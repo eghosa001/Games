@@ -57,9 +57,10 @@ func clear() -> void:
     dirty = false
 
 func _merge_legacy_core(snapshot: Dictionary, core: Dictionary) -> void:
-    # Keep legacy runtime fields for compatibility, but employees is canonical.
+    # Keep legacy runtime fields for compatibility, but never replace canonical
+    # branch/employee records with transient scalar projections.
     for key in core.keys():
-        if key != "employees": snapshot[key] = core[key]
+        if key != "employees" and key != "branches": snapshot[key] = core[key]
     if not snapshot.has("clock") or not (snapshot["clock"] is Dictionary): snapshot["clock"] = {}
     if not snapshot.has("player") or not (snapshot["player"] is Dictionary): snapshot["player"] = {}
     if not snapshot.has("legacy") or not (snapshot["legacy"] is Dictionary): snapshot["legacy"] = {}
@@ -70,6 +71,7 @@ func _merge_legacy_core(snapshot: Dictionary, core: Dictionary) -> void:
     snapshot["finance"] = {"debt": int(core.get("debt", 0)), "loan_payment": int(core.get("loan_payment", 0))}
     if not snapshot.has("businesses") or not (snapshot["businesses"] is Dictionary): snapshot["businesses"] = {}
     snapshot["businesses"]["renew_goods"] = {"open": bool(core.get("business_open", false)), "capacity_level": int(core.get("capacity_level", 1)), "marketing_level": int(core.get("marketing_level", 0)), "price": int(core.get("player_price", 110)), "finished_goods": int(core.get("finished_goods", 0))}
+    if not snapshot.has("branches") or not (snapshot["branches"] is Dictionary): snapshot["branches"] = {}
     if not snapshot.has("employees") or not (snapshot["employees"] is Dictionary): snapshot["employees"] = {"next_id": 1, "records": {}}
 
 func _migrate(snapshot: Dictionary) -> Dictionary:
@@ -85,6 +87,7 @@ func _migrate(snapshot: Dictionary) -> Dictionary:
     if migrated["employees"].has("employees") and not migrated["employees"].has("records"):
         migrated["employees"]["records"] = migrated["employees"]["employees"]
         migrated["employees"].erase("employees")
+    if not migrated.has("branches") or not (migrated["branches"] is Dictionary): migrated["branches"] = {}
     if not migrated.has("history") or not (migrated["history"] is Array): migrated["history"] = []
     if not migrated.has("news") or not (migrated["news"] is Dictionary): migrated["news"] = {"editions": []}
     migrated["schema_version"] = STATE_VERSION
