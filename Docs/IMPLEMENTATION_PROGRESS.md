@@ -72,8 +72,14 @@
 - Branch selection, launch, hiring, stocking, price changes, upgrades and daily operating results now push their branch state back into `GameState`.
 - Branch staffing remains derived from persistent employee assignments; the `employees` field is only a compatibility/UI projection and cannot create operating staff by itself.
 - `GameState.capture()` no longer allows a transient `core["branches"]` value to overwrite canonical branch records.
-- Schema migration now converts legacy branch arrays into the keyed canonical branch record shape without discarding saved branch data.
-- This establishes the first concrete Property → Business → Branch persistence boundary while retaining existing runtime/controller APIs.
+- Schema migration converts legacy branch arrays into keyed canonical branch records without discarding saved branch data.
+
+### Save/load rehydration fixed — latest
+
+- Loading a save now rehydrates the live `BranchController` from canonical `GameState.branches`; loaded branches no longer remain at scene defaults until a restart.
+- Loading also reconstructs `main.gd`'s remaining business compatibility projection (`business_open`, capacity, marketing, price and finished goods) from the canonical `GameState.businesses.renew_goods` record.
+- The durable business record remains under `GameState`; the top-level business values returned during load exist only as a compatibility bridge for the transitional `main.gd` runtime.
+- This closes a persistence gap where business/branch data could be written to the canonical state but not fully rehydrated into the currently running scene after an in-session load.
 
 ### Commits
 
@@ -97,6 +103,7 @@
 - `d2018c4e99df5454dc0556e323c4749095158ced` — BranchController restore/sync integration
 - `b65ff9d964a5870e2fcf4f2f815719482bfa8743` — branch controller syntax correction after persistence integration
 - `24584c5635a79287a7dde4112e658869c11f9009` — legacy branch-array migration
+- `d0d634b78c63f667a4774b7a5cd1e6615cb828a5` — save/load rehydration for canonical business and branch state
 
 ## Story systems verified
 
