@@ -1,12 +1,12 @@
 extends RefCounted
 class_name RenewCompetitors
 
-# Rivals are persistent economic actors. Their district presence creates
-# pressure that changes as the player's empire grows.
+# Persistent economic actors. Rivals expand, negotiate, compete and can become
+# valuable partners or dangerous buyers as the player's empire grows.
 var rivals := [
-    {"name":"The Giant","cash":500000,"price":105,"relationship":-20,"stance":"Aggressive","strength":"capital","districts":[0],"presence":1,"supplier_pressure":0,"offer_cooldown":0},
-    {"name":"The Specialist","cash":90000,"price":118,"relationship":5,"stance":"Efficient","strength":"quality","districts":[1],"presence":1,"supplier_pressure":0,"offer_cooldown":0},
-    {"name":"The Network","cash":180000,"price":125,"relationship":15,"stance":"Connected","strength":"suppliers","districts":[2],"presence":1,"supplier_pressure":1,"offer_cooldown":0}
+    {"name":"The Giant","cash":500000,"price":105,"relationship":-20,"stance":"Aggressive","strength":"capital","districts":[0],"presence":1,"supplier_pressure":0,"offer_cooldown":0,"deal":"none","deal_days":0},
+    {"name":"The Specialist","cash":90000,"price":118,"relationship":5,"stance":"Efficient","strength":"quality","districts":[1],"presence":1,"supplier_pressure":0,"offer_cooldown":0,"deal":"none","deal_days":0},
+    {"name":"The Network","cash":180000,"price":125,"relationship":15,"stance":"Connected","strength":"suppliers","districts":[2],"presence":1,"supplier_pressure":1,"offer_cooldown":0,"deal":"none","deal_days":0}
 ]
 
 func _normalize() -> void:
@@ -15,6 +15,8 @@ func _normalize() -> void:
         if not rival.has("presence"): rival["presence"] = 1
         if not rival.has("supplier_pressure"): rival["supplier_pressure"] = 0
         if not rival.has("offer_cooldown"): rival["offer_cooldown"] = 0
+        if not rival.has("deal"): rival["deal"] = "none"
+        if not rival.has("deal_days"): rival["deal_days"] = 0
 
 func daily_update(day: int) -> Array[String]:
     _normalize()
@@ -33,6 +35,11 @@ func daily_update(day: int) -> Array[String]:
             rival["supplier_pressure"] = min(3, int(rival["supplier_pressure"]) + 1)
             news.append("The Network locks down a major supplier agreement.")
         if int(rival["offer_cooldown"]) > 0: rival["offer_cooldown"] = int(rival["offer_cooldown"]) - 1
+        if int(rival["deal_days"]) > 0:
+            rival["deal_days"] = int(rival["deal_days"]) - 1
+            if int(rival["deal_days"]) == 0:
+                rival["deal"] = "none"
+                news.append("%s strategic deal has expired." % rival["name"])
     return news
 
 func strategic_update(day: int, selected_district: int, reputation: int) -> Array[String]:
@@ -91,13 +98,70 @@ func offer_alliance(index: int) -> Dictionary:
     var r = rivals[index]
     if int(r["relationship"]) >= 35:
         r["relationship"] = min(100, int(r["relationship"]) + 3)
-        return {"ok":true,"message":"%s accepted. Alliance benefits are active." % r["name"]}
+        r["deal"] = "alliance"
+        r["deal_days"] = 12
+        return {"ok":true,"message":"%s accepted a 12-day strategic alliance." % r["name"]}
     r["relationship"] = min(100, int(r["relationship"]) + 10)
     return {"ok":false,"message":"%s wants stronger trust before an alliance." % r["name"]}
 
+func propose_supply_deal(index: int) -> Dictionary:
+    if index < 0 or index >= rivals.size(): return {"ok":false,"message":"Unknown company."}
+    var r = rivals[index]
+    if int(r["relationship"]) < 25: return {"ok":false,"message":"Trust is too low for a supply deal."}
+    if index != 2: return {"ok":false,"message":"%s is not a strong logistics partner." % r["name"]}
+    r["deal"] = "supply"
+    r["deal_days"] = 10
+    r["supplier_pressure"] = max(0, int(r["supplier_pressure"]) - 1)
+    r["relationship"] = min(100, int(r["relationship"]) + 4)
+    return {"ok":true,"message":"The Network signed a 10-day supply agreement. Input pressure is reduced."}
+
+func propose_customer_partnership(index: int) -> Dictionary:
+    if index < 0 or index >= rivals.size(): return {"ok":false,"message":"Unknown company."}
+    var r = rivals[index]
+    if int(r["relationship"]) < 25: return {"ok":false,"message":"Trust is too low for a customer partnership."}
+    if index != 1: return {"ok":false,"message":"The Specialist prefers quality partnerships rather than customer distribution."}
+    r["deal"] = "customer"
+    r["deal_days"] = 10
+    r["relationship"] = min(100, int(r["relationship"]) + 4)
+    return {"ok":true,"message":"The Specialist signed a 10-day customer partnership. Premium demand increases."}
+
+func reject_acquisition(index: int) -> Dictionary:
+    if index < 0 or index >= rivals.size(): return {"ok":false,"message":"Unknown company."}
+    var r = rivals[index]
+    r["offer_cooldown"] = 14
+    r["relationship"] = max(-100, int(r["relationship"]) - 5)
+    return {"ok":true,"message":"Acquisition rejected. %s will remember the decision." % r["name"]}
+
+func negotiate_acquisition(index: int, player_cash: int, reputation: int) -> Dictionary:
+    if index < 0 or index >= rivals.size(): return {"ok":false,"message":"Unknown company."}
+    var r = rivals[index]
+    if reputation < 35: return {"ok":false,"message":"Your company needs 35 reputation to negotiate a major acquisition."}
+    var cost := 45000 + int(r["presence"]) * 18000
+    if int(r["relationship"]) < 10: cost += 15000
+    if player_cash < cost: return {"ok":false,"message":"Negotiation requires $%s available capital." % _money(cost),"cost":cost}
+    r["cash"] = max(0, int(r["cash"]) - cost / 2)
+    r["presence"] = max(1, int(r["presence"]) - 1)
+    r["offer_cooldown"] = 20
+    r["relationship"] = min(50, int(r["relationship"]) + 8)
+    return {"ok":true,"cost":cost,"message":"You acquired a strategic foothold from %s. Their remaining operations are still active." % r["name"]}
+
 func alliance_bonus(index: int) -> Dictionary:
-    if index < 0 or index >= rivals.size() or int(rivals[index]["relationship"]) < 35: return {"discount":0.0,"sales":0.0,"risk":0.0}
+    if index < 0 or index >= rivals.size(): return {"discount":0.0,"sales":0.0,"risk":0.0}
+    var r = rivals[index]
+    if int(r["relationship"]) < 35 and r["deal"] == "none": return {"discount":0.0,"sales":0.0,"risk":0.0}
     match index:
         0: return {"discount":0.08,"sales":0.02,"risk":0.0}
         1: return {"discount":0.02,"sales":0.10,"risk":0.0}
         _: return {"discount":0.12,"sales":0.03,"risk":0.15}
+
+func deal_bonus(index: int) -> Dictionary:
+    if index < 0 or index >= rivals.size(): return {"sales":0.0,"discount":0.0,"supplier":0,"risk":0.0}
+    var deal := str(rivals[index]["deal"])
+    match deal:
+        "supply": return {"sales":0.0,"discount":0.10,"supplier":-1,"risk":0.02}
+        "customer": return {"sales":0.12,"discount":0.0,"supplier":0,"risk":0.02}
+        "alliance": return {"sales":0.05,"discount":0.05,"supplier":0,"risk":0.03}
+        _: return {"sales":0.0,"discount":0.0,"supplier":0,"risk":0.0}
+
+func _money(value: int) -> String:
+    return "%,d" % value
