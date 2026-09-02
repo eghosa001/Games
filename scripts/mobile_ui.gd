@@ -20,16 +20,13 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
     if parent == null or status_label == null:
         return
-    # Never rebuild buttons here: doing so breaks touch release events.
     status_label.text = "$%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day)]
 
 func _build_ui() -> void:
     root = Control.new()
     root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    # The full-screen root is only a container. It must never consume touches.
     root.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(root)
-
     var top := ColorRect.new()
     top.color = Color("101820")
     top.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -37,7 +34,6 @@ func _build_ui() -> void:
     top.size.y = 54
     top.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(top)
-
     tabs = HBoxContainer.new()
     tabs.position = Vector2(12, 12)
     tabs.size = Vector2(720, 46)
@@ -52,7 +48,6 @@ func _build_ui() -> void:
         button.mouse_filter = Control.MOUSE_FILTER_STOP
         button.pressed.connect(_set_tab.bind(i))
         tabs.add_child(button)
-
     status_label = Label.new()
     status_label.position = Vector2(760, 17)
     status_label.size = Vector2(500, 44)
@@ -60,7 +55,6 @@ func _build_ui() -> void:
     status_label.add_theme_font_size_override("font_size", 15)
     status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(status_label)
-
     var bottom := ColorRect.new()
     bottom.color = Color("101820")
     bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
@@ -68,7 +62,6 @@ func _build_ui() -> void:
     bottom.size.y = 138
     bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(bottom)
-
     action_scroll = ScrollContainer.new()
     action_scroll.position = Vector2(18, -132)
     action_scroll.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
@@ -78,7 +71,6 @@ func _build_ui() -> void:
     action_scroll.focus_mode = Control.FOCUS_NONE
     action_scroll.mouse_filter = Control.MOUSE_FILTER_STOP
     root.add_child(action_scroll)
-
     actions = GridContainer.new()
     actions.columns = 5
     actions.custom_minimum_size = Vector2(1200, 0)
@@ -167,6 +159,11 @@ func _refresh() -> void:
             if missions != null:
                 _button("TAKE OPPORTUNITY", missions.choose_a)
                 _button("DECLINE OPPORTUNITY", missions.choose_b)
+            var market = get_node_or_null("../MarketDirector")
+            if market != null:
+                _button("MARKET AGGRESSIVE", market.respond_aggressively)
+                _button("MARKET BALANCED", market.respond_balanced)
+                _button("MARKET DEFENSIVE", market.respond_defensively)
             _button("DISTRICT", parent.select_district.bind((int(parent.selected_district) + 1) % parent.districts.districts.size()))
             _button("SAVE GAME", parent.save_game)
             _button("LOAD GAME", parent.load_game)
