@@ -1,8 +1,6 @@
 extends RefCounted
 class_name RenewSaveSystem
 
-# Versioned, recoverable persistence. A temporary write plus a rolling backup
-# protects long mobile sessions from interrupted file writes or malformed saves.
 const SAVE_PATH := "user://renew_save.json"
 const BACKUP_PATH := "user://renew_save.backup.json"
 const TEMP_PATH := "user://renew_save.tmp.json"
@@ -22,7 +20,7 @@ static func save_game(state: Dictionary) -> bool:
     if FileAccess.file_exists(SAVE_PATH):
         if FileAccess.file_exists(BACKUP_PATH):
             DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP_PATH))
-        if FileAccess.copy(SAVE_PATH, BACKUP_PATH) != OK:
+        if DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(BACKUP_PATH)) != OK:
             return false
 
     if FileAccess.file_exists(SAVE_PATH):
@@ -35,9 +33,7 @@ static func load_game() -> Dictionary:
     var state := _read_dictionary(SAVE_PATH)
     if not state.is_empty():
         return state
-    # Recover automatically if the primary save was interrupted or corrupted.
-    var backup := _read_dictionary(BACKUP_PATH)
-    return backup
+    return _read_dictionary(BACKUP_PATH)
 
 static func _read_dictionary(path: String) -> Dictionary:
     if not FileAccess.file_exists(path):
