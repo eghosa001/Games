@@ -27,6 +27,8 @@ Implemented systems now include:
 - headquarters management overhead and upgrades
 - district-based demand, logistics and competition modifiers
 - save/load persistence for the expanded empire state
+- autosave protection for long mobile sessions and application pause/close
+- responsive mobile touch controls with contextual feedback and milestones
 
 ### Run it
 
@@ -36,14 +38,32 @@ Implemented systems now include:
 4. Press **F6/F5** to run the project.
 5. Start with **I** to inspect, **A** to acquire, then **R** repeatedly to restore.
 
+### Core controls
+
+- **I** — inspect the abandoned property
+- **A** — acquire it
+- **R** — restore the next stage
+- **O** — open RENEW Goods after restoration
+- **N** — close the operating day
+- **P** — cycle selling price
+- **S** — buy core inputs
+- **B** — produce core goods
+- **H** — hire a core employee
+- **U** — upgrade core capacity
+- **M** — launch marketing
+- **K** — sign a customer contract
+- **J / V** — take loan / repay loan
+- **T** — cycle supplier tier
+- **F5 / F9** — save / load
+
 ### Empire controls
 
-- **7 / 8 / 9** — select Retail / Factory / Warehouse
-- **Z** — produce selected business
-- **Y** — sell selected business inventory
-- **G** — hire at selected business
-- **, / .** — lower/raise business price
-- **0** — open/pause selected business
+- **7 / 8 / 9** — select Retail / Factory / Warehouse expansion slots
+- **Z** — produce selected expansion business
+- **Y** — sell selected expansion inventory
+- **G** — hire at selected expansion business
+- **, / .** — lower/raise expansion business price
+- **0** — open/pause selected expansion business
 - **4 / 5 / 6** — select Materials / Food / Fuel resource site
 - **W** — generate resource stock
 - **F** — acquire selected resource site
@@ -56,7 +76,22 @@ Implemented systems now include:
 - **L** — improve relationship with selected rival
 - **C** — propose alliance
 - **X** — acquire a rival asset when unlocked
-- **F5 / F9** — save / load
+
+### World and branch controls
+
+- **F3 / F4** — cycle world regions
+- **F6** — establish presence in the selected region
+- **F7** — upgrade regional infrastructure
+- **F8** — dispatch goods to the selected region
+- **F10** — establish a regional trade route
+- **CTRL+F6** — cycle regional branch
+- **CTRL+F7** — launch selected branch
+- **CTRL+F8** — stock selected branch
+- **CTRL+F10** — hire branch staff
+- **CTRL+F11** — upgrade branch
+- **CTRL+F12** — raise branch price
+
+The branch controls use **CTRL** deliberately so F6/F7/F8 remain dedicated to world-region actions and F9 remains dedicated to loading the game.
 
 ## Development roadmap
 
