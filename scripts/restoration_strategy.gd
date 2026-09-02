@@ -30,13 +30,13 @@ func _apply(plan_name: String) -> void:
         game = get_parent()
     if game == null or not plans.has(plan_name):
         return
-    if bool(game.get("owned", false)) and int(game.get("restoration", 0)) > 0:
+    if bool(game.owned) and int(game.restoration) > 0:
         game.message = "Restoration strategy is locked after work begins."
         return
     selected = plan_name
     var plan: Dictionary = plans[plan_name]
     var costs: Array = plan["costs"]
-    var stages: Array = game.get("stages")
+    var stages: Array = game.stages
     if stages.size() == costs.size():
         for i in range(stages.size()):
             stages[i][2] = int(costs[i])
