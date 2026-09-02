@@ -74,7 +74,7 @@ func upgrade(index: int, cash_available: int) -> Dictionary: return upgrade_prop
 func restore_property(index: int, cash_available: int) -> Dictionary:
     _normalize_all()
     if index < 0 or index >= properties.size(): return {"ok":false,"cost":0,"message":"Unknown property."}
-    var site = properties[index]
+    var site: Dictionary = properties[index]
     if not bool(site.get("unlocked", true)): return {"ok":false,"cost":0,"message":"More reputation is required to access this property."}
     if bool(site["owned"]): return {"ok":false,"cost":0,"message":"Already owned."}
     var cost: int = int(site["restoration_cost"])
@@ -86,7 +86,7 @@ func restore_property(index: int, cash_available: int) -> Dictionary:
 func buy_resource_site(index: int, cash_available: int) -> Dictionary:
     _normalize_all()
     if index < 0 or index >= resource_sites.size(): return {"ok":false,"cost":0,"message":"Unknown resource site."}
-    var site = resource_sites[index]
+    var site: Dictionary = resource_sites[index]
     if bool(site["owned"]): return {"ok":false,"cost":0,"message":"Already owned."}
     var cost: int = int(site["cost"])
     if cash_available < cost: return {"ok":false,"cost":cost,"message":"Purchase requires $%d." % cost}
@@ -109,7 +109,7 @@ func operate_day() -> Dictionary:
 func upgrade_property(index: int, cash_available: int) -> Dictionary:
     _normalize_all()
     if index < 0 or index >= properties.size() or not bool(properties[index]["owned"]): return {"ok":false,"cost":0,"message":"Own the property first."}
-    var site = properties[index]; var cost: int = 7000 * int(site["level"])
+    var site: Dictionary = properties[index]; var cost: int = 7000 * int(site["level"])
     if cash_available < cost: return {"ok":false,"cost":cost,"message":"Upgrade requires $%d." % cost}
     site["level"] += 1; site["income"] += 500; site["value"] += 5000
     management_level = max(management_level, int(properties.size() / 2))
@@ -118,7 +118,7 @@ func upgrade_property(index: int, cash_available: int) -> Dictionary:
 func generate_resource(index: int) -> Dictionary:
     _normalize_all()
     if index < 0 or index >= resource_sites.size() or not bool(resource_sites[index]["owned"]): return {"ok":false,"output":0,"message":"Own the resource site first."}
-    var site = resource_sites[index]; var output: int = int(site["output"]) * int(site["level"])
+    var site: Dictionary = resource_sites[index]; var output: int = int(site["output"]) * int(site["level"])
     site["stock"] += output
     return {"ok":true,"output":output,"message":"%s generated %d %s. Stock: %d." % [site["name"],output,site["resource"],site["stock"]]}
 
@@ -127,7 +127,7 @@ func harvest_resource(index: int) -> Dictionary: return generate_resource(index)
 func produce(index: int) -> Dictionary:
     _normalize_all()
     if index < 0 or index >= properties.size(): return {"ok":false,"output":0,"message":"Unknown business."}
-    var p := properties[index]
+    var p: Dictionary = properties[index]
     if not bool(p["owned"]): return {"ok":false,"output":0,"message":"Own the business first."}
     if not bool(p.get("active", true)): return {"ok":false,"output":0,"message":"Business is paused."}
     if p["input_need"].is_empty():
@@ -136,23 +136,23 @@ func produce(index: int) -> Dictionary:
     for resource in p["input_need"]:
         if int(p["inputs"].get(resource, 0)) < int(p["input_need"][resource]): return {"ok":false,"output":0,"message":"%s needs more %s before production." % [p["name"],resource]}
     for resource in p["input_need"]: p["inputs"][resource] = int(p["inputs"].get(resource, 0)) - int(p["input_need"][resource])
-    var output := max(1, int(p["level"])); p["stock"] = int(p.get("stock", 0)) + output
+    var output: int = max(1, int(p["level"])); p["stock"] = int(p.get("stock", 0)) + output
     p["quality"] = clamp(int(p.get("quality", 60)) + randi_range(-2, 3), 30, 100)
     return {"ok":true,"output":output,"message":"%s produced %d units at quality %d." % [p["name"],output,int(p["quality"])]}
 
 func sell(index: int) -> Dictionary:
     _normalize_all()
     if index < 0 or index >= properties.size(): return {"ok":false,"revenue":0,"profit":0,"message":"Unknown business."}
-    var p := properties[index]; var stock := int(p.get("stock", 0))
+    var p: Dictionary = properties[index]; var stock: int = int(p.get("stock", 0))
     if stock <= 0: return {"ok":false,"revenue":0,"profit":0,"message":"%s has no finished stock to sell." % p["name"]}
-    var price := int(p.get("price", 100)); var revenue := stock * price; var operating_cost := max(100, int(p["income"]) / 5); var profit := revenue - operating_cost
+    var price: int = int(p.get("price", 100)); var revenue: int = stock * price; var operating_cost: int = max(100, int(p["income"]) / 5); var profit: int = revenue - operating_cost
     p["stock"] = 0
     return {"ok":true,"revenue":revenue,"profit":profit,"message":"%s sold %d units for $%d." % [p["name"],stock,revenue]}
 
 func hire(index: int, cash_available: int) -> Dictionary:
     _normalize_all()
     if index < 0 or index >= properties.size() or not bool(properties[index]["owned"]): return {"ok":false,"cost":0,"message":"Own the business first."}
-    var p := properties[index]; var employees := int(p.get("employees", 1)); var cost := 900 + employees * 250
+    var p: Dictionary = properties[index]; var employees: int = int(p.get("employees", 1)); var cost: int = 900 + employees * 250
     if cash_available < cost: return {"ok":false,"cost":cost,"message":"Hiring requires $%d." % cost}
     p["employees"] = employees + 1; p["income"] = int(p["income"]) + 180
     return {"ok":true,"cost":cost,"message":"%s hired employee %d." % [p["name"],employees + 1]}
@@ -160,28 +160,28 @@ func hire(index: int, cash_available: int) -> Dictionary:
 func change_price(index: int, delta: int) -> Dictionary:
     _normalize_all()
     if index < 0 or index >= properties.size(): return {"ok":false,"message":"Unknown business."}
-    var p := properties[index]; var price := clamp(int(p.get("price", 100)) + delta, 50, 250); p["price"] = price
+    var p: Dictionary = properties[index]; var price: int = clamp(int(p.get("price", 100)) + delta, 50, 250); p["price"] = price
     return {"ok":true,"message":"%s selling price is now $%d." % [p["name"],price]}
 
 func toggle_active(index: int) -> Dictionary:
     _normalize_all()
     if index < 0 or index >= properties.size(): return {"ok":false,"message":"Unknown business."}
-    var p := properties[index]
+    var p: Dictionary = properties[index]
     if not bool(p["owned"]): return {"ok":false,"message":"Own the business first."}
     p["active"] = not bool(p.get("active", true)); return {"ok":true,"message":"%s is now %s." % [p["name"],"open" if p["active"] else "paused"]}
 
 func transfer_core_goods(index: int, amount: int, available: int) -> Dictionary:
     _normalize_all()
     if index < 0 or index >= properties.size(): return {"ok":false,"moved":0,"message":"Unknown business."}
-    var p := properties[index]
+    var p: Dictionary = properties[index]
     if not bool(p["owned"]): return {"ok":false,"moved":0,"message":"Own the business first."}
-    var moved := min(max(0, amount), max(0, available))
+    var moved: int = min(max(0, amount), max(0, available))
     if moved <= 0: return {"ok":false,"moved":0,"message":"No finished goods are available."}
     p["inputs"]["goods"] = int(p["inputs"].get("goods", 0)) + moved; p["input_need"]["goods"] = max(1, int(p["input_need"].get("goods", 0)))
     return {"ok":true,"moved":moved,"message":"Moved %d finished goods into %s." % [moved,p["name"]]}
 
 func management_upgrade(cash_available: int) -> Dictionary:
-    var cost := 12000 * (management_level + 1)
+    var cost: int = 12000 * (management_level + 1)
     if cash_available < cost: return {"ok":false,"cost":cost,"message":"HQ management upgrade requires $%d." % cost}
     management_level += 1; management_overhead = management_level * 350
     return {"ok":true,"cost":cost,"message":"Headquarters management upgraded to level %d." % management_level}
@@ -189,7 +189,7 @@ func management_upgrade(cash_available: int) -> Dictionary:
 func upgrade_resource_site(index: int, cash_available: int) -> Dictionary:
     _normalize_all()
     if index < 0 or index >= resource_sites.size() or not bool(resource_sites[index]["owned"]): return {"ok":false,"cost":0,"message":"Own the resource site first."}
-    var site = resource_sites[index]; var cost: int = 9000 * int(site["level"])
+    var site: Dictionary = resource_sites[index]; var cost: int = 9000 * int(site["level"])
     if cash_available < cost: return {"ok":false,"cost":cost,"message":"Resource upgrade requires $%d." % cost}
     site["level"] += 1; site["output"] += 2; site["risk"] = max(3, int(site["risk"]) - 1)
     return {"ok":true,"cost":cost,"message":"%s upgraded to level %d." % [site["name"],site["level"]]}
@@ -197,14 +197,14 @@ func upgrade_resource_site(index: int, cash_available: int) -> Dictionary:
 func supply_business(index: int, resource: String, amount: int) -> Dictionary:
     _normalize_all()
     if index < 0 or index >= properties.size(): return {"ok":false,"moved":0,"message":"Unknown business."}
-    var p = properties[index]
+    var p: Dictionary = properties[index]
     if not bool(p["owned"]): return {"ok":false,"moved":0,"message":"Own the business first."}
     if not p["input_need"].has(resource): return {"ok":false,"moved":0,"message":"%s does not use %s." % [p["name"],resource]}
-    var need := max(0, amount)
+    var need: int = max(0, amount)
     if need <= 0: return {"ok":false,"moved":0,"message":"Supply amount must be positive."}
     for site in resource_sites:
         if bool(site["owned"]) and String(site["resource"]) == resource:
-            var moved := min(need, int(site["stock"]))
+            var moved: int = min(need, int(site["stock"]))
             if moved <= 0: continue
             site["stock"] -= moved; p["inputs"][resource] = int(p["inputs"].get(resource, 0)) + moved
             return {"ok":true,"moved":moved,"message":"Moved %d %s from %s to %s." % [moved,resource,site["name"],p["name"]]}
