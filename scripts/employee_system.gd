@@ -1,8 +1,6 @@
 extends Node
 class_name RenewEmployeeSystem
 
-## Persistent people system for RENEW.
-## Employee identity lives here instead of being represented only by an integer count.
 const SYSTEM_VERSION := 1
 const JAMES_ID := "emp_james_001"
 
@@ -19,8 +17,7 @@ const ROLES := ["Technician", "Sales Associate", "Logistics Coordinator", "Craft
 const SPECIALIZATIONS := ["Restoration", "Sales", "Logistics", "Production", "Operations"]
 
 func _ready() -> void:
-    if employees.is_empty():
-        _create_initial_roster()
+    if employees.is_empty(): _create_initial_roster()
     refresh_candidates()
 
 func _process(_delta: float) -> void:
@@ -37,13 +34,7 @@ func _create_initial_roster() -> void:
     _record("emp_0003", "hired", {"reason": "founding roster"})
 
 func _make_employee(id: String, name: String, role: String, specialization: String, skill: int, experience: int, salary: int, loyalty: int, morale: int, ambition: int, productivity: int, career_level: int, assignment: String, _unused: String, hire_date: int) -> Dictionary:
-    return {
-        "id": id, "name": name, "role": role, "skill": skill, "experience": experience,
-        "career_level": career_level, "salary": salary, "loyalty": loyalty, "morale": morale,
-        "ambition": ambition, "personality": _personality_for(name), "productivity": productivity,
-        "specialization": specialization, "assignment": assignment, "hire_date": hire_date,
-        "promotion_date": 0, "status": "active", "relationships": {}, "history": []
-    }
+    return {"id": id, "name": name, "role": role, "skill": skill, "experience": experience, "career_level": career_level, "salary": salary, "loyalty": loyalty, "morale": morale, "ambition": ambition, "personality": _personality_for(name), "productivity": productivity, "specialization": specialization, "assignment": assignment, "hire_date": hire_date, "promotion_date": 0, "status": "active", "relationships": {}, "history": []}
 
 func _personality_for(name: String) -> String:
     match name:
@@ -58,13 +49,7 @@ func refresh_candidates() -> void:
         var n := FIRST_NAMES[(i + _day) % FIRST_NAMES.size()]
         var role := ROLES[(i + _day) % ROLES.size()]
         var spec := SPECIALIZATIONS[(i + _day) % SPECIALIZATIONS.size()]
-        candidates.append({
-            "id": "candidate_%d_%d" % [_day, i], "name": n, "role": role,
-            "skill": 40 + ((i * 9 + _day * 3) % 31), "experience": 3 + i * 4,
-            "salary": 360 + i * 55, "loyalty": 50 + i * 4, "morale": 70,
-            "ambition": 50 + i * 7, "personality": "Professional, motivated",
-            "productivity": 55 + i * 5, "specialization": spec
-        })
+        candidates.append({"id": "candidate_%d_%d" % [_day, i], "name": n, "role": role, "skill": 40 + ((i * 9 + _day * 3) % 31), "experience": 3 + i * 4, "salary": 360 + i * 55, "loyalty": 50 + i * 4, "morale": 70, "ambition": 50 + i * 7, "personality": "Professional, motivated", "productivity": 55 + i * 5, "specialization": spec})
 
 func active_count() -> int:
     var count := 0
@@ -81,8 +66,7 @@ func total_salary() -> int:
 func total_productivity() -> float:
     var total := 0.0
     for employee in employees:
-        if employee.get("status", "active") == "active":
-            total += float(employee.get("productivity", 0)) / 100.0
+        if employee.get("status", "active") == "active": total += float(employee.get("productivity", 0)) / 100.0
     return total
 
 func get_employee(employee_id: String) -> Dictionary:
@@ -90,11 +74,8 @@ func get_employee(employee_id: String) -> Dictionary:
         if employee.get("id", "") == employee_id: return employee
     return {}
 
-func get_roster() -> Array[Dictionary]:
-    return employees.duplicate(true)
-
-func get_candidates() -> Array[Dictionary]:
-    return candidates.duplicate(true)
+func get_roster() -> Array[Dictionary]: return employees.duplicate(true)
+func get_candidates() -> Array[Dictionary]: return candidates.duplicate(true)
 
 func hire_candidate(candidate_id: String, day: int) -> Dictionary:
     for candidate in candidates:
@@ -150,10 +131,8 @@ func promote_employee(employee_id: String, day: int) -> Dictionary:
         employee["role"] = "COO"
         employee["specialization"] = "Executive Operations"
         employee["assignment"] = "Company Headquarters"
-    elif level == 2:
-        employee["role"] = "Senior " + str(employee["role"])
-    elif level == 3:
-        employee["role"] = "Supervisor"
+    elif level == 2: employee["role"] = "Senior " + str(employee["role"])
+    elif level == 3: employee["role"] = "Supervisor"
     _record(employee_id, "promoted", {"day": day, "career_level": level})
     return {"ok": true, "employee": employee.duplicate(true), "message": "%s promoted to %s." % [employee["name"], employee["role"]]}
 
@@ -230,8 +209,7 @@ func restore_state(snapshot: Dictionary) -> void:
 func migrate_legacy_count(count: int, day: int = 1) -> void:
     if not employees.is_empty(): return
     _create_initial_roster()
-    while active_count() < max(3, count):
-        hire_default(day)
+    while active_count() < max(3, count): hire_default(day)
 
 func _ensure_james() -> void:
     if not get_employee(JAMES_ID).is_empty(): return
@@ -244,8 +222,7 @@ func _sync_legacy_gameplay() -> void:
     var tree := get_tree()
     if tree == null: return
     var main := tree.get_first_node_in_group("game_root")
-    if main == null:
-        main = tree.current_scene
+    if main == null: main = tree.current_scene
     if main == null or not ("employees" in main): return
     var legacy_count := int(main.get("employees"))
     var active := active_count()
@@ -261,10 +238,6 @@ func _sync_legacy_gameplay() -> void:
             var result := hire_default(int(main.get("day")))
             if not result.get("ok", false): break
             active = active_count()
-    elif legacy_count < active:
-        # Legacy UI has no employee selector yet. Keep the persistent roster authoritative
-        # and restore the displayed count so an accidental count mutation cannot delete staff.
-        legacy_count = active
     if int(main.get("employees")) != active_count():
         _syncing_legacy = true
         main.set("employees", active_count())
