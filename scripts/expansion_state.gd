@@ -56,26 +56,33 @@ static func adjust_player(state, cash_delta: int, reputation_delta: int) -> void
     state.set_value(EXPANSION_PATH, expansion)
 
 static func calculate_operating_day(state) -> Dictionary:
-    var expansion := ensure(state)
+    # Deliberately read-only: calculating a preview must never repair or mutate state.
+    if state == null or not state.has_method("get_value"):
+        return {"revenue":0,"expense":0,"profit":0,"cash":0,"day":1,"businesses":0,"population_delta":0,"management_overhead":0}
+    var expansion = state.get_value(EXPANSION_PATH, {})
+    if not (expansion is Dictionary):
+        expansion = {}
     var revenue: int = 0
     var expense: int = 0
     var businesses: int = 0
-    var properties: Array = expansion["properties"]
-    for property in properties:
-        if not (property is Dictionary):
-            continue
-        if bool(property.get("owned", false)) and bool(property.get("active", true)):
-            businesses += 1
-            var income := int(property.get("income", 0))
-            var level := max(1, int(property.get("level", 1)))
-            revenue += income * level
-            expense += income / 4
-    var resource_sites: Array = expansion["resource_sites"]
-    for site in resource_sites:
-        if not (site is Dictionary):
-            continue
-        if bool(site.get("owned", false)):
-            revenue += int(site.get("output", 0)) * max(1, int(site.get("level", 1))) * 100
+    var properties = expansion.get("properties", [])
+    if properties is Array:
+        for property in properties:
+            if not (property is Dictionary):
+                continue
+            if bool(property.get("owned", false)) and bool(property.get("active", true)):
+                businesses += 1
+                var income := int(property.get("income", 0))
+                var level := max(1, int(property.get("level", 1)))
+                revenue += income * level
+                expense += income / 4
+    var resource_sites = expansion.get("resource_sites", [])
+    if resource_sites is Array:
+        for site in resource_sites:
+            if not (site is Dictionary):
+                continue
+            if bool(site.get("owned", false)):
+                revenue += int(site.get("output", 0)) * max(1, int(site.get("level", 1))) * 100
     var management_level := int(expansion.get("management_level", 0))
     var management_overhead := management_level * 350
     expense += management_overhead
