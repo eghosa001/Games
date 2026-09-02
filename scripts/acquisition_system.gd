@@ -2,8 +2,7 @@ extends Node
 
 ## RENEW acquisition ledger.
 ## Acquisitions are asset/control transactions, not simple cash transfers.
-## Supports asset purchases, negotiated sales, auctions, hostile acquisitions,
-## shareholder accumulation and mergers while preserving a due-diligence trail.
+## Mergers resolve the operating and corporate state of both organizations.
 
 const TYPE_ASSET_PURCHASE := "asset_purchase"
 const TYPE_NEGOTIATED_SALE := "negotiated_sale"
@@ -13,13 +12,16 @@ const TYPE_SHARE_ACCUMULATION := "shareholder_accumulation"
 const TYPE_MERGER := "merger"
 
 var acquisitions: Array[Dictionary] = []
+var mergers: Array[Dictionary] = []
 var targets: Dictionary = {}
 var next_id := 1
 
-func register_target(target_id: String, target_name: String = "", assets: Array = [], debt: float = 0.0, employees: int = 0, contracts: Array = [], liabilities: float = 0.0, reputation: float = 0.0, hidden_risks: Array = []) -> Dictionary:
+func register_target(target_id: String, target_name: String = "", assets: Array = [], debt: float = 0.0, employees: int = 0, contracts: Array = [], liabilities: float = 0.0, reputation: float = 0.0, hidden_risks: Array = [], extra_state: Dictionary = {}) -> Dictionary:
     if target_id.is_empty(): return {"ok": false, "error": "target_id_required"}
-    targets[target_id] = {"id": target_id, "name": target_name if not target_name.is_empty() else target_id, "assets": assets.duplicate(true), "debt": max(0.0, debt), "employees": max(0, employees), "contracts": contracts.duplicate(true), "liabilities": max(0.0, liabilities), "reputation": reputation, "hidden_risks": hidden_risks.duplicate(true), "owners": {}, "status": "independent"}
-    return {"ok": true, "target": targets[target_id].duplicate(true)}
+    var target := {"id": target_id, "name": target_name if not target_name.is_empty() else target_id, "assets": assets.duplicate(true), "debt": max(0.0, debt), "employees": max(0, employees), "contracts": contracts.duplicate(true), "liabilities": max(0.0, liabilities), "reputation": reputation, "hidden_risks": hidden_risks.duplicate(true), "owners": {}, "status": "independent"}
+    for key in extra_state.keys(): target[str(key)] = extra_state[key]
+    targets[target_id] = target
+    return {"ok": true, "target": target.duplicate(true)}
 
 func get_target(target_id: String) -> Dictionary: return targets.get(target_id, {}).duplicate(true)
 
@@ -43,14 +45,15 @@ func acquire_asset(acquirer_id: String, target_id: String, asset_index: int, pri
     return _record_transaction(TYPE_ASSET_PURCHASE, acquirer_id, target_id, price, {"assets": [asset], "debt_assumed": 0.0, "liabilities_assumed": 0.0, "employees_transferred": 0, "contracts_transferred": [], "reputation_transfer": 0.0, "hidden_risks": []})
 
 func acquire_company(acquirer_id: String, target_id: String, price: float, method: String = TYPE_NEGOTIATED_SALE, assume_debt: bool = true, retain_employees: bool = true, assume_liabilities: bool = true, transfer_contracts: bool = true, reputation_transfer: float = 1.0) -> Dictionary:
+    if method == TYPE_MERGER: return merge_entities(acquirer_id, target_id, price)
     var target := targets.get(target_id, {})
     if target.is_empty() or price < 0.0: return {"ok": false, "error": "invalid_company_acquisition"}
-    if not [TYPE_NEGOTIATED_SALE, TYPE_AUCTION, TYPE_HOSTILE, TYPE_SHARE_ACCUMULATION, TYPE_MERGER].has(method): return {"ok": false, "error": "invalid_acquisition_method"}
+    if not [TYPE_NEGOTIATED_SALE, TYPE_AUCTION, TYPE_HOSTILE, TYPE_SHARE_ACCUMULATION].has(method): return {"ok": false, "error": "invalid_acquisition_method"}
     var diligence := due_diligence(target_id)
     var transferred := {"assets": target.get("assets", []).duplicate(true), "debt_assumed": float(target.get("debt", 0.0)) if assume_debt else 0.0, "liabilities_assumed": float(target.get("liabilities", 0.0)) if assume_liabilities else 0.0, "employees_transferred": int(target.get("employees", 0)) if retain_employees else 0, "contracts_transferred": target.get("contracts", []).duplicate(true) if transfer_contracts else [], "reputation_transfer": float(target.get("reputation", 0.0)) * reputation_transfer, "hidden_risks": target.get("hidden_risks", []).duplicate(true)}
     var result := _record_transaction(method, acquirer_id, target_id, price, transferred)
     if bool(result.get("ok", false)):
-        target["status"] = "merged" if method == TYPE_MERGER else "acquired"
+        target["status"] = "acquired"
         target["owners"] = {acquirer_id: 100.0}
         targets[target_id] = target
         result["due_diligence"] = diligence
@@ -65,9 +68,8 @@ func hostile_acquire(acquirer_id: String, target_id: String, offer: float, contr
     if control_percent < 50.1 or control_percent > 100.0: return {"ok": false, "error": "invalid_control_target"}
     var target := targets.get(target_id, {})
     if target.is_empty(): return {"ok": false, "error": "target_not_found"}
-    var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
     var control_bridge = get_node_or_null("/root/RenewDiplomacyControl")
-    if diplomacy != null and control_bridge != null:
+    if control_bridge != null:
         for owner_id in target.get("owners", {}).keys():
             var owner := str(owner_id)
             if owner != acquirer_id and control_bridge.has_defense_treaty(owner, acquirer_id):
@@ -87,9 +89,72 @@ func accumulate_shares(acquirer_id: String, target_id: String, shares: float, pr
     targets[target_id] = target
     return _record_transaction(TYPE_SHARE_ACCUMULATION, acquirer_id, target_id, price, {"shares_percent": shares, "new_control_percent": owners[acquirer_id], "assets": [], "debt_assumed": 0.0, "liabilities_assumed": 0.0, "employees_transferred": 0, "contracts_transferred": [], "reputation_transfer": 0.0, "hidden_risks": []})
 
-func merge_entities(acquirer_id: String, target_id: String, price: float, share_exchange: float = 0.0) -> Dictionary:
-    var result := acquire_company(acquirer_id, target_id, price, TYPE_MERGER)
-    if bool(result.get("ok", false)): result["share_exchange_percent"] = share_exchange
+## Comprehensive merger. The target is absorbed into the surviving company while
+## preserving an auditable resolution of ownership, value, debt and operations.
+func merge_entities(acquirer_id: String, target_id: String, price: float, share_exchange: float = 0.0, terms: Dictionary = {}) -> Dictionary:
+    var target := targets.get(target_id, {})
+    if target.is_empty(): return {"ok": false, "error": "target_not_found"}
+    if acquirer_id.is_empty() or acquirer_id == target_id: return {"ok": false, "error": "invalid_merger_parties"}
+    if price < 0.0 or share_exchange < 0.0 or share_exchange > 100.0: return {"ok": false, "error": "invalid_merger_terms"}
+
+    var diligence := due_diligence(target_id)
+    var valuation_data := _resolve_valuation(target, price, terms)
+    var ownership_result := _resolve_merger_ownership(acquirer_id, target_id, target, share_exchange, terms)
+    if not bool(ownership_result.get("ok", false)): return ownership_result
+
+    var finance_result := _resolve_merger_finance(target, price, terms)
+    if not bool(finance_result.get("ok", false)): return finance_result
+    var employee_result := _resolve_merger_employees(target, terms)
+    var management_result := _resolve_management(target, terms)
+    var property_result := _combine_collection("properties", target, terms)
+    var branch_result := _combine_collection("branches", target, terms)
+    var contract_result := _combine_collection("contracts", target, terms)
+    var brand_result := _combine_collection("brands", target, terms)
+    var technology_result := _combine_collection("technology", target, terms)
+
+    var reputation_before := _surviving_reputation(acquirer_id, terms)
+    var reputation_after := _resolve_reputation(reputation_before, float(target.get("reputation", 0.0)), terms)
+
+    var consolidated_assets: Array = []
+    var source_assets := target.get("assets", [])
+    for asset in source_assets: consolidated_assets.append(asset.duplicate(true) if asset is Dictionary else asset)
+
+    var resolution := {
+        "valuation": valuation_data,
+        "ownership": ownership_result,
+        "debt": finance_result,
+        "employees": employee_result,
+        "management": management_result,
+        "properties": property_result,
+        "branches": branch_result,
+        "contracts": contract_result,
+        "brands": brand_result,
+        "technology": technology_result,
+        "reputation": {"surviving_before": reputation_before, "target": float(target.get("reputation", 0.0)), "surviving_after": reputation_after},
+        "assets": {"transferred": consolidated_assets, "asset_value": float(diligence.get("asset_value", 0.0))},
+        "hidden_risks": target.get("hidden_risks", []).duplicate(true),
+        "status": "completed"
+    }
+
+    var merged_target := target.duplicate(true)
+    merged_target["status"] = "merged_into:%s" % acquirer_id
+    merged_target["merged_into"] = acquirer_id
+    merged_target["merger_resolution"] = resolution.duplicate(true)
+    targets[target_id] = merged_target
+
+    var merger_entry := {"id": next_id, "type": TYPE_MERGER, "surviving_company": acquirer_id, "target_id": target_id, "cash_consideration": price, "share_exchange_percent": share_exchange, "terms": terms.duplicate(true), "resolution": resolution.duplicate(true), "timestamp": Time.get_unix_time_from_system()}
+    next_id += 1
+    mergers.append(merger_entry)
+    if mergers.size() > 500: mergers.pop_front()
+    acquisitions.append(merger_entry.duplicate(true))
+    if acquisitions.size() > 1000: acquisitions.pop_front()
+
+    return {"ok": true, "merger": merger_entry.duplicate(true), "due_diligence": diligence, "resolution": resolution.duplicate(true)}
+
+func get_merger_history(target_id: String = "") -> Array[Dictionary]:
+    var result: Array[Dictionary] = []
+    for entry in mergers:
+        if target_id.is_empty() or str(entry.get("target_id", "")) == target_id: result.append(entry.duplicate(true))
     return result
 
 func get_acquisition_history(target_id: String = "") -> Array[Dictionary]:
@@ -99,11 +164,104 @@ func get_acquisition_history(target_id: String = "") -> Array[Dictionary]:
     return result
 
 func capture_state() -> Dictionary:
-    return {"system_version": 1, "next_id": next_id, "targets": targets.duplicate(true), "acquisitions": acquisitions.duplicate(true)}
+    return {"system_version": 2, "next_id": next_id, "targets": targets.duplicate(true), "acquisitions": acquisitions.duplicate(true), "mergers": mergers.duplicate(true)}
 
 func restore_state(snapshot: Dictionary) -> void:
     if snapshot.is_empty(): return
-    next_id = int(snapshot.get("next_id", 1)); targets = snapshot.get("targets", {}).duplicate(true); acquisitions = snapshot.get("acquisitions", []).duplicate(true)
+    next_id = int(snapshot.get("next_id", 1)); targets = snapshot.get("targets", {}).duplicate(true); acquisitions = snapshot.get("acquisitions", []).duplicate(true); mergers = snapshot.get("mergers", []).duplicate(true)
+
+func _resolve_valuation(target: Dictionary, price: float, terms: Dictionary) -> Dictionary:
+    var assets := 0.0
+    for asset in target.get("assets", []):
+        if asset is Dictionary: assets += float(asset.get("value", asset.get("cost", 0.0)))
+    var debt := float(target.get("debt", 0.0)) + float(target.get("liabilities", 0.0))
+    var target_value := max(0.0, assets - debt)
+    var negotiated := float(terms.get("target_valuation", price if price > 0.0 else target_value))
+    var premium := 0.0 if target_value <= 0.0 else (negotiated - target_value) / target_value * 100.0
+    return {"asset_value": assets, "net_asset_value": target_value, "agreed_value": max(0.0, negotiated), "premium_percent": premium, "consideration": price}
+
+func _resolve_merger_ownership(acquirer_id: String, target_id: String, target: Dictionary, share_exchange: float, terms: Dictionary) -> Dictionary:
+    var ownership = get_node_or_null("/root/RenewOwnershipSystem")
+    if ownership == null: ownership = get_tree().current_scene.get_node_or_null("OwnershipSystem") if get_tree().current_scene != null else null
+    var surviving_entity := str(terms.get("surviving_entity", acquirer_id))
+    var target_entity := str(terms.get("target_entity", target_id))
+    var target_percent := float(terms.get("target_owner_percent", 0.0))
+    var transferred_percent := share_exchange
+    if target_percent > 0.0: transferred_percent = target_percent
+    if ownership != null and ownership.has_method("has_entity"):
+        if not ownership.has_entity(surviving_entity): return {"ok": false, "error": "surviving_ownership_entity_not_found", "entity": surviving_entity}
+        if ownership.has_entity(target_entity) and transferred_percent > 0.0:
+            var target_owners: Dictionary = target.get("owners", {})
+            for owner_id in target_owners.keys():
+                var owner := str(owner_id)
+                var pct := float(target_owners[owner]) * transferred_percent / 100.0
+                var holder = ownership.get_entity(target_entity).get("holders", {}).get(owner, {})
+                var classes: Dictionary = holder.get("classes", {}) if holder is Dictionary else {}
+                var ordinary := int(classes.get(ownership.VOTE_ORDINARY, 0))
+                if ordinary > 0:
+                    var amount := int(round(float(ordinary) * pct / 100.0))
+                    if amount > 0: ownership.transfer_shares(target_entity, owner, surviving_entity, amount, ownership.VOTE_ORDINARY, "merger_absorption")
+        return {"ok": true, "surviving_entity": surviving_entity, "target_entity": target_entity, "share_exchange_percent": transferred_percent, "control_survives": true}
+    return {"ok": true, "surviving_entity": surviving_entity, "target_entity": target_entity, "share_exchange_percent": transferred_percent, "control_survives": true, "ledger": "ownership system unavailable; merger resolution recorded"}
+
+func _resolve_merger_finance(target: Dictionary, price: float, terms: Dictionary) -> Dictionary:
+    var finance = get_node_or_null("/root/RenewFinanceSystem")
+    if finance == null: return {"ok": true, "cash_consideration": price, "debt_assumed": float(target.get("debt", 0.0)), "liabilities_assumed": float(target.get("liabilities", 0.0)), "ledger": "finance system unavailable; merger resolution recorded"}
+    var debt_assumed := float(target.get("debt", 0.0)) if bool(terms.get("assume_debt", true)) else 0.0
+    var liabilities_assumed := float(target.get("liabilities", 0.0)) if bool(terms.get("assume_liabilities", true)) else 0.0
+    var consideration := int(max(0.0, price))
+    if consideration > 0 and not finance.can_afford(consideration): return {"ok": false, "error": "insufficient_cash_for_merger", "required": consideration, "cash": finance.available_cash()}
+    if consideration > 0: finance.spend(consideration, "merger consideration")
+    if debt_assumed > 0.0: finance.debt += int(round(debt_assumed))
+    if liabilities_assumed > 0.0: finance.other_liabilities += liabilities_assumed
+    var asset_value := 0.0
+    for asset in target.get("assets", []):
+        if asset is Dictionary: asset_value += float(asset.get("value", asset.get("cost", 0.0)))
+    finance.fixed_assets += asset_value
+    return {"ok": true, "cash_consideration": consideration, "debt_assumed": debt_assumed, "liabilities_assumed": liabilities_assumed, "assets_added": asset_value, "cash_after": finance.available_cash(), "debt_after": finance.debt}
+
+func _resolve_merger_employees(target: Dictionary, terms: Dictionary) -> Dictionary:
+    var employee_system = get_node_or_null("/root/RenewEmployeeSystem")
+    var source: Array = target.get("employee_roster", [])
+    var count := int(target.get("employees", source.size()))
+    if employee_system == null: return {"retained": count, "source_roster": source.duplicate(true), "policy": str(terms.get("employee_policy", "retain"))}
+    var policy := str(terms.get("employee_policy", "retain"))
+    var retained := count if policy != "downsize" else int(round(float(count) * float(terms.get("retention_percent", 80.0)) / 100.0))
+    var added := 0
+    if not source.is_empty() and employee_system.get("employees") is Array:
+        for employee in source:
+            if added >= retained: break
+            if employee is Dictionary:
+                var copy := employee.duplicate(true)
+                copy["id"] = "merged_%s_%s" % [str(target.get("id", "target")), str(copy.get("id", added))]
+                copy["status"] = "active"
+                employee_system.employees.append(copy)
+                added += 1
+    return {"retained": retained, "added_to_roster": added, "policy": policy, "target_count": count}
+
+func _resolve_management(target: Dictionary, terms: Dictionary) -> Dictionary:
+    var policy := str(terms.get("management_policy", "survivor_leads"))
+    var target_management = target.get("management", target.get("leadership", []))
+    var incoming := target_management.duplicate(true) if target_management is Array else target_management
+    return {"policy": policy, "incoming_management": incoming, "successor": terms.get("successor_manager", ""), "integration_period": int(terms.get("management_integration_days", 30))}
+
+func _combine_collection(key: String, target: Dictionary, terms: Dictionary) -> Dictionary:
+    var values = target.get(key, [])
+    var policy := str(terms.get("%s_policy" % key, "combine"))
+    var items: Array = []
+    if values is Array:
+        for item in values: items.append(item.duplicate(true) if item is Dictionary else item)
+    elif values is Dictionary:
+        for item_key in values.keys(): items.append({"id": str(item_key), "value": values[item_key].duplicate(true) if values[item_key] is Dictionary else values[item_key]})
+    return {"policy": policy, "items": items, "count": items.size()}
+
+func _surviving_reputation(_acquirer_id: String, terms: Dictionary) -> float:
+    if terms.has("surviving_reputation"): return float(terms["surviving_reputation"])
+    return 0.0
+
+func _resolve_reputation(surviving: float, target: float, terms: Dictionary) -> float:
+    var target_weight := clamp(float(terms.get("reputation_weight", 0.35)), 0.0, 1.0)
+    return clamp(surviving * (1.0 - target_weight) + target * target_weight, 0.0, 100.0)
 
 func _record_transaction(method: String, acquirer_id: String, target_id: String, price: float, transferred: Dictionary) -> Dictionary:
     var entry := {"id": next_id, "method": method, "acquirer_id": acquirer_id, "target_id": target_id, "price": price, "transferred": transferred.duplicate(true), "timestamp": Time.get_unix_time_from_system()}
