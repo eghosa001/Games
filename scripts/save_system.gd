@@ -45,6 +45,17 @@ static func load_game() -> Dictionary:
     if source == "backup": state["recovery"] = {"source": "backup", "recovered_at": Time.get_datetime_string_from_system(true)}
     var game_state = _game_state()
     if game_state != null: game_state.restore(state)
+
+    # Rehydrate the runtime BranchController from canonical branch records.
+    # Loading must update the live operating projection as well as GameState;
+    # otherwise a loaded branch would remain at its scene defaults until restart.
+    _restore_branch_controller(game_state)
+
+    # Rehydrate main.gd's remaining compatibility business fields from the
+    # canonical businesses. The scalar fields are transitional; GameState keeps
+    # the persistent business record authoritative.
+    _restore_legacy_business_projection(state)
+
     # The canonical save stores employees as a roster dictionary. main.gd is
     # still a transitional typed-int consumer, so expose only the legacy count
     # in the returned compatibility payload while keeping GameState canonical.
@@ -53,6 +64,32 @@ static func load_game() -> Dictionary:
         var records = employee_state.get("records", {})
         state["employees"] = int(records.size()) if records is Dictionary else int(state.get("legacy", {}).get("employee_count", 0))
     return state
+
+static func _restore_branch_controller(game_state) -> void:
+    var tree = Engine.get_main_loop()
+    if tree == null: return
+    var root = tree.get_root()
+    if root == null: return
+    var controller = root.get_node_or_null("Main/BranchController")
+    if controller == null: return
+    if game_state != null and game_state.has_state():
+        var saved = game_state.get_value(["branches"], {})
+        if saved is Dictionary and not saved.is_empty():
+            controller.branches.restore_from_game_state(game_state)
+
+static func _restore_legacy_business_projection(state: Dictionary) -> void:
+    var businesses = state.get("businesses", {})
+    if not (businesses is Dictionary): return
+    var business = businesses.get("renew_goods", {})
+    if not (business is Dictionary): return
+    # These top-level keys are consumed only by transitional main.gd runtime
+    # fields. The durable values remain under GameState.businesses. Preserve
+    # missing fields by leaving them absent so older saves can use their defaults.
+    state["business_open"] = bool(business.get("open", false))
+    state["capacity_level"] = int(business.get("capacity_level", 1))
+    state["marketing_level"] = int(business.get("marketing_level", 0))
+    state["player_price"] = int(business.get("price", 110))
+    state["finished_goods"] = int(business.get("finished_goods", 0))
 
 static func _read_dictionary(path: String) -> Dictionary:
     if not FileAccess.file_exists(path): return {}
