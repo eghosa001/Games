@@ -28,6 +28,7 @@ RenewResearchSystem="*res://scripts/research_system.gd"
 RenewWorldEventSystem="*res://scripts/world_event_system.gd"
 RenewEconomicCycleSystem="*res://scripts/economic_cycle_system.gd"
 RenewGlobalRankingSystem="*res://scripts/global_ranking_system.gd"
+RenewWorldPowerSystem="*res://scripts/world_power_system.gd"
 
 [display]
 window/size/viewport_width=1280
