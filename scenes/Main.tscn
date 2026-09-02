@@ -1,4 +1,4 @@
-[gd_scene load_steps=31 format=3]
+[gd_scene load_steps=32 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -29,6 +29,7 @@
 [ext_resource path="res://scripts/alliance_ui.gd" type="Script" id="28"]
 [ext_resource path="res://scripts/headquarters_ui.gd" type="Script" id="29"]
 [ext_resource path="res://scripts/collection_ui.gd" type="Script" id="30"]
+[ext_resource path="res://scripts/liveops_ui.gd" type="Script" id="31"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -44,7 +45,7 @@ script = ExtResource("12")
 [node name="RestorationStrategy" type="Node" parent="."]
 script = ExtResource("15")
 [node name="Progression" type="Node" parent="."]
-script = ExtResource("14")
+script = ExtResource("14"]
 [node name="MarketDirector" type="Node" parent="."]
 script = ExtResource("16")
 [node name="EmpireGoals" type="Node" parent="."]
@@ -101,3 +102,6 @@ layer = 58
 [node name="CollectionUI" type="CanvasLayer" parent="."]
 script = ExtResource("30")
 layer = 61
+[node name="LiveOpsUI" type="CanvasLayer" parent="."]
+script = ExtResource("31")
+layer = 62
