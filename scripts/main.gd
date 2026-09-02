@@ -270,7 +270,7 @@ func load_game()->void:
     rivals._normalize(); expansion._normalize_all(); districts.update_unlocks(reputation); message="Game loaded."; _log("SAVE: Previous company, empire and regional state restored.")
 func _log(text:String)->void:
     log_lines.push_front("D%d  %s"%[day,text]); if log_lines.size()>7: log_lines.pop_back()
-func _money(value:int)->String: return "%,d"%value
+func _money(value:int)->String: return str(value)
 func _next_cost()->int:
     if stage=="Operational": return 0
     for s in stages:
