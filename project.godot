@@ -13,6 +13,7 @@ RenewFinanceSystem="*res://scripts/finance_system.gd"
 RenewProductionSystem="*res://scripts/production_system.gd"
 RenewSimulationSystem="*res://scripts/simulation_system.gd"
 RenewContractSystem="*res://scripts/contract_system.gd"
+RenewAllianceSystem="*res://scripts/alliance_system.gd"
 
 [display]
 window/size/viewport_width=1280
