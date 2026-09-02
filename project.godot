@@ -2,6 +2,9 @@
 config/name="RENEW"
 run/main_scene="res://scenes/Main.tscn"
 
+[autoload]
+RenewAutosave="*res://scripts/autosave.gd"
+
 [display]
 window/size/viewport_width=1280
 window/size/viewport_height=720
