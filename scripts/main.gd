@@ -158,41 +158,24 @@ func change_price() -> void:
     message = "Selling price is now $%s." % _money(player_price)
 
 func advance_day() -> void:
-    if not business_open: message = "There is no operating business yet."; return
-    if finished_goods < 5: message = "Produce at least 5 goods before ending the day."; return
-    var rival_price: int = int(rivals.rivals[0]["price"])
-    var alliance := rivals.alliance_bonus(selected_rival)
-    var deal := rivals.deal_bonus(selected_rival)
-    var pressure := rivals.district_pressure(selected_district)
-    var price_factor := clamp(float(rival_price-player_price)/50.0,-0.55,0.75)
-    var district_mult := districts.business_multiplier("Consumer Goods")
-    var demand := clamp(int((55.0*(0.7+price_factor)+reputation*0.7+marketing_level*8+float(alliance["sales"])*40.0+float(deal["sales"])*45.0)*(district_mult-pressure)),5,100)
-    var units := min(demand,finished_goods)
-    var sales: int = units*player_price
-    var wages := employees*180
-    var overhead := 650+capacity_level*100
-    var contract_income := contract_bonus if contract_days > 0 else 0
-    var profit: int = sales+contract_income-wages-overhead
-    cash += profit; finished_goods -= units; last_sales = sales+contract_income; last_profit = profit; total_profit += profit
-    if contract_days > 0: contract_days -= 1
-    if profit >= 0: reputation += 1
-    else: reputation = max(0,reputation-1)
-    if debt > 0:
-        var interest := max(100,int(round(debt*0.012))); cash -= interest; _log("BANK: $%s interest charged." % _money(interest))
-    if loan_payment > 0 and debt > 0:
-        var payment := min(loan_payment,debt)
-        if cash >= payment: cash -= payment; debt -= payment
-        else: _log("BANK: missed loan payment; credit reputation damaged."); reputation = max(0,reputation-2)
-    day += 1; economy.end_market_day()
-    for news in rivals.daily_update(day): _log("RIVAL: " + news)
-    for news in rivals.strategic_update(day,selected_district,reputation): _log("MARKET: " + news)
-    if day % 2 == 0:
-        var event: Dictionary = events.roll(); cash += int(event["cash"]); reputation += int(event["rep"]); _log("EVENT: %s — %s" % [event["title"],event["text"]])
-    var empire = expansion.operate_day(); cash += int(empire["profit"])
-    if int(empire["businesses"]) > 0: _log("EMPIRE: %d businesses generated $%s net." % [empire["businesses"],_money(int(empire["profit"]))])
-    expansion.unlock_from_reputation(reputation); districts.update_unlocks(reputation)
-    _log("DAY %d: %d sold | sales $%s | core profit $%s | district %s." % [day,units,_money(sales),_money(profit),districts.current()["name"]])
-    message = "Day %d closed. %d sold; core profit $%s; empire profit $%s." % [day,units,_money(profit),_money(int(empire["profit"]))]
+    var simulation = get_node_or_null("/root/RenewSimulationSystem")
+    if simulation == null:
+        message = "SimulationSystem is unavailable."; return
+    var result: Dictionary = simulation.advance_day(_simulation_state(), _simulation_context())
+    if not bool(result.get("ok", false)):
+        message = str(result.get("message", "Unable to advance the day.")); return
+    _apply_simulation_state(result["state"])
+
+func _simulation_state() -> Dictionary:
+    return {"cash":cash,"reputation":reputation,"day":day,"debt":debt,"loan_payment":loan_payment,"business_open":business_open,"employees":employees,"capacity_level":capacity_level,"marketing_level":marketing_level,"player_price":player_price,"finished_goods":finished_goods,"last_sales":last_sales,"last_profit":last_profit,"total_profit":total_profit,"relationship":relationship,"selected_rival":selected_rival,"selected_expansion":selected_expansion,"supplier_choice":supplier_choice,"contract_days":contract_days,"contract_bonus":contract_bonus,"acquisition_count":acquisition_count,"transport_level":transport_level,"transport_capacity":transport_capacity,"selected_district":selected_district,"message":message,"log_lines":log_lines.duplicate(true)}
+
+func _apply_simulation_state(state: Dictionary) -> void:
+    for key in ["cash","reputation","day","debt","loan_payment","business_open","employees","capacity_level","marketing_level","player_price","finished_goods","last_sales","last_profit","total_profit","relationship","selected_rival","selected_expansion","supplier_choice","contract_days","contract_bonus","acquisition_count","transport_level","transport_capacity","selected_district","message"]:
+        if state.has(key): set(key, state[key])
+    if state.get("log_lines", []) is Array: log_lines = state["log_lines"].duplicate(true)
+
+func _simulation_context() -> Dictionary:
+    return {"economy":economy,"rivals":rivals,"events":events,"expansion":expansion,"districts":districts}
 
 func cycle_supplier() -> void:
     supplier_choice = (supplier_choice+1)%3; message = "Supplier tier %d selected: lower price tiers trade reliability for savings." % (supplier_choice+1)
@@ -223,7 +206,7 @@ func sign_contract()->void:
     if not business_open: message="Open a business before signing contracts."; return
     if contract_days>0: message="An active customer contract is already running."; return
     if reputation<10: message="Major customers need at least 10 reputation."; return
-    contract_days=5; contract_bonus=900+reputation*20; reputation+=2; _log("CONTRACT: five-day customer supply deal signed for $%s/day."%_money(contract_bonus)); message="Contract signed. Deliver every day for guaranteed revenue."
+    contract_days=5; contract_bonus=900+reputation*20; reputation+=2; _log("CONTRACT: customer supply agreement requested."); message="Contract requested. The SimulationSystem will execute its deliveries."
 func take_loan()->void:
     if debt>0: message="Repay the current loan before borrowing again."; return
     var amount:=20000+reputation*300; debt=amount; loan_payment=int(ceil(float(amount)/20.0)); cash+=amount; _log("BANK: borrowed $%s. Daily repayment is $%s."%[_money(amount),_money(loan_payment)]); message="Loan approved. Growth is faster, but default will hurt your company."
@@ -237,58 +220,33 @@ func repay_loan()->void:
 func buy_expansion()->void:
     expansion.unlock_from_reputation(reputation); var result=expansion.buy(selected_expansion,cash)
     if not result["ok"]: message=result["message"]; return
-    cash-=int(result["cost"]); reputation+=5; _log("EXPANSION: "+result["message"]); message=result["message"]+" It now operates as part of your empire."
+    cash-=int(result["cost"]); reputation+=int(result["rep"]); _log("EXPANSION: %s (-$%s)."%[result["name"],_money(int(result["cost"]))]); message=result["message"]
 func upgrade_expansion()->void:
     var result=expansion.upgrade(selected_expansion,cash)
     if not result["ok"]: message=result["message"]; return
-    cash-=int(result["cost"]); reputation+=2; _log("EMPIRE: "+result["message"]); message=result["message"]
+    cash-=int(result["cost"]); reputation+=int(result["rep"]); _log("EMPIRE UPGRADE: %s."%result["name"]); message=result["message"]
 func acquire_rival_asset()->void:
-    if reputation<25: message="Acquisitions unlock at 25 reputation."; return
-    var rival=rivals.rivals[selected_rival]; var cost: int = 50000+max(0,int(rival["cash"])/12)
-    if cash<cost: message="Acquiring a %s asset requires $%s."%[rival["name"],_money(cost)]; return
-    cash-=cost; acquisition_count+=1; reputation+=8; rival["cash"]=max(0,int(rival["cash"])-cost/2); _log("ACQUISITION: bought a distressed %s asset for $%s."%[rival["name"],_money(cost)]); message="Acquisition complete. A competitor's foothold is now yours."
-func upgrade_transport()->void:
-    var cost: int = 8000*transport_level
-    if cash<cost: message="Transport upgrade requires $%s."%_money(cost); return
-    cash-=cost; transport_level+=1; transport_capacity+=30; reputation+=2; _log("LOGISTICS: fleet upgraded to level %d; capacity %d."%[transport_level,transport_capacity]); message="Transport network upgraded."
-
+    var result=rivals.negotiate_acquisition(selected_rival,cash,reputation)
+    if not result["ok"]: message=result["message"]; return
+    cash-=int(result["cost"]); acquisition_count+=1; reputation+=8; _log("ACQUISITION: strategic foothold purchased for $%s."%_money(int(result["cost"]))); message=result["message"]
 func save_game()->void:
-    var state={"cash":cash,"reputation":reputation,"day":day,"debt":debt,"loan_payment":loan_payment,"owned":owned,"inspected":inspected,"restoration":restoration,"stage":stage,"business_open":business_open,"employees":employees,"capacity_level":capacity_level,"marketing_level":marketing_level,"player_price":player_price,"finished_goods":finished_goods,"last_sales":last_sales,"last_profit":last_profit,"total_profit":total_profit,"contract_days":contract_days,"contract_bonus":contract_bonus,"acquisition_count":acquisition_count,"supplier_choice":supplier_choice,"selected_district":districts.selected,"transport_level":transport_level,"transport_capacity":transport_capacity,"expansion":expansion.properties,"resource_sites":expansion.resource_sites,"management_level":expansion.management_level,"management_overhead":expansion.management_overhead,"rivals":rivals.rivals,"resources":economy.resources}
-    message="Game saved." if SaveSystem.save_game(state) else "Save failed."
+    var state=_state_dict(); message="Game saved." if SaveSystem.save_game(state) else "Save failed."; queue_redraw()
 func load_game()->void:
-    var state:=SaveSystem.load_game()
-    if state.is_empty(): message="No save found."; return
-    for key in ["cash","reputation","day","debt","loan_payment","owned","inspected","restoration","stage","business_open","employees","capacity_level","marketing_level","player_price","finished_goods","last_sales","last_profit","total_profit","contract_days","contract_bonus","acquisition_count","supplier_choice","transport_level","transport_capacity"]:
+    var state=SaveSystem.load_game()
+    if state.is_empty(): message="No save file found."; return
+    _apply_loaded_state(state); message="Game loaded."; queue_redraw()
+func _state_dict()->Dictionary:
+    var state={"cash":cash,"reputation":reputation,"day":day,"debt":debt,"loan_payment":loan_payment,"owned":owned,"inspected":inspected,"restoration":restoration,"stage":stage,"business_open":business_open,"employees":employees,"capacity_level":capacity_level,"marketing_level":marketing_level,"player_price":player_price,"finished_goods":finished_goods,"last_sales":last_sales,"last_profit":last_profit,"total_profit":total_profit,"relationship":relationship,"selected_rival":selected_rival,"selected_expansion":selected_expansion,"supplier_choice":supplier_choice,"contract_days":contract_days,"contract_bonus":contract_bonus,"acquisition_count":acquisition_count,"transport_level":transport_level,"transport_capacity":transport_capacity,"selected_district":selected_district,"message":message,"log_lines":log_lines,"rivals":rivals.rivals,"events":events.state,"expansion":expansion.state,"districts":districts.state}
+    return state
+func _apply_loaded_state(state:Dictionary)->void:
+    for key in ["cash","reputation","day","debt","loan_payment","owned","inspected","restoration","stage","business_open","employees","capacity_level","marketing_level","player_price","finished_goods","last_sales","last_profit","total_profit","relationship","selected_rival","selected_expansion","supplier_choice","contract_days","contract_bonus","acquisition_count","transport_level","transport_capacity","selected_district","message"]:
         if state.has(key): set(key,state[key])
-    if state.has("expansion"): expansion.properties=state["expansion"]
-    if state.has("resource_sites"): expansion.resource_sites=state["resource_sites"]
-    if state.has("management_level"): expansion.management_level=state["management_level"]
-    if state.has("management_overhead"): expansion.management_overhead=state["management_overhead"]
-    if state.has("selected_district"): districts.selected=clamp(int(state["selected_district"]),0,districts.districts.size()-1)
+    if state.has("log_lines"): log_lines=state["log_lines"]
     if state.has("rivals"): rivals.rivals=state["rivals"]
-    if state.has("resources"): economy.resources=state["resources"]
-    rivals._normalize(); expansion._normalize_all(); districts.update_unlocks(reputation); message="Game loaded."; _log("SAVE: Previous company, empire and regional state restored.")
+    if state.has("events"): events.state=state["events"]
+    if state.has("expansion"): expansion.state=state["expansion"]
+    if state.has("districts"): districts.state=state["districts"]
 func _log(text:String)->void:
-    log_lines.push_front("D%d  %s"%[day,text]); if log_lines.size()>7: log_lines.pop_back()
-func _money(value:int)->String: return str(value)
-func _next_cost()->int:
-    if stage=="Operational": return 0
-    for s in stages:
-        if s[0]==stage:
-            var idx:=stages.find(s)+1
-            if idx<stages.size(): return stages[idx][2]
-    return 0
-
-func _draw()->void:
-    draw_rect(Rect2(0,0,1280,720),Color("0c1218")); draw_rect(Rect2(0,0,1280,64),Color("17232d"))
-    draw_string(ThemeDB.fallback_font,Vector2(28,41),"RENEW",HORIZONTAL_ALIGNMENT_LEFT,-1,30,Color.WHITE)
-    draw_string(ThemeDB.fallback_font,Vector2(160,39),"DAY %d"%day,HORIZONTAL_ALIGNMENT_LEFT,-1,18,Color("9fb3c8"))
-    draw_string(ThemeDB.fallback_font,Vector2(270,39),"CASH $%s"%_money(cash),HORIZONTAL_ALIGNMENT_LEFT,-1,18,Color("8ee6a8"))
-    draw_string(ThemeDB.fallback_font,Vector2(500,39),"REP %d"%reputation,HORIZONTAL_ALIGNMENT_LEFT,-1,18,Color("f2d27a"))
-    draw_string(ThemeDB.fallback_font,Vector2(620,39),"DEBT $%s"%_money(debt),HORIZONTAL_ALIGNMENT_LEFT,-1,18,Color("ffad8f"))
-    draw_string(ThemeDB.fallback_font,Vector2(790,39),"PROFIT $%s"%_money(total_profit),HORIZONTAL_ALIGNMENT_LEFT,-1,18,Color("b7d7ff"))
-    draw_rect(Rect2(25,82,390,270),Color("18242e"),true); draw_string(ThemeDB.fallback_font,Vector2(45,112),"RESTORATION",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("7891a5")); draw_string(ThemeDB.fallback_font,Vector2(45,146),"OLD WAREHOUSE",HORIZONTAL_ALIGNMENT_LEFT,-1,25,Color.WHITE); draw_string(ThemeDB.fallback_font,Vector2(45,176),stage,HORIZONTAL_ALIGNMENT_LEFT,-1,21,Color("8ee6a8")); draw_rect(Rect2(45,192,330,14),Color("293945"),true); draw_rect(Rect2(45,192,330.0*restoration/100.0,14),Color("62c97d"),true); draw_string(ThemeDB.fallback_font,Vector2(45,229),"%d%% restored"%restoration,HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color.WHITE); draw_string(ThemeDB.fallback_font,Vector2(45,258),"Next stage: $%s"%_money(_next_cost()),HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("f2d27a")); draw_string(ThemeDB.fallback_font,Vector2(45,292),"I inspect  A acquire  R restore  O open",HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("c6d0d8")); draw_string(ThemeDB.fallback_font,Vector2(45,318),"The building improves as you invest in it.",HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("aab8c3"))
-    draw_rect(Rect2(435,82,390,270),Color("18242e"),true); draw_string(ThemeDB.fallback_font,Vector2(455,112),"RENEW GOODS",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("7891a5")); draw_string(ThemeDB.fallback_font,Vector2(455,145),"EMPLOYEES %d   CAPACITY %d"%[employees,capacity_level],HORIZONTAL_ALIGNMENT_LEFT,-1,17,Color.WHITE); draw_string(ThemeDB.fallback_font,Vector2(455,174),"GOODS %d   PRICE $%d"%[finished_goods,player_price],HORIZONTAL_ALIGNMENT_LEFT,-1,17,Color("8ee6a8")); draw_string(ThemeDB.fallback_font,Vector2(455,203),"MARKETING %d"%marketing_level,HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("b7d7ff")); draw_string(ThemeDB.fallback_font,Vector2(455,234),"B buy inputs  T supplier  P price",HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("c6d0d8")); draw_string(ThemeDB.fallback_font,Vector2(455,257),"B produce  H hire  U capacity  M marketing",HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("c6d0d8")); draw_string(ThemeDB.fallback_font,Vector2(455,280),"N end day  K contract  J loan  V repay",HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("c6d0d8")); draw_string(ThemeDB.fallback_font,Vector2(455,303),"Contract: %d days | $%s/day"%[contract_days,_money(contract_bonus)],HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("f2d27a")); draw_string(ThemeDB.fallback_font,Vector2(455,326),"Last P&L: $%s"%_money(last_profit),HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color.WHITE)
-    draw_rect(Rect2(845,82,410,270),Color("18242e"),true); draw_string(ThemeDB.fallback_font,Vector2(865,112),"REGION & COMPETITION",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("7891a5")); var r=rivals.rivals[selected_rival]; draw_string(ThemeDB.fallback_font,Vector2(865,143),"[%d] %s"%[selected_rival+1,r["name"]],HORIZONTAL_ALIGNMENT_LEFT,-1,21,Color.WHITE); draw_string(ThemeDB.fallback_font,Vector2(865,171),"Price $%d | Relationship %d"%[r["price"],r["relationship"]],HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("f2d27a")); draw_string(ThemeDB.fallback_font,Vector2(865,198),"1-3 select  L improve  C alliance",HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("c6d0d8")); var d=districts.current(); draw_string(ThemeDB.fallback_font,Vector2(865,228),"District: %s"%d["name"],HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("8ee6a8")); draw_string(ThemeDB.fallback_font,Vector2(865,252),"Demand %.2fx | Logistics %.2fx"%[d["demand"],d["logistics"]],HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("b7d7ff")); draw_string(ThemeDB.fallback_font,Vector2(865,274),"Rival pressure %.0f%% | Supplier pressure %d"%[rivals.district_pressure(selected_district)*100.0,rivals.supplier_pressure(selected_district)],HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("ffad8f")); draw_string(ThemeDB.fallback_font,Vector2(865,298),"TAB district | 1-3 rival | 7-9 business",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("c6d0d8")); draw_string(ThemeDB.fallback_font,Vector2(865,326),"Deal: %s (%d days) | Fleet L%d"%[r["deal"],r["deal_days"],transport_level],HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("f2d27a"))
-    draw_rect(Rect2(25,375,800,315),Color("111b23"),true); draw_string(ThemeDB.fallback_font,Vector2(45,404),"ACTIVITY / MARKET",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("7891a5")); draw_string(ThemeDB.fallback_font,Vector2(45,432),"Materials $%d   Packaging $%d   Fuel $%d"%[economy.resources["materials"]["price"],economy.resources["packaging"]["price"],economy.resources["fuel"]["price"]],HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color.WHITE); draw_string(ThemeDB.fallback_font,Vector2(45,457),"Supplier tier %d | Debt payment $%s/day"%[supplier_choice+1,_money(loan_payment)],HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("b7d7ff")); for i in range(log_lines.size()): draw_string(ThemeDB.fallback_font,Vector2(45,490+i*27),log_lines[i],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("aab8c3"))
-    draw_rect(Rect2(845,375,410,315),Color("111b23"),true); draw_string(ThemeDB.fallback_font,Vector2(865,405),"CEO STATUS",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("7891a5")); draw_string(ThemeDB.fallback_font,Vector2(865,438),message,HORIZONTAL_ALIGNMENT_LEFT,365,15,Color.WHITE); draw_string(ThemeDB.fallback_font,Vector2(865,493),"F5 save    F9 load",HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("f2d27a")); draw_string(ThemeDB.fallback_font,Vector2(865,530),"Core: RESTORE → BUSINESS → PROFIT",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("8ee6a8")); draw_string(ThemeDB.fallback_font,Vector2(865,556),"REGION → LOGISTICS → RESOURCES → EMPIRE",HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("8ee6a8")); draw_string(ThemeDB.fallback_font,Vector2(865,610),"Deals: L alliance | C alliance offer",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("f2d27a")); draw_string(ThemeDB.fallback_font,Vector2(865,636),"RENEW: rebuild the world you eventually control.",HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("aab8c3"))
+    log_lines.append(text)
+    if log_lines.size()>100: log_lines.pop_front()
+func _money(value:int)->String: return "%d"%value
