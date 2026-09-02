@@ -1,7 +1,10 @@
 extends Node2D
 
 # RENEW V1 persistence bridge for systems added after the original save format.
+# This remains separate from the core save so newer systems can evolve without
+# invalidating an older company save.
 const SAVE_PATH := "user://renew_empire_state.json"
+const BACKUP_PATH := "user://renew_empire_state.backup.json"
 var parent
 var last_day := 0
 
@@ -53,21 +56,33 @@ func _state() -> Dictionary:
 func _save_extended_state(log_result: bool) -> void:
     if parent == null:
         return
-    var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+    var json := JSON.stringify(_state())
+    var temp_path := "user://renew_empire_state.tmp.json"
+    var file := FileAccess.open(temp_path, FileAccess.WRITE)
     if file == null:
         return
-    file.store_string(JSON.stringify(_state()))
+    file.store_string(json)
+    file.flush()
+    file = null
+
+    if FileAccess.file_exists(SAVE_PATH):
+        if FileAccess.file_exists(BACKUP_PATH):
+            DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP_PATH))
+        if FileAccess.copy(SAVE_PATH, BACKUP_PATH) != OK:
+            return
+        DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+    if DirAccess.rename_absolute(ProjectSettings.globalize_path(temp_path), ProjectSettings.globalize_path(SAVE_PATH)) != OK:
+        return
     if log_result:
         parent._log("SAVE: extended empire state synchronized.")
 
 func _load_extended_state() -> void:
-    if not FileAccess.file_exists(SAVE_PATH):
+    if parent == null:
         return
-    var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
-    if file == null:
-        return
-    var state = JSON.parse_string(file.get_as_text())
-    if not state is Dictionary:
+    var state = _read_state(SAVE_PATH)
+    if state.is_empty():
+        state = _read_state(BACKUP_PATH)
+    if state.is_empty():
         return
 
     var supply = parent.get_node_or_null("SupplyChainController")
@@ -96,6 +111,16 @@ func _load_extended_state() -> void:
         region.regions.rival_presence = region_state.get("rival_presence", region.regions.rival_presence).duplicate(true)
         region.regions.infrastructure = region_state.get("infrastructure", region.regions.infrastructure).duplicate(true)
         region.regions._normalize()
+        parent.selected_district = int(region.regions.selected)
 
     parent._log("LOAD: extended empire state restored.")
     last_day = int(parent.day)
+
+func _read_state(path: String) -> Dictionary:
+    if not FileAccess.file_exists(path):
+        return {}
+    var file := FileAccess.open(path, FileAccess.READ)
+    if file == null:
+        return {}
+    var parsed = JSON.parse_string(file.get_as_text())
+    return parsed if parsed is Dictionary else {}
