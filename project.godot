@@ -5,6 +5,7 @@ run/main_scene="res://scenes/Main.tscn"
 
 [autoload]
 RenewAutosave="*res://scripts/autosave.gd"
+RenewGameState="*res://scripts/game_state.gd"
 
 [display]
 window/size/viewport_width=1280
