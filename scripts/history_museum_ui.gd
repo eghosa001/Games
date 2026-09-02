@@ -1,14 +1,14 @@
 extends CanvasLayer
 
-## In-game corporate archives / museum UI for RENEW.
-## Opens with Y and exposes the permanent HistorySystem as a readable timeline.
-
+## Visual corporate museum and legacy gallery. Opens with Y.
 var panel: PanelContainer
 var summary_label: Label
 var content: VBoxContainer
 var tabs: HBoxContainer
-var active_tab := "timeline"
+var active_tab := "museum"
 var visible_archive := false
+
+const TABS := {"museum":"Museum Gallery", "timeline":"Timeline", "people":"Historic People", "business":"Business History", "innovation":"Technology", "legacy":"Legacy"}
 
 func _ready() -> void:
     layer = 60
@@ -18,194 +18,104 @@ func _ready() -> void:
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo:
         if event.keycode == KEY_Y:
-            toggle_archive()
-            get_viewport().set_input_as_handled()
+            toggle_archive(); get_viewport().set_input_as_handled()
         elif event.keycode == KEY_ESCAPE and visible_archive:
-            toggle_archive()
-            get_viewport().set_input_as_handled()
+            toggle_archive(); get_viewport().set_input_as_handled()
 
 func toggle_archive() -> void:
     _set_visible(not visible_archive)
-    if visible_archive:
-        _refresh()
+    if visible_archive: _refresh()
 
 func _set_visible(value: bool) -> void:
     visible_archive = value
-    if is_instance_valid(panel):
-        panel.visible = value
+    if is_instance_valid(panel): panel.visible = value
 
 func _build_ui() -> void:
-    panel = PanelContainer.new()
-    panel.name = "CorporateArchives"
-    panel.set_anchors_preset(Control.PRESET_CENTER)
-    panel.position = Vector2(140, 70)
-    panel.size = Vector2(1000, 580)
-    panel.custom_minimum_size = Vector2(1000, 580)
-    add_child(panel)
-
+    panel = PanelContainer.new(); panel.name = "CorporateMuseum"; panel.position = Vector2(90, 45); panel.size = Vector2(1100, 630); panel.custom_minimum_size = Vector2(1100, 630); add_child(panel)
     var margin := MarginContainer.new()
-    margin.add_theme_constant_override("margin_left", 24)
-    margin.add_theme_constant_override("margin_right", 24)
-    margin.add_theme_constant_override("margin_top", 20)
-    margin.add_theme_constant_override("margin_bottom", 20)
+    for side in ["left", "right", "top", "bottom"]: margin.add_theme_constant_override("margin_" + side, 20)
     panel.add_child(margin)
-
-    var root := VBoxContainer.new()
-    root.add_theme_constant_override("separation", 12)
-    margin.add_child(root)
-
-    var header := HBoxContainer.new()
-    root.add_child(header)
-    var title := Label.new()
-    title.text = "RENEW CORPORATE ARCHIVES"
-    title.add_theme_font_size_override("font_size", 26)
-    header.add_child(title)
-    var spacer := Control.new()
-    spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    header.add_child(spacer)
-    var close := Button.new()
-    close.text = "Close  [Esc]"
-    close.pressed.connect(toggle_archive)
-    header.add_child(close)
-
-    summary_label = Label.new()
-    summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    root.add_child(summary_label)
-
-    tabs = HBoxContainer.new()
-    root.add_child(tabs)
-    _add_tab("timeline", "Corporate Timeline")
-    _add_tab("notable", "Historic Events")
-    _add_tab("museum", "Museum Collection")
-    _add_tab("legacy", "Company Legacy")
-
-    var scroll := ScrollContainer.new()
-    scroll.name = "ArchiveScroll"
-    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-    root.add_child(scroll)
-
-    content = VBoxContainer.new()
-    content.name = "ArchiveContent"
-    content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    content.add_theme_constant_override("separation", 8)
-    scroll.add_child(content)
+    var root := VBoxContainer.new(); root.add_theme_constant_override("separation", 10); margin.add_child(root)
+    var header := HBoxContainer.new(); root.add_child(header)
+    var title := Label.new(); title.text = "RENEW CORPORATE MUSEUM"; title.add_theme_font_size_override("font_size", 28); header.add_child(title)
+    var spacer := Control.new(); spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL; header.add_child(spacer)
+    var close := Button.new(); close.text = "Close [Esc]"; close.pressed.connect(toggle_archive); header.add_child(close)
+    summary_label = Label.new(); summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; root.add_child(summary_label)
+    tabs = HBoxContainer.new(); root.add_child(tabs)
+    for id in TABS.keys(): _add_tab(id, TABS[id])
+    var scroll := ScrollContainer.new(); scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; root.add_child(scroll)
+    content = VBoxContainer.new(); content.size_flags_horizontal = Control.SIZE_EXPAND_FILL; content.add_theme_constant_override("separation", 9); scroll.add_child(content)
 
 func _add_tab(id: String, label_text: String) -> void:
-    var button := Button.new()
-    button.text = label_text
-    button.toggle_mode = true
-    button.button_pressed = id == active_tab
-    button.pressed.connect(_select_tab.bind(id))
-    tabs.add_child(button)
+    var button := Button.new(); button.text = label_text; button.toggle_mode = true; button.button_pressed = id == active_tab; button.pressed.connect(_select_tab.bind(id)); tabs.add_child(button)
 
 func _select_tab(id: String) -> void:
     active_tab = id
     for child in tabs.get_children():
-        if child is Button:
-            child.button_pressed = child.text == _tab_label(id)
+        if child is Button: child.button_pressed = child.text == TABS[id]
     _refresh()
 
-func _tab_label(id: String) -> String:
-    match id:
-        "timeline": return "Corporate Timeline"
-        "notable": return "Historic Events"
-        "museum": return "Museum Collection"
-        "legacy": return "Company Legacy"
-    return ""
-
-func _history():
-    return get_node_or_null("/root/RenewHistorySystem")
+func _legacy(): return get_node_or_null("/root/RenewCorporateLegacy")
+func _hq(): return get_node_or_null("/root/RenewHeadquartersSystem")
 
 func _refresh() -> void:
-    var history = _history()
-    if history == null:
-        summary_label.text = "Corporate archives are unavailable."
-        return
-    var summary: Dictionary = history.get_legacy_summary()
-    summary_label.text = "Founded Day %d  •  %d historic records  •  %d museum pieces  •  %d years recorded\nPress Y to close the archives." % [int(summary.get("founded_day", 1)), int(summary.get("timeline_length", 0)), int(summary.get("museum_items", 0)), int(summary.get("years_recorded", 1))]
-
-    for child in content.get_children():
-        child.queue_free()
-
+    var legacy = _legacy()
+    if legacy == null: summary_label.text = "Corporate Museum system unavailable."; return
+    var s: Dictionary = legacy.summary(); var hq = _hq(); var hq_text := "HQ: unavailable"
+    if hq != null: hq_text = "HQ: %s" % hq.get_stage()
+    summary_label.text = "%s  •  %s  •  %d preserved artifacts\nThe museum permanently records the company's decisions, people, victories and failures." % [hq_text, "Museum open" if (hq != null and hq.museum_available()) else "Museum requires Corporate Center", int(s.get("total", 0))]
+    for child in content.get_children(): child.queue_free()
     match active_tab:
-        "timeline": _render_events(history.get_chronological_timeline(), false)
-        "notable": _render_events(history.get_notable_events(100), false)
-        "museum": _render_events(history.get_museum_collection(), true)
-        "legacy": _render_legacy(summary)
+        "museum": _render_gallery(legacy)
+        "timeline": _render_items(legacy.get_collection(), "Corporate Timeline")
+        "people": _render_items(legacy.list_category("employees"), "Historic Employees")
+        "business": _render_business(legacy)
+        "innovation": _render_items(legacy.list_category("technologies"), "Technologies & Discoveries")
+        "legacy": _render_legacy(s)
 
-func _render_events(events: Array, museum_mode: bool) -> void:
-    if events.is_empty():
-        var empty := Label.new()
-        empty.text = "No historic records yet. Your next major decision will become part of the company's story."
-        empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        content.add_child(empty)
+func _render_gallery(legacy) -> void:
+    var hq = _hq()
+    if hq != null and not hq.museum_available():
+        _empty("The Corporate Museum unlocks when the Headquarters reaches Corporate Center and the Museum area is constructed.")
+        _render_items(legacy.list_category("founding"), "Founding & Headquarters")
         return
+    for category in ["founding", "products", "employees", "contracts", "acquisitions", "failures", "awards", "rankings", "technologies", "alliances", "crisis_recoveries"]:
+        var items: Array = legacy.list_category(category)
+        if items.is_empty(): continue
+        var heading := Label.new(); heading.text = _category_title(category); heading.add_theme_font_size_override("font_size", 19); content.add_child(heading); _render_items(items, "")
 
-    for event in events:
-        var card := PanelContainer.new()
-        card.custom_minimum_size = Vector2(0, 86 if museum_mode else 72)
-        content.add_child(card)
-        var box := VBoxContainer.new()
-        box.add_theme_constant_override("separation", 3)
-        card.add_child(box)
+func _render_business(legacy) -> void:
+    for category in ["founding", "products", "contracts", "acquisitions", "failures", "alliances", "crisis_recoveries"]:
+        var items: Array = legacy.list_category(category)
+        if not items.is_empty():
+            var heading := Label.new(); heading.text = _category_title(category); heading.add_theme_font_size_override("font_size", 19); content.add_child(heading); _render_items(items, "")
 
-        var heading := Label.new()
-        var day := int(event.get("day", 1))
-        var event_type := str(event.get("type", "general")).replace("_", " ").capitalize()
-        var era := str(event.get("era", ""))
-        heading.text = ("Day %d  •  %s  •  %s" % [day, event_type, era]) if museum_mode else ("Day %d  •  %s" % [day, event_type])
-        heading.add_theme_font_size_override("font_size", 15)
-        box.add_child(heading)
-
-        var title := Label.new()
-        title.text = str(event.get("title", "Historic event"))
-        title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        box.add_child(title)
-
-        var details: Dictionary = event.get("details", {})
+func _render_items(items: Array, heading_text: String) -> void:
+    if heading_text != "":
+        var heading := Label.new(); heading.text = heading_text; heading.add_theme_font_size_override("font_size", 20); content.add_child(heading)
+    if items.is_empty(): _empty("No records yet. Major decisions will be preserved here."); return
+    for item in items:
+        var card := PanelContainer.new(); card.custom_minimum_size = Vector2(0, 74); content.add_child(card)
+        var box := VBoxContainer.new(); card.add_child(box)
+        var top := Label.new(); top.text = "Day %d  •  %s" % [int(item.get("day", 1)), _category_title(str(item.get("category", "general")))]; top.add_theme_font_size_override("font_size", 14); box.add_child(top)
+        var title := Label.new(); title.text = str(item.get("title", "Historic artifact")); title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; title.add_theme_font_size_override("font_size", 17); box.add_child(title)
+        var details: Dictionary = item.get("details", {})
         if not details.is_empty():
-            var detail := Label.new()
-            detail.text = _details_text(details)
-            detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-            detail.modulate = Color(0.75, 0.75, 0.75)
-            box.add_child(detail)
+            var detail := Label.new(); detail.text = _details(details); detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; box.add_child(detail)
 
-func _render_legacy(summary: Dictionary) -> void:
-    var rows := [
-        ["Company", str(summary.get("company_name", "RENEW"))],
-        ["Founder", str(summary.get("founder", "Founder"))],
-        ["Founded", "Day %d" % int(summary.get("founded_day", 1))],
-        ["Historic records", str(summary.get("timeline_length", 0))],
-        ["Properties acquired", str(summary.get("properties_acquired", 0))],
-        ["Expansions", str(summary.get("expansions", 0))],
-        ["Strategic alliances", str(summary.get("alliances", 0))],
-        ["Acquisitions / mergers", str(summary.get("acquisitions", 0))],
-        ["Contracts", str(summary.get("contracts", 0))],
-        ["Crises", str(summary.get("crises", 0))],
-        ["Employee milestones", str(summary.get("employees_milestones", 0))]
-    ]
-    for row in rows:
-        var line := HBoxContainer.new()
-        line.custom_minimum_size = Vector2(0, 34)
-        content.add_child(line)
-        var key := Label.new()
-        key.text = str(row[0])
-        key.custom_minimum_size = Vector2(300, 0)
-        line.add_child(key)
-        var value := Label.new()
-        value.text = str(row[1])
-        value.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-        line.add_child(value)
+func _render_legacy(s: Dictionary) -> void:
+    var title := Label.new(); title.text = "THE RENEW LEGACY"; title.add_theme_font_size_override("font_size", 24); content.add_child(title)
+    var text := Label.new(); text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; text.add_theme_font_size_override("font_size", 17)
+    text.text = "A company is remembered for what it built, who built it, the risks it took, the crises it survived and the partnerships it created.\n\nArtifacts: %d\nEmployees remembered: %d\nContracts: %d\nAcquisitions / mergers: %d\nFailed projects: %d\nAwards: %d\nRankings: %d\nTechnologies: %d\nAlliance milestones: %d\nCrisis recoveries: %d" % [int(s.get("total",0)), int(s.get("employees",0)), int(s.get("contracts",0)), int(s.get("acquisitions",0)), int(s.get("failures",0)), int(s.get("awards",0)), int(s.get("rankings",0)), int(s.get("technologies",0)), int(s.get("alliances",0)), int(s.get("crisis_recoveries",0))]
+    content.add_child(text)
 
-    var note := Label.new()
-    note.text = "LEGACY\nEvery major acquisition, alliance, crisis, breakthrough and employee milestone becomes part of RENEW's permanent corporate memory."
-    note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    note.add_theme_font_size_override("font_size", 16)
-    content.add_child(note)
+func _empty(text: String) -> void:
+    var label := Label.new(); label.text = text; label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; content.add_child(label)
 
-func _details_text(details: Dictionary) -> String:
+func _category_title(category: String) -> String:
+    return category.replace("_", " ").capitalize()
+
+func _details(details: Dictionary) -> String:
     var parts: Array[String] = []
-    for key in details.keys():
-        if key == "source_log": continue
-        parts.append("%s: %s" % [str(key).replace("_", " ").capitalize(), str(details[key])])
+    for key in details.keys(): parts.append("%s: %s" % [str(key).replace("_", " ").capitalize(), str(details[key])])
     return "  •  ".join(parts)
