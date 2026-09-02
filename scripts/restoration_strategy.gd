@@ -1,7 +1,5 @@
 extends Node
 
-# Player-facing restoration strategy layer.
-# Changes the economics of the first property without changing the core loop.
 var game: Node
 var selected := "Standard"
 var applied := false
@@ -24,6 +22,10 @@ func choose_standard() -> void:
 
 func choose_premium() -> void:
     _apply("Premium")
+
+func current_plan() -> Dictionary:
+    var plan: Dictionary = plans.get(selected, plans["Standard"])
+    return {"name": selected, "costs": plan["costs"].duplicate(), "final_message": String(plan["final_message"]), "applied": applied}
 
 func _apply(plan_name: String) -> void:
     if game == null:
