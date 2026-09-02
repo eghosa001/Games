@@ -35,8 +35,7 @@ func _input(event:InputEvent)->void:
 
 func select_region(index:int)->void:
     var count:int=regions.regions.size()
-    if count <= 0:
-        return
+    if count <= 0: return
     index=(index%count+count)%count
     var result=regions.select(index,parent.reputation)
     message=result["message"]
@@ -46,51 +45,35 @@ func establish_region()->void:
     var result=regions.establish(regions.selected,parent.cash,parent.reputation)
     message=result["message"]
     if not result["ok"]: return
-    parent.cash-=int(result["cost"])
-    parent.reputation+=3
+    parent.cash-=int(result["cost"]); parent.reputation+=3
     parent._log("REGIONAL EXPANSION: "+message+" (-$%s)."%_money(int(result["cost"])))
 
 func upgrade_infrastructure()->void:
     var result=regions.build_infrastructure(regions.selected,parent.cash,parent.reputation)
     message=result["message"]
     if not result["ok"]: return
-    parent.cash-=int(result["cost"])
-    parent.reputation+=2
+    parent.cash-=int(result["cost"]); parent.reputation+=2
     parent._log("REGIONAL INFRASTRUCTURE: "+message+" (-$%s)."%_money(int(result["cost"])))
 
 func establish_trade_route()->void:
-    var origin:int=0
-    var destination:int=regions.selected
-    if destination==origin:
-        message="Select an established region other than the starter region."
-        return
+    var origin:int=0; var destination:int=regions.selected
+    if destination==origin: message="Select an established region other than the starter region."; return
     var result=regions.establish_trade_route(origin,destination,parent.cash,parent.reputation)
     message=result["message"]
     if not result["ok"]: return
-    parent.cash-=int(result["cost"])
-    parent.reputation+=4
+    parent.cash-=int(result["cost"]); parent.reputation+=4
     parent._log("TRADE CORRIDOR: "+message+" (-$%s)."%_money(int(result["cost"])))
 
 func dispatch_goods()->void:
-    var destination:int=regions.selected
-    var origin:int=0
-    if destination==origin:
-        message="The starter region is already local; choose another region first."
-        return
+    var destination:int=regions.selected; var origin:int=0
+    if destination==origin: message="The starter region is already local; choose another region first."; return
     var amount:int=min(10,parent.finished_goods)
-    if amount<=0:
-        message="Produce goods before dispatching a regional shipment."
-        return
+    if amount<=0: message="Produce goods before dispatching a regional shipment."; return
     var cost:int=int(round(regions.logistics_cost(amount*45.0,origin,destination)))
-    if parent.transport_capacity<amount:
-        message="Fleet capacity is too low. Upgrade transport before shipping."
-        return
-    if parent.cash<cost:
-        message="Regional freight requires $%s."%_money(cost)
-        return
-    parent.cash-=cost
-    parent.finished_goods-=amount
-    parent.reputation+=1
+    if parent.transport_capacity<amount: message="Fleet capacity is too low. Upgrade transport before shipping."; return
+    if parent.cash<cost: message="Regional freight requires $%s."%_money(cost); return
+    parent.cash-=cost; parent.finished_goods-=amount; parent.reputation+=1
+    regions.local_reputation[destination] = clamp(float(regions.local_reputation[destination]) + 0.8, -100.0, 100.0)
     parent._log("SHIPMENT: %d goods sent to %s for $%s freight."%[amount,regions.current()["name"],_money(cost)])
     message="Shipment delivered. Regional market is now stocked."
 
@@ -99,12 +82,16 @@ func branch_income()->int:
     for i in range(regions.regions.size()):
         if regions.player_presence[i]<=0: continue
         var r=regions.regions[i]
-        var income:int=int(round(850.0*float(r["demand"])*float(regions.market_levels[i])))
+        var market=float(regions.regional_market_size(i))
+        var labor=float(regions.labor_cost(i))
+        var market_fit:=1.0 if parent.expansion.properties.size() == 0 else 1.0
+        var income:int=int(round(850.0*float(r["demand"])*market*market_fit))
         income+=int(regions.infrastructure[i])*250
         income+=int(round(income*regions.trade_route_bonus(i)))
-        income-=int(round(220.0*float(r["labor"])))
+        income+=int(round(income*max(-0.15,min(0.20,regions.local_reputation_score(i)/500.0))))
+        income-=int(round(220.0*labor))
         income-=int(round(140.0*float(r["logistics"])))
-        income-=int(regions.rival_presence[i])*90
+        income-=int(regions.rival_presence[i]*90.0*float(r["competition"]))
         total+=max(0,income)
     return total
 
@@ -113,22 +100,22 @@ func apply_branch_income()->int:
     if income>0: parent.cash+=income
     return income
 
-func _money(value:int)->String:
-    return String.num_int64(value)
+func _money(value:int)->String: return String.num_int64(value)
 
 func _draw()->void:
     if parent==null: return
-    draw_rect(Rect2(845,80,410,285),Color("18242e"),true)
+    draw_rect(Rect2(845,80,410,330),Color("18242e"),true)
     draw_string(ThemeDB.fallback_font,Vector2(865,108),"WORLD REGIONS",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("7891a5"))
-    var r=regions.current()
-    var unlocked=bool(r.get("unlocked",false))
+    var r=regions.current(); var unlocked=bool(r.get("unlocked",false))
     draw_string(ThemeDB.fallback_font,Vector2(865,138),"F3/F4  %s"%r["name"],HORIZONTAL_ALIGNMENT_LEFT,-1,20,Color.WHITE)
     draw_string(ThemeDB.fallback_font,Vector2(865,165),"Tier %d | Unlock REP %d | %s"%[r["tier"],r["rep"],"OPEN" if unlocked else "LOCKED"],HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("8ee6a8") if unlocked else Color("ffad8f"))
-    draw_string(ThemeDB.fallback_font,Vector2(865,190),"Demand %.2fx | Market %.2fx"%[r["demand"],regions.market_levels[regions.selected]],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("b7d7ff"))
-    draw_string(ThemeDB.fallback_font,Vector2(865,214),"Logistics %.2fx | Labor %.2fx"%[r["logistics"],r["labor"]],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("b7d7ff"))
-    draw_string(ThemeDB.fallback_font,Vector2(865,238),"Competition %.2fx | Rivals %d"%[r["competition"],regions.rival_presence[regions.selected]],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("ffad8f"))
-    draw_string(ThemeDB.fallback_font,Vector2(865,262),"Special: %s"%r["special"],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("f2d27a"))
-    draw_string(ThemeDB.fallback_font,Vector2(865,286),"Industry: %s | Resource: %s"%[r["industry"],r["resource"]],HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("c6d0d8"))
-    draw_string(ThemeDB.fallback_font,Vector2(865,310),"Presence %d | Infrastructure L%d"%[regions.player_presence[regions.selected],regions.infrastructure[regions.selected]],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color.WHITE)
-    draw_string(ThemeDB.fallback_font,Vector2(865,334),"Trade bonus %.0f%% | F10 connect"%[regions.trade_route_bonus(regions.selected)*100.0],HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("8ee6a8"))
-    draw_string(ThemeDB.fallback_font,Vector2(865,353),message,HORIZONTAL_ALIGNMENT_LEFT,370,11,Color("8ee6a8"))
+    draw_string(ThemeDB.fallback_font,Vector2(865,190),"Population %s | Market %.2fx"%[String.num_int64(int(r["population"])),regions.regional_market_size()],HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("b7d7ff"))
+    draw_string(ThemeDB.fallback_font,Vector2(865,213),"Demand %.2fx | Labor %.2fx | Wage %.2fx"%[r["demand"],r["labor_supply"],r["regional_wage"]],HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("b7d7ff"))
+    draw_string(ThemeDB.fallback_font,Vector2(865,236),"Logistics %.2fx | Competition %.2fx | Rivals %d"%[r["logistics"],r["competition"],r["rival_presence"]],HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("ffad8f"))
+    draw_string(ThemeDB.fallback_font,Vector2(865,259),"Local REP %.0f | Businesses %d"%[r["local_reputation"],r["business_count"]],HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("8ee6a8"))
+    draw_string(ThemeDB.fallback_font,Vector2(865,282),"Special: %s"%r["special"],HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("f2d27a"))
+    draw_string(ThemeDB.fallback_font,Vector2(865,305),"Industry: %s | Resource: %s"%[r["industry"],r["resource"]],HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("c6d0d8"))
+    draw_string(ThemeDB.fallback_font,Vector2(865,328),"Presence %d | Infrastructure L%d"%[r["player_presence"],r["infrastructure"]],HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color.WHITE)
+    draw_string(ThemeDB.fallback_font,Vector2(865,350),"Trade %.0f%% | Labor availability %.2fx"%[regions.trade_route_bonus(regions.selected)*100.0,regions.labor_availability()],HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("8ee6a8"))
+    draw_string(ThemeDB.fallback_font,Vector2(865,373),message,HORIZONTAL_ALIGNMENT_LEFT,370,11,Color("8ee6a8"))
+    draw_string(ThemeDB.fallback_font,Vector2(865,395),"Regional businesses respond to population, wages, demand and competition.",HORIZONTAL_ALIGNMENT_LEFT,370,10,Color("c6d0d8"))
