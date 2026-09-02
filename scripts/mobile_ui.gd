@@ -34,7 +34,6 @@ func _build_ui() -> void:
     root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     root.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(root)
-
     var top := ColorRect.new()
     top.color = Color("101820")
     top.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -42,7 +41,6 @@ func _build_ui() -> void:
     top.size.y = 54
     top.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(top)
-
     tabs = HBoxContainer.new()
     tabs.position = Vector2(12, 12)
     tabs.size = Vector2(720, 46)
@@ -57,7 +55,6 @@ func _build_ui() -> void:
         button.mouse_filter = Control.MOUSE_FILTER_STOP
         button.pressed.connect(_set_tab.bind(i))
         tabs.add_child(button)
-
     status_label = Label.new()
     status_label.position = Vector2(760, 17)
     status_label.size = Vector2(500, 44)
@@ -72,7 +69,6 @@ func _build_ui() -> void:
     feedback_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
     feedback_panel.hide()
     root.add_child(feedback_panel)
-
     feedback_label = Label.new()
     feedback_label.position = Vector2(16, 10)
     feedback_label.size = Vector2(688, 72)
@@ -88,7 +84,6 @@ func _build_ui() -> void:
     bottom.size.y = 138
     bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(bottom)
-
     action_scroll = ScrollContainer.new()
     action_scroll.position = Vector2(18, -132)
     action_scroll.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
@@ -98,7 +93,6 @@ func _build_ui() -> void:
     action_scroll.focus_mode = Control.FOCUS_NONE
     action_scroll.mouse_filter = Control.MOUSE_FILTER_STOP
     root.add_child(action_scroll)
-
     actions = GridContainer.new()
     actions.columns = 5
     actions.custom_minimum_size = Vector2(1200, 0)
@@ -132,9 +126,7 @@ func _run_action(label: String, callback: Callable) -> void:
     var before_day := int(parent.day)
     var before_goods := int(parent.finished_goods)
     var before_message := String(parent.message)
-
     callback.call()
-
     var message := String(parent.message)
     if message.is_empty() or message == before_message:
         message = "%s completed." % label
@@ -166,7 +158,7 @@ func _refresh() -> void:
     if parent == null or actions == null:
         return
     _clear_actions()
-    status_label.text = "$%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day))]
+    status_label.text = "$%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day)]
     match active_tab:
         0:
             var restoration_strategy = get_node_or_null("../RestorationStrategy")
