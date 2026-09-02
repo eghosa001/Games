@@ -156,6 +156,7 @@ func _refresh() -> void:
                 _button("PREVIOUS REGION", region_controller.select_region.bind(region_controller.regions.selected - 1))
                 _button("ESTABLISH", region_controller.establish_region)
                 _button("INFRASTRUCTURE", region_controller.upgrade_infrastructure)
+                _button("TRADE CORRIDOR", region_controller.establish_trade_route)
                 _button("DISPATCH GOODS", region_controller.dispatch_goods)
             var missions = get_node_or_null("../WorldMissions")
             if missions != null:
