@@ -20,12 +20,16 @@ func _ready() -> void:
     _refresh()
 
 func _process(_delta: float) -> void:
-    if game == null: return
+    if game == null:
+        return
     _refresh()
 
 func _build() -> void:
     var root := Control.new()
     root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    # Critical on mobile: the full-screen overlay must never capture touches
+    # outside its actual tutorial button.
+    root.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(root)
 
     panel = Panel.new()
@@ -37,18 +41,21 @@ func _build() -> void:
     title_label = Label.new()
     title_label.position = Vector2(18, 12)
     title_label.size = Vector2(324, 28)
+    title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     title_label.add_theme_font_size_override("font_size", 16)
     panel.add_child(title_label)
 
     progress_label = Label.new()
     progress_label.position = Vector2(18, 40)
     progress_label.size = Vector2(324, 20)
+    progress_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     progress_label.add_theme_font_size_override("font_size", 11)
     panel.add_child(progress_label)
 
     body_label = Label.new()
     body_label.position = Vector2(18, 66)
     body_label.size = Vector2(324, 48)
+    body_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     body_label.add_theme_font_size_override("font_size", 12)
     panel.add_child(body_label)
@@ -56,6 +63,7 @@ func _build() -> void:
     hint_label = Label.new()
     hint_label.position = Vector2(18, 112)
     hint_label.size = Vector2(200, 24)
+    hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     hint_label.add_theme_font_size_override("font_size", 11)
     panel.add_child(hint_label)
 
@@ -73,14 +81,16 @@ func _build() -> void:
     collapsed_button.position = Vector2(24, 78)
     collapsed_button.size = Vector2(120, 40)
     collapsed_button.focus_mode = Control.FOCUS_NONE
+    collapsed_button.mouse_filter = Control.MOUSE_FILTER_STOP
     collapsed_button.pressed.connect(_expand)
     collapsed_button.hide()
     root.add_child(collapsed_button)
 
 func _refresh() -> void:
-    if collapsed or game == null: return
-    var current := tutorial.current()
-    var step := int(tutorial.step)
+    if collapsed or game == null:
+        return
+    var current: Dictionary = tutorial.current()
+    var step: int = int(tutorial.step)
     if step != last_step:
         last_step = step
     title_label.text = String(current.get("title", "RENEW TUTORIAL"))
@@ -95,9 +105,9 @@ func _dismiss_current() -> void:
     if tutorial.completed:
         _collapse()
         return
-    var action := String(tutorial.current().get("action", ""))
+    var action: String = String(tutorial.current().get("action", ""))
     # If the required action has already happened, advance immediately.
-    var text := tutorial.notify(action, game)
+    var text: String = tutorial.notify(action, game)
     if tutorial.completed:
         title_label.text = "FIRST BUSINESS COMPLETE"
         body_label.text = text
