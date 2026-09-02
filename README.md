@@ -10,19 +10,22 @@ RENEW is an economic restoration and empire-building simulation game. The defini
 
 The active game is a Godot 4.x prototype demonstrating the restoration-to-empire loop:
 
-**Inspect → Acquire → Restore → Open → Operate → Earn → Reinvest → Expand → Control Supply**
+**Inspect → Acquire → Restore → Open → Operate → Earn → Reinvest → Expand → Control Supply → Defend Your Market**
 
 Implemented systems now include:
 - staged visual restoration of the first abandoned warehouse
 - RENEW Goods production, staffing, pricing, marketing and customer contracts
 - dynamic resource prices and supplier reliability choices
-- three NPC corporations with relationships, alliances and acquisition pressure
+- three NPC corporations with relationships, alliances and reactive competitive behavior
+- rivals expanding into districts and increasing local competitive pressure
+- price wars, supplier wars, specialist customer pressure and acquisition approaches
 - loans, repayments, events and competitor reactions
 - three individually playable expansion businesses
 - business-level inventory, quality, staffing, pricing and open/paused operations
 - internal logistics between owned resource sites and businesses
 - owned materials, food and fuel resource sites with production, risk and upgrades
 - headquarters management overhead and upgrades
+- district-based demand, logistics and competition modifiers
 - save/load persistence for the expanded empire state
 
 ### Run it
@@ -47,6 +50,12 @@ Implemented systems now include:
 - **[** — upgrade selected resource site
 - **D** — move internal resources into the selected business
 - **]** — upgrade headquarters management
+- **TAB** — cycle through unlocked districts
+- **BACKSPACE** — upgrade transport fleet
+- **1 / 2 / 3** — select a rival
+- **L** — improve relationship with selected rival
+- **C** — propose alliance
+- **X** — acquire a rival asset when unlocked
 - **F5 / F9** — save / load
 
 ## Development roadmap
@@ -55,4 +64,4 @@ See `Docs/V1_IMPLEMENTATION.md` for the implementation plan and current mileston
 
 ## Design principle
 
-The player should become emotionally attached to businesses because they personally transformed them from neglected assets into valuable operations. Economic competition—not combat—is the primary conflict.
+The player should become emotionally attached to businesses because they personally transformed them from neglected assets into valuable operations. Economic competition—not combat—is the primary conflict. Rivals should react to the player's growth, making expansion feel like entering a living market rather than unlocking static menus.
