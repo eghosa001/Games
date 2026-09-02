@@ -4,18 +4,23 @@ class_name RenewSaveSystem
 const SAVE_PATH := "user://renew_save.json"
 const BACKUP_PATH := "user://renew_save.backup.json"
 const TEMP_PATH := "user://renew_save.tmp.json"
-const SCHEMA_VERSION := 2
+const SCHEMA_VERSION := 3
 
 static func save_game(state: Dictionary) -> bool:
-    var payload := state.duplicate(true)
-    payload["schema_version"] = SCHEMA_VERSION
-    payload["state_version"] = int(payload.get("state_version", 2))
-
-    # Keep the autoloaded GameState synchronized whenever the legacy runtime
-    # save entry point is used. This lets existing gameplay code migrate safely.
+    if state.is_empty():
+        return false
     var game_state = _game_state()
+    var payload := state.duplicate(true)
     if game_state != null:
-        game_state.capture(payload)
+        payload = game_state.capture(payload)
+    payload["schema_version"] = SCHEMA_VERSION
+    payload["state_version"] = SCHEMA_VERSION
+    payload["save_metadata"] = {
+        "saved_at": Time.get_datetime_string_from_system(true),
+        "day": int(payload.get("day", payload.get("clock", {}).get("day", 1)))
+    }
+    if not _validate(payload):
+        return false
 
     var json := JSON.stringify(payload)
     var temp := FileAccess.open(TEMP_PATH, FileAccess.WRITE)
@@ -40,14 +45,17 @@ static func save_game(state: Dictionary) -> bool:
     return true
 
 static func load_game() -> Dictionary:
-    var state := _read_dictionary(SAVE_PATH)
+    var active := _read_dictionary(SAVE_PATH)
+    var state := _migrate(active)
+    var source := "active"
     if state.is_empty():
-        state = _read_dictionary(BACKUP_PATH)
+        state = _migrate(_read_dictionary(BACKUP_PATH))
+        source = "backup"
     if state.is_empty():
         return {}
-
-    state = _migrate(state)
-    if state.is_empty():
+    if source == "backup":
+        state["recovery"] = {"source": "backup", "recovered_at": Time.get_datetime_string_from_system(true)}
+    if not _validate(state):
         return {}
 
     var game_state = _game_state()
@@ -67,17 +75,33 @@ static func _read_dictionary(path: String) -> Dictionary:
     return parsed
 
 static func _migrate(state: Dictionary) -> Dictionary:
-    var schema := int(state.get("schema_version", 0))
+    if state.is_empty():
+        return {}
+    var schema := int(state.get("schema_version", state.get("state_version", 1)))
+    if schema > SCHEMA_VERSION:
+        return {}
     if schema == SCHEMA_VERSION:
         return state
-    # V1 saves were flat runtime snapshots. Preserve all known fields and
-    # upgrade them instead of deleting the player's progress.
-    if schema == 1:
+    if schema == 1 or schema == 2:
+        var game_state = _game_state()
+        if game_state != null:
+            return game_state.restore(state)
         var migrated := state.duplicate(true)
         migrated["schema_version"] = SCHEMA_VERSION
-        migrated["state_version"] = 2
+        migrated["state_version"] = SCHEMA_VERSION
         return migrated
     return {}
+
+static func _validate(state: Dictionary) -> bool:
+    if int(state.get("schema_version", 0)) != SCHEMA_VERSION:
+        return false
+    if not state.has("clock") or not (state["clock"] is Dictionary):
+        return false
+    if not state.has("player") or not (state["player"] is Dictionary):
+        return false
+    var day := int(state.get("day", state["clock"].get("day", 0)))
+    var cash := int(state.get("cash", state["player"].get("cash", 0)))
+    return day >= 1 and cash > -1000000000
 
 static func _game_state():
     var tree = Engine.get_main_loop()
