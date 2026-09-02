@@ -4,15 +4,16 @@ class_name RenewSaveSystem
 const SAVE_PATH := "user://renew_save.json"
 const BACKUP_PATH := "user://renew_save.backup.json"
 const TEMP_PATH := "user://renew_save.tmp.json"
-const SCHEMA_VERSION := 2
+const SCHEMA_VERSION := 3
 
 static func save_game(state: Dictionary) -> bool:
     var payload := state.duplicate(true)
     payload["schema_version"] = SCHEMA_VERSION
     payload["state_version"] = int(payload.get("state_version", 2))
+    var employee_system = _employee_system()
+    if employee_system != null:
+        payload["employee_system"] = employee_system.capture_state()
 
-    # Keep the autoloaded GameState synchronized whenever the legacy runtime
-    # save entry point is used. This lets existing gameplay code migrate safely.
     var game_state = _game_state()
     if game_state != null:
         game_state.capture(payload)
@@ -50,6 +51,14 @@ static func load_game() -> Dictionary:
     if state.is_empty():
         return {}
 
+    var employee_system = _employee_system()
+    if employee_system != null:
+        if state.has("employee_system"):
+            employee_system.restore_state(state["employee_system"])
+        else:
+            employee_system.migrate_legacy_count(int(state.get("employees", 3)), int(state.get("day", 1)))
+        state["employees"] = employee_system.active_count()
+
     var game_state = _game_state()
     if game_state != null:
         game_state.restore(state)
@@ -70,13 +79,16 @@ static func _migrate(state: Dictionary) -> Dictionary:
     var schema := int(state.get("schema_version", 0))
     if schema == SCHEMA_VERSION:
         return state
-    # V1 saves were flat runtime snapshots. Preserve all known fields and
-    # upgrade them instead of deleting the player's progress.
-    if schema == 1:
+    if schema == 2 or schema == 1:
         var migrated := state.duplicate(true)
         migrated["schema_version"] = SCHEMA_VERSION
         migrated["state_version"] = 2
         return migrated
+    if schema == 0:
+        var migrated_v0 := state.duplicate(true)
+        migrated_v0["schema_version"] = SCHEMA_VERSION
+        migrated_v0["state_version"] = 2
+        return migrated_v0
     return {}
 
 static func _game_state():
@@ -87,3 +99,12 @@ static func _game_state():
     if root == null:
         return null
     return root.get_node_or_null("RenewGameState")
+
+static func _employee_system():
+    var tree = Engine.get_main_loop()
+    if tree == null:
+        return null
+    var root = tree.get_root()
+    if root == null:
+        return null
+    return root.get_node_or_null("RenewEmployeeSystem")
