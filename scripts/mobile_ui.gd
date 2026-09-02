@@ -7,6 +7,7 @@ var active_tab := 0
 var root: Control
 var tabs: HBoxContainer
 var actions: GridContainer
+var action_scroll: ScrollContainer
 var status_label: Label
 
 var tab_names := ["RESTORE", "BUSINESS", "EMPIRE", "WORLD"]
@@ -61,17 +62,25 @@ func _build_ui() -> void:
     bottom.size.y = 138
     root.add_child(bottom)
 
+    action_scroll = ScrollContainer.new()
+    action_scroll.position = Vector2(18, -132)
+    action_scroll.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+    action_scroll.size = Vector2(1240, 126)
+    action_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    action_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+    action_scroll.focus_mode = Control.FOCUS_NONE
+    root.add_child(action_scroll)
+
     actions = GridContainer.new()
     actions.columns = 5
-    actions.position = Vector2(18, -126)
-    actions.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-    actions.size = Vector2(1240, 112)
+    actions.custom_minimum_size = Vector2(1200, 0)
     actions.add_theme_constant_override("h_separation", 10)
     actions.add_theme_constant_override("v_separation", 8)
-    root.add_child(actions)
+    action_scroll.add_child(actions)
 
 func _set_tab(index: int) -> void:
     active_tab = index
+    action_scroll.scroll_vertical = 0
     _refresh()
 
 func _clear_actions() -> void:
