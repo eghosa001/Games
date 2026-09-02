@@ -1,6 +1,6 @@
 extends Node
 
-const SYSTEM_VERSION := 1
+const SYSTEM_VERSION := 2
 const MAX_HISTORY := 500
 
 var next_contract_id := 1
@@ -14,10 +14,42 @@ func _new_id() -> String:
     return value
 
 func create_customer_contract(parties: Array, product: String, quantity: int, price: int, quality_requirement: int, delivery_schedule: Dictionary, destination: String, penalty: int, cancellation: Dictionary, renewal: Dictionary, reputation_impact: Dictionary) -> Dictionary:
-    if product.is_empty() or quantity <= 0 or price <= 0:
+    if parties.size() < 2 or product.is_empty() or quantity <= 0 or price <= 0 or quality_requirement < 0 or quality_requirement > 100 or destination.is_empty() or penalty < 0:
         return {"ok": false, "message": "Invalid contract terms."}
+    var duration := max(1, int(delivery_schedule.get("duration_days", 1)))
+    var frequency := str(delivery_schedule.get("frequency", "daily"))
+    var quantity_per_delivery := max(1, int(delivery_schedule.get("quantity_per_delivery", quantity)))
     var id := _new_id()
-    var contract := {"id": id, "parties": parties.duplicate(true), "resource_product": product, "quantity": quantity, "price": price, "quality_requirement": quality_requirement, "delivery_schedule": delivery_schedule.duplicate(true), "destination": destination, "penalty": penalty, "cancellation": cancellation.duplicate(true), "renewal": renewal.duplicate(true), "reputation_impact": reputation_impact.duplicate(true), "execution_status": "active", "signed_day": int(delivery_schedule.get("start_day", 1)), "days_elapsed": 0, "quantity_delivered": 0, "quantity_due": 0, "quality_delivered": 0, "revenue_earned": 0, "penalties_paid": 0, "missed_deliveries": 0, "cancel_reason": "", "renewal_offered": false, "last_execution": {}}
+    var contract := {
+        "id": id,
+        "parties": parties.duplicate(true),
+        "resource_product": product,
+        "quantity": quantity,
+        "price": price,
+        "quality_requirement": quality_requirement,
+        "delivery_schedule": delivery_schedule.duplicate(true),
+        "destination": destination,
+        "penalty": penalty,
+        "cancellation": cancellation.duplicate(true),
+        "renewal": renewal.duplicate(true),
+        "reputation_impact": reputation_impact.duplicate(true),
+        "execution_status": "active",
+        "signed_day": int(delivery_schedule.get("start_day", 1)),
+        "days_elapsed": 0,
+        "quantity_delivered": 0,
+        "quantity_due": 0,
+        "quality_delivered": 0,
+        "revenue_earned": 0,
+        "penalties_paid": 0,
+        "missed_deliveries": 0,
+        "cancel_reason": "",
+        "renewal_offered": false,
+        "renewed_contract_id": "",
+        "last_execution": {},
+        "next_delivery_day": int(delivery_schedule.get("start_day", 1)),
+        "schedule_frequency": frequency,
+        "schedule_quantity": quantity_per_delivery
+    }
     active_contracts[id] = contract
     _record("signed", id, {"product": product, "quantity": quantity, "destination": destination})
     return {"ok": true, "contract": contract.duplicate(true)}
@@ -28,15 +60,32 @@ func create_default_customer_contract(day: int, reputation: int) -> Dictionary:
 func execute_day(contract_id: String, available_quantity: int, average_quality: int, day: int) -> Dictionary:
     if not active_contracts.has(contract_id): return {"ok": false, "message": "Contract not found."}
     var contract: Dictionary = active_contracts[contract_id]
+    if contract["execution_status"] != "active": return {"ok": false, "message": "Contract is not active."}
     var schedule: Dictionary = contract["delivery_schedule"]
-    var daily_due := int(schedule.get("quantity_per_delivery", contract["quantity"]))
+    var start_day := int(schedule.get("start_day", contract["signed_day"]))
+    var duration := max(1, int(schedule.get("duration_days", 1)))
+    if day < start_day: return {"ok": false, "message": "Delivery window has not started."}
+    if int(contract["days_elapsed"]) >= duration: return {"ok": false, "message": "Contract delivery window has ended."}
+    var frequency := str(schedule.get("frequency", "daily"))
+    var delivery_day := true
+    if frequency == "weekly": delivery_day = (int(contract["days_elapsed"]) % 7) == 0
+    elif frequency == "every_2_days": delivery_day = (int(contract["days_elapsed"]) % 2) == 0
+    elif frequency == "monthly": delivery_day = (int(contract["days_elapsed"]) % 30) == 0
+    if not delivery_day:
+        contract["days_elapsed"] = int(contract["days_elapsed"]) + 1
+        contract["last_execution"] = {"day": day, "due": 0, "delivered": 0, "shortfall": 0, "quality_ok": true, "revenue": 0, "penalty": 0, "scheduled": false}
+        if int(contract["days_elapsed"]) >= duration: _finish(contract)
+        else: active_contracts[contract_id] = contract
+        return {"ok": true, "contract": contract.duplicate(true), "delivered": 0, "revenue": 0, "penalty": 0, "quality_ok": true, "shortfall": 0, "finished": int(contract["days_elapsed"]) >= duration, "scheduled": false}
+    var daily_due := min(int(contract["quantity"]) - int(contract["quantity_due"]), int(schedule.get("quantity_per_delivery", contract["quantity"])))
+    daily_due = max(0, daily_due)
     var delivered := min(daily_due, max(0, available_quantity))
     var quality_ok := average_quality >= int(contract["quality_requirement"])
     if not quality_ok: delivered = 0
     var shortfall := daily_due - delivered
     var revenue := delivered * int(contract["price"])
     var penalty := shortfall * int(contract["penalty"])
-    if not quality_ok and delivered == 0: penalty += int(contract["penalty"])
+    if not quality_ok and daily_due > 0: penalty += int(contract["penalty"])
     contract["days_elapsed"] = int(contract["days_elapsed"]) + 1
     contract["quantity_due"] = int(contract["quantity_due"]) + daily_due
     contract["quantity_delivered"] = int(contract["quantity_delivered"]) + delivered
@@ -44,14 +93,11 @@ func execute_day(contract_id: String, available_quantity: int, average_quality: 
     contract["revenue_earned"] = int(contract["revenue_earned"]) + revenue
     contract["penalties_paid"] = int(contract["penalties_paid"]) + penalty
     if shortfall > 0: contract["missed_deliveries"] = int(contract["missed_deliveries"]) + 1
-    contract["last_execution"] = {"day": day, "due": daily_due, "delivered": delivered, "shortfall": shortfall, "quality_ok": quality_ok, "revenue": revenue, "penalty": penalty}
-    var duration := int(schedule.get("duration_days", 1))
-    var finished := int(contract["days_elapsed"]) >= duration
-    if finished:
-        _finish(contract)
-    else:
-        active_contracts[contract_id] = contract
-    return {"ok": true, "contract": contract.duplicate(true), "delivered": delivered, "revenue": revenue, "penalty": penalty, "quality_ok": quality_ok, "shortfall": shortfall, "finished": finished}
+    contract["last_execution"] = {"day": day, "due": daily_due, "delivered": delivered, "shortfall": shortfall, "quality_ok": quality_ok, "revenue": revenue, "penalty": penalty, "scheduled": true}
+    var finished := int(contract["days_elapsed"]) >= duration or int(contract["quantity_due"]) >= int(contract["quantity"])
+    if finished: _finish(contract)
+    else: active_contracts[contract_id] = contract
+    return {"ok": true, "contract": contract.duplicate(true), "delivered": delivered, "revenue": revenue, "penalty": penalty, "quality_ok": quality_ok, "shortfall": shortfall, "finished": finished, "scheduled": true}
 
 func cancel_contract(contract_id: String, reason: String, day: int) -> Dictionary:
     if not active_contracts.has(contract_id): return {"ok": false, "message": "Contract not found."}
@@ -63,9 +109,29 @@ func cancel_contract(contract_id: String, reason: String, day: int) -> Dictionar
     contract["penalties_paid"] = int(contract["penalties_paid"]) + int(terms.get("fee", 0))
     _record("cancelled", contract_id, {"day": day, "reason": reason})
     active_contracts.erase(contract_id)
-    completed_contracts.append(contract)
+    completed_contracts.append(contract.duplicate(true))
     _trim_completed()
     return {"ok": true, "contract": contract.duplicate(true)}
+
+func renew_contract(contract_id: String, day: int) -> Dictionary:
+    var source: Dictionary = {}
+    for item in completed_contracts:
+        if str(item.get("id", "")) == contract_id: source = item.duplicate(true); break
+    if source.is_empty(): return {"ok": false, "message": "Completed contract not found."}
+    if str(source.get("execution_status", "")) != "fulfilled" or not bool(source.get("renewal_offered", false)): return {"ok": false, "message": "Contract is not eligible for renewal."}
+    var terms: Dictionary = source.get("renewal", {})
+    var adjustment := float(terms.get("price_adjustment", 0.0))
+    var new_price := max(1, int(round(float(source["price"]) * (1.0 + adjustment))))
+    var schedule: Dictionary = source["delivery_schedule"].duplicate(true)
+    schedule["start_day"] = day
+    schedule["duration_days"] = max(1, int(terms.get("term_days", schedule.get("duration_days", 1))))
+    var result := create_customer_contract(source["parties"], str(source["resource_product"]), int(source["quantity"]), new_price, int(source["quality_requirement"]), schedule, str(source["destination"]), int(source["penalty"]), source["cancellation"], source["renewal"], source["reputation_impact"])
+    if bool(result.get("ok", false)):
+        var new_id := str(result["contract"]["id"])
+        for item in completed_contracts:
+            if str(item.get("id", "")) == contract_id: item["renewed_contract_id"] = new_id; break
+        _record("renewed", contract_id, {"new_contract_id": new_id, "day": day, "price": new_price})
+    return result
 
 func _finish(contract: Dictionary) -> void:
     var due := max(1, int(contract["quantity_due"]))
@@ -92,6 +158,11 @@ func active_contract(id: String = "") -> Dictionary:
         for value in active_contracts.values(): return value.duplicate(true)
         return {}
     return active_contracts.get(id, {}).duplicate(true)
+
+func list_active_contracts() -> Array:
+    var result: Array = []
+    for value in active_contracts.values(): result.append(value.duplicate(true))
+    return result
 
 func capture_state() -> Dictionary:
     return {"system_version": SYSTEM_VERSION, "next_contract_id": next_contract_id, "active_contracts": active_contracts.duplicate(true), "completed_contracts": completed_contracts.duplicate(true), "history": history.duplicate(true)}
