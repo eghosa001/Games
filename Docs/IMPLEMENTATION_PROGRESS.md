@@ -64,6 +64,17 @@
 - Central `EmployeeController` payroll is now the sole wage charge during normal operation.
 - Core business opening migrates legacy `renew_goods` employees to the flagship operating unit before reporting its workforce.
 
+### Canonical branch persistence — latest
+
+- `RenewGameState.branches` is now treated as the persistent branch boundary instead of an unused placeholder.
+- Branch records are stored under stable IDs (`branch_0`, `branch_1`, etc.) with selected-branch state alongside them.
+- `BranchController` restores branch records from `GameState` during startup and seeds the canonical state for a genuinely new game.
+- Branch selection, launch, hiring, stocking, price changes, upgrades and daily operating results now push their branch state back into `GameState`.
+- Branch staffing remains derived from persistent employee assignments; the `employees` field is only a compatibility/UI projection and cannot create operating staff by itself.
+- `GameState.capture()` no longer allows a transient `core["branches"]` value to overwrite canonical branch records.
+- Schema migration now converts legacy branch arrays into the keyed canonical branch record shape without discarding saved branch data.
+- This establishes the first concrete Property → Business → Branch persistence boundary while retaining existing runtime/controller APIs.
+
 ### Commits
 
 - `d3b2e9e625d178e4183d64bbaa77f3534c8e4ff` — employee system fix
@@ -82,6 +93,10 @@
 - `831d77cf55be4b80b5e1e390e2b7d3e153a66250` — branch payroll double-charge prevention
 - `f992e66ead24d1601737892af37dfeca5dbe63f1` — startup-safe employee migration into branch assignments
 - `eb845de0d1fb555b86b128104863aac1ab8c0893` — core business hiring/payroll integration
+- `1985d331c3354fb6510f51ff02ab574441866d63` — GameState canonical branch persistence boundary
+- `d2018c4e99df5454dc0556e323c4749095158ced` — BranchController restore/sync integration
+- `b65ff9d964a5870e2fcf4f2f815719482bfa8743` — branch controller syntax correction after persistence integration
+- `24584c5635a79287a7dde4112e658869c11f9009` — legacy branch-array migration
 
 ## Story systems verified
 
@@ -101,8 +116,7 @@ These are **foundation implementations**, not yet the full V1.1 completion gate:
 - Employee firing/promotion/training are not yet exposed through the complete mobile UI.
 - Corporate History does not yet receive every important transaction/event type.
 - RENEW Daily does not yet consume the full market/rival/supply-chain/news event stream.
-- Property, Business and Branch are not yet fully separated into authoritative systems.
-- Branch state itself still needs canonical persistence integration; current runtime branch data remains owned by `Branches` until the Property/Business/Branch refactor.
+- Property and Business state are not yet fully separated from legacy `main.gd`/runtime ownership; Branch now has a canonical persistence boundary but the full Property → Business → Branch refactor remains.
 - Balance testing and Android manual validation remain outstanding.
 
 ## Next implementation target
@@ -110,10 +124,10 @@ These are **foundation implementations**, not yet the full V1.1 completion gate:
 Continue in the master implementation order:
 
 1. remove remaining legacy workforce reconciliation from `main.gd`/`EmployeeController` once all migration paths are covered;
-2. persist branch/business state through `GameState` as part of the Property → Business → Branch boundary refactor;
+2. move Business state into the same canonical GameState boundary and complete Property → Business → Branch separation;
 3. finish employee management UI and history/news runtime event coverage;
-4. refactor Property → Business → Branch boundaries;
-5. extract data-driven balance definitions;
-6. deepen resource/production/supply-chain simulation.
+4. extract data-driven balance definitions;
+5. deepen resource/production/supply-chain simulation;
+6. add acquisition/ownership/finance consequences on top of stable canonical state.
 
 A feature should only be marked complete after **Code → Integration → Persistence → UI → Simulation behavior → Tests** has been verified.
