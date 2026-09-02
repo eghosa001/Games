@@ -28,7 +28,7 @@ func resource_price(resource:String, regions)->int:
     var base := {"materials":38,"packaging":28,"fuel":52,"food":34}.get(resource,40)
     var multiplier:=1.0+float(competitor_pressure)*0.025
     if regions and regions.has_method("regional_resource_bonus"):
-        multiplier*=float(regions.regional_resource_bonus(resource))
+        multiplier*=1.0+float(regions.regional_resource_bonus(resource))
     return max(10,int(round(float(base)*multiplier)))
 
 func acquire_from_market(resource:String, amount:int, cash:int, regions)->Dictionary:
