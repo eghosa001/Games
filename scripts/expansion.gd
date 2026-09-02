@@ -6,8 +6,6 @@ var properties: Array = [
     {"name":"Harbor Warehouse","type":"Industrial","condition":28,"value":50000,"restoration_cost":28000,"income":2600,"owned":false,"level":1,"inputs":["materials","fuel"]}
 ]
 
-# Resource ownership uses the same commodity vocabulary as the economy and
-# supply-chain systems so owned sites can actually feed the empire network.
 var resource_sites: Array = [
     {"name":"Stone Quarry","resource":"materials","owned":false,"level":1,"output":8,"risk":12},
     {"name":"Timber Camp","resource":"packaging","owned":false,"level":1,"output":7,"risk":15},
@@ -135,7 +133,21 @@ func supply_business(index: int, resource: String, amount: int) -> Dictionary:
     var p = properties[index]
     if not p["owned"]: return {"ok":false,"moved":0,"message":"Own the business first."}
     if not p["inputs"].has(resource): return {"ok":false,"moved":0,"message":"%s does not use %s." % [p["name"],resource]}
-    return {"ok":true,"moved":amount,"message":"Supplied %d %s to %s." % [amount,resource,p["name"]]}
+    var site_index := -1
+    for i in range(resource_sites.size()):
+        if String(resource_sites[i]["resource"]) == resource and bool(resource_sites[i]["owned"]):
+            site_index = i
+            break
+    if site_index < 0:
+        return {"ok":false,"moved":0,"message":"No owned %s source is available." % resource}
+    var source = resource_sites[site_index]
+    var available: int = int(source.get("stock", 0))
+    var moved: int = min(max(0, amount), available)
+    if moved <= 0:
+        return {"ok":false,"moved":0,"message":"Generate %s before supplying this business." % resource}
+    source["stock"] = available - moved
+    p["input_stock"] = int(p.get("input_stock", 0)) + moved
+    return {"ok":true,"moved":moved,"message":"Supplied %d %s to %s from your own source." % [moved,resource,p["name"]]}
 
 func get_summary() -> Dictionary:
     _normalize_all()
