@@ -18,6 +18,8 @@ func _process(_delta:float)->void:
     regions.update_unlocks(parent.reputation)
     if parent.day != last_day:
         for news in regions.daily_update(parent.day): parent._log("REGION: "+news)
+        var income:=apply_branch_income()
+        if income>0: parent._log("REGIONAL REVENUE: $%s from established operations."%_money(income))
         last_day=parent.day
     queue_redraw()
 
@@ -26,9 +28,9 @@ func _input(event:InputEvent)->void:
     match event.keycode:
         KEY_F3: select_region(regions.selected+1)
         KEY_F4: select_region(regions.selected-1)
-        KEY_G: establish_region()
-        KEY_F: upgrade_infrastructure()
-        KEY_D: dispatch_goods()
+        KEY_F6: establish_region()
+        KEY_F7: upgrade_infrastructure()
+        KEY_F8: dispatch_goods()
 
 func select_region(index:int)->void:
     var count=regions.regions.size()
@@ -57,16 +59,15 @@ func dispatch_goods()->void:
     var destination:=regions.selected
     var origin:=0
     if destination==origin:
-        message="The starter region is already local; use dispatch on another region."
+        message="The starter region is already local; choose another region first."
         return
     var amount:=min(10,parent.finished_goods)
     if amount<=0:
         message="Produce goods before dispatching a regional shipment."
         return
     var cost:=int(round(regions.logistics_cost(amount*45.0,origin,destination)))
-    var capacity:=min(parent.transport_capacity,amount)
-    if capacity<amount:
-        message="Fleet capacity is too low for this shipment. Upgrade transport."
+    if parent.transport_capacity<amount:
+        message="Fleet capacity is too low. Upgrade transport before shipping."
         return
     if parent.cash<cost:
         message="Regional freight requires $%s."%_money(cost)
@@ -86,8 +87,7 @@ func branch_income()->int:
         income+=int(regions.infrastructure[i])*250
         income-=int(round(220.0*float(r["labor"])))
         income-=int(round(140.0*float(r["logistics"])))
-        var pressure:=int(regions.rival_presence[i])
-        income-=pressure*90
+        income-=int(regions.rival_presence[i])*90
         total+=max(0,income)
     return total
 
@@ -113,5 +113,5 @@ func _draw()->void:
     draw_string(ThemeDB.fallback_font,Vector2(865,262),"Special: %s"%r["special"],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("f2d27a"))
     draw_string(ThemeDB.fallback_font,Vector2(865,286),"Industry: %s | Resource: %s"%[r["industry"],r["resource"]],HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("c6d0d8"))
     draw_string(ThemeDB.fallback_font,Vector2(865,310),"Presence %d | Infrastructure L%d"%[regions.player_presence[regions.selected],regions.infrastructure[regions.selected]],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color.WHITE)
-    draw_string(ThemeDB.fallback_font,Vector2(865,334),"G establish | F infrastructure | D dispatch" ,HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("c6d0d8"))
+    draw_string(ThemeDB.fallback_font,Vector2(865,334),"F6 establish | F7 infrastructure | F8 dispatch",HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("c6d0d8"))
     draw_string(ThemeDB.fallback_font,Vector2(865,353),message,HORIZONTAL_ALIGNMENT_LEFT,370,11,Color("8ee6a8"))
