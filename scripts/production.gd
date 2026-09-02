@@ -5,14 +5,39 @@ var recipe := {"materials": 1, "packaging": 1, "fuel": 1}
 var output_per_cycle := 2
 var quality := 60
 
+# Staffing is read from canonical GameState analytics rather than from the
+# legacy integer employee count. This keeps ProductionSystem independent from
+# employee identities while still making individual employee performance
+# affect real production output.
 func produce(economy: RenewEconomy, cycles: int) -> Dictionary:
-    var possible := cycles
+    var requested_cycles := max(0, cycles)
+    var staffing_efficiency := _staffing_efficiency()
+    var staffed_cycles := int(floor(float(requested_cycles) * staffing_efficiency))
+    if requested_cycles > 0 and staffed_cycles <= 0:
+        return {"ok": false, "cycles": 0, "output": 0, "quality": quality, "staffing_efficiency": staffing_efficiency, "reason": "insufficient_staffing"}
+
+    var possible := staffed_cycles
     for resource in recipe:
+        if not economy.resources.has(resource):
+            return {"ok": false, "cycles": 0, "output": 0, "quality": quality, "staffing_efficiency": staffing_efficiency, "reason": "missing_resource"}
         possible = min(possible, int(economy.resources[resource]["stock"] / recipe[resource]))
     if possible <= 0:
-        return {"ok": false, "cycles": 0, "output": 0, "quality": quality}
+        return {"ok": false, "cycles": 0, "output": 0, "quality": quality, "staffing_efficiency": staffing_efficiency}
     for resource in recipe:
         economy.resources[resource]["stock"] -= recipe[resource] * possible
     var output := possible * output_per_cycle
     quality = clamp(quality + randi_range(-3, 4), 30, 100)
-    return {"ok": true, "cycles": possible, "output": output, "quality": quality}
+    return {"ok": true, "cycles": possible, "output": output, "quality": quality, "staffing_efficiency": staffing_efficiency}
+
+func _staffing_efficiency() -> float:
+    var tree := Engine.get_main_loop()
+    if tree == null:
+        return 1.0
+    var root := tree.get_root()
+    if root == null:
+        return 1.0
+    var game_state = root.get_node_or_null("RenewGameState")
+    if game_state == null:
+        return 1.0
+    var value = game_state.get_value(["analytics", "employee_average_productivity"], 1.0)
+    return clampf(float(value), 0.25, 2.5)
