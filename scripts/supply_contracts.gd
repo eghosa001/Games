@@ -1,8 +1,6 @@
 extends RefCounted
 class_name RenewSupplyContracts
 
-# Negotiated access to rival-controlled commodities. Contracts are deliberately
-# temporary: the player must keep relationships healthy or build ownership.
 var active_rival := -1
 var active_resource := ""
 var days_remaining := 0
@@ -27,8 +25,7 @@ func negotiate(rival_index:int, resource:String, parent)->Dictionary:
     var rival=parent.rivals.rivals[rival_index]
     var relationship=int(rival.get("relationship",0))
     var requirement:=20 if rival_index!=2 else 15
-    if relationship<requirement:
-        return {"ok":false,"message":"%s requires relationship %d before offering this contract."%[rival["name"],requirement]}
+    if relationship<requirement: return {"ok":false,"message":"%s requires relationship %d before offering this contract."%[rival["name"],requirement]}
     var cost: int = 2500+max(0,25-relationship)*100
     if rival_index==2: cost+=1000
     if int(parent.cash)<cost: return {"ok":false,"message":"Contract signing requires $%d."%cost}
@@ -75,7 +72,7 @@ func daily_update()->String:
 
 func snapshot()->Dictionary:
     _normalize()
-    return {"active_rival":active_rival,"active_resource":active_resource,"days_remaining":days_remaining,"discount":discount,"player_resource_rights":player_resource_rights.duplicate(true)}
+    return {"contracts":[{"rival":active_rival,"resource":active_resource,"days_remaining":days_remaining,"discount":discount}],"active_rival":active_rival,"active_resource":active_resource,"days_remaining":days_remaining,"discount":discount,"player_resource_rights":player_resource_rights.duplicate(true)}
 
 func load_snapshot(state:Dictionary)->void:
     if state is Dictionary:
@@ -83,5 +80,12 @@ func load_snapshot(state:Dictionary)->void:
         active_resource=str(state.get("active_resource",""))
         days_remaining=int(state.get("days_remaining",0))
         discount=float(state.get("discount",0.0))
+        var legacy_contracts=state.get("contracts",[])
+        if (active_rival<0 or active_resource=="") and legacy_contracts is Array and legacy_contracts.size()>0 and legacy_contracts[0] is Dictionary:
+            var contract:Dictionary=legacy_contracts[0]
+            active_rival=int(contract.get("rival",-1))
+            active_resource=str(contract.get("resource",""))
+            days_remaining=int(contract.get("days_remaining",0))
+            discount=float(contract.get("discount",0.0))
         player_resource_rights=state.get("player_resource_rights",player_resource_rights).duplicate(true)
     _normalize()
