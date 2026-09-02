@@ -3,6 +3,7 @@ extends CanvasLayer
 const Tutorial = preload("res://scripts/tutorial.gd")
 var game: Node
 var tutorial = Tutorial.new()
+var overlay_root: Control
 var panel: Panel
 var title_label: Label
 var body_label: Label
@@ -10,7 +11,7 @@ var progress_label: Label
 var hint_label: Label
 var continue_button: Button
 var collapsed_button: Button
-var collapsed := false
+var dismissed := false
 var last_step := -1
 
 func _ready() -> void:
@@ -30,15 +31,15 @@ func _process(_delta: float) -> void:
     _refresh()
 
 func _build() -> void:
-    var root := Control.new()
-    root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    add_child(root)
+    overlay_root = Control.new()
+    overlay_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    overlay_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    add_child(overlay_root)
     panel = Panel.new()
     panel.position = Vector2(24, 78)
     panel.size = Vector2(360, 150)
     panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    root.add_child(panel)
+    overlay_root.add_child(panel)
     title_label = Label.new()
     title_label.position = Vector2(18, 12)
     title_label.size = Vector2(324, 28)
@@ -80,10 +81,10 @@ func _build() -> void:
     collapsed_button.mouse_filter = Control.MOUSE_FILTER_STOP
     collapsed_button.pressed.connect(_expand)
     collapsed_button.hide()
-    root.add_child(collapsed_button)
+    overlay_root.add_child(collapsed_button)
 
 func _refresh() -> void:
-    if collapsed or game == null:
+    if dismissed or game == null:
         return
     var current: Dictionary = tutorial.current()
     var step: int = int(tutorial.step)
@@ -98,26 +99,20 @@ func _refresh() -> void:
         hint_label.text = "PHASE A COMPLETE • SCALE THE EMPIRE"
 
 func _dismiss_current() -> void:
-    if tutorial.completed:
-        _collapse()
-        return
     var action: String = String(tutorial.current().get("action", ""))
-    var text: String = tutorial.notify(action, game)
-    if tutorial.completed:
-        title_label.text = "FIRST BUSINESS COMPLETE"
-        body_label.text = text
-        hint_label.text = "PHASE A COMPLETE"
-        continue_button.text = "HIDE"
-    else:
-        _refresh()
+    tutorial.notify(action, game)
+    _hide_overlay()
+
+func _hide_overlay() -> void:
+    dismissed = true
+    overlay_root.hide()
 
 func _collapse() -> void:
-    collapsed = true
-    panel.hide()
-    collapsed_button.show()
+    _hide_overlay()
 
 func _expand() -> void:
-    collapsed = false
+    dismissed = false
+    overlay_root.show()
     collapsed_button.hide()
     panel.show()
     _refresh()
