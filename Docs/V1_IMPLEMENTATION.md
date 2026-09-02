@@ -1,334 +1,267 @@
-# RENEW — Master Implementation Plan
+# RENEW — Master Implementation Specification
 
-> **Status:** Authoritative implementation specification
-> **Repository:** `eghosa001/Games`
-> **Purpose:** Define what must be built, what is genuinely complete, what is only a foundation, and the order in which RENEW should be developed.
-
----
-
-## 1. Vision
-
-RENEW is an economic restoration and corporate strategy game built around one fantasy:
-
-> **Find something abandoned → restore it → turn it into a business → hire people → make money → secure resources → compete → build relationships → acquire companies → expand → build an economic empire → leave a legacy.**
-
-The player should begin small enough to understand every decision and eventually become capable of influencing entire regions and industries.
-
-The intended long-term simulation is:
-
-**RESTORATION → PROPERTIES → BUSINESSES → EMPLOYEES → ECONOMY → RESOURCES → CONTRACTS → COMPETITORS → OWNERSHIP → ACQUISITIONS → ALLIANCES → DIPLOMACY → INFRASTRUCTURE → TECHNOLOGY → WORLD EVENTS → RANKINGS → HEADQUARTERS/MUSEUM → GLOBAL ECONOMY**
-
-Every later system must strengthen this chain rather than becoming an isolated minigame.
+> **Status:** Authoritative engineering specification
+> **Scope:** Full RENEW simulation architecture, from current prototype through the long-term world simulation
+> **Rule:** A system is not considered implemented because a file, variable, UI button, or stub exists. It is implemented only when its data model, simulation rules, persistence, UI integration, edge cases, and tests work together.
 
 ---
 
-# 2. Development rules
+## 1. Product vision
 
-These rules are mandatory.
+RENEW is a restoration-to-empire business simulation.
 
-1. **Build systems, not placeholders.** A button that changes one integer is not considered a complete system.
-2. **Do not throw away working foundations.** Refactor and extend them.
-3. **One source of truth.** Simulation state must not be duplicated unnecessarily across controllers.
-4. **Data-driven balance.** Costs, recipes, wages, resources, events and AI parameters should eventually live in configuration/data.
-5. **Every major system must affect gameplay.** UI-only systems do not count as implemented.
-6. **Persistence is part of implementation.** A feature is incomplete if important state disappears after loading.
-7. **NPC decisions must be state-aware.** Random flavor is not strategic AI.
-8. **Mobile is a first-class platform.** Controls and layouts must remain usable on touch devices.
-9. **Numbers must have consequences.** Prices, shortages, reputation, employees, debt and relationships must feed back into the simulation.
-10. **The first 30–60 days must be fun before deep endgame systems are built.**
+The player's journey is:
+
+**Discover → Inspect → Acquire → Restore → Operate → Hire → Produce → Sell → Reinvest → Secure resources → Expand → Compete → Negotiate → Form alliances → Acquire companies → Build infrastructure → Research technology → Influence the world → Create a legacy.**
+
+The game must make the player care about both the **company** and the **people who built it**.
+
+The simulation must create stories rather than simply award bonuses. A supplier shortage should affect factories. A successful employee should be promotable. A competitor should remember hostile behavior. An acquisition should change the workforce, debt, assets and relationships. A regional infrastructure project should alter logistics and economic power.
+
+### Core design principles
+
+1. **Simulation before decoration.** Systems must cause real economic consequences.
+2. **Decisions have trade-offs.** Cheap, fast, safe and prestigious options should rarely all be optimal.
+3. **The world remembers.** Important actions create persistent history and relationships.
+4. **People matter.** Employees are not just a number used to calculate production.
+5. **Companies are entities.** Property, business and branch must remain distinct concepts.
+6. **Geography matters.** Resources, customers, labor and logistics differ by region.
+7. **Events are causal.** World events alter underlying systems instead of only showing popups.
+8. **Player agency matters.** Major outcomes should usually have choices or strategic responses.
+9. **Data drives balance.** Costs and content should not be scattered through gameplay code.
+10. **Persistence is authoritative.** One save model owns the simulation state.
+11. **Mobile first.** Every important action must be usable on a phone.
+12. **Build in layers.** Do not build multiplayer, monetization or advanced global systems on unstable foundations.
 
 ---
 
-# 3. Status legend
+## 2. Canonical architecture
 
-- 🟢 **Implemented:** functioning repository system with gameplay effect.
-- 🟡 **Foundation:** partially implemented or simplified; must be expanded.
-- 🔴 **Planned:** not implemented as a genuine system.
-- ⚠️ **Refactor:** exists but architecture must change before major expansion.
+The long-term architecture is:
 
-A system must not be marked 🟢 merely because a file, class, button or placeholder exists.
+**RESTORATION → PROPERTY → BUSINESS → BRANCH → EMPLOYEES → ECONOMY → RESOURCES → PRODUCTION → SUPPLY CHAIN → CONTRACTS → COMPETITORS → OWNERSHIP → FINANCE → ACQUISITIONS → ALLIANCES → DIPLOMACY → INFRASTRUCTURE → TECHNOLOGY → WORLD EVENTS → RANKINGS → HEADQUARTERS → MUSEUM/LEGACY → LIVEOPS → MULTIPLAYER → GLOBAL ECONOMY**
 
----
+The runtime should eventually be coordinated by a small simulation/application layer rather than a giant `main.gd`.
 
-# 4. Current implementation status
+### Required system boundaries
 
-| System | Status | Required milestone |
+| System | Responsibility | Must not own |
 |---|---|---|
-| Restoration | 🟢 | V1 |
-| Properties | 🟡 | V1.5 |
-| Businesses | 🟡 | V1.5 |
-| Employees | 🟡 | V1.1 |
-| Executives | 🔴 | V1.5+ |
-| Company culture | 🔴 | V2 |
-| Economy | 🟡 | V1.5 |
-| Resources | 🟡 | V1.5 |
-| Production | 🟡 | V1.5 |
-| Supply chain | 🟡 | V1.5/V2 |
-| Contracts | 🟡 | V1.5 |
-| Competitors | 🟡 | V1.5 |
-| Ownership/control | 🟡 | V2 |
-| Acquisitions | 🟡 | V1.5/V2 |
-| Finance/banking | 🟡 | V1.5 |
-| Credit rating | 🔴 | V2 |
-| Alliances | 🟡 | V2 |
-| Diplomacy/treaties | 🟡 | V2 |
-| Joint ventures | 🔴 | V2+ |
-| Mergers | 🔴 | V2+ |
-| Bankruptcy/restructuring | 🔴 | V2+ |
-| Regions | 🟢/🟡 | V1.5/V2 |
-| Infrastructure | 🟡 | V2 |
-| Technology | 🔴 | V2+ |
-| Research | 🔴 | V2+ |
-| World events | 🟡 | V1.5 |
-| Global rankings | 🔴 | V2+ |
-| World Power | 🔴 | V2+ |
-| Corporate history | 🟡 | V1.1 |
-| RENEW Daily | 🟡 | V1.1 |
-| Headquarters | 🟡 | V2+ |
-| Corporate museum | 🔴 | V2+ |
-| Collections | 🔴 | V2+ |
-| Analytics | 🔴 | Post-V2 |
-| Multiplayer economy | 🔴 | Post-V2 |
-| LiveOps | 🔴 | Post-V2 |
-| Monetization | 🔴 | Post-V2 |
-| Mobile UI | 🟢 | V1 |
-| Persistence | 🟡/⚠️ | V1.1 |
-| Automated tests | 🟢 | Continuous |
+| GameState | authoritative persistent state | presentation logic |
+| PropertySystem | physical assets and restoration | company accounting |
+| BusinessSystem | companies and business identity | regional branch-only state |
+| BranchSystem | regional operating units | ownership rules |
+| EmployeeSystem | people, careers, morale and productivity | global market prices |
+| EconomySystem | prices, demand and transactions | employee careers |
+| ResourceSystem | extraction and resource availability | UI |
+| ProductionSystem | recipes, inputs, output and quality | corporate ownership |
+| SupplyChainSystem | movement, capacity and logistics | employee identity |
+| ContractSystem | agreements and obligations | rendering |
+| CompetitorSystem | rival decisions and memory | player UI |
+| OwnershipSystem | shares, control and voting | production calculations |
+| FinanceSystem | loans, capital, debt and solvency | restoration visuals |
+| AllianceSystem | alliance membership, treasury and governance | individual company cash |
+| InfrastructureSystem | physical regional infrastructure | company share ownership |
+| TechnologySystem | research and technology unlocks | market event presentation |
+| WorldEventSystem | causal world events and modifiers | save-file transport |
+| HistorySystem | permanent milestones and records | temporary news feed |
+| NewsSystem | contextual RENEW Daily stories | authoritative facts |
+| ProgressionSystem | goals, unlocks and milestones | core economy calculations |
+| AnalyticsSystem | telemetry | gameplay decisions |
+
+`main.gd` is transitional orchestration code. New business rules should not be added there unless they are temporary glue awaiting extraction.
 
 ---
 
-# 5. V1 core loop
+## 3. Definition of done
 
-The first complete playable loop is:
+A feature is **DONE** only if all applicable items below exist:
 
-**Inspect → Acquire → Restore → Open Business → Buy Inputs → Produce → Sell → Pay Workers/Overhead → Reinvest → Expand**
+- runtime data model
+- creation and mutation rules
+- integration with the simulation clock
+- UI access where player-facing
+- persistence
+- migration handling
+- deterministic behavior where required
+- edge-case handling
+- automated tests
+- mobile usability
+- history/news integration when the feature is important enough to create a story
+- no duplicate source of truth
 
-The player must always understand:
-
-- what they own
-- what they can afford
-- what is profitable
-- what is risky
-- what to improve next
-- what competitors are doing
-- what opportunity is available
-
-The loop must create meaningful choices instead of requiring the player to press buttons in a fixed order forever.
-
----
-
-# 6. Restoration system
-
-## Current foundation 🟢
-
-The prototype supports inspection, acquisition and staged restoration.
-
-Current intended progression:
-
-**Neglected → Cleaned → Repaired → Rebuilt → Installed → Designed → Operational**
-
-## Required completion
-
-Each restoration project must eventually support:
-
-- property discovery
-- inspection cost
-- purchase price
-- restoration estimate
-- individual restoration stages
-- stage-specific costs
-- construction time
-- quality outcomes
-- unexpected problems
-- contractor choices
-- material requirements
-- reputation effects
-- visual progression
-- property history
-- alternative final uses
-
-### Restoration decisions
-
-A player should sometimes choose between:
-
-- cheap/fast restoration
-- expensive/high-quality restoration
-- preservation
-- modernization
-- conversion to another business type
-
-These choices must create different downstream economics.
-
-### Special restoration projects
-
-Later properties may contain:
-
-- historical buildings
-- abandoned factories
-- old transport facilities
-- famous landmarks
-- damaged industrial sites
-- community assets
-
-Special projects can unlock unique rewards, reputation, stories and collections.
+A feature marked as `Foundation` is not complete until these requirements are satisfied.
 
 ---
 
-# 7. Property system
+# PHASE A — FOUNDATION REPAIR
 
-## Definition
+## 4. Authoritative GameState
 
-> **Property = physical asset.**
+### Current problem
 
-A property is not a business and not a branch.
+The prototype has state distributed across `main.gd`, module objects, `save_system.gd`, `game_state_bridge.gd`, autosave and individual systems. This creates the possibility of divergent saves.
 
-## Required data
+### Target
 
-Every property should eventually have:
+Create one authoritative state tree.
 
-- unique ID
-- name
-- property type
-- region
-- district
-- owner
-- condition
-- historical value
-- market value
-- acquisition cost
-- operating capacity
-- current use
-- development level
-- attached business ID
-- infrastructure connections
-- property history
+Recommended top-level structure:
 
-## Actions
+```text
+GameState
+├── schema_version
+├── meta
+├── clock
+├── player
+├── company
+├── properties
+├── businesses
+├── branches
+├── employees
+├── economy
+├── resources
+├── production
+├── supply_chain
+├── contracts
+├── competitors
+├── ownership
+├── finance
+├── alliances
+├── diplomacy
+├── regions
+├── infrastructure
+├── technology
+├── events
+├── progression
+├── history
+├── news
+└── analytics
+```
 
-- inspect
-- buy
-- sell
-- lease
-- renovate
-- develop
-- repurpose
-- specialize
-- combine
-- abandon
-- designate as historical
+### Rules
 
-## Property lifecycle
+- Runtime systems may cache calculated values.
+- Persistent truth belongs in GameState.
+- A cache must be rebuildable from GameState.
+- UI must read through system APIs or state snapshots.
+- No second save file may contain overlapping authoritative data.
 
-**Discovered → Inspected → Acquired → Restored → Developed → Operated → Upgraded → Repurposed/Sold**
+### Migration
 
----
+Every schema change increments `schema_version`.
 
-# 8. Business system
+Migrations must be explicit:
 
-## Definition
+`V1 → V2 → V3 → ... → CURRENT`
 
-> **Business = operating company.**
-
-A business controls operations, finances, employees, products and strategy.
-
-A business may own or lease multiple properties and operate multiple branches.
-
-## Required data
-
-- company ID
-- legal/brand name
-- industry
-- founder
-- treasury
-- valuation
-- debt
-- reputation
-- employees
-- properties
-- branches
-- products
-- inventory
-- contracts
-- suppliers
-- shareholders
-- technology
-- history
-
-## Business lifecycle
-
-**Founded → Operating → Growing → Regional → National → International → Corporate Group**
+Never silently discard unknown fields during migration.
 
 ---
 
-# 9. Branch system
+## 5. Persistence consolidation
 
-## Definition
+### Required save pipeline
 
-> **Branch = regional operating unit of a business.**
+`GameState → serialize → validate → temporary file → flush → backup previous save → replace active save`
 
-A branch must not become a second independent company.
+### Required recovery order
 
-A branch contains:
+1. active save
+2. backup save
+3. safe new-game state
 
-- parent business ID
-- region
-- property ID
-- employees
-- inventory
-- local pricing
-- local demand
-- local revenue
-- local expenses
-- local reputation
-- local logistics
-- branch level
+### Save requirements
 
-This distinction is mandatory:
+- atomic write
+- backup
+- schema version
+- corruption detection
+- migration
+- explicit load result
+- save timestamp
+- last successful day
+- recovery logging
 
-**Property = where physical activity happens**
+### Remove duplication
 
-**Business = who owns/manages the operation**
+`game_state_bridge.gd` must not remain a second independent persistence authority. Its useful branch/region/supply snapshots must be moved into the canonical save pipeline and the duplicate file eventually removed.
 
-**Branch = where that business operates regionally**
+Autosave and manual save must call the same save service.
 
 ---
 
-# 10. Employee system — V1.1 priority
+## 6. Replace `main.gd` god-object architecture
 
-The current anonymous employee count is only a foundation. It must become persistent people.
+Refactor gradually. Do not rewrite the entire game in one risky change.
 
-## Employee data
+### Extraction order
+
+1. EmployeeSystem
+2. HistorySystem
+3. NewsSystem
+4. FinanceSystem
+5. PropertySystem
+6. BusinessSystem
+7. SimulationClock
+8. PlayerCommandService
+9. WorldEventSystem
+10. remaining economy/strategy modules
+
+`main.gd` should eventually do approximately:
+
+```text
+initialize systems
+load state
+receive player commands
+advance simulation
+request UI refresh
+save state
+```
+
+It should not contain hundreds of individual economic rules.
+
+---
+
+# PHASE B — PLAYER ATTACHMENT
+
+## 7. EmployeeSystem — complete implementation
+
+The current integer employee count is only a foundation.
+
+### Employee record
 
 Each employee requires:
 
-- unique ID
-- generated/name identity
-- age range
-- role
-- skill
-- experience
-- salary
-- loyalty
-- morale
-- productivity
-- personality
-- ambition
-- career level
-- current assignment
-- employer/business ID
-- branch/property assignment
-- hiring day
-- promotion history
-- notable achievements
-- relationship with company
+- `id`
+- `name`
+- `role`
+- `skill`
+- `experience`
+- `career_level`
+- `salary`
+- `loyalty`
+- `morale`
+- `ambition`
+- `personality`
+- `productivity`
+- `specialization`
+- `assignment_type`
+- `assignment_id`
+- `hire_day`
+- `promotion_day`
+- `status`
+- `relationship_ids`
+- `history_ids`
 
-## Roles
+### Roles
 
 Initial roles:
 
 - Worker
 - Technician
-- Salesperson
+- Sales
+- Logistics
 - Accountant
 - Supervisor
 - Manager
@@ -344,697 +277,794 @@ Later:
 - Head of Manufacturing
 - Head of Logistics
 
-## Career ladder
+### Productivity model
 
-**Junior → Skilled → Supervisor → Manager → Regional Director → Executive**
+Base productivity should be affected by:
 
-## Employee gameplay
+`skill × experience × morale × suitability × equipment × management × fatigue`
 
-Employees can:
+Clamp values to safe ranges. A bad employee should not produce negative output.
 
-- gain experience
-- increase productivity
-- request raises
-- become loyal
-- become dissatisfied
-- leave
-- be recruited by rivals
-- be promoted
-- mentor others
-- create relationships
-- become managers
-- become executives
-- generate stories
+### Morale
 
-## Employee economics
+Morale changes from:
 
-Salary is a real operating cost.
+- salary fairness
+- workload
+- successful company performance
+- promotion
+- recognition
+- poor management
+- layoffs
+- missed wages
+- unsafe conditions
+- company reputation
+- peer relationships
 
-Productivity must influence output, quality, efficiency or sales depending on role.
+### Loyalty
 
-Morale and loyalty must influence retention and performance.
+Loyalty changes over time and from treatment. High loyalty reduces poaching risk; low loyalty increases resignation/competitor recruitment risk.
+
+### Hiring
+
+Hiring must create a real persistent employee record, not only increment an integer.
+
+Candidate generation should consider:
+
+- role
+- skill
+- wage expectation
+- personality
+- experience
+- ambition
+- regional labor pool
+
+### Firing
+
+Firing must:
+
+- remove assignment
+- create history/news where appropriate
+- affect morale of remaining staff
+- affect company reputation when mass or unfair
+- release salary cost
+
+### Promotion
+
+Promotion changes:
+
+- role
+- salary
+- productivity
+- management capacity
+- morale
+- career level
+
+### Training
+
+Training consumes money/time but increases selected skills.
+
+### Competitor poaching
+
+A competitor can target valuable employees based on skill, loyalty, salary and relationship. The player can counter with raises, promotion, bonuses or culture improvements.
+
+### Compatibility
+
+Employee relationships should be introduced after the basic employee model is stable. They should affect teams and morale, not become a disconnected social mini-game.
 
 ---
 
-# 11. Executive system
+## 8. Company culture
 
-Executives are specialized employees with company-wide effects.
+Introduce a company culture profile rather than a single morale number.
 
-Each executive should have:
+Possible dimensions:
 
-- skill profile
-- leadership
-- loyalty
-- compensation
-- strategy preference
-- strengths
-- weaknesses
-- relationships
-
-Example:
-
-**CFO:** stronger financing and cost control, weaker aggressive expansion.
-
-**COO:** stronger production/logistics efficiency.
-
-**CTO:** stronger research and technology.
-
-Executives may leave, be poached or become rivals.
-
----
-
-# 12. Company culture
-
-Culture is a long-term company characteristic.
-
-Possible axes:
-
-- efficiency
 - innovation
+- discipline
 - employee welfare
-- aggressive growth
-- stability
+- risk tolerance
+- quality
+- growth ambition
 - environmental responsibility
-- customer focus
 
-Culture affects employee loyalty, recruitment, productivity, reputation and strategic options.
+Culture is shaped by player decisions and leadership.
 
----
-
-# 13. Corporate history
-
-Create a permanent company timeline separate from the short activity log.
-
-History entries should contain:
-
-- day
-- category
-- title
-- description
-- importance
-- related property/business/employee/rival ID
-
-Examples:
-
-- Bought Old Warehouse
-- Completed first restoration
-- Founded RENEW Goods
-- Hired first employee
-- Employee promoted to manager
-- First profitable month
-- First major contract
-- First expansion
-- First alliance
-- First acquisition
-- First regional entry
-- First hostile takeover
-
-History must survive saves and should later power the Corporate Museum and RENEW Daily.
+Culture should affect recruitment, retention, productivity, reputation and executive behavior.
 
 ---
 
-# 14. RENEW Daily / business news
+## 9. Corporate History
 
-RENEW Daily turns simulation state into readable news.
+History is permanent and separate from the recent activity log.
 
-## Sections
+### History record
 
-### YOUR COMPANY
-- revenue
-- profit
-- production
-- new employees
-- promotions
-- resignations
-- milestones
+```text
+id
+company_id
+day
+type
+title
+description
+importance
+related_entity_ids
+```
 
-### MARKET
-- price movement
-- shortages
-- demand changes
-- supply conditions
+### History types
 
-### RIVALS
+- founding
+- restoration
+- first sale
+- first profit
+- employee milestone
+- contract
+- property acquisition
 - expansion
-- acquisitions
-- price changes
-- supplier actions
-- alliances
-- conflicts
+- resource acquisition
+- alliance
+- acquisition
+- merger
+- crisis
+- bankruptcy
+- technology
+- infrastructure
+- ranking
+- world event
 
-### PEOPLE
-- employee achievements
-- promotions
-- disputes
-- departures
-- executive developments
+### Importance levels
 
-### OPPORTUNITIES
-- properties
-- contracts
-- distressed companies
-- investment opportunities
-- regional opportunities
+`minor → notable → major → historic`
 
-### WORLD
-- major economic events
-- infrastructure changes
-- resource shocks
-- technology breakthroughs
-
-News must be generated from actual simulation events. Random flavor may supplement real events but cannot replace them.
+Historic entries should remain visible years later and feed the museum/legacy system.
 
 ---
 
-# 15. Authoritative GameState
+## 10. RENEW Daily
 
-The repository must converge on one authoritative state boundary.
+RENEW Daily is the company's personalized newspaper, not a random text generator.
 
-## State domains
+### Sections
 
-- game metadata
-- player/company identity
-- day
+1. Your Company
+2. People
+3. Market
+4. Rivals
+5. Supply Chain
+6. Contracts
+7. Opportunities
+8. Regions
+9. World
+10. Corporate History
+
+### Generation rules
+
+News is generated from actual state changes and event records.
+
+Example pipeline:
+
+`Simulation event → event payload → NewsSystem → relevance scoring → article → Daily edition`
+
+### Relevance
+
+Important events should be prioritized by:
+
+- direct player impact
+- financial impact
+- strategic importance
+- employee importance
+- relationship importance
+- proximity to player operations
+
+Do not generate contradictory articles from stale state.
+
+---
+
+# PHASE C — MAKE THE CORE LOOP FUN
+
+## 11. Restoration system
+
+### Current loop
+
+**Inspect → Acquire → Clean → Repair → Rebuild → Install → Design → Operate**
+
+### Complete implementation
+
+Every restoration project needs:
+
+- property identity
+- condition
+- inspection result
+- estimated cost
+- actual cost
+- required materials
+- labor requirement
+- project duration
+- quality outcome
+- risks
+- optional upgrades
+- visual stage
+- history
+
+### Restoration choices
+
+Allow meaningful choices such as:
+
+- cheap repair
+- balanced repair
+- premium restoration
+- preserve historical character
+- modernize
+- repurpose
+
+Choices must produce different downstream consequences.
+
+### Special properties
+
+Some properties should contain unique stories, rare opportunities or restoration chains. These should be generated as special content, not required for the normal economy loop.
+
+---
+
+## 12. Property / Business / Branch separation
+
+### Property
+
+A physical asset:
+
+- location
+- condition
+- capacity
+- physical upgrades
+- history
+- ownership
+
+### Business
+
+A company:
+
+- identity
 - cash
 - debt
+- employees
+- ownership
+- strategy
 - reputation
-- properties
-- businesses
-- branches
+- products
+
+### Branch
+
+A regional operating unit of a business:
+
+- region
 - employees
-- resources
-- production
-- contracts
-- competitors
-- ownership
-- alliances
-- regions
-- infrastructure
-- technology
-- research
-- events
-- history
-- news
-- progression
+- local stock
+- local demand
+- local pricing
+- local logistics
+- branch performance
 
-Controllers may calculate temporary runtime values, but persistent state must be represented in the authoritative state model.
+A business may own multiple properties and operate multiple branches.
 
-## Main coordinator
-
-`main.gd` should progressively become an orchestrator rather than a god object containing every business rule.
+Do not represent all three with one dictionary.
 
 ---
 
-# 16. Persistence architecture
+## 13. Core balance pass
 
-## Requirements
+Before advanced features, manually play at least 30, 60, 180 and 365 in-game days.
 
-One authoritative save operation must capture all persistent systems.
+Measure:
 
-Required features:
-
-- schema version
-- module version data
-- atomic temporary write
-- backup
-- fallback recovery
-- migration
-- validation
-- deterministic load
-
-## Migration
-
-Existing saves must remain usable whenever practical.
-
-Every schema change requires either:
-
-- migration code, or
-- explicit documented incompatibility.
-
-## Save coverage
-
-At minimum:
-
-- company state
-- restoration state
-- properties
-- businesses
-- branches
-- employees
-- resources
-- production inventory
-- contracts
-- competitors
-- alliances
-- regions
-- infrastructure
-- ownership
-- debt
-- history
-- events affecting the world
-- progression
-
-No important gameplay system should maintain an unrelated hidden save file indefinitely.
-
----
-
-# 17. Economy system
-
-The current economy foundation contains resources, prices, suppliers, stock and transactions. It must become a deeper interconnected economy.
-
-## Data-driven definitions
-
-Move definitions into configuration/data for:
-
-- resource prices
-- price ranges
-- wages
-- restoration costs
-- property values
-- production recipes
+- restoration payback
+- production margins
+- employee wage burden
+- supplier costs
+- fuel costs
 - transport costs
-- supplier characteristics
+- marketing return
+- loan burden
+- expansion payback
+- competitor pressure
+- bankruptcy risk
+
+The early game must contain meaningful decisions without requiring excessive grinding.
+
+The player should normally have multiple viable strategies:
+
+- premium quality
+- low-cost volume
+- resource control
+- logistics advantage
+- contract specialization
+- aggressive expansion
+- regional dominance
+
+---
+
+# PHASE D — DEEP ECONOMY
+
+## 14. Data-driven economy
+
+Create structured content/configuration for:
+
+- resources
+- materials
+- products
+- recipes
+- wages
+- property types
+- restoration stages
+- upgrades
+- transport
 - contracts
 - competitors
+- regions
 - events
-- upgrades
 - technologies
 
-## Market behavior
+Gameplay systems consume these definitions rather than embedding balance constants.
 
-Prices should respond to:
+### Product definition
 
-- supply
-- demand
-- regional conditions
-- transportation
-- scarcity
-- competitor behavior
-- world events
-- contracts
-- production capacity
+Each product should support:
+
+- inputs
+- packaging
+- fuel/energy
+- labor
+- machinery requirement
+- recipe time
+- base quality
+- base price
+- demand category
+- region modifiers
+- technology requirements
 
 ---
 
-# 18. Resource system
+## 15. Production system
 
-Resources should become geographically differentiated and strategically meaningful.
+Target chain:
 
-Initial categories may include:
+**Extraction → Processing → Manufacturing → Distribution → Retail → Customer**
+
+### Production concepts
+
+- recipes
+- intermediate goods
+- machines
+- factories
+- capacity
+- utilization
+- quality
+- waste
+- maintenance
+- automation
+- technology
+
+### Quality
+
+Quality should influence:
+
+- sale price
+- demand
+- reputation
+- contract eligibility
+- customer retention
+
+### Efficiency
+
+Efficiency should improve through:
+
+- employee skill
+- machinery
+- training
+- technology
+- maintenance
+- process upgrades
+
+---
+
+## 16. Resource economy
+
+Resources should be geographically differentiated.
+
+Initial resource families:
 
 - timber
 - stone
 - iron
-- steel
 - fuel
-- energy
 - agricultural goods
+- energy
+
+Later:
+
+- steel
 - chemicals
 - electronics
 - machinery
-- construction materials
+- advanced materials
 
-Resource sites should have:
+### Scarcity
 
-- capacity
-- extraction rate
-- depletion/renewal model where appropriate
-- ownership
-- workforce
-- operating cost
-- transport connection
-- quality
-- local market conditions
+Scarcity can result from:
 
-Controlling an important resource region should affect downstream costs and availability.
+- extraction limits
+- regional demand
+- disruptions
+- competitor control
+- infrastructure capacity
+- weather/events
+- long-term depletion where appropriate
 
----
-
-# 19. Production system
-
-Target chain:
-
-**Extraction → Transport → Processing → Manufacturing → Distribution → Retail → Customer**
-
-Production must support:
-
-- multiple recipes
-- intermediate goods
-- machinery
-- employee skill
-- quality
-- capacity
-- efficiency
-- automation
-- maintenance
-- technology requirements
-- production failures
-
-Example:
-
-**Iron Mine → Railway → Steel Factory → Machine Factory → Furniture Factory → Warehouse → Retail → Customer**
-
-A production bottleneck must be able to propagate through the chain.
+Resource scarcity must propagate into prices and production rather than only display a warning.
 
 ---
 
-# 20. Supply chain
+## 17. Supply chain
 
-The supply network must eventually model:
+Target physical chain:
 
-- extraction
-- processing
-- transport
-- storage
-- manufacturing
-- distribution
-- retail
+**Source → Extraction → Transport → Processing → Manufacturing → Warehouse → Distribution → Retail**
 
-Transport requires:
+Every link can have:
 
 - capacity
-- route
-- distance
 - cost
-- travel time
+- delay
+- reliability
 - disruption risk
-- infrastructure quality
+- ownership/control
 
-Shortages should create real consequences instead of only changing a popup.
+Transport upgrades should have measurable economic consequences.
 
 ---
 
-# 21. Contracts
+## 18. Contracts
 
-Create a general contract framework.
+Create a reusable contract model.
 
-Every contract should support:
+Required fields:
 
+- contract ID
 - parties
+- start/end day
 - resource/product
 - quantity
 - unit price
-- duration
 - quality requirement
 - delivery schedule
-- delivery location
-- penalties
+- destination
+- penalty
+- cancellation rule
+- renewal rule
 - reputation impact
-- renewal
-- cancellation
-- breach
+- status
 
-Contract types:
+Contract execution must be checked by the simulation, not manually assumed.
 
-- supply
-- customer
-- construction
-- logistics
-- distribution
-- infrastructure
-- research
-- investment
-- defense
-- alliance
-
-Later support player-to-player contracts.
+Failure can reduce cash, reputation and future opportunities.
 
 ---
 
-# 22. Competitor AI
+# PHASE E — CORPORATE STRATEGY
 
-Current rivals are differentiated but remain largely rule-driven foundations.
+## 19. Competitor AI
 
-## Rival profile
+Current rivals are a foundation. Move from scripted reactions toward persistent strategic agents.
 
-Each competitor should have:
+Each competitor needs:
 
+- identity
 - personality
+- cash
+- debt
+- assets
+- businesses
+- employees
+- technology
+- regional presence
+- supplier relationships
+- customer relationships
 - risk tolerance
-- cash strategy
-- industry preference
-- regional preference
-- relationship state
-- strategic goals
+- strategic priorities
 - memory
-- threat assessment
-- resource dependencies
 
-## Memory
+### Memory
 
-Important player actions must be remembered.
+Record significant player actions:
 
-Example:
+- price wars
+- contract betrayal
+- supplier interference
+- acquisitions
+- cooperation
+- alliance support
+- territory competition
 
-> Player undercut The Giant for 12 consecutive days.
+Memory affects future decisions.
 
-The Giant can later retaliate, negotiate, acquire a supplier, lower prices or attempt an acquisition.
+### Decision loop
 
-## AI decision priorities
+`Observe → Evaluate → Select strategy → Execute → Record result → Update memory`
 
-Each day competitors evaluate:
-
-1. survival
-2. profitability
-3. resource security
-4. regional position
-5. player threat
-6. strategic opportunities
-7. relationships
-8. long-term goals
-
-Competitors should be capable of helping, ignoring, competing with, partnering with or attempting to destroy the player's company depending on circumstances.
+Competitors should sometimes make imperfect decisions so the world feels alive rather than mathematically omniscient.
 
 ---
 
-# 23. Ownership and corporate control
+## 20. Ownership and control
 
-The current ownership prototype must evolve into a true shareholder system.
+Implement true share ownership.
 
 Example:
 
-**Player 42% · Investor A 21% · Investor B 17% · Alliance Fund 20%**
+`Founder 42% | Investor A 21% | Investor B 17% | Treasury 20%`
 
-Required features:
+Required:
 
-- shareholders
 - share issuance
 - dilution
-- share purchases
+- transfers
 - buybacks
-- dividends
 - voting
 - board seats
 - control thresholds
+- dividends
 - investor confidence
-- takeover pressure
-- defensive measures
+- takeover defense
 
-Ownership must affect who controls strategic decisions.
+Control should not simply equal the largest percentage in every case. Board structure, voting classes and agreements can affect effective control later.
 
 ---
 
-# 24. Acquisitions
+## 21. Finance
+
+Expand current loans into a corporate finance model.
+
+### Instruments
+
+- loans
+- secured loans
+- refinancing
+- investment
+- bonds
+- equity
+- buybacks
+
+### Financial metrics
+
+- revenue
+- operating profit
+- net profit
+- cash flow
+- assets
+- liabilities
+- debt service
+- valuation
+- leverage
+- credit rating
+
+### Credit rating
+
+Rating should depend on:
+
+- repayment history
+- leverage
+- cash flow
+- profitability
+- collateral
+- company stability
+
+Credit rating changes financing costs and available capital.
+
+---
+
+## 22. Acquisitions
 
 Acquisition paths:
 
 1. direct asset purchase
 2. negotiated company sale
-3. auction/competitive bidding
+3. competitive auction
 4. hostile acquisition
-5. shareholder purchase
-6. full company acquisition
-7. merger
+5. shareholder accumulation
+6. merger
 
-Acquisitions must transfer or account for:
+### Due diligence
 
-- employees
-- properties
-- branches
-- resources
-- contracts
+Before acquisition, the player should be able to discover some combination of:
+
+- assets
 - debt
-- ownership
+- employees
+- contracts
+- liabilities
 - reputation
-- technology
-- management
+- hidden risks
 
-A purchased company should not simply disappear into a counter increment.
-
----
-
-# 25. Finance and banking
-
-Current loans/debt are a foundation.
-
-Expand to:
-
-- credit rating
-- secured lending
-- refinancing
-- corporate bonds
-- investor confidence
-- collateral
-- interest-rate changes
-- restructuring
-- bankruptcy protection
-- asset liquidation
-
-## Bankruptcy
-
-Bankruptcy should create a recovery gameplay path:
-
-**Financial distress → negotiation → restructure → asset sale/investment/downsizing/merger → recovery or failure**
-
-Do not implement bankruptcy as an instant game-over unless a specific challenge mode requires it.
+Acquisition price must not be the only consequence.
 
 ---
 
-# 26. Alliances
+## 23. Bankruptcy and restructuring
 
-Alliances must become organizations rather than simple relationship bonuses.
+Bankruptcy is a strategic state, not a game-over popup.
 
-An alliance can eventually own:
+Possible recovery path:
 
+**Cash crisis → covenant pressure → restructuring → asset sales → investment → downsizing → refinancing → recovery**
+
+If recovery fails:
+
+**insolvency → administration → liquidation or acquisition**
+
+Allow the player to lose assets and control while still giving the company a possible comeback story where appropriate.
+
+---
+
+# PHASE F — SOCIAL STRATEGY
+
+## 24. Alliances 2.0
+
+An alliance is an organization with its own persistent state.
+
+### Alliance state
+
+- members
+- treasury
+- assets
 - infrastructure
-- resource operations
-- warehouses
-- companies
-- transport networks
-- research facilities
+- technologies
+- research projects
+- reputation
+- trust
+- governance
+- treaties
+- contribution records
 
-Members may contribute:
+### Contributions
 
-- money
+Members can contribute:
+
+- cash
 - resources
 - technology
-- labor
+- employees/labor
 - infrastructure
 
-## Governance
-
-- founder
-- chairman
-- directors
-- regional leaders
-- voting
-- elections
-- investment votes
-- expansion votes
-- resource allocation
-
-## Treasury
-
-Alliance money is separate from member company money.
+Contributions should be recorded and visible.
 
 ---
 
-# 27. Diplomacy and treaties
+## 25. Alliance governance
 
-Treaties should include:
+Roles:
+
+- Founder
+- Chairman
+- Director
+- Regional Leader
+- Member
+
+Voting should support:
+
+- leadership
+- expansion
+- treasury spending
+- shared infrastructure
+- research
+- new members
+- sanctions
+- treaty decisions
+
+Alliance power must not automatically equal player power.
+
+---
+
+## 26. Diplomacy and treaties
+
+Treaty types:
 
 - trade
-- joint venture
+- supply
 - research
 - defense
-- territory
 - non-aggression
 - investment
-- resource access
+- territory
+- infrastructure
+- joint venture
 
-Treaties need:
+Every treaty needs:
 
 - parties
+- terms
 - duration
 - obligations
 - benefits
-- breach conditions
-- reputation consequences
+- penalties
 - cancellation rules
+- trust impact
 
-Diplomacy should influence economic and strategic outcomes.
+Breaking treaties should affect diplomatic reputation.
 
 ---
 
-# 28. Joint ventures
+## 27. Joint ventures
 
-A joint venture is a shared project owned by multiple companies.
+A joint venture creates a shared project/entity.
 
 Example:
 
-**Port Project — $500M**
+`Port project: $500M`
 
-- Company A: 40%
-- Company B: 35%
-- Company C: 25%
+`Company A 40%`
+`Company B 35%`
+`Company C 25%`
 
-The system must calculate:
+Store:
 
 - contributions
 - ownership
 - voting
+- debt
 - income
-- costs
-- obligations
-- failure risk
-- exit rules
+- expenses
+- management
+- exit terms
+
+The JV must remain distinct from the parent companies.
 
 ---
 
-# 29. Mergers
+## 28. Mergers
 
-Mergers combine companies rather than merely buying one asset.
+A merger combines companies while resolving:
 
-A merger must determine:
-
-- surviving/new company identity
-- valuation
 - ownership
+- valuation
 - debt
 - employees
-- executives
+- management
 - properties
 - branches
-- technology
 - contracts
-- brand
-- culture
-- board structure
+- brands
+- technology
+- reputation
 
-Integration can produce temporary costs and employee morale effects.
+Allow negotiated merger terms rather than always creating a simple sum of assets.
 
 ---
 
-# 30. Regions
+# PHASE G — WORLD SIMULATION
 
-Regions should become economically different places rather than simple multipliers.
+## 29. Regions
 
-Each region can have:
+Regions must have distinct economic identities.
 
-- population
-- demand
+Required dimensions:
+
+- population/demand
 - labor supply
 - wage level
-- logistics quality
-- infrastructure
-- resource specialization
+- logistics
+- resources
 - industry specialization
-- growth rate
+- growth
 - competition
-- player presence
-- rival presence
+- infrastructure
+- local reputation
 - market size
-- local events
 
-Regional control should matter to company strategy.
+The same business should perform differently in different regions.
 
 ---
 
-# 31. Infrastructure
+## 30. Physical infrastructure
 
-Upgrade regional abstract infrastructure into physical strategic assets.
-
-Types:
+Infrastructure assets:
 
 - roads
 - railways
@@ -1045,745 +1075,997 @@ Types:
 - industrial zones
 - technology parks
 
-Infrastructure effects:
+Infrastructure should have:
 
-- transport capacity
-- logistics cost
-- travel time
-- energy availability
-- regional attractiveness
-- industrial capacity
-- resource access
+- construction cost
+- capacity
+- maintenance
+- ownership
+- utilization
+- location
+- upgrade levels
+- disruption state
 
-Infrastructure projects should require money, materials, workers and time.
+Infrastructure must alter actual logistics and economic capacity.
 
 ---
 
-# 32. Technology tree
+## 31. Technology tree
 
-Technology must eventually become a real progression system.
-
-## Manufacturing
+### Manufacturing
 
 Automation → Robotics → Smart Factories → Advanced Manufacturing
 
-## Logistics
+### Logistics
 
 GPS → Optimization → Autonomous Delivery → Global Logistics
 
-## Energy
+### Energy
 
 Efficient Generation → Renewable → Storage → Advanced Energy
 
-## Computing
+### Computing
 
 Computing → AI → Advanced Computing → Next Generation
 
-## Construction
+### Construction
 
-Modern Materials → Modular → Smart Buildings → Mega Infrastructure
+Modern Materials → Modular Construction → Smart Buildings → Mega Infrastructure
 
-Technology must unlock actual gameplay capabilities.
+Each technology must unlock gameplay, not merely increase a number.
+
+Examples:
+
+- new recipe
+- lower production time
+- new factory type
+- new logistics option
+- new infrastructure
+- better quality
+- new contract eligibility
 
 ---
 
-# 33. Research
+## 32. Research
 
 Research sources:
 
 - company R&D
-- alliance research
+- employees
 - universities
+- alliances
 - partnerships
 - joint research
 - discoveries
 
-Research requires:
+Research projects require:
 
-- money
-- researchers
-- facilities
-- time
-- technology prerequisites
+- cost
+- duration
+- required skills
+- facility
+- uncertainty
+- outcome
 
-Research outputs must affect production, logistics, energy, construction, products or strategy.
+Rare discoveries should create unique strategic advantages without permanently breaking balance.
 
 ---
 
-# 34. World Event System
+## 33. Unified WorldEventSystem
 
-The repository has multiple event foundations. They must eventually converge into one `WorldEventSystem`.
+Merge the old event architectures into one event pipeline.
 
-Events should operate through a lifecycle:
+### Event structure
 
-**Trigger → Escalation → Player/NPC response → Consequence → Recovery → Long-term change**
+```text
+id
+category
+start_day
+duration
+scope
+causes
+effects
+choices
+follow_up_events
+resolution
+```
 
-Example:
+### Example
 
 **Energy Crisis**
 
-→ energy prices rise
+→ energy price rises
 
 → factory costs rise
 
-→ weak factories cut production
+→ weak factories reduce output
 
 → some competitors struggle
 
 → alternative energy demand rises
 
-→ investment opportunity appears
+→ investment opportunities appear
 
-→ new technology becomes valuable
+→ research becomes valuable
 
-The rule is:
+→ crisis resolves or evolves
 
-> **World events must change the economy, not merely reward the player with cash.**
+Events must modify actual systems.
 
 ---
 
-# 35. Global rankings
+## 34. World event categories
 
-Rank companies using multiple dimensions:
+Initial categories:
+
+- economic boom
+- recession
+- energy crisis
+- resource shortage
+- construction boom
+- supplier disruption
+- transport disruption
+- labor shortage
+- technology breakthrough
+- regional disaster
+- major contract
+- competitor crisis
+- political/regulatory change
+- environmental event
+
+Events can have multiple stages and conditional outcomes.
+
+---
+
+# PHASE H — POWER, RANKINGS AND LEGACY
+
+## 35. Global rankings
+
+Rank companies using multiple dimensions rather than cash alone.
+
+Possible scores:
 
 - valuation
 - revenue
 - profit
 - assets
-- employees
 - market share
-- resource control
-- infrastructure control
-- technology
-- reputation
-- regional influence
-
-Rankings should update over time and produce meaningful competition.
-
----
-
-# 36. World Power
-
-World Power is a composite measure of economic influence.
-
-Possible components:
-
-- capital
-- resource control
-- industrial capacity
-- logistics
+- employees
 - technology
 - infrastructure
-- alliances
-- market share
-- regional control
+- regional presence
 - reputation
+- resource control
+- alliance influence
 
-World Power should unlock higher-level strategic opportunities and make the player's rise visible.
+Publish:
 
----
-
-# 37. Headquarters
-
-Headquarters begins as a management concept and later becomes a physical progression system.
-
-Stages may include:
-
-**Office → Headquarters → Corporate Center → Regional HQ → Global HQ**
-
-HQ can display:
-
-- company achievements
-- executives
-- departments
-- technology
-- maps
-- financial information
-- history
-- awards
-
-HQ upgrades should feel like visible evidence of growth.
+- daily/weekly snapshots
+- historical ranking
+- category rankings
+- regional rankings
 
 ---
 
-# 38. Corporate Museum
+## 36. World Power
 
-The museum preserves the company's journey.
+World Power is a composite influence system.
 
-It should display:
+Components can include:
+
+- economic power
+- resource power
+- industrial power
+- technological power
+- logistics power
+- diplomatic power
+- alliance power
+- cultural/reputation power
+
+World Power should be explainable: the player must know why their score changed.
+
+---
+
+## 37. Headquarters
+
+HQ is a physical representation of corporate growth.
+
+Progression:
+
+**Small Office → Headquarters → Corporate Center → Regional HQ → Global Headquarters**
+
+HQ can contain:
+
+- executive offices
+- meeting rooms
+- research facilities
+- training center
+- archives
+- museum
+- board room
+- technology center
+
+HQ should be functional, not just cosmetic.
+
+---
+
+## 38. Corporate Museum
+
+The museum presents the company's permanent story.
+
+Display:
 
 - first property
 - restoration milestones
-- important employees
-- famous contracts
-- acquisitions
-- historic products
+- first product
+- historic employees
+- major contracts
+- major acquisitions
+- failed projects
 - awards
-- major events
-- old company logos/brands
-- important rivalries
-- alliance achievements
+- rankings
+- technologies
+- alliance milestones
+- crisis recoveries
 
-The museum is powered by Corporate History and Collections.
+The museum is driven from Corporate History and must survive saves.
 
 ---
 
-# 39. Collections
+## 39. Collections
 
-Collections are long-term optional goals.
+Collections are optional long-term objectives.
 
 Examples:
 
-- restored landmarks
 - historic properties
 - rare machinery
-- famous products
-- important documents
-- trophies
-- unique businesses
+- landmark businesses
+- unique technologies
+- special contracts
+- famous employees
+- world-event artifacts
 
-Collections should reward exploration without becoming mandatory progression.
-
----
-
-# 40. Personalized world news
-
-The player should eventually receive a living newspaper reflecting their position in the world.
-
-A new player should see local opportunities.
-
-A regional company should see regional economic news.
-
-A global company should see international events, rival boardroom stories and geopolitical/economic changes.
-
-News priority should depend on relevance, not random selection.
+Collections should reward exploration without becoming mandatory grinding.
 
 ---
 
-# 41. Multiplayer economy
+# PHASE I — LIVE WORLD AND COMMERCIAL SYSTEMS
 
-Multiplayer is deliberately later.
+## 40. Multiplayer economy
 
-When implemented, players should interact through:
+Do not build direct multiplayer before the single-player simulation is stable.
 
-- buying/selling
+Foundation requirements:
+
+- authoritative server state
+- player/company identity
+- synchronized market state
+- secure transactions
+- contract validation
+- anti-cheat validation
+- conflict resolution
+
+Player-to-player systems can later include:
+
+- trade
 - contracts
-- investments
+- investment
 - alliances
 - joint ventures
-- resource markets
 - acquisitions
 - competition
-- rankings
 
-The simulation must be designed so that NPC and player companies can share compatible economic interfaces.
-
-Do not build multiplayer networking before the single-player economy is stable.
+Never trust client-supplied cash, ownership or transaction outcomes.
 
 ---
 
-# 42. Analytics
+## 41. Analytics
 
-Later analytics should measure:
+Telemetry should measure gameplay health without becoming a gameplay dependency.
 
-- tutorial completion
-- restoration completion
-- first profit
-- first expansion
-- first employee departure
-- contract failures
-- bankruptcies
-- acquisition frequency
-- day-30 retention
-- day-90 retention
-- economy balance
-- most-used strategies
+Useful events:
 
-Analytics must respect privacy and must not become a dependency for core gameplay.
+- new game
+- inspection
+- acquisition
+- restoration stage
+- business opened
+- employee hired
+- employee promoted
+- product produced
+- sale completed
+- contract signed
+- expansion purchased
+- loan taken
+- acquisition completed
+- alliance joined
+- technology researched
+- bankruptcy/recovery
+- session end
+
+Track funnel metrics such as:
+
+`New Game → First Restoration → First Business → First Profit → First Expansion → First Major Strategic Decision`
+
+Analytics must not contain sensitive personal information.
 
 ---
 
-# 43. LiveOps
+## 42. LiveOps
 
-LiveOps comes after the core simulation is proven.
+LiveOps is built after the core simulation is reliable.
 
-Possible systems:
+Use content definitions for:
 
-- seasonal economic events
-- limited restoration projects
-- market cycles
-- community goals
-- special contracts
-- rotating opportunities
+- seasonal events
+- limited opportunities
+- rotating contracts
+- world crises
 - challenges
+- rankings
+- community goals
 
-LiveOps content must plug into the existing WorldEventSystem rather than create a second economy.
-
----
-
-# 44. Monetization
-
-Monetization is intentionally postponed.
-
-Do not compromise the core simulation to force monetization into early development.
-
-When introduced, monetization should not invalidate fair strategic play.
+LiveOps content must use the same WorldEventSystem rather than creating a parallel simulation.
 
 ---
 
-# 45. Mobile UX
+## 43. Monetization
 
-Mobile is a core target.
+Monetization comes after the game is fun without payment.
 
-Requirements:
+Rules:
+
+- never sell mandatory progression
+- never create pay-to-win economic dominance
+- never hide core simulation behind excessive friction
+- purchases must be clearly understood
+- economy must remain balanced with monetization disabled
+
+Possible later models:
+
+- cosmetic HQ items
+- cosmetic restoration themes
+- optional expansion/content packs
+- convenience that does not distort competition
+
+---
+
+# PHASE J — MOBILE EXPERIENCE
+
+## 44. Mobile UI requirements
+
+Every major system needs a compact mobile representation.
+
+Required primary navigation:
+
+- Home
+- Property
+- Business
+- People
+- Market
+- Supply
+- Regions
+- Rivals
+- Corporate
+- News
+
+### Interaction rules
 
 - large touch targets
-- readable text
-- responsive layouts
-- scrollable information panels
-- clear action feedback
-- confirmation for expensive/risky actions
-- compact but informative dashboards
-- accessible menus
-- stable performance
-- no keyboard-only critical action
+- scrollable action panels
+- concise financial summaries
+- confirmation for irreversible actions
+- visible feedback after actions
+- no critical action dependent on hover
+- important alerts accessible from the home screen
 
-The desktop keyboard shortcuts can remain for development and testing, but every essential gameplay function needs a touch-accessible UI.
+### Information hierarchy
+
+Show:
+
+`Cash → Daily Profit/Loss → Key Risk → Main Opportunity → Next Decision`
+
+before secondary details.
 
 ---
 
-# 46. Testing strategy
+# PHASE K — TESTING AND QUALITY
 
-Automated tests must cover simulation correctness.
+## 45. Automated test layers
 
-## Required test groups
+### Unit tests
 
-### New game
+Test individual systems:
 
-- initial state
-- first inspection
-- acquisition
-- restoration
-- business opening
+- employee calculations
+- production recipes
+- prices
+- contracts
+- loans
+- ownership
+- event effects
+- migrations
 
-### Economy
+### Integration tests
 
-- purchase
-- sale
+Test:
+
+- restoration to business
+- hiring to production
+- resource shortage to price/output
+- acquisition to employee/property transfer
+- alliance to shared benefit
+- event to economy
+- save to load
+
+### Regression tests
+
+Every previously fixed bug should gain a regression test where practical.
+
+### Soak tests
+
+Run:
+
+- 30-day
+- 365-day
+- 1,000-day
+- long-run multi-company simulations
+
+Check for:
+
+- NaN
+- negative impossible quantities
+- runaway cash
+- runaway prices
+- duplicated employees
+- orphaned properties
+- broken ownership totals
+- memory growth
+- save corruption
+
+### Manual playtests
+
+Automated tests cannot determine whether the game is fun.
+
+Perform repeated fresh-start sessions and record:
+
+- where the player becomes confused
+- where decisions feel meaningless
+- where progression stalls
+- where the player becomes excited
+- which systems create memorable stories
+
+---
+
+## 46. Invariants
+
+The simulation must enforce invariants such as:
+
+- cash is finite
+- stock cannot be below zero
+- ownership percentages have valid bounds
+- employee IDs are unique
+- property IDs are unique
+- business IDs are unique
+- branch references point to existing businesses
+- contracts reference valid parties
+- debt cannot become NaN
+- production cannot consume nonexistent inputs
+- alliance contributions cannot exceed available member resources
+- deleted entities cannot remain as live references
+
+Validation should run during development and save/load.
+
+---
+
+# PHASE L — IMPLEMENTATION ORDER
+
+## 47. Exact execution order
+
+### Sprint 1 — Foundation
+
+1. finalize GameState schema
+2. remove duplicate persistence authority
+3. centralize save/load
+4. add migration tests
+5. establish system interfaces
+
+### Sprint 2 — People
+
+6. EmployeeSystem
+7. employee generation
+8. hiring/firing
+9. wages
+10. productivity
+11. morale/loyalty
+12. promotion/training
+13. save/load employees
+
+### Sprint 3 — Story
+
+14. HistorySystem
+15. milestone generation
+16. NewsSystem
+17. RENEW Daily UI
+18. employee/company news integration
+
+### Sprint 4 — Core economy
+
+19. data-driven definitions
+20. production recipes
+21. resource scarcity
+22. transport chain
+23. contract execution
+24. balance pass
+
+### Sprint 5 — Corporate strategy
+
+25. competitor memory
+26. ownership/shareholders
+27. FinanceSystem
+28. acquisitions
+29. restructuring/bankruptcy
+
+### Sprint 6 — Social strategy
+
+30. AllianceSystem
+31. alliance treasury
+32. governance
+33. diplomacy
+34. joint ventures
+35. mergers
+
+### Sprint 7 — World
+
+36. regional specialization
+37. physical infrastructure
+38. technology tree
+39. research
+40. unified WorldEventSystem
+
+### Sprint 8 — Legacy
+
+41. rankings
+42. World Power
+43. HQ progression
+44. museum
+45. collections
+
+### Sprint 9 — Commercial/live
+
+46. analytics
+47. LiveOps
+48. multiplayer foundation
+49. monetization
+50. production hardening
+
+This order is intentional. Do not jump to Sprint 8 or 9 because a feature sounds exciting while foundational systems are incomplete.
+
+---
+
+# 48. Current prototype-to-target mapping
+
+| Existing foundation | Required evolution |
+|---|---|
+| `main.gd` | coordinator, progressively decomposed |
+| `economy.gd` | data-driven EconomySystem |
+| `production.gd` | recipe/intermediate-goods ProductionSystem |
+| `expansion.gd` | Property/Business/Branch separation |
+| `competitors.gd` | persistent strategic AI |
+| `supply_chain.gd` | complete physical supply network |
+| `supply_contracts.gd` | generalized ContractSystem |
+| `market_director.gd` + `events.gd` | unified WorldEventSystem |
+| `districts.gd` | regional specialization layer |
+| `regions.gd` | full RegionalEconomy |
+| `region_controller.gd` | InfrastructureSystem + region orchestration |
+| `branches.gd` | BranchSystem |
+| `corporate.gd` | Ownership/Finance/Control systems |
+| `save_system.gd` | authoritative persistence service |
+| `game_state_bridge.gd` | migrate useful state, then remove duplicate authority |
+| activity log | short-term operational log only |
+| employee count | EmployeeSystem roster |
+| progression | goals/unlocks, not simulation state |
+
+Do not delete useful existing foundations simply because they need expansion. Refactor them behind the new boundaries.
+
+---
+
+# 49. Backward compatibility rules
+
+Existing saves must not become unusable merely because a system becomes deeper.
+
+Examples:
+
+### Old employee count
+
+If an old save contains `employees: 3`, migration creates three generated employee records with sensible starter attributes.
+
+### Old branches
+
+Old branch dictionaries are migrated into BranchSystem records.
+
+### Old rivals
+
+Existing rival state is preserved and extended with new memory/personality fields.
+
+### Old events
+
+Existing event modifiers are converted into WorldEventSystem effects where possible.
+
+Migration must be deterministic: loading the same old save twice must produce the same state.
+
+---
+
+# 50. Error handling
+
+Player-facing failures must be explicit.
+
+Examples:
+
 - insufficient cash
-- stock changes
-- price changes
-- supplier reliability
+- insufficient stock
+- missing employee skill
+- unavailable property
+- invalid contract
+- insufficient alliance approval
+- failed financing
+- unavailable technology
+- blocked route
 
-### Production
+Never silently change state when an operation fails.
 
-- recipe inputs
-- output
-- capacity
-- employee effects
-- insufficient resources
+Use structured result objects where practical:
 
-### Employees
-
-- hire
-- salary
-- promotion
-- productivity
-- morale
-- departure
-- persistence
-
-### Contracts
-
-- creation
-- delivery
-- completion
-- breach
-- cancellation
-- rewards/penalties
-
-### Competitors
-
-- daily decisions
-- price changes
-- expansion
-- relationship changes
-- memory
-
-### Persistence
-
-- save
-- load
-- backup
-- fallback
-- migration
-- full-state round trip
-
-### Long simulation
-
-- 365-day soak
-- 1000-day soak
-- bankruptcy/recovery once those systems exist
-- resource shortages
-- event chains
-
-Automated tests prove correctness, not fun. Manual playtesting remains mandatory.
+```text
+success
+reason_code
+message
+changed_entities
+financial_delta
+history_event
+news_event
+```
 
 ---
 
-# 47. Balance and playtesting
+# 51. Simulation clock
 
-Before adding advanced endgame systems, perform repeated 30–60 day playthroughs.
+Create one simulation clock authority.
 
-Measure:
+The clock controls:
 
-- time to first restoration
-- time to first business
-- cash flow
-- employee affordability
-- input costs
-- selling price
-- competitor pressure
-- contract profitability
-- loan risk
-- expansion timing
-- player decision density
+- daily wages
+- production cycles
+- sales
+- contracts
+- loan payments
+- employee progression
+- competitor decisions
+- resource extraction
+- infrastructure maintenance
+- event progression
+- research
+- news generation
+- autosave
 
-Questions to answer:
-
-- Is the opening exciting?
-- Does restoration feel rewarding?
-- Is hiring meaningful?
-- Can the player recover from mistakes?
-- Are competitors threatening but understandable?
-- Does expansion feel earned?
-- Does the player have reasons to care about individual people?
-- Are there several viable strategies?
+Do not let multiple systems independently advance the day.
 
 ---
 
-# 48. Development phases
+# 52. Transaction architecture
 
-## Phase A — Foundation stabilization
+Economic actions should use explicit transactions where money/resources change hands.
 
-1. Authoritative GameState
-2. Save consolidation
-3. Schema/migration validation
-4. Property/Business/Branch boundaries
-5. Main coordinator refactor
-6. Data-driven balance foundations
-7. Automated regression coverage
+Examples:
 
-**Exit condition:** core state can be saved/loaded reliably without duplicate authoritative systems.
+- purchase property
+- buy resource
+- sell product
+- pay wages
+- pay loan
+- sign contract
+- acquire company
+- alliance contribution
 
----
+A transaction should record:
 
-## Phase B — Player attachment
+- day
+- actor
+- counterparty
+- amount
+- currency
+- resource/product
+- reason
+- resulting state
 
-1. Real employees
-2. Employee career progression
-3. Employee economics
-4. Corporate History
-5. RENEW Daily
-6. Milestone notifications
-7. Employee persistence
-
-**Exit condition:** the company feels like a group of people rather than counters.
-
----
-
-## Phase C — Core fun and balance
-
-1. 30–60 day manual playtests
-2. Restoration tuning
-3. Production tuning
-4. wage tuning
-5. pricing tuning
-6. supplier tuning
-7. competitor tuning
-8. contract tuning
-9. loan tuning
-10. expansion pacing
-11. restoration visual feedback
-
-**Exit condition:** a new player can understand the loop and make meaningful choices for at least the first 30 days.
+This improves debugging, history and analytics.
 
 ---
 
-## Phase D — Deeper economy
+# 53. Economy safety limits
 
-1. more resources
-2. multiple recipes
-3. intermediate goods
-4. extraction
-5. processing
-6. transport
-7. manufacturing
-8. distribution
-9. regional scarcity
-10. physical infrastructure
+The economy must prevent runaway values.
 
-**Exit condition:** supply and demand form a genuinely interconnected economy.
+Use:
 
----
+- bounded modifiers
+- minimum/maximum sensible prices
+- production capacity limits
+- finite resource availability where intended
+- debt constraints
+- event expiration
+- compounding safeguards
 
-## Phase E — Corporate strategy
-
-1. real ownership
-2. shareholders
-3. control
-4. credit rating
-5. advanced acquisitions
-6. company acquisition
-7. hostile takeovers
-8. executive system
-9. company culture
-10. bankruptcy/restructuring
-
-**Exit condition:** growing a company requires strategic corporate decisions, not only purchasing upgrades.
+Do not use arbitrary clamps to hide broken simulation logic. When a value hits a safety bound during development, log the cause and investigate it.
 
 ---
 
-## Phase F — Social strategy
+# 54. Save-state ownership matrix
 
-1. Alliance 2.0
-2. alliance treasury
-3. alliance governance
-4. treaties
-5. diplomacy
-6. joint ventures
-7. mergers
-8. shared infrastructure
+| Data | Owner |
+|---|---|
+| day | SimulationClock/GameState |
+| cash | Finance/GameState |
+| employees | EmployeeSystem/GameState |
+| properties | PropertySystem/GameState |
+| businesses | BusinessSystem/GameState |
+| branches | BranchSystem/GameState |
+| stock | Resource/Business state |
+| contracts | ContractSystem/GameState |
+| rivals | CompetitorSystem/GameState |
+| shares | OwnershipSystem/GameState |
+| loans | FinanceSystem/GameState |
+| alliances | AllianceSystem/GameState |
+| regions | RegionSystem/GameState |
+| infrastructure | InfrastructureSystem/GameState |
+| technology | TechnologySystem/GameState |
+| history | HistorySystem/GameState |
+| news archive | NewsSystem/GameState |
+| event state | WorldEventSystem/GameState |
 
-**Exit condition:** relationships with companies and organizations become strategically important.
-
----
-
-## Phase G — World simulation
-
-1. technology trees
-2. research
-3. unified world events
-4. causal event chains
-5. global rankings
-6. World Power
-7. regional competition
-8. global economic interactions
-
-**Exit condition:** the world continues evolving independently of the player.
+No other module may silently persist an overlapping copy.
 
 ---
 
-## Phase H — Legacy
+# 55. Performance requirements
 
-1. headquarters progression
-2. Corporate Museum
-3. Collections
-4. permanent history
-5. legacy achievements
-6. world recognition
+The game must remain responsive on mobile.
 
-**Exit condition:** the player can look back at a unique corporate story created by their decisions.
+Avoid recalculating the entire world every frame.
 
----
+Use:
 
-## Phase I — Commercial/live game
+- daily simulation ticks
+- event-driven updates
+- cached derived values
+- batched competitor decisions
+- lazy UI refresh
+- bounded history/news retention for short-lived feeds
 
-1. analytics
-2. LiveOps framework
-3. seasonal content
-4. multiplayer economy
-5. monetization
-6. production hardening
-7. device optimization
-8. release pipeline
+Permanent corporate history may grow, but should use compact records.
 
-**Exit condition:** RENEW is stable enough for long-term operation.
+Large future worlds should support simulation tiers so distant entities can be simulated at lower detail when appropriate.
 
 ---
 
-# 49. What NOT to build yet
+# 56. Security requirements for future multiplayer
 
-Do not prioritize these before Phases A–C are stable:
+When multiplayer is introduced:
 
-- multiplayer networking
-- monetization
-- complex global diplomacy
-- huge technology trees
-- massive world maps
-- elaborate 3D headquarters
-- live-service infrastructure
-- cosmetic stores
+- server owns authoritative money
+- server owns ownership
+- server validates contracts
+- server validates inventory
+- server validates production
+- clients send intents, not final outcomes
+- all economic mutations are audited
+- rate limits prevent transaction abuse
 
-A large feature count does not compensate for a weak core loop.
-
----
-
-# 50. V1.1 completion criteria
-
-V1.1 is complete only when all of the following are true:
-
-- [ ] GameState is authoritative for persistent simulation state.
-- [ ] Existing saves migrate safely.
-- [ ] Employees are persistent individual people.
-- [ ] Hiring affects actual gameplay.
-- [ ] Salaries affect cash flow.
-- [ ] Skills affect productivity.
-- [ ] Experience/career progression works.
-- [ ] Employee changes persist through save/load.
-- [ ] Corporate History records important milestones.
-- [ ] History persists through save/load.
-- [ ] RENEW Daily reads actual simulation events.
-- [ ] Major employee events appear in news/history.
-- [ ] Property/Business/Branch boundaries are defined in code.
-- [ ] The duplicate persistence paths are consolidated or explicitly bridged.
-- [ ] Automated regression tests pass.
-- [ ] A 30–60 day manual playthrough is enjoyable.
+Single-player code should be written with this separation in mind where it does not add unnecessary complexity.
 
 ---
 
-# 51. Definition of a commercially viable RENEW core
+# 57. What must NOT happen
 
-Before commercial release, the core game must allow a player to:
+Do not:
 
-1. discover an abandoned property
-2. inspect it
-3. acquire it
-4. restore it
-5. make meaningful restoration choices
-6. create a business
-7. hire named employees
-8. watch employees grow
-9. produce and sell goods
-10. manage resources
-11. negotiate contracts
-12. react to market conditions
-13. compete with believable rivals
-14. expand into new regions
-15. make meaningful financial decisions
-16. form relationships
-17. acquire assets/companies
-18. experience consequences from decisions
-19. read a personalized company/world news feed
-20. see their company's history evolve
-
-The player should finish a session thinking:
-
-> **“This is my company. These are my people. I built this.”**
+- add another save file for a new system
+- add another event manager beside WorldEventSystem
+- represent employees only as an integer after EmployeeSystem is integrated
+- put new business logic into `main.gd` simply because it is convenient
+- make technology a collection of isolated percentage bonuses
+- make alliances a renamed relationship score
+- make acquisitions only subtract cash and add an asset
+- make world events only display text
+- make rankings only sort by cash
+- make news random when the story can be derived from state
+- add multiplayer before single-player economy stability
+- add monetization before the core loop is enjoyable
+- mark a foundation as complete because its API exists
 
 ---
 
-# 52. Long-term player fantasy
+# 58. V1.1 completion gate
 
-The final game should allow a player to start with almost nothing and eventually:
+V1.1 is complete only when:
 
-- own historic properties
-- employ thousands of people
-- control supply chains
-- own resource companies
-- operate factories
-- build infrastructure
-- influence regional economies
-- compete with giant corporations
-- create alliances
-- negotiate treaties
-- develop technologies
-- acquire rivals
-- merge companies
-- survive economic crises
-- build headquarters
-- preserve corporate history
-- appear in global rankings
-- become a World Power
-- leave a permanent legacy
-
-The scale should grow naturally from the same original restoration loop.
+- [ ] employee count has been replaced by persistent employee records
+- [ ] employees affect wages and productivity
+- [ ] employees can be hired and fired
+- [ ] employees gain experience
+- [ ] morale and loyalty affect outcomes
+- [ ] promotions work
+- [ ] employees persist through save/load
+- [ ] corporate history is permanent
+- [ ] major milestones create history entries
+- [ ] RENEW Daily is generated from real state changes
+- [ ] GameState is the authoritative save boundary
+- [ ] duplicate persistence is removed
+- [ ] old saves migrate correctly
+- [ ] restoration/business flow remains functional
+- [ ] 30/60/180/365-day playtests are balanced
+- [ ] automated regression suite passes
+- [ ] Android/mobile interaction has been manually tested
 
 ---
 
-# 53. Implementation quality gates
+# 59. V2 completion gate
 
-Every major feature must pass these gates before being called complete.
+V2 requires, in addition to V1.1:
 
-### Gate 1 — Simulation
-Does it actually change game state?
-
-### Gate 2 — Integration
-Does another system respond to it?
-
-### Gate 3 — Persistence
-Does it survive save/load?
-
-### Gate 4 — UI
-Can the player understand and use it?
-
-### Gate 5 — Balance
-Does it create sensible economic consequences?
-
-### Gate 6 — Testing
-Is there automated coverage for important edge cases?
-
-### Gate 7 — Fun
-Does it create a meaningful decision or story?
-
-If a feature fails these gates, mark it 🟡 rather than 🟢.
-
----
-
-# 54. Immediate implementation queue
-
-The next code work must follow this order:
-
-**1. AUTHORITATIVE GAMESTATE**
-
-→ unify persistent state
-
-**2. EMPLOYEE INTEGRATION**
-
-→ replace anonymous employee count with real people while retaining backward compatibility
-
-**3. SAVE INTEGRATION**
-
-→ employees, history, news and all existing empire state use one save boundary
-
-**4. CORPORATE HISTORY**
-
-→ permanent milestones generated from real actions
-
-**5. RENEW DAILY**
-
-→ news generated from history, market, rivals, people and opportunities
-
-**6. PROPERTY/BUSINESS/BRANCH REFACTOR**
-
-→ eliminate conceptual duplication
-
-**7. DATA-DRIVEN BALANCE**
-
-→ move hardcoded economic definitions into configuration
-
-**8. 30–60 DAY BALANCE PASS**
-
-→ playtest and tune the complete early loop
-
-**9. DEEP RESOURCE/PRODUCTION ECONOMY**
-
-→ extraction, processing, manufacturing, logistics and regional scarcity
-
-**10. CORPORATE STRATEGY**
-
-→ ownership, executives, acquisitions, finance and restructuring
-
-Only after these are stable should the project proceed deeply into alliances, technology, global simulation, legacy, multiplayer and monetization.
+- [ ] deeper production chain
+- [ ] resource scarcity
+- [ ] meaningful regional specialization
+- [ ] persistent competitor memory
+- [ ] real ownership/control
+- [ ] expanded finance
+- [ ] acquisitions with consequences
+- [ ] alliances with treasury/governance
+- [ ] diplomacy/treaties
+- [ ] joint ventures
+- [ ] mergers
+- [ ] bankruptcy/restructuring
+- [ ] physical infrastructure
+- [ ] technology tree
+- [ ] research
+- [ ] causal world events
+- [ ] global rankings
+- [ ] World Power
+- [ ] headquarters progression
+- [ ] corporate museum
+- [ ] collections
 
 ---
 
-# 55. Final principle
+# 60. Commercial-quality gate
 
-RENEW should not become a spreadsheet with a renovation theme.
+RENEW is ready for serious commercial/live development only when a fresh player can:
 
-It should be a living corporate world where:
+1. understand the first restoration without external instructions;
+2. experience a satisfying restoration transformation;
+3. open a business and understand its economics;
+4. care about at least one employee or company relationship;
+5. encounter a meaningful strategic problem;
+6. make a decision with a real trade-off;
+7. see the world react to that decision;
+8. return later and discover that the company has changed;
+9. understand why they succeeded or failed;
+10. want to continue because a future goal is personally meaningful.
 
-**buildings have history, employees have lives, companies have personalities, markets have consequences, rivals remember, alliances matter, resources create power, crises create opportunities, and the player's decisions permanently shape the world.**
+The game must generate memorable stories such as:
 
-The implementation should always serve that experience.
+> “James joined me when I had almost nothing. He became my first manager, helped survive the energy crisis, and eventually ran the branch I built in the north.”
+
+That type of story is a core product outcome, not optional flavor.
+
+---
+
+# 61. Immediate implementation queue
+
+The next code work must be executed in this exact order unless a blocking defect requires otherwise:
+
+### A. Foundation
+
+1. Audit current GameState implementation against this specification.
+2. Integrate every currently authoritative scalar into GameState.
+3. Move employees into EmployeeSystem.
+4. Remove duplicate extended-save authority.
+5. Add migration tests.
+
+### B. Player attachment
+
+6. Integrate employee hiring/firing into gameplay.
+7. Replace wage calculation with employee records.
+8. Replace production staffing calculation with employee productivity.
+9. Add morale/loyalty/experience progression.
+10. Add corporate history events.
+11. Add RENEW Daily generation from actual events.
+
+### C. Core economy
+
+12. Extract balance definitions.
+13. Complete production recipes.
+14. Complete resource/transport chain.
+15. Complete contract execution.
+16. Run balance playtests.
+
+### D. Strategy
+
+17. Competitor memory.
+18. Ownership/control.
+19. Finance expansion.
+20. Acquisition consequences.
+
+Only after these are stable should the implementation move into advanced alliances, infrastructure, technology and world-power systems.
+
+---
+
+# 62. Engineering rule for every future prompt
+
+When asked to “continue implementation,” inspect the actual repository first and continue from the current committed state.
+
+Do not assume that a checklist item is implemented because:
+
+- a file exists;
+- a variable exists;
+- a button exists;
+- a function is named correctly;
+- a README says it is complete;
+- a system returns placeholder data.
+
+For every claimed completion, verify:
+
+**Code → Integration → Persistence → UI → Simulation behavior → Tests.**
+
+If any layer is missing, report the feature as a foundation and continue implementing it.
+
+---
+
+# 63. Final architectural objective
+
+The finished RENEW simulation should behave as one connected world:
+
+**A player restores a property.**
+
+That creates a business.
+
+The business hires people.
+
+Those people improve or struggle.
+
+The business needs resources.
+
+Resources come from regions and supply chains.
+
+Production turns resources into goods.
+
+Customers and contracts create revenue.
+
+Competitors respond.
+
+The player expands.
+
+Expansion changes regional economics.
+
+Ownership creates investors and control problems.
+
+Finance enables growth but creates risk.
+
+Acquisitions reshape companies and careers.
+
+Alliances create shared power.
+
+Infrastructure changes geography.
+
+Technology changes what companies can produce.
+
+World events disrupt and create opportunities.
+
+Rankings measure the resulting power.
+
+The headquarters and museum preserve the story.
+
+The company becomes more than a collection of numbers: **it becomes a history the player created.**
+
+That is the standard this implementation must ultimately meet.
