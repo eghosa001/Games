@@ -11,6 +11,7 @@ var history: Array[Dictionary] = []
 var _day := 1
 var _syncing_legacy := false
 var _last_legacy_count := -1
+var _last_game_day := -1
 
 const FIRST_NAMES := ["David", "Sarah", "Michael", "Grace", "Daniel", "Amaka", "Victor", "Esther", "Samuel", "Ada"]
 const ROLES := ["Technician", "Sales Associate", "Logistics Coordinator", "Craft Worker", "Operations Assistant"]
@@ -221,28 +222,35 @@ func _sync_legacy_gameplay() -> void:
     if _syncing_legacy: return
     var tree := get_tree()
     if tree == null: return
-    var main := tree.get_first_node_in_group("game_root")
-    if main == null: main = tree.current_scene
-    if main == null or not ("employees" in main): return
-    var legacy_count := int(main.get("employees"))
+    var main = tree.current_scene
+    if main == null: return
+    var legacy_value = main.get("employees")
+    var game_day_value = main.get("day")
+    if legacy_value == null: return
+    var legacy_count := int(legacy_value)
+    var game_day := int(game_day_value) if game_day_value != null else _day
+    if _last_game_day < 0:
+        _last_game_day = game_day
+    elif game_day != _last_game_day:
+        daily_update(game_day, int(main.get("last_profit")))
+        _last_game_day = game_day
     var active := active_count()
     if _last_legacy_count < 0:
         _last_legacy_count = legacy_count
-        if active != legacy_count:
-            _syncing_legacy = true
-            main.set("employees", active)
-            _syncing_legacy = false
+        _syncing_legacy = true
+        main.set("employees", active)
+        _syncing_legacy = false
         return
     if legacy_count > active:
         while active_count() < legacy_count:
-            var result := hire_default(int(main.get("day")))
+            var result := hire_default(game_day)
             if not result.get("ok", false): break
-            active = active_count()
-    if int(main.get("employees")) != active_count():
+    active = active_count()
+    if int(main.get("employees")) != active:
         _syncing_legacy = true
-        main.set("employees", active_count())
+        main.set("employees", active)
         _syncing_legacy = false
-    _last_legacy_count = active_count()
+    _last_legacy_count = active
 
 func _record(employee_id: String, event_type: String, details: Dictionary) -> void:
     var entry := {"employee_id": employee_id, "type": event_type, "details": details}
