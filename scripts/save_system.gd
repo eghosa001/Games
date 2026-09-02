@@ -4,7 +4,7 @@ class_name RenewSaveSystem
 const SAVE_PATH := "user://renew_save.json"
 const BACKUP_PATH := "user://renew_save.backup.json"
 const TEMP_PATH := "user://renew_save.tmp.json"
-const SCHEMA_VERSION := 7
+const SCHEMA_VERSION := 8
 
 static func save_game(state: Dictionary) -> bool:
     var payload := state.duplicate(true)
@@ -24,6 +24,8 @@ static func save_game(state: Dictionary) -> bool:
     if production_system != null: payload["production_system"] = production_system.capture_state()
     var simulation_system = _simulation_system()
     if simulation_system != null: payload["simulation_system"] = simulation_system.capture_state()
+    var contract_system = _contract_system()
+    if contract_system != null: payload["contract_system"] = contract_system.capture_state()
     var game_state = _game_state()
     if game_state != null: payload["game_state"] = game_state.capture(payload)
     var json := JSON.stringify(payload)
@@ -67,6 +69,8 @@ static func load_game() -> Dictionary:
     if production_system != null and state.has("production_system"): production_system.restore_state(state["production_system"])
     var simulation_system = _simulation_system()
     if simulation_system != null and state.has("simulation_system"): simulation_system.restore_state(state["simulation_system"])
+    var contract_system = _contract_system()
+    if contract_system != null and state.has("contract_system"): contract_system.restore_state(state["contract_system"])
     if game_state != null: game_state.capture(state)
     return state
 
@@ -91,7 +95,7 @@ static func _read_dictionary(path: String) -> Dictionary:
 static func _migrate(state: Dictionary) -> Dictionary:
     var schema := int(state.get("schema_version", 0))
     if schema == SCHEMA_VERSION: return state
-    if schema >= 0 and schema <= 6:
+    if schema >= 0 and schema <= 7:
         var migrated := state.duplicate(true)
         migrated["schema_version"] = SCHEMA_VERSION
         migrated["state_version"] = 4
@@ -111,3 +115,4 @@ static func _news_system(): return _root_node("RenewNewsSystem")
 static func _finance_system(): return _root_node("RenewFinanceSystem")
 static func _production_system(): return _root_node("RenewProductionSystem")
 static func _simulation_system(): return _root_node("RenewSimulationSystem")
+static func _contract_system(): return _root_node("RenewContractSystem")
