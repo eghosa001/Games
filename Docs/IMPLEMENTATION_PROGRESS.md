@@ -74,10 +74,20 @@
 - `GameState.capture()` no longer allows a transient `core["branches"]` value to overwrite canonical branch records.
 - Schema migration converts legacy branch arrays into keyed canonical branch records without discarding saved branch data.
 
+### Canonical business persistence boundary — latest
+
+- Added an explicit `RenewGameState` business boundary for `renew_goods` with stable business ID and durable fields for open state, capacity, marketing, price, inventory, sales, profit and contract state.
+- Added `get_business()`, `set_business_value()`, `sync_business_runtime()` and `restore_business_runtime()` APIs so future systems can stop treating `main.gd` scalars as persistent ownership.
+- `GameState.capture()` no longer blindly copies business scalar fields into the canonical record when that record already exists. Legacy scalar fields are imported only when a canonical field is genuinely missing.
+- Save/load now routes business synchronization through `GameState` instead of maintaining a second business save structure in `SaveSystem`.
+- Load restores the complete business compatibility projection, including sales/profit totals and contract state, not only open/capacity/marketing/price/inventory.
+- Older saves that contain only top-level business fields are migrated into the canonical `businesses.renew_goods` record.
+- This is a persistence-boundary improvement, not a claim that the full BusinessSystem refactor is finished: `main.gd` still temporarily mutates compatibility fields at runtime.
+
 ### Save/load rehydration fixed — latest
 
 - Loading a save now rehydrates the live `BranchController` from canonical `GameState.branches`; loaded branches no longer remain at scene defaults until a restart.
-- Loading also reconstructs `main.gd`'s remaining business compatibility projection (`business_open`, capacity, marketing, price and finished goods) from the canonical `GameState.businesses.renew_goods` record.
+- Loading also reconstructs `main.gd`'s remaining business compatibility projection from the canonical `GameState.businesses.renew_goods` record.
 - The durable business record remains under `GameState`; the top-level business values returned during load exist only as a compatibility bridge for the transitional `main.gd` runtime.
 - This closes a persistence gap where business/branch data could be written to the canonical state but not fully rehydrated into the currently running scene after an in-session load.
 
@@ -104,6 +114,8 @@
 - `b65ff9d964a5870e2fcf4f2f815719482bfa8743` — branch controller syntax correction after persistence integration
 - `24584c5635a79287a7dde4112e658869c11f9009` — legacy branch-array migration
 - `d0d634b78c63f667a4774b7a5cd1e6615cb828a5` — save/load rehydration for canonical business and branch state
+- `dd1a662af809a816606833396c65f8344e66d932` — canonical business state boundary and migration safety
+- `35ceda5aba06bc139363da95a74d6a5429b5955d` — save/load routed through canonical business boundary
 
 ## Story systems verified
 
@@ -117,7 +129,7 @@ These are **foundation implementations**, not yet the full V1.1 completion gate:
 
 ## Still incomplete after this pass
 
-- `main.gd` remains transitional and still contains the compatibility scalar `employees`, but it is no longer the authority for hiring, production staffing, or payroll.
+- `main.gd` remains transitional and still contains compatibility business/workforce scalars; these are no longer intended to be persistent authority, but business mutations are still performed there at runtime.
 - Employee assignment is available in the controller API but is not yet exposed through the complete mobile UI.
 - Employee hiring UI does not yet expose candidates, roles, salaries, skills or personalities.
 - Employee firing/promotion/training are not yet exposed through the complete mobile UI.
@@ -130,11 +142,12 @@ These are **foundation implementations**, not yet the full V1.1 completion gate:
 
 Continue in the master implementation order:
 
-1. remove remaining legacy workforce reconciliation from `main.gd`/`EmployeeController` once all migration paths are covered;
-2. move Business state into the same canonical GameState boundary and complete Property → Business → Branch separation;
-3. finish employee management UI and history/news runtime event coverage;
-4. extract data-driven balance definitions;
-5. deepen resource/production/supply-chain simulation;
-6. add acquisition/ownership/finance consequences on top of stable canonical state.
+1. replace remaining `main.gd` business mutations with canonical Business APIs while preserving compatibility UI fields;
+2. complete Property → Business → Branch separation and move property lifecycle into canonical state;
+3. remove remaining legacy workforce reconciliation once all migration paths are covered;
+4. finish employee management UI and history/news runtime event coverage;
+5. extract data-driven balance definitions;
+6. deepen resource/production/supply-chain simulation;
+7. add acquisition/ownership/finance consequences on top of stable canonical state.
 
 A feature should only be marked complete after **Code → Integration → Persistence → UI → Simulation behavior → Tests** has been verified.
