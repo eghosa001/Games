@@ -31,10 +31,12 @@ func _input(event:InputEvent)->void:
         KEY_F6: establish_region()
         KEY_F7: upgrade_infrastructure()
         KEY_F8: dispatch_goods()
-        KEY_F9: establish_trade_route()
+        KEY_F10: establish_trade_route()
 
 func select_region(index:int)->void:
     var count:int=regions.regions.size()
+    if count <= 0:
+        return
     index=(index%count+count)%count
     var result=regions.select(index,parent.reputation)
     message=result["message"]
@@ -128,5 +130,5 @@ func _draw()->void:
     draw_string(ThemeDB.fallback_font,Vector2(865,262),"Special: %s"%r["special"],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("f2d27a"))
     draw_string(ThemeDB.fallback_font,Vector2(865,286),"Industry: %s | Resource: %s"%[r["industry"],r["resource"]],HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("c6d0d8"))
     draw_string(ThemeDB.fallback_font,Vector2(865,310),"Presence %d | Infrastructure L%d"%[regions.player_presence[regions.selected],regions.infrastructure[regions.selected]],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color.WHITE)
-    draw_string(ThemeDB.fallback_font,Vector2(865,334),"Trade bonus %.0f%% | F9 connect"%[regions.trade_route_bonus(regions.selected)*100.0],HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("8ee6a8"))
+    draw_string(ThemeDB.fallback_font,Vector2(865,334),"Trade bonus %.0f%% | F10 connect"%[regions.trade_route_bonus(regions.selected)*100.0],HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("8ee6a8"))
     draw_string(ThemeDB.fallback_font,Vector2(865,353),message,HORIZONTAL_ALIGNMENT_LEFT,370,11,Color("8ee6a8"))
