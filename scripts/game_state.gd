@@ -3,11 +3,13 @@ class_name RenewGameState
 
 # Single authoritative persistent state for the RENEW simulation.
 const STATE_VERSION := 3
+const BUSINESS_ID := "renew_goods"
 var data: Dictionary = {}
 var dirty := false
 
 func new_game() -> Dictionary:
-    data = {"schema_version": STATE_VERSION, "state_version": STATE_VERSION, "meta": {"created_at": Time.get_datetime_string_from_system(true), "last_saved_at": ""}, "clock": {"day": 1}, "player": {"cash": 25000, "reputation": 0}, "company": {"id": "renew_goods", "name": "RENEW Goods", "founded_day": 1}, "properties": {}, "businesses": {}, "branches": {}, "employees": {"next_id": 1, "records": {}}, "economy": {}, "resources": {}, "production": {}, "supply_chain": {}, "contracts": {}, "competitors": {}, "ownership": {}, "finance": {}, "alliances": {}, "diplomacy": {}, "regions": {}, "infrastructure": {}, "technology": {}, "events": {}, "progression": {}, "history": [], "news": {"editions": []}, "analytics": {}, "legacy": {"employee_count": 3}}
+    data = {"schema_version": STATE_VERSION, "state_version": STATE_VERSION, "meta": {"created_at": Time.get_datetime_string_from_system(true), "last_saved_at": ""}, "clock": {"day": 1}, "player": {"cash": 25000, "reputation": 0}, "company": {"id": BUSINESS_ID, "name": "RENEW Goods", "founded_day": 1}, "properties": {}, "businesses": {}, "branches": {}, "employees": {"next_id": 1, "records": {}}, "economy": {}, "resources": {}, "production": {}, "supply_chain": {}, "contracts": {}, "competitors": {}, "ownership": {}, "finance": {}, "alliances": {}, "diplomacy": {}, "regions": {}, "infrastructure": {}, "technology": {}, "events": {}, "progression": {}, "history": [], "news": {"editions": []}, "analytics": {}, "legacy": {"employee_count": 3}}
+    _ensure_business_record()
     dirty = true
     return data.duplicate(true)
 
@@ -21,12 +23,40 @@ func capture(core: Dictionary) -> Dictionary:
     dirty = false
     return data.duplicate(true)
 
-func restore(snapshot: Dictionary) -> Dictionary:
-    var migrated := _migrate(snapshot)
-    if migrated.is_empty(): return {}
-    data = migrated
-    dirty = false
-    return data.duplicate(true)
+# Business persistence boundary. main.gd may temporarily expose scalar fields for
+# UI compatibility, but the durable business record lives here. All persistence
+# code should enter through this boundary rather than maintaining a second save.
+func get_business(business_id: String = BUSINESS_ID) -> Dictionary:
+    _ensure_business_record(business_id)
+    return data["businesses"][business_id].duplicate(true)
+
+func set_business_value(key: String, value, business_id: String = BUSINESS_ID) -> void:
+    _ensure_business_record(business_id)
+    data["businesses"][business_id][key] = value
+    dirty = true
+
+func sync_business_runtime(core: Dictionary, business_id: String = BUSINESS_ID) -> void:
+    _ensure_business_record(business_id)
+    var record: Dictionary = data["businesses"][business_id]
+    var defaults := {"open": false, "capacity_level": 1, "marketing_level": 0, "price": 110, "finished_goods": 0, "last_sales": 0, "last_profit": 0, "total_profit": 0, "contract_days": 0, "contract_bonus": 0}
+    for key in defaults.keys():
+        if core.has(key): record[key] = core[key]
+        elif not record.has(key): record[key] = defaults[key]
+    data["businesses"][business_id] = record
+    dirty = true
+
+func restore_business_runtime(core: Dictionary, business_id: String = BUSINESS_ID) -> void:
+    var record := get_business(business_id)
+    core["business_open"] = bool(record.get("open", false))
+    core["capacity_level"] = int(record.get("capacity_level", 1))
+    core["marketing_level"] = int(record.get("marketing_level", 0))
+    core["player_price"] = int(record.get("price", 110))
+    core["finished_goods"] = int(record.get("finished_goods", 0))
+    core["last_sales"] = int(record.get("last_sales", 0))
+    core["last_profit"] = int(record.get("last_profit", 0))
+    core["total_profit"] = int(record.get("total_profit", 0))
+    core["contract_days"] = int(record.get("contract_days", 0))
+    core["contract_bonus"] = int(record.get("contract_bonus", 0))
 
 func mark_dirty() -> void:
     dirty = true
@@ -56,11 +86,17 @@ func clear() -> void:
     data.clear()
     dirty = false
 
+func _ensure_business_record(business_id: String = BUSINESS_ID) -> void:
+    if data.is_empty(): return
+    if not data.has("businesses") or not (data["businesses"] is Dictionary): data["businesses"] = {}
+    if not data["businesses"].has(business_id) or not (data["businesses"][business_id] is Dictionary):
+        data["businesses"][business_id] = {"id": business_id, "open": false, "capacity_level": 1, "marketing_level": 0, "price": 110, "finished_goods": 0, "last_sales": 0, "last_profit": 0, "total_profit": 0, "contract_days": 0, "contract_bonus": 0}
+
 func _merge_legacy_core(snapshot: Dictionary, core: Dictionary) -> void:
     # Keep legacy runtime fields for compatibility, but never replace canonical
     # branch/employee records with transient scalar projections.
     for key in core.keys():
-        if key != "employees" and key != "branches": snapshot[key] = core[key]
+        if key != "employees" and key != "branches" and key not in ["business_open", "capacity_level", "marketing_level", "player_price", "finished_goods", "last_sales", "last_profit", "total_profit", "contract_days", "contract_bonus"]: snapshot[key] = core[key]
     if not snapshot.has("clock") or not (snapshot["clock"] is Dictionary): snapshot["clock"] = {}
     if not snapshot.has("player") or not (snapshot["player"] is Dictionary): snapshot["player"] = {}
     if not snapshot.has("legacy") or not (snapshot["legacy"] is Dictionary): snapshot["legacy"] = {}
@@ -69,10 +105,21 @@ func _merge_legacy_core(snapshot: Dictionary, core: Dictionary) -> void:
     snapshot["player"]["reputation"] = int(core.get("reputation", snapshot["player"].get("reputation", 0)))
     snapshot["legacy"]["employee_count"] = int(core.get("employees", snapshot["legacy"].get("employee_count", 0)))
     snapshot["finance"] = {"debt": int(core.get("debt", 0)), "loan_payment": int(core.get("loan_payment", 0))}
-    if not snapshot.has("businesses") or not (snapshot["businesses"] is Dictionary): snapshot["businesses"] = {}
-    snapshot["businesses"]["renew_goods"] = {"open": bool(core.get("business_open", false)), "capacity_level": int(core.get("capacity_level", 1)), "marketing_level": int(core.get("marketing_level", 0)), "price": int(core.get("player_price", 110)), "finished_goods": int(core.get("finished_goods", 0))}
+    _ensure_business_record_in_snapshot(snapshot)
+    # Only import legacy scalar business data when the canonical record does not
+    # yet exist. Existing saves must never be overwritten by stale UI projections.
+    var business: Dictionary = snapshot["businesses"][BUSINESS_ID]
+    var legacy_business_keys := {"open": "business_open", "capacity_level": "capacity_level", "marketing_level": "marketing_level", "price": "player_price", "finished_goods": "finished_goods", "last_sales": "last_sales", "last_profit": "last_profit", "total_profit": "total_profit", "contract_days": "contract_days", "contract_bonus": "contract_bonus"}
+    for key in legacy_business_keys.keys():
+        if not business.has(key) and core.has(legacy_business_keys[key]): business[key] = core[legacy_business_keys[key]]
+    snapshot["businesses"][BUSINESS_ID] = business
     if not snapshot.has("branches") or not (snapshot["branches"] is Dictionary): snapshot["branches"] = {}
     if not snapshot.has("employees") or not (snapshot["employees"] is Dictionary): snapshot["employees"] = {"next_id": 1, "records": {}}
+
+func _ensure_business_record_in_snapshot(snapshot: Dictionary) -> void:
+    if not snapshot.has("businesses") or not (snapshot["businesses"] is Dictionary): snapshot["businesses"] = {}
+    if not snapshot["businesses"].has(BUSINESS_ID) or not (snapshot["businesses"][BUSINESS_ID] is Dictionary):
+        snapshot["businesses"][BUSINESS_ID] = {"id": BUSINESS_ID, "open": false, "capacity_level": 1, "marketing_level": 0, "price": 110, "finished_goods": 0, "last_sales": 0, "last_profit": 0, "total_profit": 0, "contract_days": 0, "contract_bonus": 0}
 
 func _migrate(snapshot: Dictionary) -> Dictionary:
     if not (snapshot is Dictionary) or snapshot.is_empty(): return {}
@@ -87,8 +134,6 @@ func _migrate(snapshot: Dictionary) -> Dictionary:
     if migrated["employees"].has("employees") and not migrated["employees"].has("records"):
         migrated["employees"]["records"] = migrated["employees"]["employees"]
         migrated["employees"].erase("employees")
-    # Older prototypes could expose branches as an array. Normalize that shape
-    # into the canonical keyed record map without losing branch data.
     if migrated.has("branches") and migrated["branches"] is Array:
         var branch_records:={}
         for index in range(migrated["branches"].size()):
@@ -97,6 +142,12 @@ func _migrate(snapshot: Dictionary) -> Dictionary:
         migrated["branches"]={"selected":0,"records":branch_records}
     elif not migrated.has("branches") or not (migrated["branches"] is Dictionary):
         migrated["branches"]={}
+    _ensure_business_record_in_snapshot(migrated)
+    var business: Dictionary = migrated["businesses"][BUSINESS_ID]
+    var legacy_business_keys := {"open": "business_open", "capacity_level": "capacity_level", "marketing_level": "marketing_level", "price": "player_price", "finished_goods": "finished_goods", "last_sales": "last_sales", "last_profit": "last_profit", "total_profit": "total_profit", "contract_days": "contract_days", "contract_bonus": "contract_bonus"}
+    for key in legacy_business_keys.keys():
+        if not business.has(key) and migrated.has(legacy_business_keys[key]): business[key] = migrated[legacy_business_keys[key]]
+    migrated["businesses"][BUSINESS_ID] = business
     if not migrated.has("history") or not (migrated["history"] is Array): migrated["history"] = []
     if not migrated.has("news") or not (migrated["news"] is Dictionary): migrated["news"] = {"editions": []}
     migrated["schema_version"] = STATE_VERSION
