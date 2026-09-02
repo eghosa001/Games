@@ -235,7 +235,7 @@ func process_day() -> void:
 
 func get_summary() -> Dictionary:
     _recalculate()
-    return {"valuation":valuation,"share_price":share_price,"founder":founder_stake,"investors":investor_stake,"treasury":treasury_shares,"control":control_score,"risk":takeover_risk,"defense":defense_level,"trust":board_trust,"influence":board_influence,"takeover_wins":takeover_wins,"dividends":dividends_paid}
+    return {"valuation":valuation,"share_price":share_price,"founder":founder_stake,"investors":investor_stake,"treasury":treasury_shares,"control":control_score,"risk":takeover_risk,"defense":defense_level,"trust":board_trust,"influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"dividends":dividends_paid}
 
 func save_state() -> Dictionary:
     return {"founder_stake":founder_stake,"investor_stake":investor_stake,"treasury_shares":treasury_shares,"investor_cash_raised":investor_cash_raised,"dividends_paid":dividends_paid,"control_score":control_score,"takeover_risk":takeover_risk,"defense_level":defense_level,"board_trust":board_trust,"valuation":valuation,"share_price":share_price,"last_capital_raise":last_capital_raise,"takeover_cooldown":takeover_cooldown,"last_processed_day":last_processed_day,"board_influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts}
@@ -286,4 +286,4 @@ func _draw() -> void:
     draw_string(ThemeDB.fallback_font, Vector2(870, 421), "Founder: %.0f%%   Investors: %.0f%%" % [s["founder"], s["investors"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("d6e0e7"))
     draw_string(ThemeDB.fallback_font, Vector2(870, 443), "Control %.0f | Risk %.0f | Defense L%d" % [s["control"], s["risk"], s["defense"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("8ee6a8"))
     draw_string(ThemeDB.fallback_font, Vector2(870, 465), "Board trust %d | Influence %d/10" % [s["trust"], s["influence"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("b7d7ff"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 487), "Takeover wins %d | Attempts %d" % [s["takeover_wins"], s["takeover_wins"] + s["risk"] * 0], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("ffad8f"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 487), "Takeover wins %d | Attempts %d" % [s["takeover_wins"], s["hostile_attempts"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("ffad8f"))
