@@ -29,7 +29,7 @@ func negotiate(rival_index:int, resource:String, parent)->Dictionary:
     var requirement:=20 if rival_index!=2 else 15
     if relationship<requirement:
         return {"ok":false,"message":"%s requires relationship %d before offering this contract."%[rival["name"],requirement]}
-    var cost:=2500+max(0,25-relationship)*100
+    var cost: int = 2500+max(0,25-relationship)*100
     if rival_index==2: cost+=1000
     if int(parent.cash)<cost: return {"ok":false,"message":"Contract signing requires $%d."%cost}
     parent.cash-=cost
