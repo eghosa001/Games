@@ -55,6 +55,42 @@ static func adjust_player(state, cash_delta: int, reputation_delta: int) -> void
     expansion["reputation"] = int(expansion.get("reputation", 0)) + reputation_delta
     state.set_value(EXPANSION_PATH, expansion)
 
+static func calculate_operating_day(state) -> Dictionary:
+    var expansion := ensure(state)
+    var revenue: int = 0
+    var expense: int = 0
+    var businesses: int = 0
+    var properties: Array = expansion["properties"]
+    for property in properties:
+        if not (property is Dictionary):
+            continue
+        if bool(property.get("owned", false)) and bool(property.get("active", true)):
+            businesses += 1
+            var income := int(property.get("income", 0))
+            var level := max(1, int(property.get("level", 1)))
+            revenue += income * level
+            expense += income / 4
+    var resource_sites: Array = expansion["resource_sites"]
+    for site in resource_sites:
+        if not (site is Dictionary):
+            continue
+        if bool(site.get("owned", false)):
+            revenue += int(site.get("output", 0)) * max(1, int(site.get("level", 1))) * 100
+    var management_level := int(expansion.get("management_level", 0))
+    var management_overhead := management_level * 350
+    expense += management_overhead
+    var profit := revenue - expense
+    return {
+        "revenue": revenue,
+        "expense": expense,
+        "profit": profit,
+        "cash": int(expansion.get("cash", 0)) + profit,
+        "day": int(expansion.get("day", 1)) + 1,
+        "businesses": businesses,
+        "population_delta": int(expansion.get("restored_count", 0)) * 2,
+        "management_overhead": management_overhead
+    }
+
 static func advance_day(state, profit: int, population_delta: int = 0) -> Dictionary:
     var expansion := ensure(state)
     var day := int(expansion.get("day", 1)) + 1
