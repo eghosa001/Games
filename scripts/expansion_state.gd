@@ -143,3 +143,19 @@ static func record_resource_upgrade(state, index: int, cost: int, output_delta: 
     expansion["cash"] = int(expansion.get("cash", 0)) - cost
     state.set_value(EXPANSION_PATH, expansion)
     return true
+
+static func record_resource_generation(state, index: int) -> Dictionary:
+    var expansion := ensure(state)
+    var sites: Array = expansion["resource_sites"]
+    if index < 0 or index >= sites.size() or not (sites[index] is Dictionary):
+        return {"ok": false, "output": 0, "stock": 0}
+    var site: Dictionary = sites[index]
+    if not bool(site.get("owned", false)):
+        return {"ok": false, "output": 0, "stock": int(site.get("stock", 0))}
+    var output := int(site.get("output", 0)) * int(site.get("level", 1))
+    var stock := int(site.get("stock", 0)) + output
+    site["stock"] = stock
+    sites[index] = site
+    expansion["resource_sites"] = sites
+    state.set_value(EXPANSION_PATH, expansion)
+    return {"ok": true, "output": output, "stock": stock, "resource": str(site.get("resource", ""))}
