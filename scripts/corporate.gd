@@ -235,7 +235,7 @@ func process_day() -> void:
 
 func get_summary() -> Dictionary:
     _recalculate()
-    return {"valuation":valuation,"share_price":share_price,"founder":founder_stake,"investors":investor_stake,"treasury":treasury_shares,"control":control_score,"risk":takeover_risk,"defense":defense_level,"trust":board_trust,"influence":board_influence,"takeover_wins":takeover_wins,"trust":board_trust,"dividends":dividends_paid}
+    return {"valuation":valuation,"share_price":share_price,"founder":founder_stake,"investors":investor_stake,"treasury":treasury_shares,"control":control_score,"risk":takeover_risk,"defense":defense_level,"trust":board_trust,"influence":board_influence,"takeover_wins":takeover_wins,"dividends":dividends_paid}
 
 func save_state() -> Dictionary:
     return {"founder_stake":founder_stake,"investor_stake":investor_stake,"treasury_shares":treasury_shares,"investor_cash_raised":investor_cash_raised,"dividends_paid":dividends_paid,"control_score":control_score,"takeover_risk":takeover_risk,"defense_level":defense_level,"board_trust":board_trust,"valuation":valuation,"share_price":share_price,"last_capital_raise":last_capital_raise,"takeover_cooldown":takeover_cooldown,"last_processed_day":last_processed_day,"board_influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts}
@@ -277,28 +277,13 @@ func _load_persistent_state() -> void:
 
 func _draw() -> void:
     if parent == null: return
+    var s := get_summary()
     var panel := Rect2(855, 350, 385, 360)
     draw_rect(panel, Color("101923"), true)
     draw_rect(panel, Color("516b7d"), false, 2.0)
-    var s := get_summary()
     draw_string(ThemeDB.fallback_font, Vector2(870, 375), "CORPORATE CONTROL", HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color("f0f4f7"))
     draw_string(ThemeDB.fallback_font, Vector2(870, 399), "Valuation: $%s   Share: $%s" % [parent._money(int(s["valuation"])), parent._money(int(s["share_price"]))], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d6e0e7"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 421), "Founder: %.0f%%   Investors: %.0f%%" % [s["founder"],s["investors"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d6e0e7"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 443), "Control: %.0f/100   Takeover risk: %.0f/100" % [s["control"],s["risk"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d6e0e7"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 465), "Defense: %d/3   Board trust: %d" % [s["defense"],s["trust"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d6e0e7"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 487), "Board influence: %d/10   Takeovers: %d" % [s["influence"],s["takeover_wins"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("d6e0e7"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 512), "ENTER Raise   - Buyback   = Dividend", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("9fd3ff"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 533), "; Defense   ' Ally defense", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("9fd3ff"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 554), "Board influence   |   Hostile bid", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("9fd3ff"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 575), "Ownership is now a strategic resource.", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("c7d0d7"))
-
-func _input(event: InputEvent) -> void:
-    if not event is InputEventKey or not event.pressed or event.echo: return
-    match event.keycode:
-        KEY_ENTER, KEY_KP_ENTER: raise_capital()
-        KEY_MINUS: buyback_shares()
-        KEY_EQUAL: pay_dividend()
-        KEY_SEMICOLON: strengthen_defense()
-        KEY_APOSTROPHE: strategic_ally_defense()
-        KEY_I: influence_board()
-        KEY_H: hostile_takeover()
+    draw_string(ThemeDB.fallback_font, Vector2(870, 421), "Founder: %.0f%%   Investors: %.0f%%" % [s["founder"], s["investors"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("d6e0e7"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 443), "Control %.0f | Risk %.0f | Defense L%d" % [s["control"], s["risk"], s["defense"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("8ee6a8"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 465), "Board trust %d | Influence %d/10" % [s["trust"], s["influence"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("b7d7ff"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 487), "Takeover wins %d | Attempts %d" % [s["takeover_wins"], s["takeover_wins"] + s["risk"] * 0], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("ffad8f"))
