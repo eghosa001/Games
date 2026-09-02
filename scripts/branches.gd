@@ -98,4 +98,4 @@ func operate_day(region_system)->Dictionary:
     return {"profit":total,"businesses":active,"sales":sales}
 
 func _money(value:int)->String:
-    return "%,d"%value
+    return str(value)
