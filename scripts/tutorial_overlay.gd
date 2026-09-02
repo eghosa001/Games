@@ -1,6 +1,5 @@
 extends CanvasLayer
 
-# Phase A presentation: a lightweight onboarding coach that never blocks the game controls.
 const Tutorial = preload("res://scripts/tutorial.gd")
 var game: Node
 var tutorial = Tutorial.new()
@@ -22,36 +21,36 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
     if game == null:
         return
+    var current_action: String = String(tutorial.current().get("action", "COMPLETE"))
+    if not tutorial.completed and current_action != "COMPLETE":
+        var old_step := tutorial.step
+        tutorial.notify(current_action, game)
+        if tutorial.step != old_step:
+            game.message = "TUTORIAL COMPLETE: %s" % String(tutorial.current().get("title", "Next step"))
     _refresh()
 
 func _build() -> void:
     var root := Control.new()
     root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    # Critical on mobile: the full-screen overlay must never capture touches
-    # outside its actual tutorial button.
     root.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(root)
-
     panel = Panel.new()
     panel.position = Vector2(24, 78)
     panel.size = Vector2(360, 150)
     panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(panel)
-
     title_label = Label.new()
     title_label.position = Vector2(18, 12)
     title_label.size = Vector2(324, 28)
     title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     title_label.add_theme_font_size_override("font_size", 16)
     panel.add_child(title_label)
-
     progress_label = Label.new()
     progress_label.position = Vector2(18, 40)
     progress_label.size = Vector2(324, 20)
     progress_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     progress_label.add_theme_font_size_override("font_size", 11)
     panel.add_child(progress_label)
-
     body_label = Label.new()
     body_label.position = Vector2(18, 66)
     body_label.size = Vector2(324, 48)
@@ -59,14 +58,12 @@ func _build() -> void:
     body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     body_label.add_theme_font_size_override("font_size", 12)
     panel.add_child(body_label)
-
     hint_label = Label.new()
     hint_label.position = Vector2(18, 112)
     hint_label.size = Vector2(200, 24)
     hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     hint_label.add_theme_font_size_override("font_size", 11)
     panel.add_child(hint_label)
-
     continue_button = Button.new()
     continue_button.text = "GOT IT"
     continue_button.position = Vector2(248, 108)
@@ -75,7 +72,6 @@ func _build() -> void:
     continue_button.mouse_filter = Control.MOUSE_FILTER_STOP
     continue_button.pressed.connect(_dismiss_current)
     panel.add_child(continue_button)
-
     collapsed_button = Button.new()
     collapsed_button.text = "TUTORIAL"
     collapsed_button.position = Vector2(24, 78)
@@ -99,14 +95,13 @@ func _refresh() -> void:
     hint_label.text = "Goal: " + String(current.get("action", "COMPLETE"))
     if tutorial.completed:
         continue_button.text = "HIDE"
-        hint_label.text = "NEXT: build your first growth strategy"
+        hint_label.text = "PHASE A COMPLETE • SCALE THE EMPIRE"
 
 func _dismiss_current() -> void:
     if tutorial.completed:
         _collapse()
         return
     var action: String = String(tutorial.current().get("action", ""))
-    # If the required action has already happened, advance immediately.
     var text: String = tutorial.notify(action, game)
     if tutorial.completed:
         title_label.text = "FIRST BUSINESS COMPLETE"
