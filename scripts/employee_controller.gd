@@ -28,12 +28,23 @@ func _process(_delta: float) -> void:
     _mark_dirty()
 
 func hire(role: String = "Worker") -> Dictionary:
+    return hire_for_assignment(role, "renew_goods", "core")
+
+# Hiring for an operating unit creates the real employee record and immediately
+# binds that person to the unit. This is the authoritative path for new staffing.
+func hire_for_assignment(role: String, assignment_type: String, assignment_id: String) -> Dictionary:
     if parent == null:
         return {"ok": false, "message": "Employee controller is not ready."}
     var employee = employees.create_employee(role, int(parent.get("day")), "renew_goods")
+    var employee_id := str(employee["id"])
+    var assignment := assign(employee_id, assignment_type, assignment_id)
+    if not bool(assignment.get("ok", false)):
+        employees.fire_employee(employee_id, int(parent.get("day")), "assignment_failed")
+        _sync_legacy_projection()
+        return assignment
     _sync_legacy_projection()
     _mark_dirty()
-    return {"ok": true, "employee": employee, "wage": int(employee["salary"])}
+    return {"ok": true, "employee": employees.employees[employee_id].duplicate(true), "wage": int(employee["salary"])}
 
 func fire(employee_id: String, reason: String = "terminated") -> Dictionary:
     var result = employees.fire_employee(employee_id, int(parent.get("day")), reason)
@@ -67,6 +78,18 @@ func assign(employee_id: String, assignment_type: String, assignment_id: String)
     employees.employees[employee_id] = employee
     _mark_dirty()
     return {"ok": true, "employee": employee.duplicate(true)}
+
+# Returns only employees actually assigned to the requested operating unit.
+# Branch/business systems should use this instead of maintaining staffing counts.
+func assigned_employee_ids(assignment_type: String, assignment_id: String) -> Array:
+    var result: Array = []
+    for employee in employees.active_employees():
+        if str(employee.get("assignment_type", "")) == assignment_type and str(employee.get("assignment_id", "")) == assignment_id:
+            result.append(str(employee.get("id", "")))
+    return result
+
+func assigned_count(assignment_type: String, assignment_id: String) -> int:
+    return assigned_employee_ids(assignment_type, assignment_id).size()
 
 func active_count() -> int:
     return employees.active_count()
@@ -102,8 +125,6 @@ func role_metrics() -> Dictionary:
         if count > 0: metrics[role]["productivity"] = float(metrics[role]["productivity"]) / float(count)
     return metrics
 
-# Role suitability makes the employee system affect the operation that a person
-# is actually qualified for, instead of treating every employee as interchangeable.
 func operating_metrics() -> Dictionary:
     var production_score := 0.0
     var sales_score := 0.0
@@ -146,9 +167,6 @@ func operating_metrics() -> Dictionary:
         "management_people": management_people
     }
 
-# Converts individual employee productivity into the staffing value expected by
-# the current prototype ProductionSystem. This keeps the bridge explicit while
-# the production system is being refactored to consume employee records directly.
 func effective_staffing() -> int:
     var count := active_count()
     if count <= 0: return 0
