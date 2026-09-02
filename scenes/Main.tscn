@@ -1,4 +1,4 @@
-[gd_scene load_steps=28 format=3]
+[gd_scene load_steps=29 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -26,6 +26,7 @@
 [ext_resource path="res://scripts/acquisition_system.gd" type="Script" id="25"]
 [ext_resource path="res://scripts/finance_system.gd" type="Script" id="26"]
 [ext_resource path="res://scripts/bankruptcy_system.gd" type="Script" id="27"]
+[ext_resource path="res://scripts/alliance_ui.gd" type="Script" id="28"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -89,3 +90,6 @@ layer = 60
 [node name="NewsUI" type="CanvasLayer" parent="."]
 script = ExtResource("21")
 layer = 70
+[node name="AllianceUI" type="CanvasLayer" parent="."]
+script = ExtResource("28")
+layer = 55
