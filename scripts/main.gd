@@ -168,11 +168,11 @@ func advance_day() -> void:
     var district_mult := districts.business_multiplier("Consumer Goods")
     var demand := clamp(int((55.0*(0.7+price_factor)+reputation*0.7+marketing_level*8+float(alliance["sales"])*40.0+float(deal["sales"])*45.0)*(district_mult-pressure)),5,100)
     var units := min(demand,finished_goods)
-    var sales := units*player_price
+    var sales: int = units*player_price
     var wages := employees*180
     var overhead := 650+capacity_level*100
     var contract_income := contract_bonus if contract_days > 0 else 0
-    var profit := sales+contract_income-wages-overhead
+    var profit: int = sales+contract_income-wages-overhead
     cash += profit; finished_goods -= units; last_sales = sales+contract_income; last_profit = profit; total_profit += profit
     if contract_days > 0: contract_days -= 1
     if profit >= 0: reputation += 1
@@ -244,11 +244,11 @@ func upgrade_expansion()->void:
     cash-=int(result["cost"]); reputation+=2; _log("EMPIRE: "+result["message"]); message=result["message"]
 func acquire_rival_asset()->void:
     if reputation<25: message="Acquisitions unlock at 25 reputation."; return
-    var rival=rivals.rivals[selected_rival]; var cost:=50000+max(0,int(rival["cash"])/12)
+    var rival=rivals.rivals[selected_rival]; var cost: int = 50000+max(0,int(rival["cash"])/12)
     if cash<cost: message="Acquiring a %s asset requires $%s."%[rival["name"],_money(cost)]; return
     cash-=cost; acquisition_count+=1; reputation+=8; rival["cash"]=max(0,int(rival["cash"])-cost/2); _log("ACQUISITION: bought a distressed %s asset for $%s."%[rival["name"],_money(cost)]); message="Acquisition complete. A competitor's foothold is now yours."
 func upgrade_transport()->void:
-    var cost:=8000*transport_level
+    var cost: int = 8000*transport_level
     if cash<cost: message="Transport upgrade requires $%s."%_money(cost); return
     cash-=cost; transport_level+=1; transport_capacity+=30; reputation+=2; _log("LOGISTICS: fleet upgraded to level %d; capacity %d."%[transport_level,transport_capacity]); message="Transport network upgraded."
 
