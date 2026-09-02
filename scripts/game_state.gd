@@ -54,6 +54,10 @@ func restore(snapshot: Dictionary) -> Dictionary:
     }
     return flat.duplicate(true)
 
+# Named compatibility entry point for migration tooling and tests.
+func restore_state_compat(snapshot: Dictionary) -> Dictionary:
+    return restore(snapshot)
+
 func get_domain(domain: String) -> Dictionary:
     _ensure_domains()
     return domains.get(domain, {}).duplicate(true)
