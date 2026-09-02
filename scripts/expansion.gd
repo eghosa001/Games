@@ -132,3 +132,7 @@ func supply_business(index: int, resource: String, amount: int) -> Dictionary:
     if not p["owned"]: return {"ok":false,"moved":0,"message":"Own the business first."}
     if not p["inputs"].has(resource): return {"ok":false,"moved":0,"message":"%s does not use %s." % [p["name"],resource]}
     return {"ok":true,"moved":amount,"message":"Supplied %d %s to %s." % [amount,resource,p["name"]]}
+
+func get_summary() -> Dictionary:
+    _normalize_all()
+    return {"day":day,"cash":cash,"reputation":reputation,"population":population,"restored_count":restored_count,"properties":properties,"resource_sites":resource_sites}
