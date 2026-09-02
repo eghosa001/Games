@@ -1,17 +1,18 @@
 extends Node2D
 
-# RENEW Corporate Layer - ownership, capital, control and takeover defense.
+# RENEW Corporate Layer.
+# OwnershipSystem is the sole source of truth for shares, holders, voting,
+# board seats, dividends, investor confidence and takeover defense.
+
+const OwnershipSystem = preload("res://scripts/ownership_system.gd")
+const COMPANY_ID := "renew_co"
+const FOUNDER_ID := "founder"
+const INVESTOR_ID := "fund_a"
 
 var parent
-var founder_stake := 100.0
-var investor_stake := 0.0
-var treasury_shares := 0.0
+var ownership: Node
 var investor_cash_raised := 0
 var dividends_paid := 0
-var control_score := 100.0
-var takeover_risk := 0.0
-var defense_level := 0
-var board_trust := 50
 var valuation := 25000
 var share_price := 25
 var last_capital_raise := 0
@@ -23,10 +24,33 @@ var takeover_wins := 0
 var hostile_attempts := 0
 var milestone_level := 0
 
+# Compatibility accessors: these are derived from OwnershipSystem, never stored here.
+var founder_stake: float:
+    get: return _ownership_percent(FOUNDER_ID)
+var investor_stake: float:
+    get: return _ownership_percent(INVESTOR_ID)
+var treasury_shares: float:
+    get: return float(_company().get("treasury_shares", 0))
+var control_score: float:
+    get: return _control_score()
+var takeover_risk: float:
+    get: return _takeover_risk()
+var defense_level: int:
+    get: return int(_company().get("defense_level", 0))
+var board_trust: int:
+    get: return int(round(float(_company().get("investor_confidence", 50.0))))
+
 func _ready() -> void:
     parent = get_parent()
+    ownership = get_node_or_null("../OwnershipSystem")
+    if ownership == null:
+        ownership = OwnershipSystem.new()
+        ownership.name = "OwnershipSystem"
+        get_parent().add_child(ownership)
     if parent != null: last_processed_day = parent.day
+    _ensure_company()
     _load_persistent_state()
+    _ensure_company()
     queue_redraw()
 
 func _process(_delta: float) -> void:
@@ -36,6 +60,44 @@ func _process(_delta: float) -> void:
         process_day()
     _recalculate()
     queue_redraw()
+
+func _company() -> Dictionary:
+    if ownership == null: return {}
+    return ownership.get_entity(COMPANY_ID)
+
+func _ensure_company() -> void:
+    if ownership == null or ownership.has_entity(COMPANY_ID): return
+    var created := ownership.register_entity(COMPANY_ID, OwnershipSystem.ENTITY_COMPANY, 1000000)
+    if bool(created.get("ok", false)):
+        ownership.issue_shares(COMPANY_ID, FOUNDER_ID, 1000000, OwnershipSystem.VOTE_ORDINARY, "corporate_initialization")
+
+func _ownership_percent(holder_id: String) -> float:
+    if ownership == null or not ownership.has_entity(COMPANY_ID): return 0.0
+    return ownership.get_ownership_percent(COMPANY_ID, holder_id)
+
+func _voting_percent(holder_id: String) -> float:
+    if ownership == null or not ownership.has_entity(COMPANY_ID): return 0.0
+    return ownership.get_voting_percent(COMPANY_ID, holder_id)
+
+func _control_score() -> float:
+    if ownership == null or not ownership.has_entity(COMPANY_ID): return 0.0
+    var founder_vote := _voting_percent(FOUNDER_ID)
+    var board_percent := ownership.board_control_percent(COMPANY_ID, FOUNDER_ID)
+    var defense := float(_company().get("defense_level", 0))
+    var confidence := float(_company().get("investor_confidence", 50.0))
+    return clamp(founder_vote + board_percent * 0.15 + defense * 3.0 + confidence * 0.10, 0.0, 100.0)
+
+func _takeover_risk() -> float:
+    if ownership == null or not ownership.has_entity(COMPANY_ID): return 0.0
+    var fragmentation := max(0.0, 100.0 - _voting_percent(FOUNDER_ID))
+    var weakness := 0.0
+    if parent != null:
+        if parent.cash < valuation * 0.15: weakness += 18.0
+        if parent.debt > valuation * 0.45: weakness += 20.0
+        if parent.reputation < 30: weakness += 8.0
+    var defense := float(_company().get("defense_level", 0))
+    var confidence := float(_company().get("investor_confidence", 50.0))
+    return clamp(fragmentation * 0.65 + weakness - defense * 12.0 - confidence * 0.12, 0.0, 100.0)
 
 func _recalculate() -> void:
     var business_value := max(0, int(parent.cash))
@@ -50,13 +112,6 @@ func _recalculate() -> void:
         if r["owned"]: business_value += int(r["cost"]) + int(r["level"]) * 7000
     valuation = max(25000, business_value - int(parent.debt))
     share_price = max(10, int(round(float(valuation) / 1000.0)))
-    control_score = clamp(founder_stake + treasury_shares * 0.5 + float(defense_level) * 3.0 + float(board_trust) * 0.1 + float(board_influence) * 0.4, 0.0, 100.0)
-    var fragmentation := max(0.0, 100.0 - founder_stake)
-    var weakness := 0.0
-    if parent.cash < valuation * 0.15: weakness += 18.0
-    if parent.debt > valuation * 0.45: weakness += 20.0
-    if parent.reputation < 30: weakness += 8.0
-    takeover_risk = clamp(fragmentation * 0.65 + weakness - defense_level * 12.0 - board_trust * 0.12, 0.0, 100.0)
 
 func _milestone_target(level: int) -> String:
     match level:
@@ -87,7 +142,7 @@ func show_status() -> void:
     if next > 5:
         parent.message = "ENDGAME: You have reached the RENEW Empire tier. Keep expanding, defending control and challenging the giants."
     else:
-        parent.message = "CORPORATE STATUS: %s | Valuation $%s | Control %.0f%% | Risk %.0f%% | Next: %s." % [_milestone_target(milestone_level), parent._money(valuation), control_score, takeover_risk, next_name]
+        parent.message = "CORPORATE STATUS: %s | Valuation $%s | Founder %.1f%% | Investors %.1f%% | Voting %.1f%% | Risk %.0f%% | Next: %s." % [_milestone_target(milestone_level), parent._money(valuation), founder_stake, investor_stake, _voting_percent(FOUNDER_ID), takeover_risk, next_name]
 
 func raise_capital() -> void:
     _recalculate()
@@ -99,34 +154,42 @@ func raise_capital() -> void:
     if founder_stake - new_stake < 51.0:
         parent.message = "That raise would put founder control below 51%. Raise less or grow first."
         return
-    founder_stake -= new_stake
-    investor_stake += new_stake
+    var issued := int(_company().get("issued_shares", 0))
+    var quantity := int(ceil(float(issued) * new_stake / (100.0 - new_stake)))
+    var result := ownership.issue_shares(COMPANY_ID, INVESTOR_ID, quantity, OwnershipSystem.VOTE_ORDINARY, "capital_raise")
+    if not bool(result.get("ok", false)):
+        parent.message = "Capital raise failed: %s." % str(result.get("error", "unknown"))
+        return
     investor_cash_raised += offer
     parent.cash += offer
     last_capital_raise = offer
-    board_trust = min(100, board_trust + 3)
+    ownership.adjust_investor_confidence(COMPANY_ID, 3.0, "capital_raise")
     parent.reputation += 3
     _persist()
-    parent.message = "Capital raised: $%s for %.0f%% equity. Founder control remains %.0f%%." % [parent._money(offer), new_stake, founder_stake]
-    parent._log("INVESTMENT: %s invested $%s for %.0f%% equity." % [investor_name, parent._money(offer), new_stake])
+    parent.message = "Capital raised: $%s for new equity. Founder voting control remains %.1f%%." % [parent._money(offer), _voting_percent(FOUNDER_ID)]
+    parent._log("INVESTMENT: %s invested $%s through OwnershipSystem." % [investor_name, parent._money(offer)])
 
 func buyback_shares() -> void:
     _recalculate()
     if investor_stake <= 0.0:
         parent.message = "There are no investor shares to buy back."
         return
-    var amount := min(5.0, investor_stake)
-    var cost := max(5000, int(round(float(valuation) * amount / 100.0 * 1.08)))
+    var amount_pct := min(5.0, investor_stake)
+    var investor_shares := int(_company().get("holders", {}).get(INVESTOR_ID, {}).get("classes", {}).get(OwnershipSystem.VOTE_ORDINARY, 0))
+    var amount := min(investor_shares, max(1, int(round(float(_company().get("issued_shares", 0)) * amount_pct / 100.0))))
+    var cost := max(5000, int(round(float(valuation) * amount_pct / 100.0 * 1.08)))
     if parent.cash < cost:
         parent.message = "Share buyback requires $%s." % parent._money(cost)
         return
+    var result := ownership.buyback(COMPANY_ID, INVESTOR_ID, amount, float(cost) / max(1, amount), "corporate_buyback")
+    if not bool(result.get("ok", false)):
+        parent.message = "Buyback failed: %s." % str(result.get("error", "unknown"))
+        return
     parent.cash -= cost
-    investor_stake -= amount
-    founder_stake += amount
-    board_trust = min(100, board_trust + 2)
+    ownership.adjust_investor_confidence(COMPANY_ID, 2.0, "share_buyback")
     _persist()
-    parent.message = "Bought back %.0f%% of company for $%s. Founder stake: %.0f%%." % [amount, parent._money(cost), founder_stake]
-    parent._log("BUYBACK: %.0f%% equity repurchased for $%s." % [amount, parent._money(cost)])
+    parent.message = "Bought back %.1f%% of company for $%s. Founder stake: %.1f%%." % [amount_pct, parent._money(cost), founder_stake]
+    parent._log("BUYBACK: OwnershipSystem repurchased %d shares for $%s." % [amount, parent._money(cost)])
 
 func pay_dividend() -> void:
     _recalculate()
@@ -137,29 +200,34 @@ func pay_dividend() -> void:
     if parent.cash < payout:
         parent.message = "Dividend requires $%s in available cash." % parent._money(payout)
         return
+    var result := ownership.distribute_dividend(COMPANY_ID, float(payout))
+    if not bool(result.get("ok", false)):
+        parent.message = "Dividend failed: %s." % str(result.get("error", "unknown"))
+        return
     parent.cash -= payout
     dividends_paid += payout
-    board_trust = min(100, board_trust + 5)
+    ownership.adjust_investor_confidence(COMPANY_ID, 5.0, "dividend_paid")
     _persist()
-    parent.message = "Paid $%s dividend. Investors are happier, but growth capital is lower." % parent._money(payout)
-    parent._log("DIVIDEND: $%s paid to shareholders." % parent._money(payout))
+    parent.message = "Paid $%s dividend through OwnershipSystem. Investors are happier, but growth capital is lower." % parent._money(payout)
+    parent._log("DIVIDEND: $%s distributed according to ownership." % parent._money(payout))
 
 func strengthen_defense() -> void:
     _recalculate()
-    if defense_level >= 3:
+    var current := defense_level
+    if current >= 3:
         parent.message = "Corporate defense is already at maximum strength."
         return
-    var cost := 7000 * (defense_level + 1)
+    var cost := 7000 * (current + 1)
     if parent.cash < cost:
         parent.message = "Corporate defense requires $%s." % parent._money(cost)
         return
     parent.cash -= cost
-    defense_level += 1
-    board_trust = min(100, board_trust + 6)
+    ownership.set_defense(COMPANY_ID, current + 1, bool(_company().get("poison_pill", false)))
+    ownership.adjust_investor_confidence(COMPANY_ID, 6.0, "defense_upgrade")
     parent.reputation += 2
     _persist()
-    parent.message = "Defense upgraded to level %d. Takeover risk reduced." % defense_level
-    parent._log("BOARD: corporate defense upgraded to level %d (-$%s)." % [defense_level, parent._money(cost)])
+    parent.message = "Defense upgraded to level %d through OwnershipSystem. Takeover risk reduced." % defense_level
+    parent._log("BOARD: ownership defense upgraded to level %d (-$%s)." % [defense_level, parent._money(cost)])
 
 func strategic_ally_defense() -> void:
     _recalculate()
@@ -174,11 +242,11 @@ func strategic_ally_defense() -> void:
         parent.message = "Defensive partnership requires $5,000."
         return
     parent.cash -= 5000
-    board_trust = min(100, board_trust + 12)
-    defense_level = min(3, defense_level + 1)
+    ownership.adjust_investor_confidence(COMPANY_ID, 12.0, "strategic_ally_defense")
+    ownership.set_defense(COMPANY_ID, min(3, defense_level + 1), true)
     takeover_cooldown = 10
     _persist()
-    parent.message = "Strategic ally committed support. Takeover risk temporarily suppressed."
+    parent.message = "Strategic ally committed support. OwnershipSystem takeover risk is temporarily suppressed."
     parent._log("ALLIANCE DEFENSE: strategic partner backed the company against takeover pressure.")
 
 func influence_board() -> void:
@@ -189,20 +257,28 @@ func influence_board() -> void:
     if parent.reputation < 25:
         parent.message = "Board influence requires 25 reputation."
         return
-    if board_influence >= 10:
-        parent.message = "Board influence is already at maximum."
+    var board_size := int(_company().get("board", {}).get("seat_count", 3))
+    var occupied := ownership.get_board_seats(COMPANY_ID)
+    if occupied >= board_size:
+        parent.message = "The OwnershipSystem board is full."
         return
     var cost := 3500 + board_influence * 1500
     if parent.cash < cost:
         parent.message = "Board campaign requires $%s." % parent._money(cost)
         return
     parent.cash -= cost
-    board_influence += 1
-    board_trust = min(100, board_trust + 4)
+    var seat_id := "founder_campaign_%d" % (board_influence + 1)
+    var result := ownership.appoint_board_seat(COMPANY_ID, FOUNDER_ID, seat_id)
+    if not bool(result.get("ok", false)):
+        parent.cash += cost
+        parent.message = "Board campaign failed: %s." % str(result.get("error", "unknown"))
+        return
+    board_influence = ownership.get_board_seats(COMPANY_ID, FOUNDER_ID)
+    ownership.adjust_investor_confidence(COMPANY_ID, 4.0, "board_campaign")
     parent.reputation += 1
     _persist()
-    parent.message = "Board influence increased to %d/10." % board_influence
-    parent._log("BOARD CAMPAIGN: secured one additional voting influence for $%s." % parent._money(cost))
+    parent.message = "Founder board control increased to %d seat(s)." % board_influence
+    parent._log("BOARD CAMPAIGN: OwnershipSystem assigned founder seat for $%s." % parent._money(cost))
 
 func hostile_takeover() -> void:
     _recalculate()
@@ -225,7 +301,11 @@ func hostile_takeover() -> void:
         parent.message = "A hostile bid needs $%s in acquisition financing." % parent._money(offer)
         return
     hostile_attempts += 1
-    var strength := float(control_score) + float(board_influence * 3) + float(parent.reputation) * 0.25 - float(target_cash) / 50000.0
+    var control_check := ownership.takeover_control(COMPANY_ID, FOUNDER_ID, 50.0)
+    if not bool(control_check.get("ok", false)):
+        parent.message = "Hostile bid blocked: founder lacks majority voting control."
+        return
+    var strength := control_score + float(ownership.get_board_seats(COMPANY_ID, FOUNDER_ID) * 3) + float(parent.reputation) * 0.25 - float(target_cash) / 50000.0
     var chance := clamp(0.25 + strength / 260.0 - float(defense_level) * 0.04, 0.18, 0.88)
     parent.cash -= offer
     if randf() <= chance:
@@ -233,16 +313,16 @@ func hostile_takeover() -> void:
         takeover_wins += 1
         parent.acquisition_count += 1
         parent.reputation += 12
-        board_trust = min(100, board_trust + 15)
-        board_influence = min(10, board_influence + 2)
+        ownership.adjust_investor_confidence(COMPANY_ID, 15.0, "successful_takeover")
+        ownership.set_defense(COMPANY_ID, min(3, defense_level + 1), bool(_company().get("poison_pill", false)))
         takeover_cooldown = 12
         _persist()
         parent.message = "HOSTILE TAKEOVER SUCCESS: You seized strategic control of %s." % target["name"]
-        parent._log("CORPORATE WAR: hostile bid succeeded against %s for $%s. Your empire now controls a rival asset." % [target["name"], parent._money(offer)])
+        parent._log("CORPORATE WAR: hostile bid succeeded against %s for $%s." % [target["name"], parent._money(offer)])
         _check_milestones()
     else:
         parent.reputation = max(0, parent.reputation - 6)
-        board_trust = max(0, board_trust - 10)
+        ownership.adjust_investor_confidence(COMPANY_ID, -10.0, "failed_takeover")
         takeover_cooldown = 8
         _persist()
         parent.message = "HOSTILE TAKEOVER FAILED: shareholders rejected the bid."
@@ -252,15 +332,15 @@ func process_day() -> void:
     if parent == null: return
     if takeover_cooldown > 0: takeover_cooldown -= 1
     _recalculate()
-    if investor_stake > 0 and parent.day % 7 == 0:
-        board_trust = min(100, board_trust + 1)
+    if parent.day % 7 == 0 and investor_stake > 0:
+        ownership.adjust_investor_confidence(COMPANY_ID, 1.0, "weekly_board_cycle")
     if takeover_risk >= 65.0 and takeover_cooldown <= 0 and parent.day % 5 == 0 and parent.rivals.rivals.size() > 0:
         var giant = parent.rivals.rivals[0]
         var pressure := max(0, int(float(takeover_risk) * 700))
         if int(giant["cash"]) > pressure:
             giant["cash"] = max(0, int(giant["cash"]) - pressure / 4)
             takeover_cooldown = 5
-            board_trust = max(0, board_trust - 8)
+            ownership.adjust_investor_confidence(COMPANY_ID, -8.0, "hostile_pressure")
             parent.reputation = max(0, parent.reputation - 2)
             parent._log("TAKEOVER ATTEMPT: The Giant offered shareholders a premium bid. Control is under pressure.")
             parent.message = "TAKEOVER ALERT: The Giant is targeting your company. Defend your control."
@@ -269,21 +349,17 @@ func process_day() -> void:
 
 func get_summary() -> Dictionary:
     _recalculate()
-    return {"valuation":valuation,"share_price":share_price,"founder":founder_stake,"investors":investor_stake,"treasury":treasury_shares,"control":control_score,"risk":takeover_risk,"defense":defense_level,"trust":board_trust,"influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"dividends":dividends_paid,"milestone":milestone_level,"milestone_name":_milestone_target(milestone_level)}
+    var snapshot := ownership.get_control_snapshot(COMPANY_ID)
+    return {"valuation":valuation,"share_price":share_price,"founder":founder_stake,"investors":investor_stake,"treasury":treasury_shares,"control":control_score,"risk":takeover_risk,"defense":defense_level,"trust":board_trust,"influence":ownership.get_board_seats(COMPANY_ID, FOUNDER_ID),"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"dividends":dividends_paid,"milestone":milestone_level,"milestone_name":_milestone_target(milestone_level),"ownership_snapshot":snapshot}
 
 func save_state() -> Dictionary:
-    return {"founder_stake":founder_stake,"investor_stake":investor_stake,"treasury_shares":treasury_shares,"investor_cash_raised":investor_cash_raised,"dividends_paid":dividends_paid,"control_score":control_score,"takeover_risk":takeover_risk,"defense_level":defense_level,"board_trust":board_trust,"valuation":valuation,"share_price":share_price,"last_capital_raise":last_capital_raise,"takeover_cooldown":takeover_cooldown,"last_processed_day":last_processed_day,"board_influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"milestone_level":milestone_level}
+    return {"ownership_state": ownership.save_state() if ownership != null else {}, "investor_cash_raised":investor_cash_raised,"dividends_paid":dividends_paid,"valuation":valuation,"share_price":share_price,"last_capital_raise":last_capital_raise,"takeover_cooldown":takeover_cooldown,"last_processed_day":last_processed_day,"board_influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"milestone_level":milestone_level}
 
 func load_state(state: Dictionary) -> void:
-    founder_stake = float(state.get("founder_stake",100.0))
-    investor_stake = float(state.get("investor_stake",0.0))
-    treasury_shares = float(state.get("treasury_shares",0.0))
+    if ownership != null and state.has("ownership_state") and state["ownership_state"] is Dictionary:
+        ownership.load_state(state["ownership_state"])
     investor_cash_raised = int(state.get("investor_cash_raised",0))
     dividends_paid = int(state.get("dividends_paid",0))
-    control_score = float(state.get("control_score",100.0))
-    takeover_risk = float(state.get("takeover_risk",0.0))
-    defense_level = int(state.get("defense_level",0))
-    board_trust = int(state.get("board_trust",50))
     valuation = int(state.get("valuation",25000))
     share_price = int(state.get("share_price",25))
     last_capital_raise = int(state.get("last_capital_raise",0))
@@ -318,8 +394,8 @@ func _draw() -> void:
     draw_rect(panel, Color("516b7d"), false, 2.0)
     draw_string(ThemeDB.fallback_font, Vector2(870, 375), "CORPORATE CONTROL", HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color("f0f4f7"))
     draw_string(ThemeDB.fallback_font, Vector2(870, 399), "Valuation: $%s   Share: $%s" % [parent._money(int(s["valuation"])), parent._money(int(s["share_price"]))], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d6e0e7"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 421), "Founder: %.0f%%   Investors: %.0f%%" % [s["founder"], s["investors"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("d6e0e7"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 443), "Control %.0f | Risk %.0f | Defense L%d" % [s["control"], s["risk"], s["defense"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("8ee6a8"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 465), "Board trust %d | Influence %d/10" % [s["trust"], s["influence"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("b7d7ff"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 421), "Founder: %.1f%%   Investors: %.1f%%" % [s["founder"], s["investors"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("d6e0e7"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 443), "Voting control %.1f | Risk %.0f | Defense L%d" % [_voting_percent(FOUNDER_ID), s["risk"], s["defense"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("8ee6a8"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 465), "Investor confidence %d | Founder board %d" % [s["trust"], s["influence"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("b7d7ff"))
     draw_string(ThemeDB.fallback_font, Vector2(870, 487), "Takeover wins %d | Attempts %d" % [s["takeover_wins"], s["hostile_attempts"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("ffad8f"))
     draw_string(ThemeDB.fallback_font, Vector2(870, 509), "Tier %d: %s" % [s["milestone"], s["milestone_name"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("ffd27f"))
