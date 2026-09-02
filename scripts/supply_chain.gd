@@ -2,7 +2,7 @@ extends RefCounted
 class_name RenewSupplyChain
 
 # Supply-chain simulation: resources are produced at owned sites, moved through
-the player's network, and consumed by operating businesses. Shortages create
+# the player's network, and consumed by operating businesses. Shortages create
 # real economic consequences instead of being cosmetic inventory numbers.
 var network_stock := {"materials":0,"packaging":0,"fuel":0,"food":0}
 var shipped_today := 0
