@@ -2,6 +2,29 @@
 
 > Verified implementation work on `feature/foundation-v11-implementation`.
 
+## 2026-09-02 — Canonical expansion operating-day calculation
+
+### Fixed in this pass
+
+- Added `RenewExpansionState.calculate_operating_day()` as the canonical, non-mutating calculation layer for expansion daily revenue, expense, profit, business count, next-day projection and restored-property population delta.
+- The calculation reads only `GameState.expansion`, so expansion economics no longer need to derive their authoritative inputs from the mutable `Expansion` runtime node.
+- Kept `RenewExpansionState.advance_day()` as the single canonical mutation step for committing the calculated profit, day and population changes.
+- Added regression coverage proving the calculation produces the expected expansion economics and does not mutate canonical cash/day before the explicit commit.
+- Added regression coverage proving the committed operating result survives `GameState.capture()` / `restore()`.
+
+### Verification status
+
+Static source review only. The Godot executable is not available in the current environment, so runtime tests were not claimed as passing.
+
+### Verified commits
+
+- `eda923f387fa792bf207d71fae77e2698919623b` — make expansion day simulation canonical
+- `aa8f15bdcb153dbe3c104d2e34a734ab1670f75a` — cover canonical expansion day calculation
+
+### Remaining integration step
+
+- `main.gd` still calls the legacy `Expansion.operate_day()` to obtain the result before committing through `RenewExpansionState.advance_day()`. The new canonical calculator is now available and tested; the next integration pass should switch Main to it and remove the remaining runtime calculation dependency.
+
 ## 2026-09-02 — Canonical expansion balance projection fix
 
 ### Fixed in this pass
