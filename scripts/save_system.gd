@@ -6,23 +6,23 @@ const BACKUP_PATH := "user://renew_save.backup.json"
 const TEMP_PATH := "user://renew_save.tmp.json"
 const SCHEMA_VERSION := 3
 
-static func save_game(state: Dictionary) -> bool:
-    if state.is_empty(): return false
+# Main currently passes its Node instance. Convert that runtime object into a
+# plain Dictionary at this boundary so persistence never depends on Godot
+# Object serialization or a second state store.
+static func save_game(state) -> Dictionary:
+    var payload := _runtime_snapshot(state)
+    if payload.is_empty(): return {"ok":false,"message":"No runtime state was supplied."}
     var game_state = _game_state()
-    var payload := state.duplicate(true)
     if game_state != null:
-        # Business state is persisted through the canonical GameState boundary.
-        # Legacy scalar fields are accepted only as a runtime compatibility
-        # projection and are not allowed to replace an existing canonical record.
         game_state.sync_business_runtime(payload)
         payload = game_state.capture(payload)
     payload["schema_version"] = SCHEMA_VERSION
     payload["state_version"] = SCHEMA_VERSION
     payload["save_metadata"] = {"saved_at": Time.get_datetime_string_from_system(true), "day": int(payload.get("day", payload.get("clock", {}).get("day", 1)))}
-    if not _validate(payload): return false
+    if not _validate(payload): return {"ok":false,"message":"Save validation failed."}
     var json := JSON.stringify(payload)
     var temp := FileAccess.open(TEMP_PATH, FileAccess.WRITE)
-    if temp == null: return false
+    if temp == null: return {"ok":false,"message":"Unable to create temporary save."}
     temp.store_string(json)
     temp.flush()
     temp = null
@@ -30,12 +30,12 @@ static func save_game(state: Dictionary) -> bool:
         if FileAccess.file_exists(BACKUP_PATH): DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP_PATH))
         if DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(BACKUP_PATH)) != OK:
             DirAccess.remove_absolute(ProjectSettings.globalize_path(TEMP_PATH))
-            return false
+            return {"ok":false,"message":"Unable to create save backup."}
     if FileAccess.file_exists(SAVE_PATH): DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
     if DirAccess.rename_absolute(ProjectSettings.globalize_path(TEMP_PATH), ProjectSettings.globalize_path(SAVE_PATH)) != OK:
         DirAccess.remove_absolute(ProjectSettings.globalize_path(TEMP_PATH))
-        return false
-    return true
+        return {"ok":false,"message":"Unable to activate save file."}
+    return {"ok":true,"message":"Save written successfully.","day":int(payload.get("day",1))}
 
 static func load_game() -> Dictionary:
     var state := _migrate(_read_dictionary(SAVE_PATH))
@@ -43,28 +43,41 @@ static func load_game() -> Dictionary:
     if state.is_empty():
         state = _migrate(_read_dictionary(BACKUP_PATH))
         source = "backup"
-    if state.is_empty() or not _validate(state): return {}
-    if source == "backup": state["recovery"] = {"source": "backup", "recovered_at": Time.get_datetime_string_from_system(true)}
+    if state.is_empty() or not _validate(state): return {"ok":false,"message":"No valid save was found."}
+    if source == "backup": state["recovery"] = {"source":"backup","recovered_at":Time.get_datetime_string_from_system(true)}
     var game_state = _game_state()
     if game_state != null: game_state.restore(state)
-
     _restore_branch_controller(game_state)
-
-    # Rehydrate main.gd's remaining compatibility business fields from the
-    # canonical GameState record. GameState remains the durable source of truth.
     if game_state != null:
         game_state.restore_business_runtime(state)
     else:
         _restore_legacy_business_projection(state)
-
-    # The canonical save stores employees as a roster dictionary. main.gd is
-    # still a transitional typed-int consumer, so expose only the legacy count
-    # in the returned compatibility payload while keeping GameState canonical.
     if state.get("employees") is Dictionary:
         var employee_state: Dictionary = state["employees"]
         var records = employee_state.get("records", {})
         state["employees"] = int(records.size()) if records is Dictionary else int(state.get("legacy", {}).get("employee_count", 0))
+    state["ok"] = true
+    state["message"] = "Save loaded from %s." % source
     return state
+
+# Explicitly copy only RENEW's runtime state. This prevents transient engine
+# properties from entering the durable save and makes the save boundary auditable.
+static func _runtime_snapshot(state) -> Dictionary:
+    if state is Dictionary: return state.duplicate(true)
+    if not (state is Object): return {}
+    var keys := [
+        "cash","reputation","day","debt","loan_payment","owned","inspected","restoration","stage",
+        "business_open","employees","capacity_level","marketing_level","player_price","finished_goods",
+        "last_sales","last_profit","total_profit","relationship","selected_rival","selected_expansion",
+        "supplier_choice","contract_days","contract_bonus","acquisition_count","transport_level",
+        "transport_capacity","selected_district","message","log_lines"
+    ]
+    var snapshot := {}
+    for key in keys:
+        if state.has_method("get"):
+            var value = state.get(key)
+            if value != null: snapshot[key] = value
+    return snapshot
 
 static func _restore_branch_controller(game_state) -> void:
     var tree = Engine.get_main_loop()
