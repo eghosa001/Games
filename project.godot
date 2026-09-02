@@ -15,6 +15,7 @@ RenewSimulationSystem="*res://scripts/simulation_system.gd"
 RenewContractSystem="*res://scripts/contract_system.gd"
 RenewAllianceSystem="*res://scripts/alliance_system.gd"
 RenewAllianceAI="*res://scripts/alliance_ai.gd"
+RenewAllianceControl="*res://scripts/alliance_control_system.gd"
 
 [display]
 window/size/viewport_width=1280
