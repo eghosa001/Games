@@ -30,6 +30,7 @@
 
 - `EmployeeController` exposes an explicit assignment API for active employees.
 - Supported assignment targets are business, property, branch, logistics, sales and management, with assignment changes recorded in employee history.
+- Added `assigned_employee_ids()` and `assigned_count()` so operating systems can query the actual persistent workforce assigned to a specific unit.
 - Role-aware operating metrics are calculated from actual employee records.
 - Technician/Worker/Supervisor/Manager weighting is stronger for production; Sales is stronger for selling; Logistics is stronger for logistics; Accountant/Supervisor/Manager contribute more to management.
 - Role metrics are published to canonical `GameState.analytics`, including production, sales, logistics and management efficiency plus role-relevant headcounts.
@@ -41,14 +42,15 @@
 - Daily network updates report logistics efficiency and effective transport capacity.
 - Existing transport-capacity arguments remain supported for compatibility.
 
-### Branch operations integration fixed
+### Branch workforce integration fixed
 
-- Regional branches now consume the canonical Sales, Logistics and Management employee metrics.
-- Sales staffing affects branch demand conversion rather than merely increasing a generic employee count.
-- Logistics staffing affects the amount of stocked goods that can be effectively converted into daily sellable units.
-- Management staffing reduces branch operating overhead within bounded limits.
-- Branch operation results expose the employee metrics used, making the effect inspectable by future UI/history systems.
-- Existing branch employee counts remain a temporary compatibility capacity projection; the canonical employee roster remains in `GameState`.
+- Branch launch no longer invents a staffing count. It opens the operating unit with zero staff and the controller creates three persistent employee records assigned to that branch.
+- Branch hiring now routes through `EmployeeController.hire_for_assignment()` and assigns the new employee to a concrete `branch_<index>` target.
+- Existing employees from older saves whose assignment is still `renew_goods` are migrated to the existing flagship branch at controller startup instead of being duplicated.
+- Branch staffing projections are refreshed from actual active employee assignments before daily operations and UI rendering.
+- Branch production/sales capacity now reaches zero when a branch has no assigned employees, preventing a branch from generating operating output from an orphaned integer count.
+- Branch P&L still includes employee wage expense, but branch cash contribution excludes payroll because `EmployeeController` charges company payroll once per day. This removes the previous double-charge while preserving wage expense in branch P&L.
+- Branch operation results continue to expose the employee metrics used by the simulation.
 
 ### Commits
 
@@ -63,7 +65,10 @@
 - `ea165da87103c6f42226d4aa5c3a872c6d7e6c3d` — production consumes role-aware staffing efficiency
 - `0fc8116918f141eb081ac10338a05470b51b2cf0` — logistics staffing affects network transport capacity
 - `93d40d2943edb72ae618626e61138a659e3ba0f4` — branch operations consume Sales/Logistics/Management metrics
-- `74e681f715f88a957439f8f376cba7c927563097` — progress documentation update
+- `26446b9a80226e90bfbb8564fd2c46c9c34d4ae4` — employee assignment query helpers and authoritative branch staffing API
+- `1bf80082f449b4f924b00cc1439a32ba425bd535` — branch launch/hiring routed through persistent employee records
+- `831d77cf55be4b80b5e1e390e2b7d3e153a66250` — branch payroll double-charge prevention
+- `2536af30cd57975c0c90d581c45809269016ec36` — previous progress documentation update
 
 ## Story systems verified
 
@@ -77,24 +82,25 @@ These are **foundation implementations**, not yet the full V1.1 completion gate:
 
 ## Still incomplete after this pass
 
-- `main.gd` remains transitional and still contains the legacy scalar employee count and direct fixed-role hiring path.
+- `main.gd` remains transitional and still contains the legacy scalar employee count, direct fixed-role hiring path, and legacy core-business payroll calculation.
+- The core-business hire action has not yet been safely replaced with an EmployeeController transaction because `main.gd` is still a large transitional orchestration file and needs a controlled refactor rather than a partial string-level change.
 - Employee assignment is available in the controller API but is not yet exposed through the complete mobile UI.
-- Branch employee counts are still compatibility projections rather than branch-specific canonical employee assignments.
 - Employee hiring UI does not yet expose candidates, roles, salaries, skills or personalities.
 - Employee firing/promotion/training are not yet exposed through the complete mobile UI.
 - Corporate History does not yet receive every important transaction/event type.
 - RENEW Daily does not yet consume the full market/rival/supply-chain/news event stream.
 - Property, Business and Branch are not yet fully separated into authoritative systems.
+- Branch state itself still needs canonical persistence integration; current runtime branch data remains owned by `Branches` until the Property/Business/Branch refactor.
 - Balance testing and Android manual validation remain outstanding.
 
 ## Next implementation target
 
 Continue in the master implementation order:
 
-1. remove the direct legacy hiring path from `main.gd` and route hiring through EmployeeController;
-2. make employee assignments actually determine branch/business staffing rather than using compatibility counts;
-3. finish employee management UI and history/news runtime event coverage;
-4. refactor Property → Business → Branch boundaries;
+1. remove the direct legacy hiring path from `main.gd` and route core-business hiring through EmployeeController;
+2. remove the legacy core-business wage calculation once payroll is fully authoritative in EmployeeController;
+3. persist branch/business state through GameState as part of the Property → Business → Branch boundary refactor;
+4. finish employee management UI and history/news runtime event coverage;
 5. extract data-driven balance definitions;
 6. deepen resource/production/supply-chain simulation.
 
