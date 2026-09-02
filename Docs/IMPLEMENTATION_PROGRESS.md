@@ -53,6 +53,17 @@
 - Fixed startup ordering: branch migration now waits until `EmployeeController` has completed restore/bootstrap, preventing old employees from being missed because `Main.tscn` initializes `BranchController` before `EmployeeController`.
 - Branch operation results continue to expose the employee metrics used by the simulation.
 
+### Core business workforce integration — latest
+
+- Removed the direct scalar employee increment from `main.gd` hiring.
+- Core business hiring now creates a persistent employee and assigns them to the flagship operating unit (`branch_0`).
+- Core hiring cost is based on the actual assigned workforce rather than the legacy scalar count.
+- Core employee count displayed by `main.gd` is synchronized from persistent assignments.
+- Core production uses `EmployeeController.effective_staffing()` instead of treating the scalar employee count as authoritative.
+- Removed the old `$180 × employee count` core-business wage calculation from daily profit.
+- Central `EmployeeController` payroll is now the sole wage charge during normal operation.
+- Core business opening migrates legacy `renew_goods` employees to the flagship operating unit before reporting its workforce.
+
 ### Commits
 
 - `d3b2e9e625d178e4183d64bbaa77f3534c8e4ff` — employee system fix
@@ -70,7 +81,7 @@
 - `1bf80082f449b4f924b00cc1439a32ba425bd535` — branch launch/hiring routed through persistent employee records
 - `831d77cf55be4b80b5e1e390e2b7d3e153a66250` — branch payroll double-charge prevention
 - `f992e66ead24d1601737892af37dfeca5dbe63f1` — startup-safe employee migration into branch assignments
-- `5bee414b476e847a96e4510b3dccb61d48ee86e6` — progress documentation update
+- `eb845de0d1fb555b86b128104863aac1ab8c0893` — core business hiring/payroll integration
 
 ## Story systems verified
 
@@ -84,8 +95,7 @@ These are **foundation implementations**, not yet the full V1.1 completion gate:
 
 ## Still incomplete after this pass
 
-- `main.gd` remains transitional and still contains the legacy scalar employee count, direct fixed-role hiring path, and legacy core-business payroll calculation.
-- The core-business hire action has not yet been safely replaced with an EmployeeController transaction because `main.gd` is still a large transitional orchestration file and needs a controlled refactor rather than a partial string-level change.
+- `main.gd` remains transitional and still contains the compatibility scalar `employees`, but it is no longer the authority for hiring, production staffing, or payroll.
 - Employee assignment is available in the controller API but is not yet exposed through the complete mobile UI.
 - Employee hiring UI does not yet expose candidates, roles, salaries, skills or personalities.
 - Employee firing/promotion/training are not yet exposed through the complete mobile UI.
@@ -99,10 +109,10 @@ These are **foundation implementations**, not yet the full V1.1 completion gate:
 
 Continue in the master implementation order:
 
-1. remove the direct legacy hiring path from `main.gd` and route core-business hiring through EmployeeController;
-2. remove the legacy core-business wage calculation once payroll is fully authoritative in EmployeeController;
-3. persist branch/business state through GameState as part of the Property → Business → Branch boundary refactor;
-4. finish employee management UI and history/news runtime event coverage;
+1. remove remaining legacy workforce reconciliation from `main.gd`/`EmployeeController` once all migration paths are covered;
+2. persist branch/business state through `GameState` as part of the Property → Business → Branch boundary refactor;
+3. finish employee management UI and history/news runtime event coverage;
+4. refactor Property → Business → Branch boundaries;
 5. extract data-driven balance definitions;
 6. deepen resource/production/supply-chain simulation.
 
