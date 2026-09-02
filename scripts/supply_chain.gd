@@ -1,30 +1,24 @@
 extends RefCounted
 class_name RenewSupplyChain
 
-# Supply-chain simulation: resources are produced at owned sites, moved through
-# the player's network, and consumed by operating businesses. Shortages create
-# real economic consequences instead of being cosmetic inventory numbers.
 var network_stock := {"materials":0,"packaging":0,"fuel":0,"food":0}
 var shipped_today := 0
 var shortages_today: Array[String] = []
 var disruption_level := 0
 var competitor_pressure := 0
 
-var resource_regions := {
-    "materials": 5,
-    "packaging": 0,
-    "fuel": 2,
-    "food": 3
-}
+var resource_regions := {"materials":5,"packaging":0,"fuel":2,"food":3}
+var valid_resources := ["materials","packaging","fuel","food"]
 
 func _normalize() -> void:
-    for resource in ["materials","packaging","fuel","food"]:
+    for resource in valid_resources:
         network_stock[resource] = max(0,int(network_stock.get(resource,0)))
     shipped_today=max(0,shipped_today)
     disruption_level=clamp(disruption_level,0,100)
     competitor_pressure=clamp(competitor_pressure,0,20)
 
 func resource_price(resource:String, regions)->int:
+    if resource not in valid_resources: return 0
     var base := {"materials":38,"packaging":28,"fuel":52,"food":34}.get(resource,40)
     var multiplier:=1.0+float(competitor_pressure)*0.025
     if regions and regions.has_method("regional_resource_bonus"):
@@ -32,6 +26,7 @@ func resource_price(resource:String, regions)->int:
     return max(10,int(round(float(base)*multiplier)))
 
 func acquire_from_market(resource:String, amount:int, cash:int, regions)->Dictionary:
+    if resource not in valid_resources: return {"ok":false,"cost":0,"message":"Unknown resource."}
     if amount<=0: return {"ok":false,"cost":0,"message":"Choose a positive shipment."}
     var unit:=resource_price(resource,regions)
     var cost:=unit*amount
@@ -46,6 +41,7 @@ func move_from_site(resource_site:Dictionary, amount:int, transport_capacity:int
     if moved<=0: return {"ok":false,"moved":0,"message":"No transferable resource stock."}
     resource_site["stock"]=available-moved
     var resource:=String(resource_site.get("resource","materials"))
+    if resource not in valid_resources: return {"ok":false,"moved":0,"message":"Unknown resource site."}
     network_stock[resource]=int(network_stock.get(resource,0))+moved
     shipped_today+=moved
     return {"ok":true,"moved":moved,"message":"Moved %d %s into the company network."%[moved,resource]}
@@ -71,8 +67,7 @@ func supply_branch(branch:Dictionary, amount:int, transport_capacity:int)->Dicti
     var need:=max(1,amount)
     var available:=int(network_stock.get("packaging",0))
     var moved:=min(min(need,available),max(0,transport_capacity))
-    if moved<=0:
-        return {"ok":false,"moved":0,"shortage":need,"message":"Packaging shortage at %s."%branch["name"]}
+    if moved<=0: return {"ok":false,"moved":0,"shortage":need,"message":"Packaging shortage at %s."%branch["name"]}
     network_stock["packaging"]=available-moved
     branch["inputs_packaging"]=int(branch.get("inputs_packaging",0))+moved
     shipped_today+=moved
@@ -112,8 +107,7 @@ func daily_business_check(expansion)->Dictionary:
         if not bool(p.get("owned",false)) or not bool(p.get("active",false)): continue
         for resource in p.get("input_need",{}):
             var need=int(p["input_need"][resource])
-            if int(p["inputs"].get(resource,0))<need:
-                shortages.append("%s lacks %s."%[p["name"],resource])
+            if int(p["inputs"].get(resource,0))<need: shortages.append("%s lacks %s."%[p["name"],resource])
     shortages_today=shortages
     return {"shortages":shortages,"count":shortages.size()}
 
