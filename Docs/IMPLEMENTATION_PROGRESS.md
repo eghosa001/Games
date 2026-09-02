@@ -6,19 +6,22 @@
 
 ### Fixed in this pass
 
-- Added `GameState.restore()` so the canonical state can be rehydrated safely during load/migration. This closes a critical gap where the save system called restore but the rewritten GameState boundary did not expose the required method.
+- Added `GameState.restore()` so canonical state can be rehydrated safely during load and migration.
 - Added canonical property records under `GameState.properties` with stable property ID `old_warehouse`.
-- Added property mutation APIs (`get_property`, `set_property_value`, `set_property_values`) alongside the existing Business APIs.
-- Added property runtime synchronization and restoration so inspection, acquisition and restoration stage are durable and restored into the active runtime.
-- Updated `SaveSystem` to synchronize the property lifecycle into GameState before saving and to rehydrate the property projection during loading.
-- Routed the core `main.gd` property lifecycle through GameState instead of leaving property persistence solely in Main's scalar fields.
-- Routed core Business mutations in `main.gd` (open, capacity, marketing, price, inventory, sales/profit and contract state) through canonical GameState Business APIs while retaining scalar projections only for compatibility/UI.
-- Kept Branch persistence separate from Business and Property persistence.
-- Preserved the existing employee system and its persistent assignment model.
+- Added property mutation APIs and runtime synchronization/restoration.
+- Corrected core property activity semantics: the physical property is active only when its restoration stage is `Operational`; opening the Business is a separate state.
+- Routed the core `main.gd` property lifecycle through GameState instead of leaving property persistence solely in Main scalar fields.
+- Routed core Business mutations through canonical GameState Business APIs while retaining scalar projections only for compatibility/UI.
+- Added a canonical `GameState.expansion` boundary containing expansion properties, resource sites, management state, day, population and selected expansion.
+- Added migration defaults for expansion state so older saves receive a valid expansion container without losing existing state.
+- Updated `SaveSystem` to capture the live expansion runtime into GameState at save time and restore it at load time.
+- Removed the unsafe `main.gd` load-time `has_variable()` dependency from the save path. SaveSystem now applies an explicit, known compatibility projection to Main and returns only the small result contract Main expects. Godot's Object API provides `get()`, `set()`, `get_property_list()` and `has_method()`, but not a generic `has_variable()` method. citeturn1view0
+- Kept Branch persistence separate from Business, Property and Expansion persistence.
+- Preserved the existing persistent employee records and role-aware workforce integration.
 
 ### Important architectural result
 
-The core model now has explicit persistent boundaries:
+The current transitional model has explicit persistent boundaries:
 
 **Property** = physical restoration/acquisition lifecycle (`GameState.properties.old_warehouse`)
 
@@ -26,24 +29,21 @@ The core model now has explicit persistent boundaries:
 
 **Branch** = regional operating unit (`GameState.branches`)
 
-These are no longer intended to share a single persistence bucket. The Main scalar fields are now compatibility projections for the transitional UI/orchestration layer rather than the durable save authority.
+**Expansion** = owned expansion properties/resource sites and expansion-management state (`GameState.expansion`)
 
-### Commits
+Main scalar fields remain compatibility projections rather than the intended durable save authority.
 
-- `42f49e698c684c6cd8f1f87880bc23b6fe6a5c9d` — canonical property and business mutation APIs
-- `50b4ffe654f033b33f340f46cfaff4c360105c8f` — route core business mutations through GameState
-- `85f6124e4d3ff7be077de8ba1040af7fae6e8643` — canonical GameState restore and property lifecycle synchronization
-- `b55aac16c72b1b651c4045917afd69e4818d2def` — save/load property synchronization and restoration
+### Verified commits from this pass
 
-## Earlier verified foundation work
+- `dbea6c6f2ed4b449b5ddf0d8356e39ababa491c3` — canonical expansion state boundary and property activity correction
+- `74638ebda5ff032d23b7a063b45ec6a7a4722771` — safe explicit Main save/load projection and expansion rehydration
+- `fd2783cc7050a7b9d2c761db2f9cfd6f6725a8ed` — previous canonical business save synchronization documentation
 
-The branch already contains persistent employee records, role-aware production/logistics/branch integration, canonical branch persistence, business save/load rehydration, and the save runtime snapshot boundary. Those systems remain foundation implementations until their UI, simulation, migration and regression requirements are fully verified.
+### Still incomplete
 
-## Still incomplete
-
-- `main.gd` remains a large orchestration object and still owns some runtime compatibility projections.
-- The full property catalog is not yet represented canonically; the current property boundary covers the core Old Warehouse lifecycle.
-- Expansion properties/resource sites still use their own runtime arrays and require migration into the same canonical property/resource architecture.
+- Expansion mutations are still executed by `expansion.gd`; canonical GameState is currently the save/load authority, not yet the sole mutation authority. The next step is routing expansion purchase, upgrade, resource generation and operating-day mutations through GameState setters.
+- The full property catalog is not yet represented canonically; the core boundary currently covers the Old Warehouse lifecycle while expansion assets live under the Expansion container.
+- `main.gd` remains a large orchestration object and still owns runtime compatibility projections and several simulation rules.
 - Employee management UI is incomplete.
 - Corporate History and RENEW Daily still need broader real-event integration.
 - Resource/production/supply-chain depth remains below the master plan target.
