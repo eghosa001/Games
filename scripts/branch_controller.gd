@@ -5,22 +5,27 @@ var parent
 var branches=Branches.new()
 var last_day:=0
 var message:=""
+var workforce_bound:=false
 
 func _ready()->void:
     parent=get_parent()
     last_day=parent.day
-    _bind_existing_workforce()
     queue_redraw()
 
 func _process(_delta:float)->void:
     if parent==null: return
+    if not workforce_bound:
+        var employee_controller=_employee_controller()
+        if employee_controller!=null and bool(employee_controller.get("initialized")):
+            _bind_existing_workforce()
+            workforce_bound=true
     if parent.day!=last_day:
         var region_controller=parent.get_node_or_null("RegionController")
         if region_controller!=null:
             var result=branches.operate_day(region_controller.regions)
             parent.cash+=int(result["profit"])
             if int(result["businesses"])>0:
-                parent._log("BRANCHES: %d regional businesses generated $%s."%[result["businesses"],_money(int(result["profit"]))])
+                parent._log("BRANCHES: %d regional businesses generated $%s contribution."%[result["businesses"],_money(int(result["profit"]))])
         last_day=parent.day
     queue_redraw()
 
@@ -52,8 +57,7 @@ func launch_selected()->void:
     if not result["ok"]: return
     var cost:=int(result["cost"])
     var employee_controller=_employee_controller()
-    if employee_controller==null:
-        # Do not leave an opened branch with an invented staffing count.
+    if employee_controller==null or not bool(employee_controller.get("initialized")):
         branches.branches[branches.selected]["owned"]=false
         message="Employee system is not ready; branch launch cancelled."
         return
@@ -90,7 +94,8 @@ func hire_selected()->void:
     var b=branches.current()
     if not bool(b["owned"]): message="Launch the branch first."; return
     var employee_controller=_employee_controller()
-    if employee_controller==null: message="Employee system is not ready."; return
+    if employee_controller==null or not bool(employee_controller.get("initialized")):
+        message="Employee system is not ready."; return
     var branch_id:="branch_%d" % branches.selected
     var current_staff:=employee_controller.assigned_count("branch",branch_id)
     var cost:=1100+current_staff*220
