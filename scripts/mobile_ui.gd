@@ -17,6 +17,8 @@ var tab_names := ["RESTORE", "BUSINESS", "EMPIRE", "WORLD"]
 
 func _ready() -> void:
     parent = get_parent(); _build_ui(); _refresh()
+    root.resized.connect(_layout_responsive)
+    _layout_responsive()
 
 func _process(delta: float) -> void:
     if parent == null or status_label == null: return
@@ -27,7 +29,7 @@ func _process(delta: float) -> void:
 
 func _build_ui() -> void:
     root = Control.new(); root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); root.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(root)
-    var top := ColorRect.new(); top.color = Color("101820"); top.set_anchors_preset(Control.PRESET_TOP_WIDE); top.position.y = 8; top.size.y = 54; top.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(top)
+    var top := ColorRect.new(); top.name = "TopBar"; top.color = Color("101820"); top.set_anchors_preset(Control.PRESET_TOP_WIDE); top.position.y = 8; top.size.y = 54; top.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(top)
     tabs = HBoxContainer.new(); tabs.position = Vector2(12, 12); tabs.size = Vector2(720, 46); tabs.add_theme_constant_override("separation", 8); tabs.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(tabs)
     for i in range(tab_names.size()):
         var button := Button.new(); button.text = tab_names[i]; button.custom_minimum_size = Vector2(150, 44); button.focus_mode = Control.FOCUS_NONE; button.mouse_filter = Control.MOUSE_FILTER_STOP; button.pressed.connect(_set_tab.bind(i)); tabs.add_child(button)
@@ -35,10 +37,47 @@ func _build_ui() -> void:
     feedback_panel = Panel.new(); feedback_panel.position = Vector2(24, 245); feedback_panel.size = Vector2(720, 92); feedback_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE; feedback_panel.hide(); root.add_child(feedback_panel)
     feedback_label = Label.new(); feedback_label.position = Vector2(16, 10); feedback_label.size = Vector2(688, 72); feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; feedback_label.add_theme_font_size_override("font_size", 15); feedback_label.mouse_filter = Control.MOUSE_FILTER_IGNORE; feedback_panel.add_child(feedback_label)
     var bottom := ColorRect.new(); bottom.color = Color("101820"); bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE); bottom.position.y = -150; bottom.size.y = 150; bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(bottom)
-    # Keep the action area in the visible middle of the screen. The previous bottom-only
-    # placement could put the restoration choices below the phone viewport.
+    # Keep actions in the visible middle of the screen. The layout is resized for
+    # portrait phones so buttons do not disappear off the right edge.
     action_scroll = ScrollContainer.new(); action_scroll.set_anchors_preset(Control.PRESET_TOP_WIDE); action_scroll.position = Vector2(18, 72); action_scroll.size = Vector2(1240, 160); action_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; action_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; action_scroll.focus_mode = Control.FOCUS_NONE; action_scroll.mouse_filter = Control.MOUSE_FILTER_STOP; root.add_child(action_scroll)
     actions = GridContainer.new(); actions.columns = 3; actions.custom_minimum_size = Vector2(720, 0); actions.add_theme_constant_override("h_separation", 10); actions.add_theme_constant_override("v_separation", 8); actions.mouse_filter = Control.MOUSE_FILTER_IGNORE; action_scroll.add_child(actions)
+
+func _layout_responsive() -> void:
+    if root == null or tabs == null or action_scroll == null or actions == null: return
+    var w := maxf(root.size.x, 320.0)
+    var narrow := w < 700.0
+    var tab_width := maxf(70.0, (w - 48.0) / 4.0)
+    tabs.position = Vector2(12, 12)
+    tabs.size = Vector2(w - 24.0, 46)
+    for child in tabs.get_children():
+        if child is Button: child.custom_minimum_size = Vector2(tab_width, 44)
+    if narrow:
+        status_label.position = Vector2(12, 60)
+        status_label.size = Vector2(w - 24.0, 30)
+        status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+        action_scroll.position = Vector2(12, 94)
+        action_scroll.size = Vector2(w - 24.0, 150)
+        actions.columns = 2
+        actions.custom_minimum_size = Vector2(w - 24.0, 0)
+        var button_width := maxf(120.0, (w - 34.0) / 2.0)
+        for child in actions.get_children():
+            if child is Button: child.custom_minimum_size = Vector2(button_width, 48)
+        feedback_panel.position = Vector2(12, 252)
+        feedback_panel.size = Vector2(w - 24.0, 96)
+        feedback_label.size = Vector2(w - 56.0, 76)
+    else:
+        status_label.position = Vector2(maxf(730.0, w - 520.0), 17)
+        status_label.size = Vector2(minf(500.0, w - maxf(730.0, w - 520.0) - 12.0), 44)
+        status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+        action_scroll.position = Vector2(18, 72)
+        action_scroll.size = Vector2(w - 36.0, 160)
+        actions.columns = 3
+        actions.custom_minimum_size = Vector2(maxf(720.0, w - 36.0), 0)
+        for child in actions.get_children():
+            if child is Button: child.custom_minimum_size = Vector2(225, 48)
+        feedback_panel.position = Vector2(24, 245)
+        feedback_panel.size = Vector2(minf(720.0, w - 48.0), 92)
+        feedback_label.size = Vector2(feedback_panel.size.x - 32.0, 72)
 
 func _set_tab(index: int) -> void:
     active_tab = index; action_scroll.scroll_vertical = 0; _refresh(); _show_feedback("TAB: %s\nChoose an action below." % tab_names[index])
