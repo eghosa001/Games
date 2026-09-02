@@ -83,7 +83,7 @@ func price_selected()->void:
     message=result["message"]
 
 func _money(value:int)->String:
-    return "%,d"%value
+    return str(value)
 
 func _draw()->void:
     if parent==null: return
