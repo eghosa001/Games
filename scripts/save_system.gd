@@ -43,14 +43,13 @@ static func load_game() -> Dictionary:
         game_state.restore_business_runtime(state)
         var expansion = _expansion()
         if expansion != null: game_state.restore_expansion_runtime(expansion)
-    else:
-        _restore_legacy_property_projection(state); _restore_legacy_business_projection(state)
     _restore_branch_controller(game_state)
+    _restore_main_projection(state)
+    var employee_count := 0
     if state.get("employees") is Dictionary:
         var employee_state:Dictionary=state["employees"]; var records=employee_state.get("records",{})
-        state["employees"]=int(records.size()) if records is Dictionary else int(state.get("legacy",{}).get("employee_count",0))
-    state["ok"]=true; state["message"]="Save loaded from %s."%source
-    return state
+        employee_count=int(records.size()) if records is Dictionary else int(state.get("legacy",{}).get("employee_count",0))
+    return {"ok":true,"message":"Save loaded from %s."%source,"employees":employee_count}
 
 static func _runtime_snapshot(state)->Dictionary:
     if state is Dictionary: return state.duplicate(true)
@@ -61,6 +60,32 @@ static func _runtime_snapshot(state)->Dictionary:
         var value=state.get(key)
         if value != null: snapshot[key]=value
     return snapshot
+
+static func _restore_main_projection(state:Dictionary)->void:
+    var tree=Engine.get_main_loop()
+    if tree==null:return
+    var root=tree.get_root()
+    if root==null:return
+    var main=root.get_node_or_null("Main")
+    if main==null:return
+    var values={"cash":int(state.get("player",{}).get("cash",state.get("cash",main.cash))),"reputation":int(state.get("player",{}).get("reputation",state.get("reputation",main.reputation))),"day":int(state.get("clock",{}).get("day",state.get("day",main.day))),"debt":int(state.get("finance",{}).get("debt",state.get("debt",main.debt))),"loan_payment":int(state.get("finance",{}).get("loan_payment",state.get("loan_payment",main.loan_payment))),"relationship":int(state.get("relationship",main.relationship)),"selected_rival":int(state.get("selected_rival",main.selected_rival)),"selected_expansion":int(state.get("selected_expansion",main.selected_expansion)),"supplier_choice":int(state.get("supplier_choice",main.supplier_choice)),"acquisition_count":int(state.get("acquisition_count",main.acquisition_count)),"transport_level":int(state.get("transport_level",main.transport_level)),"transport_capacity":int(state.get("transport_capacity",main.transport_capacity)),"selected_district":int(state.get("selected_district",main.selected_district)),"message":str(state.get("message",main.message)),"log_lines":state.get("log_lines",main.log_lines)}
+    for key in ["cash","reputation","day","debt","loan_payment","relationship","selected_rival","selected_expansion","supplier_choice","acquisition_count","transport_level","transport_capacity","selected_district","message","log_lines"]:
+        main.set(key,values[key])
+    main.set("employees",_employee_count(state))
+    main.set("owned",bool(state.get("properties",{}).get("old_warehouse",{}).get("owned",main.owned)))
+    main.set("inspected",bool(state.get("properties",{}).get("old_warehouse",{}).get("inspected",main.inspected)))
+    main.set("restoration",int(state.get("properties",{}).get("old_warehouse",{}).get("restoration",main.restoration)))
+    main.set("stage",str(state.get("properties",{}).get("old_warehouse",{}).get("stage",main.stage)))
+    var business=state.get("businesses",{}).get("renew_goods",{})
+    if business is Dictionary:
+        main.set("business_open",bool(business.get("open",main.business_open))); main.set("capacity_level",int(business.get("capacity_level",main.capacity_level))); main.set("marketing_level",int(business.get("marketing_level",main.marketing_level))); main.set("player_price",int(business.get("price",main.player_price))); main.set("finished_goods",int(business.get("finished_goods",main.finished_goods))); main.set("last_sales",int(business.get("last_sales",main.last_sales))); main.set("last_profit",int(business.get("last_profit",main.last_profit))); main.set("total_profit",int(business.get("total_profit",main.total_profit))); main.set("contract_days",int(business.get("contract_days",main.contract_days))); main.set("contract_bonus",int(business.get("contract_bonus",main.contract_bonus)))
+
+static func _employee_count(state:Dictionary)->int:
+    var employees=state.get("employees",{})
+    if employees is Dictionary:
+        var records=employees.get("records",{})
+        if records is Dictionary:return records.size()
+    return int(state.get("legacy",{}).get("employee_count",0))
 
 static func _restore_branch_controller(game_state)->void:
     var tree=Engine.get_main_loop()
@@ -73,14 +98,6 @@ static func _restore_branch_controller(game_state)->void:
         var saved=game_state.get_value(["branches"],{})
         if saved is Dictionary and not saved.is_empty(): controller.branches.restore_from_game_state(game_state)
 
-static func _restore_legacy_property_projection(state:Dictionary)->void:
-    var property=state.get("properties",{}).get("old_warehouse",{}) if state.get("properties",{}) is Dictionary else {}
-    if not (property is Dictionary):return
-    state["owned"]=bool(property.get("owned",false)); state["inspected"]=bool(property.get("inspected",false)); state["restoration"]=int(property.get("restoration",0)); state["stage"]=str(property.get("stage","Neglected"))
-static func _restore_legacy_business_projection(state:Dictionary)->void:
-    var businesses=state.get("businesses",{}); if not (businesses is Dictionary):return
-    var business=businesses.get("renew_goods",{}); if not (business is Dictionary):return
-    state["business_open"]=bool(business.get("open",false)); state["capacity_level"]=int(business.get("capacity_level",1)); state["marketing_level"]=int(business.get("marketing_level",0)); state["player_price"]=int(business.get("price",110)); state["finished_goods"]=int(business.get("finished_goods",0)); state["last_sales"]=int(business.get("last_sales",0)); state["last_profit"]=int(business.get("last_profit",0)); state["total_profit"]=int(business.get("total_profit",0)); state["contract_days"]=int(business.get("contract_days",0)); state["contract_bonus"]=int(business.get("contract_bonus",0))
 static func _read_dictionary(path:String)->Dictionary:
     if not FileAccess.file_exists(path):return {}
     var file:=FileAccess.open(path,FileAccess.READ)
