@@ -40,14 +40,14 @@ func strategic_update(day: int, selected_district: int, reputation: int) -> Arra
     var news: Array[String] = []
     for i in range(rivals.size()):
         var rival = rivals[i]
-        var districts: Array = rival["districts"]
-        if day % (6 + i * 2) == 0 and districts.size() < 4:
-            var target := (int(districts.back()) + 1) % 4
-            if target not in districts:
-                districts.append(target)
+        var rival_districts: Array = rival["districts"]
+        if day % (6 + i * 2) == 0 and rival_districts.size() < 4:
+            var target := (int(rival_districts.back()) + 1) % 4
+            if not rival_districts.has(target):
+                rival_districts.append(target)
                 rival["presence"] = min(3, int(rival["presence"]) + 1)
                 news.append("%s expands into %s. Competition is tightening." % [rival["name"], _district_name(target)])
-        if selected_district in districts:
+        if selected_district in rival_districts:
             if i == 0 and day % 4 == 0:
                 rival["price"] = max(78, int(rival["price"]) - 2)
                 news.append("PRICE WAR: The Giant is undercutting businesses in your district.")
