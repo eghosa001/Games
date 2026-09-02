@@ -8,6 +8,7 @@ var network_stock := {"materials":0,"packaging":0,"fuel":0,"food":0}
 var shipped_today := 0
 var shortages_today: Array[String] = []
 var disruption_level := 0
+var competitor_pressure := 0
 
 var resource_regions := {
     "materials": 5,
@@ -21,13 +22,14 @@ func _normalize() -> void:
         network_stock[resource] = max(0,int(network_stock.get(resource,0)))
     shipped_today=max(0,shipped_today)
     disruption_level=clamp(disruption_level,0,100)
+    competitor_pressure=clamp(competitor_pressure,0,20)
 
 func resource_price(resource:String, regions)->int:
     var base := {"materials":38,"packaging":28,"fuel":52,"food":34}.get(resource,40)
-    if not regions or not regions.has_method("regional_resource_bonus"):
-        return base
-    var bonus=float(regions.regional_resource_bonus(resource))
-    return max(10,int(round(float(base)*bonus)))
+    var multiplier:=1.0+float(competitor_pressure)*0.025
+    if regions and regions.has_method("regional_resource_bonus"):
+        multiplier*=float(regions.regional_resource_bonus(resource))
+    return max(10,int(round(float(base)*multiplier)))
 
 func acquire_from_market(resource:String, amount:int, cash:int, regions)->Dictionary:
     if amount<=0: return {"ok":false,"cost":0,"message":"Choose a positive shipment."}
@@ -54,7 +56,7 @@ func supply_business(property:Dictionary, amount:int, transport_capacity:int)->D
     for resource in property.get("input_need",{}):
         var need:=int(property["input_need"][resource])*max(1,amount)
         var available:=int(network_stock.get(resource,0))
-        var send:=min(need,available)
+        var send:=min(min(need,available),max(0,transport_capacity))
         if send>0:
             network_stock[resource]=available-send
             property["inputs"][resource]=int(property["inputs"].get(resource,0))+send
@@ -66,8 +68,6 @@ func supply_business(property:Dictionary, amount:int, transport_capacity:int)->D
     return {"ok":true,"moved":moved,"message":"Business fully supplied with %d input units."%moved}
 
 func supply_branch(branch:Dictionary, amount:int, transport_capacity:int)->Dictionary:
-    # Regional branches primarily sell finished goods, but still consume packaging
-    # as they scale. This makes packaging control strategically valuable.
     var need:=max(1,amount)
     var available:=int(network_stock.get("packaging",0))
     var moved:=min(min(need,available),max(0,transport_capacity))
@@ -123,11 +123,12 @@ func reset_day()->void:
 
 func snapshot()->Dictionary:
     _normalize()
-    return {"network_stock":network_stock.duplicate(true),"shipped_today":shipped_today,"disruption_level":disruption_level}
+    return {"network_stock":network_stock.duplicate(true),"shipped_today":shipped_today,"disruption_level":disruption_level,"competitor_pressure":competitor_pressure}
 
 func load_snapshot(state:Dictionary)->void:
     if state is Dictionary:
         network_stock=state.get("network_stock",network_stock).duplicate(true)
         shipped_today=int(state.get("shipped_today",0))
         disruption_level=int(state.get("disruption_level",0))
+        competitor_pressure=int(state.get("competitor_pressure",0))
     _normalize()
