@@ -4,29 +4,26 @@ class_name RenewProductionSystem
 const SYSTEM_VERSION := 2
 const MAX_HISTORY := 500
 
-# Data-driven production model. Recipes form a graph across extraction,
-# processing, manufacturing, distribution and retail instead of one hard-coded
-# materials -> goods conversion.
 const RECIPES := {
-    "extract_ore": {"stage":"extraction","inputs":{},"outputs":{"iron_ore":4},"machine":"extractor","technology":"extraction","cycles":1,"base_quality":58,"waste":0.03},
-    "extract_timber": {"stage":"extraction","inputs":{},"outputs":{"timber":5},"machine":"harvester","technology":"extraction","cycles":1,"base_quality":62,"waste":0.04},
-    "process_steel": {"stage":"processing","inputs":{"iron_ore":2,"fuel":1},"outputs":{"steel":1},"machine":"processor","technology":"steel_processing","cycles":1,"base_quality":68,"waste":0.06},
-    "process_lumber": {"stage":"processing","inputs":{"timber":2,"fuel":1},"outputs":{"lumber":2},"machine":"processor","technology":"lumber_processing","cycles":1,"base_quality":70,"waste":0.05},
-    "manufacture_furniture": {"stage":"manufacturing","inputs":{"lumber":2,"steel":1,"packaging":1},"outputs":{"furniture":1},"machine":"factory","technology":"furniture_manufacturing","cycles":1,"base_quality":76,"waste":0.08},
-    "manufacture_appliance": {"stage":"manufacturing","inputs":{"steel":2,"packaging":1,"fuel":1},"outputs":{"appliance":1},"machine":"factory","technology":"appliance_manufacturing","cycles":1,"base_quality":80,"waste":0.10},
-    "distribute_furniture": {"stage":"distribution","inputs":{"furniture":1,"fuel":1},"outputs":{"distributed_furniture":1},"machine":"fleet","technology":"logistics","cycles":1,"base_quality":74,"waste":0.03},
-    "distribute_appliance": {"stage":"distribution","inputs":{"appliance":1,"fuel":1},"outputs":{"distributed_appliance":1},"machine":"fleet","technology":"logistics","cycles":1,"base_quality":78,"waste":0.04},
-    "retail_furniture": {"stage":"retail","inputs":{"distributed_furniture":1},"outputs":{"customer_furniture":1},"machine":"store","technology":"retail","cycles":1,"base_quality":78,"waste":0.01},
-    "retail_appliance": {"stage":"retail","inputs":{"distributed_appliance":1},"outputs":{"customer_appliance":1},"machine":"store","technology":"retail","cycles":1,"base_quality":82,"waste":0.01}
+    "extract_ore": {"stage":"extraction","inputs":{},"outputs":{"iron_ore":4},"machine":"extractor","technology":"extraction","base_quality":58,"waste":0.03},
+    "extract_timber": {"stage":"extraction","inputs":{},"outputs":{"timber":5},"machine":"harvester","technology":"extraction","base_quality":62,"waste":0.04},
+    "process_steel": {"stage":"processing","inputs":{"iron_ore":2,"fuel":1},"outputs":{"steel":1},"machine":"processor","technology":"steel_processing","base_quality":68,"waste":0.06},
+    "process_lumber": {"stage":"processing","inputs":{"timber":2,"fuel":1},"outputs":{"lumber":2},"machine":"processor","technology":"lumber_processing","base_quality":70,"waste":0.05},
+    "manufacture_furniture": {"stage":"manufacturing","inputs":{"lumber":2,"steel":1,"packaging":1},"outputs":{"furniture":1},"machine":"factory","technology":"furniture_manufacturing","base_quality":76,"waste":0.08},
+    "manufacture_appliance": {"stage":"manufacturing","inputs":{"steel":2,"packaging":1,"fuel":1},"outputs":{"appliance":1},"machine":"factory","technology":"appliance_manufacturing","base_quality":80,"waste":0.10},
+    "distribute_furniture": {"stage":"distribution","inputs":{"furniture":1,"fuel":1},"outputs":{"distributed_furniture":1},"machine":"fleet","technology":"logistics","base_quality":74,"waste":0.03},
+    "distribute_appliance": {"stage":"distribution","inputs":{"appliance":1,"fuel":1},"outputs":{"distributed_appliance":1},"machine":"fleet","technology":"logistics","base_quality":78,"waste":0.04},
+    "retail_furniture": {"stage":"retail","inputs":{"distributed_furniture":1},"outputs":{"customer_furniture":1},"machine":"store","technology":"retail","base_quality":78,"waste":0.01},
+    "retail_appliance": {"stage":"retail","inputs":{"distributed_appliance":1},"outputs":{"customer_appliance":1},"machine":"store","technology":"retail","base_quality":82,"waste":0.01}
 }
 
 const DEFAULT_MACHINES := {
-    "extractor":{"owned":true,"condition":100,"capacity":2,"maintenance_due":0,"automation":0},
-    "harvester":{"owned":true,"condition":100,"capacity":2,"maintenance_due":0,"automation":0},
-    "processor":{"owned":false,"condition":100,"capacity":2,"maintenance_due":0,"automation":0},
-    "factory":{"owned":false,"condition":100,"capacity":2,"maintenance_due":0,"automation":0},
-    "fleet":{"owned":false,"condition":100,"capacity":3,"maintenance_due":0,"automation":0},
-    "store":{"owned":false,"condition":100,"capacity":4,"maintenance_due":0,"automation":0}
+    "extractor":{"owned":true,"condition":100.0,"capacity":2,"maintenance_due":0,"automation":0},
+    "harvester":{"owned":true,"condition":100.0,"capacity":2,"maintenance_due":0,"automation":0},
+    "processor":{"owned":false,"condition":100.0,"capacity":2,"maintenance_due":0,"automation":0},
+    "factory":{"owned":false,"condition":100.0,"capacity":2,"maintenance_due":0,"automation":0},
+    "fleet":{"owned":false,"condition":100.0,"capacity":3,"maintenance_due":0,"automation":0},
+    "store":{"owned":false,"condition":100.0,"capacity":4,"maintenance_due":0,"automation":0}
 }
 
 var inventory: Dictionary = {}
@@ -49,13 +46,13 @@ func _ensure_inventory() -> void:
         var recipe: Dictionary = RECIPES[recipe_id]
         for item in recipe["inputs"]: inventory[item] = int(inventory.get(item, 0))
         for item in recipe["outputs"]: inventory[item] = int(inventory.get(item, 0))
-    inventory["goods"] = int(inventory.get("goods", 0))
+    inventory["goods"] = int(inventory.get("goods", finished_goods))
 
 func _ensure_machine_state() -> void:
     for machine_id in DEFAULT_MACHINES:
         if not machines.has(machine_id): machines[machine_id] = DEFAULT_MACHINES[machine_id].duplicate(true)
         var machine: Dictionary = machines[machine_id]
-        machine["condition"] = clamp(float(machine.get("condition", 100)), 0.0, 100.0)
+        machine["condition"] = clamp(float(machine.get("condition", 100.0)), 0.0, 100.0)
         machine["automation"] = clamp(int(machine.get("automation", 0)), 0, 5)
         machine["capacity"] = max(1, int(machine.get("capacity", 1)))
         machine["maintenance_due"] = max(0, int(machine.get("maintenance_due", 0)))
@@ -80,8 +77,7 @@ func add_inventory(item: String, amount: int) -> void:
     inventory[item] = max(0, int(inventory.get(item, 0)) + amount)
 
 func unlock_technology(technology: String, level: int = 1) -> void:
-    if not technologies.has(technology): technologies[technology] = 0
-    technologies[technology] = max(int(technologies[technology]), level)
+    technologies[technology] = max(int(technologies.get(technology, 0)), level)
 
 func acquire_machine(machine_id: String, capacity: int = 1) -> bool:
     if not machines.has(machine_id): return false
@@ -90,8 +86,7 @@ func acquire_machine(machine_id: String, capacity: int = 1) -> bool:
     return true
 
 func set_automation(machine_id: String, level: int) -> bool:
-    if not machines.has(machine_id): return false
-    if not bool(machines[machine_id].get("owned", false)): return false
+    if not machines.has(machine_id) or not bool(machines[machine_id].get("owned", false)): return false
     var value := clamp(level, 0, 5)
     machines[machine_id]["automation"] = value
     automation[machine_id] = value
@@ -104,7 +99,7 @@ func can_run(recipe_id: String, cycles: int = 1) -> Dictionary:
     if not machines.has(machine_id) or not bool(machines[machine_id].get("owned", false)): return {"ok":false,"reason":"machine_required","machine":machine_id}
     if int(technologies.get(recipe["technology"], 0)) <= 0: return {"ok":false,"reason":"technology_required","technology":recipe["technology"]}
     var machine: Dictionary = machines[machine_id]
-    if float(machine.get("condition", 0)) <= 5.0: return {"ok":false,"reason":"maintenance_required","machine":machine_id}
+    if float(machine.get("condition", 0.0)) <= 5.0: return {"ok":false,"reason":"maintenance_required","machine":machine_id}
     var capacity := int(machine.get("capacity", 1)) + int(machine.get("automation", 0))
     var requested := min(cycles, capacity)
     for item in recipe["inputs"]:
@@ -120,7 +115,7 @@ func run_recipe(recipe_id: String, cycles: int = 1) -> Dictionary:
     var run_cycles := int(check["cycles"])
     var machine: Dictionary = machines[machine_id]
     var automation_level := int(machine.get("automation", 0))
-    var condition := float(machine.get("condition", 100))
+    var condition := float(machine.get("condition", 100.0))
     var effective_waste := clamp(float(recipe["waste"]) - automation_level * 0.012 + (100.0 - condition) * 0.0015, 0.0, 0.35)
     for item in recipe["inputs"]: add_inventory(item, -int(recipe["inputs"][item]) * run_cycles)
     var outputs: Dictionary = {}
@@ -133,8 +128,7 @@ func run_recipe(recipe_id: String, cycles: int = 1) -> Dictionary:
         outputs[item] = actual
         total_output += actual
         waste[item] = int(waste.get(item, 0)) + waste_amount
-    var quality_delta := randi_range(-2, 3) + automation_level + int(round((condition - 80.0) / 20.0))
-    var run_quality := clamp(int(recipe["base_quality"]) + quality_delta, 25, 100)
+    var run_quality := clamp(int(recipe["base_quality"]) + randi_range(-2, 3) + automation_level + int(round((condition - 80.0) / 20.0)), 25, 100)
     quality = int(round((float(quality) + run_quality) / 2.0))
     machine["condition"] = max(0.0, condition - (0.7 + run_cycles * 0.55 - automation_level * 0.08))
     machine["maintenance_due"] = int(machine.get("maintenance_due", 0)) + run_cycles
@@ -146,16 +140,17 @@ func run_recipe(recipe_id: String, cycles: int = 1) -> Dictionary:
     if recipe["stage"] == "retail":
         for item in outputs:
             if String(item).begins_with("customer_"): finished_goods += int(outputs[item])
+    inventory["goods"] = finished_goods
     return {"ok":true,"recipe":recipe_id,"stage":recipe["stage"],"cycles":run_cycles,"outputs":outputs,"output":total_output,"quality":run_quality,"waste_rate":effective_waste,"machine":machine_id,"condition":machine["condition"],"utilization":utilization[machine_id]}
 
-# Backward-compatible entry point used by the prototype. It now runs a real
-# data-driven manufacturing recipe while preserving the old economy inputs.
+# Backward-compatible prototype command. The actual production graph is above;
+# this keeps the existing Main flow functional during the architecture migration.
 func produce(economy: RenewEconomy, cycles: int) -> Dictionary:
     if economy == null or cycles <= 0: return {"ok":false,"cycles":0,"output":0,"quality":quality}
+    var possible := cycles
     for resource in ["materials","packaging","fuel"]:
         if not economy.resources.has(resource): return {"ok":false,"cycles":0,"output":0,"quality":quality}
-    var possible := cycles
-    for resource in ["materials","packaging","fuel"]: possible = min(possible, int(economy.resources[resource]["stock"]))
+        possible = min(possible, int(economy.resources[resource]["stock"]))
     if possible <= 0: return {"ok":false,"cycles":0,"output":0,"quality":quality}
     for resource in ["materials","packaging","fuel"]: economy.resources[resource]["stock"] -= possible
     var waste_amount := int(floor(float(possible) * 0.06))
@@ -176,7 +171,7 @@ func consume_goods(amount: int) -> bool:
 func maintain_machine(machine_id: String, finance = null) -> Dictionary:
     if not machines.has(machine_id) or not bool(machines[machine_id].get("owned", false)): return {"ok":false,"reason":"machine_not_owned"}
     var machine: Dictionary = machines[machine_id]
-    var condition := float(machine.get("condition", 100))
+    var condition := float(machine.get("condition", 100.0))
     var cost := int(round((100.0 - condition) * 35.0 + int(machine.get("maintenance_due", 0)) * 12.0))
     if cost > 0 and finance != null:
         var payment = finance.spend(cost, "maintenance:%s" % machine_id)
@@ -189,11 +184,11 @@ func maintain_machine(machine_id: String, finance = null) -> Dictionary:
 func advance_day() -> void:
     for machine_id in machines:
         var machine: Dictionary = machines[machine_id]
-        machine["condition"] = max(0.0, float(machine.get("condition", 100)) - 0.25)
+        machine["condition"] = max(0.0, float(machine.get("condition", 100.0)) - 0.25)
         machines[machine_id] = machine
 
 func capture_state() -> Dictionary:
-    return {"system_version":SYSTEM_VERSION,"finished_goods":finished_goods,"quality":quality,"inventory":inventory.duplicate(true),"machines":machines.duplicate(true),"technologies":technologies.duplicate(true),"utilization":utilization.duplicate(true),"waste":waste.duplicate(true),"automation":automation.duplicate(true),"history":history.duplicate(true),"last_run":last_run.duplicate(true),"legacy_recipe":recipe.duplicate(true) if "recipe" in self else {}}
+    return {"system_version":SYSTEM_VERSION,"finished_goods":finished_goods,"quality":quality,"inventory":inventory.duplicate(true),"machines":machines.duplicate(true),"technologies":technologies.duplicate(true),"utilization":utilization.duplicate(true),"waste":waste.duplicate(true),"automation":automation.duplicate(true),"history":history.duplicate(true),"last_run":last_run.duplicate(true)}
 
 func restore_state(snapshot: Dictionary) -> void:
     if snapshot.is_empty(): return
