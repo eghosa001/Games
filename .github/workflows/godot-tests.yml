@@ -9,6 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -20,12 +21,12 @@ jobs:
           unzip -q Godot_v4.7.2-stable_linux.x86_64.zip
           chmod +x Godot_v4.7.2-stable_linux.x86_64
       - name: Import project
-        run: ./Godot_v4.7.2-stable_linux.x86_64 --headless --editor --path . --quit
+        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --editor --path . --quit
       - name: Run regression tests
-        run: ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_runner.gd
+        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_runner.gd
       - name: Run extended function tests
-        run: ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_extended.gd
+        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_extended.gd
       - name: Run expansion API tests
-        run: ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_expansion_api.gd
+        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_expansion_api.gd
       - name: Run edge-case tests
-        run: ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_edge_cases.gd
+        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_edge_cases.gd
