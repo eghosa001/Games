@@ -2,41 +2,29 @@
 
 > Verified implementation work on `feature/foundation-v11-implementation`.
 
-## 2026-09-02 — Canonical resource mutation coverage
+## 2026-09-02 — Expansion resource and day mutation integration
 
 ### Fixed in this pass
 
-- Extended `scripts/expansion_state.gd` with `RenewExpansionState.record_resource_generation()`.
-- Resource generation now has an atomic canonical mutation path that validates ownership, calculates output from site output × level, increments site stock, and records the resulting stock in `GameState.expansion.resource_sites`.
-- Added `tests/test_expansion_state.gd` covering canonical expansion/property/resource mutations and state restore.
-- The regression coverage verifies property purchase, property upgrade, resource-site purchase, resource generation, resource-site upgrade, and persistence after `GameState.capture()` → `clear()` → `restore()`.
-- The test also verifies the existing economic deltas: property level/income, resource output/risk, cash deduction, restored property state and generated resource stock.
+- Added canonical Main-level resource-site actions for purchase, upgrade and generation using `RenewExpansionState`.
+- Added keyboard access for the resource actions: `Y` buy resource site, `Z` upgrade resource site and `G` generate resource.
+- Routed expansion day profit/population progression through `RenewExpansionState.advance_day()` after the existing Expansion simulation calculates the empire result.
+- Canonical expansion day state is now advanced alongside the core day instead of being silently discarded by the runtime synchronization step.
+- Expansion population growth from restored properties is now persisted through the canonical expansion state during the daily simulation.
+- Preserved the existing Expansion API and compatibility fallback when GameState is unavailable.
 
-### Architectural result
+### Important remaining issue
 
-Expansion resource generation now has an explicit durable-state mutation API instead of requiring callers to directly edit a runtime resource-site dictionary.
+- The newly exposed Main resource actions still require a final cash/reputation projection cleanup: the canonical adapter mutates GameState funds, while the legacy Main scalar projection remains transitional. The next pass must make these actions consume the canonical returned balances without allowing `_sync_expansion_runtime()` to overwrite them.
+- `Expansion.gd` itself still contains direct resource-site mutations. Full completion requires moving those runtime mutations behind the canonical boundary rather than only exposing canonical Main wrappers.
 
-**GameState** remains the durable authority.
+### Verified commit
 
-**RenewExpansionState** is the controlled mutation boundary.
-
-**Expansion** remains the transitional runtime/UI projection until its public resource and daily-operation methods are routed through the boundary.
-
-### Verified commits
-
-- `bf4700feb13999b000619780549c494879cdbc21` — add canonical resource generation mutation
-- `c29c4233a2481989139c2549854174967ca2005d` — add canonical expansion mutation regression test
+- `c6fb2ca9067ece25ca7b666661bc9d3577211936` — route expansion resources and day simulation through GameState
 
 ### Verification status
 
-The new test source was statically reviewed. A Godot executable is not available in the current environment, so runtime Godot test execution was **not** claimed as passing.
-
-### Next integration step
-
-- Route `Expansion.buy_resource_site()` and `upgrade_resource_site()` through the canonical resource mutation boundary.
-- Route `Expansion.generate_resource()`/`harvest_resource()` through `record_resource_generation()`.
-- Route `Expansion.operate_day()` through canonical day/economic mutations without double-applying cash, day or population.
-- Add legacy-save migration assertions to the expansion regression suite.
+Static source review only. A Godot executable is not available in the current environment, so runtime Godot tests were **not** claimed as passing.
 
 ## 2026-09-02 — Expansion purchase/upgrade mutation integration
 
@@ -67,13 +55,6 @@ The first real expansion gameplay mutations now follow:
 
 Static source review was performed after the changes. A Godot executable is not available in the current environment, so runtime Godot tests were **not** claimed as passing.
 
-### Next integration step
-
-- Route resource-site purchase and upgrade through the same canonical boundary.
-- Route resource generation/stock mutation through GameState.
-- Route expansion `operate_day()` through canonical day/economic mutations without double-applying cash/day/population changes.
-- Add focused save/load regression coverage for expansion purchase, property upgrade, resource-site ownership/upgrade and legacy migration.
-
 ## 2026-09-02 — Canonical expansion mutation boundary
 
 ### Fixed in this pass
@@ -83,6 +64,7 @@ Static source review was performed after the changes. A Godot executable is not 
 - Added canonical purchase helpers for expansion properties and resource sites; they validate ownership/cash and update canonical cash, reputation and restored-count state atomically.
 - Added canonical property/resource upgrade helpers so level, income/value, output/risk and cash changes are recorded together in `GameState`.
 - Added a canonical expansion day-advance helper for day, cash and population deltas.
+- Added canonical resource generation persistence for owned resource sites.
 - Kept the adapter deliberately independent of the `Expansion` Node so the durable state boundary does not depend on UI/runtime objects.
 - Preserved `Expansion`'s existing public API for the current UI while this adapter becomes the controlled migration point for the next integration pass.
 
@@ -96,9 +78,11 @@ The expansion persistence boundary now has an explicit mutation API instead of r
 
 **Expansion** remains the transitional runtime/UI projection until its remaining mutation methods are routed through this boundary.
 
-### Verified commit
+### Verified commits
 
 - `f1231e86c962aa4360d6e2a15a1c6c2022403248` — canonical expansion mutation boundary
+- `bf4700feb13999b000619780549c494879cdbc21` — canonical resource generation mutation
+- `c29c4233a2481989139c2549854174967ca2005d` — expansion state regression tests
 
 ## 2026-09-02 — Canonical state refactor continuation
 
@@ -114,10 +98,10 @@ The expansion persistence boundary now has an explicit mutation API instead of r
 - Added migration defaults for expansion state so older saves receive a valid expansion container without losing existing state.
 - Updated `SaveSystem` to capture the live expansion runtime into GameState at save time and restore it at load time.
 - Removed the unsafe `main.gd` load-time `has_variable()` dependency from the save path. SaveSystem now applies an explicit compatibility projection to Main and returns only the result contract Main expects.
-- Synchronized expansion runtime with the core Main economy around expansion actions and the daily empire simulation. This prevents `expansion.gd`'s legacy `cash`, `reputation`, and `day` fields from drifting away from the actual player state during the transitional architecture.
+- Synchronized expansion runtime with the core Main economy around expansion actions and the daily empire simulation.
 - On load, expansion is restored after the canonical core state and then synchronized back to the current Main projection.
-- Kept Branch persistence separate from Business, Property and Expansion persistence.
-- Preserved the existing persistent employee records and role-aware workforce integration.
+- Preserved Branch persistence separately from Business, Property and Expansion persistence.
+- Preserved persistent employee records and role-aware workforce integration.
 
 ### Important architectural result
 
@@ -133,16 +117,12 @@ The current transitional model has explicit persistent boundaries:
 
 Main scalar fields remain compatibility projections rather than the intended durable save authority.
 
-### Verified commits from this pass
-
-- `dbea6c6f2ed4b449b5ddf0d8356e39ababa491c3` — GameState schema v4, canonical expansion container, migration and property activity correction
-- `74638ebda5ff032d23b7a063b45ec6a7a4722771` — SaveSystem expansion capture/restore and safe explicit Main projection
-- `830a96ed8f67871ec3d0802448543f5b1b150b95` — synchronize expansion runtime with Main's authoritative cash/reputation/day around gameplay mutations
-
 ### Still incomplete
 
-- Expansion resource-site purchase/upgrade and operating-day mutation still need canonical routing.
-- `Expansion.generate_resource()` still needs to delegate to the new canonical generation API during runtime integration.
+- Final Main cash/reputation projection cleanup for canonical resource-site mutations.
+- Direct `Expansion.gd` resource-site mutation removal.
+- Full resource → extraction → transport → processing → manufacturing → distribution → retail → customer chain.
+- Expansion operating-day mutation still has a transitional runtime calculation layer.
 - The full property catalog is not yet represented canonically; the core boundary currently covers the Old Warehouse lifecycle while expansion assets live under the Expansion container.
 - `main.gd` remains a large orchestration object and still owns runtime compatibility projections and several simulation rules.
 - Employee management UI is incomplete.
