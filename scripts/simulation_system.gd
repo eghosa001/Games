@@ -36,13 +36,10 @@ func _produce(args: Dictionary) -> Dictionary:
 func _settle_sales(args: Dictionary) -> Dictionary:
     return _finance().settle_sales(int(args.get("sales", 0)), int(args.get("wages", 0)), int(args.get("overhead", 0)), int(args.get("contract_income", 0)))
 
-# Advances the supplied company snapshot by exactly one operating day.
-# No Main node is accessed here: all gameplay inputs are supplied through context.
 func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     if not bool(state.get("business_open", false)): return {"ok": false, "message": "There is no operating business yet."}
     var finished_goods := int(state.get("finished_goods", 0))
     if finished_goods < 5: return {"ok": false, "message": "Produce at least 5 goods before ending the day."}
-
     var rivals = context.get("rivals")
     var economy = context.get("economy")
     var events = context.get("events")
@@ -50,7 +47,6 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     var districts = context.get("districts")
     if rivals == null or economy == null or events == null or expansion == null or districts == null:
         return {"ok": false, "message": "Simulation domain dependencies are unavailable."}
-
     var selected_rival := int(state.get("selected_rival", 0))
     var selected_district := int(state.get("selected_district", 0))
     var rival_price: int = int(rivals.rivals[0]["price"])
@@ -71,16 +67,15 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     var overhead := 650 + capacity_level * 100
     var contract_income := 0
     var contract_penalty := 0
-    var contract_result: Dictionary = _execute_contract(state, finished_goods - units, context)
+    var contract_result: Dictionary = _execute_contract(state, finished_goods - units)
     if bool(contract_result.get("ok", false)):
         contract_income = int(contract_result.get("revenue", 0))
         contract_penalty = int(contract_result.get("penalty", 0))
         finished_goods -= int(contract_result.get("delivered", 0))
         _append_log(state, str(contract_result.get("log", "")))
     var profit: int = sales + contract_income - contract_penalty - wages - overhead
-    var cash := int(state.get("cash", 0)) + profit
+    state["cash"] = int(state.get("cash", 0)) + profit
     finished_goods -= units
-    state["cash"] = cash
     state["finished_goods"] = max(0, finished_goods)
     state["last_sales"] = sales + contract_income
     state["last_profit"] = profit
@@ -88,7 +83,6 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     if profit >= 0: reputation += 1
     else: reputation = max(0, reputation - 1)
     state["reputation"] = reputation
-
     var debt := int(state.get("debt", 0))
     var loan_payment := int(state.get("loan_payment", 0))
     if debt > 0:
@@ -104,7 +98,6 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
         else:
             _append_log(state, "BANK: missed loan payment; credit reputation damaged.")
             state["reputation"] = max(0, int(state["reputation"]) - 2)
-
     state["day"] = int(state.get("day", 1)) + 1
     economy.end_market_day()
     for news in rivals.daily_update(int(state["day"])): _append_log(state, "RIVAL: " + news)
@@ -124,7 +117,7 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     state["message"] = "Day %d closed. %d sold; core profit $%s; empire profit $%s." % [state["day"], units, _money(profit), _money(int(empire["profit"]))]
     return {"ok": true, "message": state["message"], "state": state.duplicate(true), "contract": contract_result}
 
-func _execute_contract(state: Dictionary, available_after_sales: int, context: Dictionary) -> Dictionary:
+func _execute_contract(state: Dictionary, available_after_sales: int) -> Dictionary:
     var contracts = _contracts()
     if contracts == null: return {}
     var active := contracts.active_contract()
@@ -149,7 +142,6 @@ func _execute_contract(state: Dictionary, available_after_sales: int, context: D
         state["reputation"] = max(0, int(state.get("reputation", 0)) + int(impact.get(rep_key, 0)))
         state["contract_days"] = 0
         state["contract_bonus"] = 0
-        if status == "fulfilled" and bool(final_contract.get("renewal_offered", false)): state["contract_days"] = int(final_contract["renewal"].get("term_days", 0))
         _append_log(state, "CONTRACT %s: %s." % [final_contract["id"], status.to_upper()])
     result["log"] = "CONTRACT: delivered %d; revenue $%s; penalty $%s." % [int(result.get("delivered", 0)), _money(int(result.get("revenue", 0))), _money(int(result.get("penalty", 0)))]
     return result
@@ -198,8 +190,8 @@ func _production():
     var root = get_tree().root
     return root.get_node_or_null("RenewProductionSystem") if root else null
 func _economy():
-    var main = get_tree().root.get_node_or_null("Main")
-    return main.economy if main != null and "economy" in main else null
+    var root = get_tree().current_scene
+    return root.economy if root != null and "economy" in root else null
 func _contracts():
     var root = get_tree().root
     return root.get_node_or_null("RenewContractSystem") if root else null
