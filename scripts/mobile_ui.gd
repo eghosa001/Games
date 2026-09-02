@@ -132,10 +132,14 @@ func _run_action(label: String, callback: Callable) -> void:
     var before_goods := int(parent.finished_goods)
     var before_message := String(parent.message)
 
-    callback.call()
+    var result = callback.call()
 
-    var message := _callback_message(callback)
-    if message.is_empty() or message == before_message:
+    var message := ""
+    if result is Dictionary and result.has("message"):
+        message = String(result["message"])
+    if message.is_empty():
+        message = _callback_message(callback, before_message)
+    if message.is_empty():
         message = "%s completed." % label
 
     var changes: Array[String] = []
@@ -156,13 +160,15 @@ func _run_action(label: String, callback: Callable) -> void:
     _show_feedback(message)
     _queue_refresh()
 
-func _callback_message(callback: Callable) -> String:
+func _callback_message(callback: Callable, before_parent_message: String) -> String:
     var parent_message := String(parent.message)
-    if not parent_message.is_empty():
+    if not parent_message.is_empty() and parent_message != before_parent_message:
         return parent_message
     var target = callback.get_object()
     if target != null and "message" in target:
-        return String(target.message)
+        var controller_message := String(target.message)
+        if not controller_message.is_empty():
+            return controller_message
     return ""
 
 func _queue_refresh() -> void:
