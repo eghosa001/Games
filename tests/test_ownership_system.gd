@@ -22,7 +22,7 @@ func run() -> void:
         return
 
     var ownership = OwnershipSystem.new()
-    var created = ownership.register_entity("renew_co", OwnershipSystem.ENTITY_COMPANY, 1000000)
+    var created = ownership.register_entity("renew_co", OwnershipSystem.ENTITY_COMPANY, 2000000)
     check(bool(created["ok"]), "Company entity registers")
     check(ownership.has_entity("renew_co"), "Registered company is addressable")
 
