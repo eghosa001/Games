@@ -31,6 +31,8 @@ RenewEconomicCycleSystem="*res://scripts/economic_cycle_system.gd"
 RenewGlobalRankingSystem="*res://scripts/global_ranking_system.gd"
 RenewWorldPowerSystem="*res://scripts/world_power_system.gd"
 RenewHeadquartersSystem="*res://scripts/headquarters_system.gd"
+RenewCollectionSystem="*res://scripts/collection_system.gd"
+RenewCollectionUI="*res://scripts/collection_ui.gd"
 
 [display]
 window/size/viewport_width=1280
