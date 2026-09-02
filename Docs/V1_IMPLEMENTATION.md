@@ -1,149 +1,140 @@
 # RENEW V1 Implementation
 
-This document translates the master design plan into the first playable software slice.
+This document is the living roadmap for the first polished playable version.
 
-## Target loop
+## Vision
 
-**Restore → Business → Revenue → Supply Chain → Competition → Ownership → Empire → World Events**
+**Start small → restore neglected assets → build businesses → earn → secure resources → face rivals → form alliances → acquire assets → expand regions → challenge giants → control an economic empire.**
 
-The player begins with limited money and a neglected property. The implementation now extends the transformation from abandoned asset to a connected economic empire where ownership and timing become strategic resources.
+Economic competition is the primary conflict. The player's emotional attachment should come from personally transforming abandoned assets into valuable companies.
 
 ## Current playable foundation
 
-### Restoration
-- `scripts/main.gd` — staged restoration:
-  `Neglected → Cleaned → Repaired → Rebuilt → Installed → Designed → Operational`.
-- The first property must be inspected, acquired and restored before RENEW Goods can open.
+### Restoration & first business
+- [x] Staged restoration: `Neglected → Cleaned → Repaired → Rebuilt → Installed → Designed → Operational`.
+- [x] Inspect → acquire → restore → open RENEW Goods.
+- [x] Early-game balance adjusted so the first run is not trapped by restoration costs.
+- [x] Restoration strategy choices: **Budget / Standard / Premium**.
+- [x] Mobile controls expose the strategy choices before restoration work begins.
 
 ### Core business
-- `scripts/main.gd` — RENEW Goods staffing, production, pricing, marketing, customer contracts, financing and daily P&L.
-- `scripts/production.gd` — production input requirements and output quality.
+- [x] Staffing and hiring
+- [x] Production and inventory
+- [x] Pricing
+- [x] Marketing
+- [x] Customer contracts
+- [x] Loans and repayments
+- [x] Daily profit/loss loop
 
-### Economy
-- `scripts/economy.gd` — resource supply/demand, dynamic prices and supplier reliability.
-- `scripts/competitors.gd` — three distinct NPC corporations, relationships, alliances, deals, expansion pressure and acquisitions.
-- `scripts/events.gd` — economic events that change cash/reputation and create operating pressure.
-
-### Empire businesses
-- `scripts/expansion.gd` — three separately playable businesses:
-  - Riverside Retail Unit — Consumer Goods
-  - Brickworks Yard — Building Materials
-  - Cold Storage Depot — Food Processing
-- Every expansion business has its own staff, inventory, quality, price, operating state and level.
-
-### Supply chain and resource ownership
-- Expansion businesses require business-specific internal inputs before manual or automatic production.
-- The player can acquire resource sites for materials, food and fuel.
-- Resource sites generate internal stock, have disruption risk, can be upgraded, and require upkeep.
-- Internal transfers add logistics cost, making network design a real trade-off.
-
-### Headquarters and logistics
-- Empire scale creates management overhead.
-- Headquarters upgrades reduce coordination friction.
-- Transport upgrades expand fleet capacity for the growing network.
-- Districts provide different demand, logistics and competition profiles.
-
-### Corporate ownership and capital
-- `scripts/corporate.gd` adds a corporate-control layer.
-- Company valuation and indicative share price respond to cash, profit, reputation, businesses and acquisitions.
-- The founder begins with 100% ownership.
-- Growth capital can be raised from an independent investor in exchange for minority equity.
-- Investors improve access to capital but reduce founder ownership and increase the importance of board trust.
-- Profits can later be used for share buybacks or dividends, creating a growth-versus-control decision.
-- Corporate defense can be upgraded to reduce takeover risk.
-- A strong alliance can be called upon for emergency takeover defense.
-- The Giant can attempt a takeover when the player's ownership/control position becomes vulnerable.
-- Corporate state is represented in the active prototype and is ready for the normal save system to be unified with it during persistence cleanup.
-
-### World opportunities and narrative pressure
-- `scripts/world_missions.gd` adds recurring, choice-driven opportunities beginning after the early game.
-- Opportunities include community investment, supplier rescue, price-war response, ally support, regional booms and distressed assets.
-- Every opportunity presents a meaningful trade-off between cash, reputation, relationships and strategic growth.
-- Opportunities expire, making timing matter instead of allowing every benefit to be collected safely.
-- `F1` and `F2` resolve the active opportunity.
-
-## Controls
-
-### Core
-- `I` inspect
-- `A` acquire
-- `R` restore
-- `O` open business
-- `S` buy core inputs
-- `B` produce core goods
-- `P` change core price
-- `H` hire core employee
-- `U` upgrade core capacity
-- `M` marketing
-- `N` end day
-- `K` customer contract
-- `J` loan
-- `V` repay loan
-- `T` supplier tier
-- `F5` save / `F9` load
-
-### Competition
-- `1 / 2 / 3` select rival
-- `L` improve relationship
-- `C` alliance offer
-- `X` acquire rival asset
+### Living economy
+- [x] Dynamic resource prices
+- [x] Supplier reliability tiers
+- [x] District demand modifiers
+- [x] Rival supplier/customer pressure
+- [x] Resource shortages and internal logistics foundation
+- [ ] Stronger visible market trend feedback
+- [ ] More persistent event consequences
+- [ ] More player-facing rival reaction notifications
 
 ### Empire
-- `7 / 8 / 9` select Retail / Factory / Warehouse
-- `Z` produce selected business
-- `Y` sell selected business inventory
-- `G` hire at selected business
-- `, / .` lower/raise business price
-- `0` open/pause selected business
-- `4 / 5 / 6` select Materials / Food / Fuel site
-- `W` generate resource stock
-- `F` acquire resource site
-- `[` upgrade resource site
-- `D` dispatch internal supply
-- `]` upgrade headquarters management
+- [x] Multiple expansion businesses
+- [x] Resource ownership
+- [x] Internal logistics
+- [x] Regional selection and expansion
+- [x] District system
+- [x] Headquarters management
+- [x] Transport fleet upgrades
+- [ ] Business specialization depth
+- [ ] Branch managers/delegation
+- [ ] Stronger supply-chain bottlenecks
 
-### Corporate control
-- `ENTER` raise capital from investors
-- `-` buy back investor shares
-- `=` pay shareholder dividend
-- `;` strengthen takeover defense
-- `'` call a strategic alliance for takeover defense
+### Corporate war
+- [x] NPC corporations and relationships
+- [x] Alliances
+- [x] Acquisition approaches
+- [x] Corporate capital, dividends, buybacks and defense foundation
+- [ ] Share ownership and voting power
+- [ ] Board control
+- [ ] Hostile takeover attempts as a complete gameplay loop
+- [ ] Corporate blocs and defensive alliances
+- [ ] Major corporation endgame objectives
 
-### World opportunities
-- `F1` take the opportunity
-- `F2` decline the opportunity
+### World & presentation
+- [x] Economic world presentation layer
+- [x] Restoration visual states
+- [x] Mobile-first tabbed controls
+- [x] Touch-safe overlay architecture
+- [x] Tutorial overlay
+- [x] Persistent milestone/progression system connected to Main
+- [ ] Automatic tutorial progression after validated actions
+- [ ] Stronger event-choice presentation
+- [ ] Animated feedback, sound and music
+- [ ] Polished milestone celebrations
+- [ ] Save/load UX polish
 
-## Milestone status
+## Development phases
 
-1. First Unity scene/restoration interaction — legacy foundation exists; active playable path is Godot.
-2. Visual restoration state changes — **complete in prototype UI**.
-3. Three V1 property types — **complete**.
-4. Three industries and core resources — **complete**.
-5. Customers, employees and suppliers — **complete**.
-6. Contracts and competitor reactions — **complete**.
-7. Three NPC corporations — **complete**.
-8. Basic alliances and progression — **complete**.
-9. Save/load — **complete for the established economy state**.
-10. Individually playable empire businesses — **complete**.
-11. Internal supply chains and resource ownership — **complete**.
-12. Headquarters management overhead — **complete**.
-13. Districts, transport and regional competition — **complete**.
-14. Corporate ownership, investment and takeover defense — **complete in prototype**.
-15. Dynamic world opportunities and narrative choices — **complete in prototype**.
+### Phase A — Make the first 30–60 minutes fun
+1. Finish tutorial auto-progression.
+2. Make restoration strategy visibly affect the early business.
+3. Add memorable first-day events and decisions.
+4. Make the first profitable day feel like an achievement.
 
-## Next bottlenecks
+### Phase B — Make the economy feel alive
+1. Surface price trends and shortages.
+2. Make rivals react visibly to the player's decisions.
+3. Add events with lasting trade-offs.
+4. Create reasons to change suppliers, prices and districts.
 
-The largest remaining risk is runtime validation. Godot is not currently available in the development environment, so the latest layers have been integrated through the repository but have not been executed here. Once Godot is available, the first pass should verify input constants, scene loading, draw ordering and persistence behavior, then tune balance after actually playing the loop.
+### Phase C — Build the empire
+1. Deepen business specialization.
+2. Add branch management.
+3. Make logistics capacity and resource ownership strategically important.
+4. Expand the regional map.
 
-After validation, the next major content layer should be multi-region progression: a larger map with distinct regional economies, cross-region logistics, region-specific industries and stronger corporate expansion behavior.
+### Phase D — Corporate war
+1. Introduce share ownership.
+2. Add voting power and board control.
+3. Add hostile takeover attempts.
+4. Make alliances useful for both growth and defense.
+5. Create a powerful but beatable giant corporation.
+
+### Phase E — Game feel
+1. Animations and transitions.
+2. Sound effects and music.
+3. Better notifications and milestone moments.
+4. Performance pass for lower-end Android devices.
+
+### Phase F — V1 validation
+- [ ] Clean first-run playthrough
+- [ ] 30-minute economy balance test
+- [ ] 1-hour expansion test
+- [ ] Save/load regression test
+- [ ] Touch-only regression test
+- [ ] Low-end Android performance test
+- [ ] Economy exploit/balance pass
+
+## Current test checkpoint
+
+After pulling the latest `main` branch, test the whole batch in Godot rather than testing every individual change:
+
+1. Four mobile tabs respond to touch.
+2. RESTORE shows Budget, Standard and Premium.
+3. Choosing a plan before restoration changes the restoration costs.
+4. Inspect → Acquire → Restore → Open Business still works.
+5. Milestone messages appear after achievements.
+6. SAVE GAME and LOAD GAME still work.
+7. No new GDScript parse errors appear.
+
+The `RGBAFloat` → `RGBAHalf` message previously seen on some hardware is a graphics compatibility warning, not a GDScript parse error.
 
 ## Design guardrails
 
-- Economic competition is the primary conflict; avoid turning the game into a generic military strategy game.
+- Economic competition is the primary conflict.
 - Major systems should create a meaningful decision, emotional attachment, or reason to return.
-- The player's restoration choices must have visible consequences.
-- Ownership is a strategic resource: raising money can accelerate expansion while surrendering control.
-- World opportunities should create stories and consequences, not just free rewards.
-- The Giant should be powerful but beatable through stronger economics, alliances, reputation and corporate defenses.
-- Failure should create stories and consequences rather than simply ending the game.
-- V1 should stay playable before adding a much larger world.
+- Restoration choices must have visible consequences.
+- Ownership is a strategic resource: raising money can accelerate growth while reducing control.
+- World opportunities should create stories and consequences, not free rewards.
+- The Giant should be powerful but beatable through economics, alliances, reputation and corporate defenses.
+- Failure should create consequences and comeback opportunities rather than simply ending the game.
+- Keep V1 playable before massively increasing world size.
