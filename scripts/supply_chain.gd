@@ -82,6 +82,7 @@ func consume_branch_packaging(branch:Dictionary, units:int)->Dictionary:
 
 func daily_network_update(expansion, transport_capacity:int)->Dictionary:
     _normalize()
+    var effective_capacity := _effective_transport_capacity(transport_capacity)
     var generated:=0
     var moved:=0
     var disruptions:Array[String]=[]
@@ -94,12 +95,12 @@ func daily_network_update(expansion, transport_capacity:int)->Dictionary:
             disruptions.append("%s suffered a supply disruption."%site["name"])
         site["stock"]=int(site.get("stock",0))+output
         generated+=output
-        var transfer=move_from_site(site,output,transport_capacity)
+        var transfer=move_from_site(site,output,effective_capacity)
         moved+=int(transfer.get("moved",0))
     disruption_level=min(100,disruption_level+disruptions.size()*8)
     if disruptions.size()==0: disruption_level=max(0,disruption_level-2)
     shortages_today.clear()
-    return {"generated":generated,"moved":moved,"disruptions":disruptions,"shortages":shortages_today}
+    return {"generated":generated,"moved":moved,"disruptions":disruptions,"shortages":shortages_today,"logistics_efficiency":_logistics_efficiency(),"effective_transport_capacity":effective_capacity}
 
 func daily_business_check(expansion)->Dictionary:
     var shortages:Array[String]=[]
@@ -126,3 +127,16 @@ func load_snapshot(state:Dictionary)->void:
         disruption_level=int(state.get("disruption_level",0))
         competitor_pressure=int(state.get("competitor_pressure",0))
     _normalize()
+
+func _logistics_efficiency() -> float:
+    var tree := Engine.get_main_loop()
+    if tree == null: return 1.0
+    var root := tree.get_root()
+    if root == null: return 1.0
+    var game_state = root.get_node_or_null("RenewGameState")
+    if game_state == null: return 1.0
+    var value = game_state.get_value(["analytics", "employee_logistics_efficiency"], 1.0)
+    return clampf(float(value), 0.25, 2.5)
+
+func _effective_transport_capacity(base_capacity:int) -> int:
+    return max(0, int(floor(float(max(0,base_capacity)) * _logistics_efficiency())))
