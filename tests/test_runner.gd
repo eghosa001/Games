@@ -1,0 +1,232 @@
+extends SceneTree
+
+var passed := 0
+var failed := 0
+var failures: Array[String] = []
+
+func _init() -> void:
+    call_deferred("run")
+
+func check(condition: bool, label: String) -> void:
+    if condition:
+        passed += 1
+        print("PASS: " + label)
+    else:
+        failed += 1
+        failures.append(label)
+        push_error("FAIL: " + label)
+
+func check_has(dict: Dictionary, key: String, label: String) -> void:
+    check(dict.has(key), label + " [key=%s]" % key)
+
+func run() -> void:
+    randomize()
+    test_economy()
+    test_production()
+    test_districts()
+    test_restoration()
+    test_expansion()
+    test_regions()
+    test_rivals()
+    test_supply()
+    test_contracts()
+    test_world_missions()
+    test_events()
+    test_progression()
+    test_main_scene()
+    print("\nRENEW TEST RESULT: %d passed, %d failed" % [passed, failed])
+    if failed > 0:
+        for item in failures:
+            print("FAILED: " + item)
+        quit(1)
+    quit(0)
+
+func test_economy() -> void:
+    var e = load("res://scripts/economy.gd").new()
+    var supplier = e.supplier_for("materials", 1)
+    check(not supplier.is_empty(), "economy supplier_for")
+    var quote = e.quote("materials", 10, 0)
+    check(bool(quote.get("ok", false)) and int(quote["cost"]) > 0, "economy quote")
+    var before = int(e.resources["materials"]["stock"])
+    var buy = e.buy_resource("materials", 5, 100000, 0)
+    check(bool(buy.get("ok", false)) and int(e.resources["materials"]["stock"]) == before + 5, "economy buy_resource")
+    e.set_market_modifier("materials", 1.5)
+    check(float(e.quote("materials", 1)["market_factor"]) == 1.5, "economy set_market_modifier")
+    e.clear_market_modifiers()
+    check(float(e.quote("materials", 1)["market_factor"]) == 1.0, "economy clear_market_modifiers")
+    e.end_market_day()
+    check(int(e.resources["materials"]["stock"]) >= 15, "economy end_market_day")
+
+func test_production() -> void:
+    var e = load("res://scripts/economy.gd").new()
+    var p = load("res://scripts/production.gd").new()
+    var result = p.produce(e, 3)
+    check(bool(result["ok"]) and int(result["output"]) > 0, "production produce")
+    var empty = load("res://scripts/economy.gd").new()
+    empty.resources["materials"]["stock"] = 0
+    var stopped = p.produce(empty, 3)
+    check(not bool(stopped["ok"]), "production stops on missing input")
+
+func test_districts() -> void:
+    var d = load("res://scripts/districts.gd").new()
+    d.update_unlocks(0)
+    check(bool(d.current()["unlocked"]), "districts update_unlocks keeps first district")
+    var locked = d.select(1)
+    check(not bool(locked["ok"]), "districts rejects locked district")
+    d.update_unlocks(50)
+    check(bool(d.select(3)["ok"]), "districts select unlocked district")
+    check(d.business_multiplier("Consumer Goods") > 0.0, "districts business_multiplier")
+    check(d.logistics_cost(100) > 0, "districts logistics_cost")
+    check(d.competition_pressure() > 0.0, "districts competition_pressure")
+
+func test_restoration() -> void:
+    var r = load("res://scripts/restoration_strategy.gd").new()
+    check(r.plans.has("Budget") and r.plans.has("Standard") and r.plans.has("Premium"), "restoration plans")
+    var game = Node.new()
+    game.set("owned", false)
+    game.set("restoration", 0)
+    game.set("stages", [["Neglected",0,0],["Cleaned",20,1500],["Repaired",40,3000],["Rebuilt",60,4500],["Installed",80,6000],["Designed",100,7500]])
+    game.set("message", "")
+    game.set_script(load("res://scripts/main.gd"))
+    add_child(game)
+    r.game = game
+    r.choose_budget()
+    check(r.applied and r.selected == "Budget", "restoration choose_budget")
+    check(r.summary().contains("Budget"), "restoration summary")
+    r.choose_standard()
+    check(r.selected == "Standard", "restoration choose_standard")
+    r.choose_premium()
+    check(r.selected == "Premium", "restoration choose_premium")
+    game.queue_free()
+
+func test_expansion() -> void:
+    var x = load("res://scripts/expansion.gd").new()
+    check(x.get_property_count() == 3, "expansion property count")
+    check(x.get_resource_site_count() == 3, "expansion resource site count")
+    x.unlock_from_reputation(100)
+    var p = x.selected(0)
+    check(not p.is_empty() and bool(p["unlocked"]), "expansion selected")
+    var buy = x.buy(0, 100000)
+    check(bool(buy["ok"]), "expansion buy")
+    var up = x.upgrade(0, 100000)
+    check(bool(up["ok"]), "expansion upgrade")
+    var site = x.buy_resource_site(0, 100000)
+    check(bool(site["ok"]), "expansion buy_resource_site")
+    var gen = x.generate_resource(0)
+    check(bool(gen["ok"]), "expansion generate_resource")
+    var supply = x.supply_business(p, 1)
+    check(bool(supply["ok"]) or String(supply.get("message", "")).contains("input"), "expansion supply_business path")
+    var summary = x.get_summary()
+    check(summary.has("management_level") and summary.has("management_overhead"), "expansion summary management state")
+    var day = x.operate_day()
+    check(day.has("profit") and day.has("businesses"), "expansion operate_day")
+
+func test_regions() -> void:
+    var r = load("res://scripts/regions.gd").new()
+    r._normalize()
+    r.update_unlocks(100)
+    check(bool(r.select(2)), "regions select")
+    check(r.current().has("name"), "regions current")
+    check(r.market_multiplier() > 0.0, "regions market_multiplier")
+    check(r.logistics_cost(100) > 0, "regions logistics_cost")
+    check(r.regional_resource_bonus() >= 0.0, "regions regional_resource_bonus")
+    check(r.competition_pressure() >= 0.0, "regions competition_pressure")
+    r.daily_update()
+    check(r.trade_route_bonus() >= 0.0, "regions trade_route_bonus")
+
+func test_rivals() -> void:
+    var r = load("res://scripts/competitors.gd").new()
+    r._normalize()
+    check(r.rivals.size() >= 3, "rivals normalize")
+    var idx = 0
+    check(r.improve_relationship(idx) != "", "rivals improve_relationship")
+    var alliance = r.offer_alliance(idx)
+    check(alliance.has("ok") and alliance.has("message"), "rivals offer_alliance")
+    var deal = r.propose_supply_deal(idx)
+    check(deal.has("ok") and deal.has("message"), "rivals propose_supply_deal")
+    var customer = r.propose_customer_partnership(idx)
+    check(customer.has("ok") and customer.has("message"), "rivals propose_customer_partnership")
+    var pressure = r.district_pressure(0)
+    check(pressure >= 0, "rivals district_pressure")
+    check(r.alliance_bonus(idx).has("sales"), "rivals alliance_bonus")
+    check(r.deal_bonus(idx).has("sales"), "rivals deal_bonus")
+    check(r.supplier_pressure(0) >= 0, "rivals supplier_pressure")
+    r.daily_update(2)
+    r.strategic_update(2, 0, 20)
+
+func test_supply() -> void:
+    var s = load("res://scripts/supply_chain.gd").new()
+    s._normalize()
+    check(s.network_stock.has("materials"), "supply normalize")
+    var x = load("res://scripts/expansion.gd").new()
+    x.unlock_from_reputation(100)
+    x.buy_resource_site(0, 100000)
+    var moved = s.move_from_site(x.resource_sites[0], 3, 100)
+    check(bool(moved["ok"]), "supply move_from_site")
+    var market = s.acquire_from_market("materials", 5, 100000, null)
+    check(market.has("ok") and market.has("message"), "supply acquire_from_market")
+    var business = x.buy(0, 100000)
+    check(bool(business["ok"]), "supply expansion prerequisite")
+    var supplied = s.supply_business(x.properties[0], 1, 100)
+    check(supplied.has("ok") and supplied.has("message"), "supply supply_business")
+    var daily = s.daily_network_update(x, 100)
+    check(daily.has("generated") and daily.has("moved"), "supply daily_network_update")
+    var check_daily = s.daily_business_check(x)
+    check(check_daily.has("count"), "supply daily_business_check")
+    s.reset_day()
+
+func test_contracts() -> void:
+    var c = load("res://scripts/supply_contracts.gd").new()
+    c._normalize()
+    var fake = Node.new()
+    fake.set("reputation", 100)
+    fake.set("cash", 100000)
+    add_child(fake)
+    var negotiated = c.negotiate(0, "materials", fake)
+    check(negotiated.has("ok") and negotiated.has("message"), "contracts negotiate")
+    var rights = c.secure_resource("materials", fake)
+    check(rights.has("ok") and rights.has("message"), "contracts secure_resource")
+    check(c.resource_discount("materials") >= 0.0, "contracts resource_discount")
+    c.daily_update()
+    fake.queue_free()
+
+func test_world_missions() -> void:
+    var w = load("res://scripts/world_missions.gd").new()
+    w._normalize()
+    check(w.missions.size() > 0, "world missions normalize")
+    var m = w.current()
+    check(m.has("title"), "world missions current")
+    var a = w.choose_a()
+    check(a.has("ok") and a.has("message"), "world missions choose_a")
+    w._normalize()
+    var b = w.choose_b()
+    check(b.has("ok") and b.has("message"), "world missions choose_b")
+
+func test_events() -> void:
+    var e = load("res://scripts/events.gd").new()
+    for i in range(10):
+        var event = e.roll()
+        check(event.has("title") and event.has("cash") and event.has("rep"), "events roll #%d" % (i + 1))
+
+func test_progression() -> void:
+    var p = load("res://scripts/progression.gd").new()
+    p._normalize()
+    check(p.has_method("evaluate"), "progression evaluate exists")
+    var result = p.evaluate()
+    check(result is Dictionary, "progression evaluate returns dictionary")
+
+func test_main_scene() -> void:
+    var scene = load("res://scenes/Main.tscn")
+    check(scene != null, "main scene loads")
+    if scene == null:
+        return
+    var instance = scene.instantiate()
+    check(instance != null, "main scene instantiates")
+    add_child(instance)
+    await process_frame
+    check(instance.has_method("inspect_property"), "main inspect_property")
+    check(instance.has_method("advance_day"), "main advance_day")
+    check(instance.has_method("buy_expansion"), "main buy_expansion")
+    check(instance.has_method("save_game"), "main save_game")
+    check(instance.has_method("load_game"), "main load_game")
+    instance.queue_free()
