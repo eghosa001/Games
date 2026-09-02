@@ -89,10 +89,10 @@ func operate_day(region_system)->Dictionary:
         var pressure:=min(0.35,float(r["competition"])*0.08*int(region_system.rival_presence[region_index]))
         var demand:=max(1,int(round(capacity*market*price_factor*(1.0-pressure)*(0.85+float(b["quality"])/300.0))))
         var units:=min(int(b["stock"]),demand)
-        var revenue:=units*int(b["price"])
+        var revenue: int = units*int(b["price"])
         var wages:=int(b["employees"])*190
         var overhead:=450+int(b["level"])*120
-        var profit:=revenue-wages-overhead
+        var profit: int = revenue-wages-overhead
         b["stock"]-=units; b["cashflow"]=profit
         total+=profit; sales+=revenue
     return {"profit":total,"businesses":active,"sales":sales}
