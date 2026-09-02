@@ -1,5 +1,6 @@
 [application]
 config/name="RENEW"
+config/icon="res://Assets/renew_icon.svg"
 run/main_scene="res://scenes/Main.tscn"
 
 [autoload]
