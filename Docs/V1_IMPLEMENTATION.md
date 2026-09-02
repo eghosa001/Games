@@ -4,9 +4,9 @@ This document translates the master design plan into the first playable software
 
 ## Target loop
 
-**Restore → Business → Revenue → Supply Chain → Competition → Empire**
+**Restore → Business → Revenue → Supply Chain → Competition → Ownership → Empire**
 
-The player begins with limited money and a neglected property. The implementation now extends the transformation from abandoned asset to operating business into a small connected empire.
+The player begins with limited money and a neglected property. The implementation now extends the transformation from abandoned asset to operating business into a connected economic empire where ownership itself becomes a strategic resource.
 
 ## Current playable foundation
 
@@ -21,7 +21,7 @@ The player begins with limited money and a neglected property. The implementatio
 
 ### Economy
 - `scripts/economy.gd` — resource supply/demand, dynamic prices and supplier reliability.
-- `scripts/competitors.gd` — three distinct NPC corporations, relationships, alliances and competition.
+- `scripts/competitors.gd` — three distinct NPC corporations, relationships, alliances, deals, expansion pressure and acquisitions.
 - `scripts/events.gd` — economic events that change cash/reputation and create operating pressure.
 
 ### Empire businesses
@@ -32,21 +32,28 @@ The player begins with limited money and a neglected property. The implementatio
 - Every expansion business has its own staff, inventory, quality, price, operating state and level.
 
 ### Supply chain and resource ownership
-- Expansion businesses now require business-specific internal inputs before manual or automatic production.
-- The player can acquire resource sites for **materials, food and fuel**.
+- Expansion businesses require business-specific internal inputs before manual or automatic production.
+- The player can acquire resource sites for materials, food and fuel.
 - Resource sites generate internal stock, have disruption risk, can be upgraded, and require upkeep.
-- `[D]` moves owned resource stock into compatible businesses.
-- Retail can receive finished goods from the core RENEW Goods operation.
-- Internal transfers add a small logistics cost, making network design a real trade-off.
+- Internal transfers add logistics cost, making network design a real trade-off.
 
-### Headquarters management
-- Empire scale now creates management overhead.
-- Headquarters upgrades reduce the friction of coordinating a growing network and are persisted with the save.
+### Headquarters and logistics
+- Empire scale creates management overhead.
+- Headquarters upgrades reduce coordination friction.
+- Transport upgrades expand fleet capacity for the growing network.
+- Districts provide different demand, logistics and competition profiles.
 
-### Save/load
-- `scripts/save_system.gd` — JSON save/load.
-- Expansion businesses, owned resource sites and headquarters management state are persisted.
-- Older saves are normalized when loaded so newly introduced business fields receive safe defaults.
+### Corporate ownership and capital
+- `scripts/corporate.gd` adds a persistent corporate-control layer.
+- Company valuation and indicative share price respond to cash, profit, reputation, businesses and acquisitions.
+- The founder begins with 100% ownership.
+- Growth capital can be raised from an independent investor in exchange for minority equity.
+- Investors improve access to capital but reduce founder ownership and increase the importance of board trust.
+- Profits can later be used for share buybacks or dividends, creating a growth-versus-control decision.
+- Corporate defense can be upgraded to reduce takeover risk.
+- A strong alliance can be called upon for emergency takeover defense.
+- The Giant can attempt a takeover when the player's ownership/control position becomes vulnerable.
+- Corporate state is persisted locally so ownership survives between sessions even though the normal economic save system remains separate.
 
 ## Controls
 
@@ -88,6 +95,13 @@ The player begins with limited money and a neglected property. The implementatio
 - `D` dispatch internal supply
 - `]` upgrade headquarters management
 
+### Corporate control
+- `ENTER` raise capital from investors
+- `-` buy back investor shares
+- `=` pay shareholder dividend
+- `;` strengthen takeover defense
+- `'` call a strategic alliance for takeover defense
+
 ## Milestone status
 
 1. First Unity scene/restoration interaction — legacy foundation exists; active playable path is Godot.
@@ -102,20 +116,21 @@ The player begins with limited money and a neglected property. The implementatio
 10. Individually playable empire businesses — **complete**.
 11. Internal supply chains and resource ownership — **complete**.
 12. Headquarters management overhead — **complete**.
+13. Districts, transport and regional competition — **complete**.
+14. Corporate ownership, investment and takeover defense — **complete in prototype**.
 
 ## Next bottlenecks
 
-The remaining work is no longer a simple missing mechanic. The project needs either:
+The largest remaining risk is runtime validation. Godot is not currently available in the development environment, so the new corporate layer has been integrated through the repository but has not been executed here. Once Godot is available, the first pass should verify input constants, scene loading, draw ordering and persistence behavior, then tune balance after actually playing the loop.
 
-1. **A real Godot runtime validation pass** to catch engine/version-specific GDScript or input-constant issues and tune the UI after playing the loop; or
-2. A larger world layer: districts, transport/logistics capacity, richer competitor AI, partial ownership/investors, narrative events and multi-region progression.
-
-Those are deliberately held until the current prototype can be run and observed, because further systems without runtime feedback risk creating feature complexity without improving the actual game.
+After validation, the next major content layer should focus on narrative-driven corporate events and multi-region progression rather than adding disconnected mechanics.
 
 ## Design guardrails
 
 - Economic competition is the primary conflict; avoid turning the game into a generic military strategy game.
 - Major systems should create a meaningful decision, emotional attachment, or reason to return.
 - The player's restoration choices must have visible consequences.
-- Ownership should eventually support partial stakes, investors and controlling influence.
-- V1 should stay small enough to become playable before the larger world systems are added.
+- Ownership is now a strategic resource: raising money can accelerate expansion while surrendering control.
+- The Giant should be powerful but beatable through stronger economics, alliances, reputation and corporate defenses.
+- Failure should create stories and consequences rather than simply ending the game.
+- V1 should stay playable before adding a much larger world.
