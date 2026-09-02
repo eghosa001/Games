@@ -154,6 +154,18 @@ func management_upgrade() -> void:
 
 func _draw() -> void:
     if parent == null or not is_instance_valid(parent): return
+
+    # Resource ownership dashboard remains visible even before the first expansion.
+    draw_rect(Rect2(855,425,385,180), Color("18242d"), true)
+    draw_string(ThemeDB.fallback_font, Vector2(872,449), "RESOURCE OWNERSHIP", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("7891a5"))
+    var site = parent.expansion.resource_sites[selected_resource]
+    draw_string(ThemeDB.fallback_font, Vector2(872,475), "%s • %s" % [site["name"],site["resource"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
+    draw_string(ThemeDB.fallback_font, Vector2(872,497), "STATUS %s   LEVEL %d   STOCK %d" % ["OWNED" if site["owned"] else "AVAILABLE",site["level"],site["stock"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("b7d7ff"))
+    draw_string(ThemeDB.fallback_font, Vector2(872,519), "OUTPUT %d/unit cycle   RISK %d%%" % [site["output"],site["risk"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("f2d27a"))
+    draw_string(ThemeDB.fallback_font, Vector2(872,541), "[4] Materials  [5] Food  [6] Fuel", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("c6d0d8"))
+    draw_string(ThemeDB.fallback_font, Vector2(872,560), "[W] Generate   [F] Acquire   [[]] Upgrade site", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("8ee6a8"))
+    draw_string(ThemeDB.fallback_font, Vector2(872,579), "Owned supply is moved to businesses with [D].", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("c6d0d8"))
+
     if selected < 0 or selected >= parent.expansion.properties.size(): return
     var p = parent.expansion.properties[selected]
     if not p["owned"]: return
