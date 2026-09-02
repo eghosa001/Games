@@ -8,146 +8,28 @@ This is the living roadmap for the first polished playable version.
 
 Economic competition is the primary conflict. The player's emotional attachment should come from personally transforming abandoned assets into valuable companies.
 
-## 80% gameplay-scope status
+## Current development status
 
-RENEW is being treated as **80% complete across every major gameplay part**. This does not mean release-ready; it means each major pillar has a playable foundation and the remaining work is primarily depth, polish, balancing and QA.
+RENEW now has a connected playable foundation across restoration, business, markets, expansion, regions, supply, alliances and corporate control. The current pass is focused on making those systems interact correctly before the first full regression test.
 
-### Restoration & first business — 80%+
-- [x] Inspect → acquire → restore → open business.
-- [x] Staged restoration through Operational.
-- [x] Budget / Standard / Premium restoration choices.
-- [x] Early-game financing balance.
-- [x] Mobile restoration controls.
-- [x] Tutorial onboarding with automatic progression after validated actions.
-- [ ] More property archetypes and visual restoration variety.
+### Stabilization completed
+- [x] Mobile buttons provide per-action feedback without rebuilding the pressed control mid-signal.
+- [x] Market events create temporary input-price pressure.
+- [x] Market responses create temporary economic consequences.
+- [x] Owned resource sites generate stock.
+- [x] Resource stock can be transferred into owned expansion businesses.
+- [x] Resource transfer validates ownership, availability and amount.
+- [x] No new GDScript parse errors are expected from the latest committed changes.
 
-### Core business — 80%+
-- [x] Staffing and hiring.
-- [x] Production and inventory.
-- [x] Pricing and marketing.
-- [x] Customer contracts.
-- [x] Loans and repayments.
-- [x] Daily profit/loss loop.
-- [x] Business upgrades and capacity growth.
-- [ ] Deeper business specialization and manager delegation.
-
-### Living economy — 80%+
-- [x] Dynamic resource prices.
-- [x] Supplier reliability tiers.
-- [x] District demand modifiers.
-- [x] Rival supplier/customer pressure.
-- [x] Resource shortages and internal logistics foundation.
-- [x] Recurring market events: shortages, booms, price wars, regional contracts and distressed assets.
-- [x] Aggressive / balanced / defensive responses.
-- [x] CEO market/goal dashboard.
-- [x] Event choices create immediate financial/reputation consequences.
-- [ ] More persistent industry-specific shocks and longer market cycles.
-
-### Empire — 80%+
-- [x] Multiple expansion businesses.
-- [x] Resource ownership.
-- [x] Internal logistics.
-- [x] Regional selection and expansion.
-- [x] District system.
-- [x] Headquarters management.
-- [x] Transport fleet upgrades.
-- [x] Long-term company objectives.
-- [x] Distinct regional demand, labor, competition, industry and resource modifiers.
-- [x] Regional infrastructure.
-- [x] Cross-region goods dispatch.
-- [x] Trade corridor foundation between established regions.
-- [ ] Full multi-region supply bottleneck simulation.
-- [ ] Branch manager delegation.
-
-### Corporate war — 80%+
-- [x] NPC corporations and relationships.
-- [x] Alliances and strategic ally defense.
-- [x] Acquisition approaches.
-- [x] Corporate capital raises.
-- [x] Founder/investor ownership.
-- [x] Buybacks and dividends.
-- [x] Board trust.
-- [x] Board influence.
-- [x] Corporate defense.
-- [x] Takeover risk.
-- [x] Hostile takeover attempts with success/failure outcomes.
-- [x] Takeover cooldowns and consequences.
-- [ ] Corporate blocs and multi-company political conflicts.
-- [ ] Final Giant endgame campaign.
-
-### World & presentation — 80%+
-- [x] Economic world presentation layer.
-- [x] Restoration visual states.
-- [x] Mobile-first tabbed controls.
-- [x] Touch-safe overlay architecture.
-- [x] Tutorial overlay.
-- [x] Automatic tutorial progression.
-- [x] Persistent milestone/progression system.
-- [x] Long-term empire goals.
-- [x] CEO strategy HUD.
-- [x] Market event response UI.
-- [ ] Rich event cards and stronger animations.
-- [ ] Sound effects and music.
-- [ ] Polished milestone celebrations.
-- [ ] Unified save/load for every auxiliary system.
-
-## What remains after the 80% milestone
-
-### 80–85% — Core polish
-1. Stronger feedback for profit, losses, shortages and rival reactions.
-2. First-hour economy balancing.
-3. Better event-choice presentation.
-4. More visible consequences from strategic decisions.
-
-### 85–90% — Regional depth
-1. Stronger region-specific production chains.
-2. Cross-region supply contracts.
-3. Logistics bottlenecks that can interrupt operations.
-4. Region-specific opportunities and rival behavior.
-
-### 90–95% — Corporate war depth
-1. Voting thresholds and board control states.
-2. Corporate blocs and defensive alliances.
-3. More sophisticated takeover negotiations.
-4. Giant objectives and counter-strategies.
-
-### 95–100% — Release polish
-1. Animations and transitions.
-2. Sound effects and music.
-3. Milestone celebrations and notifications.
-4. Unified save-state persistence.
-5. Android performance optimization.
-6. Full balance and regression testing.
-
-## V1 validation checklist
-
-- [ ] Clean first-run playthrough.
-- [ ] 30-minute economy balance test.
-- [ ] 1-hour expansion test.
-- [ ] Regional trade test.
-- [ ] Corporate ownership/takeover test.
-- [ ] Save/load regression test.
-- [ ] Touch-only regression test.
-- [ ] Low-end Android performance test.
-- [ ] Economy exploit/balance pass.
-- [ ] No new GDScript parse/runtime errors.
-
-## Current integrated test checkpoint
-
-After pulling the latest `main`, test one complete run rather than individual features:
-
-1. RESTORE, BUSINESS, EMPIRE and WORLD tabs respond to touch.
-2. Budget, Standard and Premium restoration plans work before restoration begins.
-3. Inspect → Acquire → Restore → Open Business works.
-4. Produce → strategy decisions → End Day works.
-5. Market events appear after advancing days and accept all three responses.
-6. Regional selection, establishment, infrastructure, dispatch and trade corridor actions work.
-7. Corporate capital, board influence, defense and takeover controls appear on mobile.
-8. SAVE GAME / LOAD GAME work.
-9. Tutorial advances as actions are completed.
-10. No new GDScript parse/runtime errors appear.
-
-The `RGBAFloat` → `RGBAHalf` message previously seen on some hardware is a graphics compatibility warning, not a GDScript parse error.
+### Still to verify in the integrated playthrough
+- [ ] Restoration choice consequences remain visible through the business loop.
+- [ ] Pricing, marketing, staffing and capacity interact correctly.
+- [ ] Rival pressure affects profitability and expansion decisions.
+- [ ] Alliances produce useful economic/protection benefits.
+- [ ] Regional logistics and trade corridors materially affect dispatch.
+- [ ] Corporate control and takeover systems remain reachable after expansion.
+- [ ] Save/load restores the connected state without regressions.
+- [ ] Touch-only playthrough remains stable on Android.
 
 ## Design guardrails
 
@@ -159,3 +41,27 @@ The `RGBAFloat` → `RGBAHalf` message previously seen on some hardware is a gra
 - The Giant should be powerful but beatable through economics, alliances, reputation and corporate defenses.
 - Failure should create consequences and comeback opportunities rather than simply ending the game.
 - Keep V1 playable before massively increasing world size.
+
+## Next development layers
+
+1. **Core economy:** make restoration quality, staff, marketing, pricing, capacity, inventory and input costs compound into meaningful profit/loss outcomes.
+2. **Rivals:** rivals react to expansion, pricing, suppliers, customers and regional entry instead of being passive numbers.
+3. **Alliances:** allies provide concrete supply access, defense, discounts and opportunities while consuming relationship capital.
+4. **Regions:** regional specialties, logistics bottlenecks, cross-region contracts and rival presence create different expansion strategies.
+5. **Corporate war:** voting thresholds, board states, defensive blocs and the Giant endgame turn ownership into a strategic struggle.
+6. **Persistence:** consolidate auxiliary system state where practical so save/load represents the whole company.
+7. **Release polish:** Android performance, responsive HUD, stronger event presentation, audio, animation, milestone celebrations and final balance.
+
+## Integrated test checkpoint
+
+After the next stabilization batch, test one complete run rather than individual features:
+
+1. RESTORE → choose a plan → inspect → acquire → restore → open business.
+2. BUSINESS → buy inputs → produce → hire/upgrade/market/price → END DAY.
+3. Advance until a market event appears; respond and verify the temporary economic effect.
+4. EMPIRE → acquire a resource site → generate stock → supply an owned business.
+5. Expand into a region → infrastructure → trade corridor → dispatch goods.
+6. Use alliance and corporate controls once unlocked.
+7. SAVE GAME → make changes → LOAD GAME → confirm the company returns consistently.
+8. Repeat using touch only.
+9. Watch the Godot output for parse errors, invalid calls or new runtime errors. The RGBAFloat → RGBAHalf message is a hardware compatibility warning, not a GDScript parse error.
