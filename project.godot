@@ -18,6 +18,8 @@ RenewAllianceAI="*res://scripts/alliance_ai.gd"
 RenewAllianceControl="*res://scripts/alliance_control_system.gd"
 RenewAllianceCoupAI="*res://scripts/alliance_coup_ai.gd"
 RenewDiplomacySystem="*res://scripts/diplomacy_system.gd"
+RenewDiplomacyAI="*res://scripts/diplomacy_ai.gd"
+RenewDiplomacyUI="*res://scripts/diplomacy_ui.gd"
 
 [display]
 window/size/viewport_width=1280
