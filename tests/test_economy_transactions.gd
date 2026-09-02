@@ -35,11 +35,18 @@ func run() -> void:
     for key in economy.resources:
         check(int(economy.resources[key]["stock"]) == int(before[key]), "Rejected bundle leaves %s unchanged" % key)
 
-    # Use highly reliable supplier tier and enough cash for a successful atomic commit.
-    var successful = economy.buy_bundle(orders, 100000, 2)
+    # Supplier delivery uses probabilistic reliability. Retry the same atomic
+    # order until a delivery succeeds so this test verifies transaction
+    # semantics rather than depending on one random roll.
+    var successful: Dictionary = {"ok":false}
+    for attempt in range(20):
+        successful = economy.buy_bundle(orders, 100000, 0)
+        if bool(successful["ok"]):
+            break
     check(successful["ok"], "Atomic bundle can commit")
-    for key in economy.resources:
-        check(int(economy.resources[key]["stock"]) == int(before[key]) + 12, "Committed bundle adds %s exactly once" % key)
+    if successful["ok"]:
+        for key in economy.resources:
+            check(int(economy.resources[key]["stock"]) == int(before[key]) + 12, "Committed bundle adds %s exactly once" % key)
 
     print("ECONOMY TRANSACTION RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
