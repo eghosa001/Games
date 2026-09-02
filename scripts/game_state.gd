@@ -87,7 +87,16 @@ func _migrate(snapshot: Dictionary) -> Dictionary:
     if migrated["employees"].has("employees") and not migrated["employees"].has("records"):
         migrated["employees"]["records"] = migrated["employees"]["employees"]
         migrated["employees"].erase("employees")
-    if not migrated.has("branches") or not (migrated["branches"] is Dictionary): migrated["branches"] = {}
+    # Older prototypes could expose branches as an array. Normalize that shape
+    # into the canonical keyed record map without losing branch data.
+    if migrated.has("branches") and migrated["branches"] is Array:
+        var branch_records:={}
+        for index in range(migrated["branches"].size()):
+            if migrated["branches"][index] is Dictionary:
+                branch_records["branch_%d" % index]=migrated["branches"][index].duplicate(true)
+        migrated["branches"]={"selected":0,"records":branch_records}
+    elif not migrated.has("branches") or not (migrated["branches"] is Dictionary):
+        migrated["branches"]={}
     if not migrated.has("history") or not (migrated["history"] is Array): migrated["history"] = []
     if not migrated.has("news") or not (migrated["news"] is Dictionary): migrated["news"] = {"editions": []}
     migrated["schema_version"] = STATE_VERSION
