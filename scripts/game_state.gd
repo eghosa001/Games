@@ -39,9 +39,13 @@ func sync_business_runtime(core: Dictionary, business_id: String = BUSINESS_ID) 
     _ensure_business_record(business_id)
     var record: Dictionary = data["businesses"][business_id]
     var defaults := {"open": false, "capacity_level": 1, "marketing_level": 0, "price": 110, "finished_goods": 0, "last_sales": 0, "last_profit": 0, "total_profit": 0, "contract_days": 0, "contract_bonus": 0}
+    var mapping := {"open": "business_open", "capacity_level": "capacity_level", "marketing_level": "marketing_level", "price": "player_price", "finished_goods": "finished_goods", "last_sales": "last_sales", "last_profit": "last_profit", "total_profit": "total_profit", "contract_days": "contract_days", "contract_bonus": "contract_bonus"}
     for key in defaults.keys():
-        if core.has(key): record[key] = core[key]
-        elif not record.has(key): record[key] = defaults[key]
+        var source_key: String = mapping[key]
+        if core.has(source_key):
+            record[key] = core[source_key]
+        elif not record.has(key):
+            record[key] = defaults[key]
     data["businesses"][business_id] = record
     dirty = true
 
@@ -53,8 +57,8 @@ func restore_business_runtime(core: Dictionary, business_id: String = BUSINESS_I
     core["player_price"] = int(record.get("price", 110))
     core["finished_goods"] = int(record.get("finished_goods", 0))
     core["last_sales"] = int(record.get("last_sales", 0))
-    core["last_profit"] = int(record.get("last_profit", 0))
     core["total_profit"] = int(record.get("total_profit", 0))
+    core["last_profit"] = int(record.get("last_profit", 0))
     core["contract_days"] = int(record.get("contract_days", 0))
     core["contract_bonus"] = int(record.get("contract_bonus", 0))
 
@@ -106,15 +110,35 @@ func _merge_legacy_core(snapshot: Dictionary, core: Dictionary) -> void:
     snapshot["legacy"]["employee_count"] = int(core.get("employees", snapshot["legacy"].get("employee_count", 0)))
     snapshot["finance"] = {"debt": int(core.get("debt", 0)), "loan_payment": int(core.get("loan_payment", 0))}
     _ensure_business_record_in_snapshot(snapshot)
-    # Only import legacy scalar business data when the canonical record does not
-    # yet exist. Existing saves must never be overwritten by stale UI projections.
+    # Runtime is the source for the current save operation. Synchronize it into
+    # the canonical business record here, but never use this direction during
+    # load/restore. That prevents stale canonical data from being overwritten by
+    # defaults while still eliminating the previous "canonical data never updates"
+    # bug during normal saves.
     var business: Dictionary = snapshot["businesses"][BUSINESS_ID]
     var legacy_business_keys := {"open": "business_open", "capacity_level": "capacity_level", "marketing_level": "marketing_level", "price": "player_price", "finished_goods": "finished_goods", "last_sales": "last_sales", "last_profit": "last_profit", "total_profit": "total_profit", "contract_days": "contract_days", "contract_bonus": "contract_bonus"}
     for key in legacy_business_keys.keys():
-        if not business.has(key) and core.has(legacy_business_keys[key]): business[key] = core[legacy_business_keys[key]]
+        if core.has(legacy_business_keys[key]):
+            business[key] = core[legacy_business_keys[key]]
+        elif not business.has(key):
+            business[key] = _business_default(key)
     snapshot["businesses"][BUSINESS_ID] = business
     if not snapshot.has("branches") or not (snapshot["branches"] is Dictionary): snapshot["branches"] = {}
     if not snapshot.has("employees") or not (snapshot["employees"] is Dictionary): snapshot["employees"] = {"next_id": 1, "records": {}}
+
+func _business_default(key: String):
+    match key:
+        "open": return false
+        "capacity_level": return 1
+        "marketing_level": return 0
+        "price": return 110
+        "finished_goods": return 0
+        "last_sales": return 0
+        "last_profit": return 0
+        "total_profit": return 0
+        "contract_days": return 0
+        "contract_bonus": return 0
+        _: return 0
 
 func _ensure_business_record_in_snapshot(snapshot: Dictionary) -> void:
     if not snapshot.has("businesses") or not (snapshot["businesses"] is Dictionary): snapshot["businesses"] = {}
