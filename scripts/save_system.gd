@@ -45,6 +45,13 @@ static func load_game() -> Dictionary:
     if source == "backup": state["recovery"] = {"source": "backup", "recovered_at": Time.get_datetime_string_from_system(true)}
     var game_state = _game_state()
     if game_state != null: game_state.restore(state)
+    # The canonical save stores employees as a roster dictionary. main.gd is
+    # still a transitional typed-int consumer, so expose only the legacy count
+    # in the returned compatibility payload while keeping GameState canonical.
+    if state.get("employees") is Dictionary:
+        var employee_state: Dictionary = state["employees"]
+        var records = employee_state.get("records", {})
+        state["employees"] = int(records.size()) if records is Dictionary else int(state.get("legacy", {}).get("employee_count", 0))
     return state
 
 static func _read_dictionary(path: String) -> Dictionary:
