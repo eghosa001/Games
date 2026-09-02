@@ -78,6 +78,7 @@ static func record_purchase(state, index: int, cost: int, reputation_delta: int 
         return false
     property["owned"] = true
     property["active"] = true
+    property["condition"] = 100
     properties[index] = property
     expansion["properties"] = properties
     expansion["cash"] = int(expansion.get("cash", 0)) - cost
@@ -120,6 +121,7 @@ static func record_property_upgrade(state, index: int, cost: int, income_delta: 
     properties[index] = property
     expansion["properties"] = properties
     expansion["cash"] = int(expansion.get("cash", 0)) - cost
+    expansion["management_level"] = max(int(expansion.get("management_level", 0)), int(properties.size() / 2))
     state.set_value(EXPANSION_PATH, expansion)
     return true
 
