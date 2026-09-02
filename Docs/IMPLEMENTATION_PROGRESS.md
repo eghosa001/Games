@@ -2,6 +2,37 @@
 
 > Verified implementation work on `feature/foundation-v11-implementation`.
 
+## 2026-09-02 — Canonical expansion mutation boundary
+
+### Fixed in this pass
+
+- Added `scripts/expansion_state.gd` (`RenewExpansionState`) as the canonical mutation adapter for the `GameState.expansion` container.
+- Added guarded mutation helpers for expansion properties and resource sites.
+- Added canonical purchase helpers for expansion properties and resource sites; they validate ownership/cash and update canonical cash, reputation and restored-count state atomically.
+- Added canonical property/resource upgrade helpers so level, income/value, output/risk and cash changes are recorded together in `GameState`.
+- Added a canonical expansion day-advance helper for day, cash and population deltas.
+- Kept the adapter deliberately independent of the `Expansion` Node so the durable state boundary does not depend on UI/runtime objects.
+- Preserved `Expansion`'s existing public API for the current UI while this adapter becomes the controlled migration point for the next integration pass.
+
+### Architectural result
+
+The expansion persistence boundary now has an explicit mutation API instead of requiring callers to edit the nested `GameState.expansion` dictionary directly.
+
+**GameState** remains the durable authority.
+
+**RenewExpansionState** is the controlled mutation boundary.
+
+**Expansion** remains the transitional runtime/UI projection until its purchase, upgrade, generation and daily-operation methods are routed through this boundary.
+
+### Verified commit
+
+- `f1231e86c962aa4360d6e2a15a1c6c2022403248` — canonical expansion mutation boundary
+
+### Next integration step
+
+- Route `Expansion.restore_property`, `buy_resource_site`, `upgrade_property`, `upgrade_resource_site`, `generate_resource` and `operate_day` through `RenewExpansionState`/`GameState` so the runtime no longer performs independent durable mutations.
+- Add mutation/save/load regression tests after integration.
+
 ## 2026-09-02 — Canonical state refactor continuation
 
 ### Fixed in this pass
