@@ -153,6 +153,8 @@ func _refresh() -> void:
                 _button("TAKE OPPORTUNITY", missions.choose_a)
                 _button("DECLINE OPPORTUNITY", missions.choose_b)
             _button("DISTRICT", parent.select_district.bind((int(parent.selected_district) + 1) % parent.districts.districts.size()))
+            _button("SAVE GAME", parent.save_game)
+            _button("LOAD GAME", parent.load_game)
             _button("END DAY", parent.advance_day)
 
 func _money(value: int) -> String:
