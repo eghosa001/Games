@@ -52,6 +52,22 @@ func train(employee_id: String, cost: int = 600) -> Dictionary:
     if result.get("ok", false): _mark_dirty()
     return result
 
+func assign(employee_id: String, assignment_type: String, assignment_id: String) -> Dictionary:
+    if not employees.employees.has(employee_id):
+        return {"ok": false, "message": "Employee not found."}
+    var employee: Dictionary = employees.employees[employee_id]
+    if employee.get("status", "former") != "active":
+        return {"ok": false, "message": "Only active employees can be assigned."}
+    var allowed := ["business", "property", "branch", "logistics", "sales", "management"]
+    if not allowed.has(assignment_type):
+        return {"ok": false, "message": "Unknown assignment type."}
+    employee["assignment_type"] = assignment_type
+    employee["assignment_id"] = assignment_id
+    employee["history_ids"].append({"day": int(parent.get("day")), "event": "assignment", "type": assignment_type, "target": assignment_id})
+    employees.employees[employee_id] = employee
+    _mark_dirty()
+    return {"ok": true, "employee": employee.duplicate(true)}
+
 func active_count() -> int:
     return employees.active_count()
 
@@ -71,6 +87,64 @@ func average_morale() -> float:
     var total := 0.0
     for employee in active: total += float(employee.get("morale", 50.0))
     return total / float(active.size())
+
+func role_metrics() -> Dictionary:
+    var metrics := {}
+    for role in employees.ROLES.keys():
+        metrics[role] = {"count": 0, "productivity": 0.0}
+    for employee in employees.active_employees():
+        var role := str(employee.get("role", "Worker"))
+        if not metrics.has(role): metrics[role] = {"count": 0, "productivity": 0.0}
+        metrics[role]["count"] += 1
+        metrics[role]["productivity"] += float(employee.get("productivity", 1.0))
+    for role in metrics.keys():
+        var count := int(metrics[role]["count"])
+        if count > 0: metrics[role]["productivity"] = float(metrics[role]["productivity"]) / float(count)
+    return metrics
+
+# Role suitability makes the employee system affect the operation that a person
+# is actually qualified for, instead of treating every employee as interchangeable.
+func operating_metrics() -> Dictionary:
+    var production_score := 0.0
+    var sales_score := 0.0
+    var logistics_score := 0.0
+    var management_score := 0.0
+    var production_people := 0
+    var sales_people := 0
+    var logistics_people := 0
+    var management_people := 0
+    var role_weights := {
+        "Worker": {"production": 1.00, "sales": 0.55, "logistics": 0.70, "management": 0.40},
+        "Technician": {"production": 1.35, "sales": 0.45, "logistics": 0.65, "management": 0.55},
+        "Sales": {"production": 0.45, "sales": 1.35, "logistics": 0.55, "management": 0.60},
+        "Logistics": {"production": 0.60, "sales": 0.55, "logistics": 1.35, "management": 0.65},
+        "Accountant": {"production": 0.45, "sales": 0.65, "logistics": 0.55, "management": 1.15},
+        "Supervisor": {"production": 1.20, "sales": 0.80, "logistics": 0.85, "management": 1.20},
+        "Manager": {"production": 1.10, "sales": 0.95, "logistics": 0.90, "management": 1.35}
+    }
+    for employee in employees.active_employees():
+        var role := str(employee.get("role", "Worker"))
+        var weight: Dictionary = role_weights.get(role, role_weights["Worker"])
+        var productivity := float(employee.get("productivity", 1.0))
+        production_score += productivity * float(weight["production"])
+        sales_score += productivity * float(weight["sales"])
+        logistics_score += productivity * float(weight["logistics"])
+        management_score += productivity * float(weight["management"])
+        production_people += 1 if float(weight["production"]) >= 1.0 else 0
+        sales_people += 1 if float(weight["sales"]) >= 1.0 else 0
+        logistics_people += 1 if float(weight["logistics"]) >= 1.0 else 0
+        management_people += 1 if float(weight["management"]) >= 1.0 else 0
+    var count := max(1, active_count())
+    return {
+        "production_efficiency": clampf(production_score / float(count), 0.25, 2.5),
+        "sales_efficiency": clampf(sales_score / float(count), 0.25, 2.5),
+        "logistics_efficiency": clampf(logistics_score / float(count), 0.25, 2.5),
+        "management_efficiency": clampf(management_score / float(count), 0.25, 2.5),
+        "production_people": production_people,
+        "sales_people": sales_people,
+        "logistics_people": logistics_people,
+        "management_people": management_people
+    }
 
 # Converts individual employee productivity into the staffing value expected by
 # the current prototype ProductionSystem. This keeps the bridge explicit while
@@ -92,10 +166,6 @@ func _restore_or_bootstrap() -> void:
         employees.bootstrap(max(1, int(parent.get("employees"))), int(parent.get("day")), "renew_goods")
     last_legacy_count = int(parent.get("employees"))
 
-# The scalar employee value is now a legacy projection, not a second roster.
-# Only a change made externally by legacy gameplay code is interpreted as a
-# requested headcount change. Natural resignations are allowed to reduce the
-# projection instead of being immediately replaced.
 func _reconcile_legacy_count() -> void:
     if parent == null: return
     var requested := max(0, int(parent.get("employees")))
@@ -122,8 +192,6 @@ func _sync_legacy_projection() -> void:
 func _advance_day(current_day: int) -> void:
     var reputation := float(parent.get("reputation"))
     var result := employees.tick_day(current_day, reputation, 50.0, 50.0)
-    # Reconcile the prototype's fixed $180 payroll with the real employee
-    # salaries. This is transitional until FinanceSystem owns payroll directly.
     var legacy_bill := employees.active_count() * 180
     var real_bill := int(result["wages"])
     var payroll_delta := real_bill - legacy_bill
@@ -144,6 +212,9 @@ func _mark_dirty() -> void:
     game_state.set_value(["analytics", "employee_average_morale"], average_morale())
     game_state.set_value(["analytics", "employee_average_productivity"], average_productivity())
     game_state.set_value(["analytics", "employee_wage_bill"], employees.total_wages())
+    var operations := operating_metrics()
+    for key in operations.keys():
+        game_state.set_value(["analytics", "employee_%s" % key], operations[key])
 
 func _game_state():
     var tree = Engine.get_main_loop()
