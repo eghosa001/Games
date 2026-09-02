@@ -2,14 +2,13 @@ extends Node2D
 
 # Presentation layer: turns the simulation into a visible economic world.
 var game: Node
-var pulse := 0.0
 
 func _ready() -> void:
     game = get_parent()
     queue_redraw()
 
-func _process(delta: float) -> void:
-    pulse += delta
+func _process(_delta: float) -> void:
+    # Keep the presentation synced without animating an input-obscuring marker.
     queue_redraw()
 
 func _draw() -> void:
@@ -121,7 +120,7 @@ func _draw_network(w: float, h: float) -> void:
     draw_circle(a, 9, Color("5d8278"))
     draw_circle(b, 12, Color("789d91"))
     draw_circle(c, 9, Color("5d8278"))
-    draw_circle(a.lerp(b, 0.5 + 0.5 * sin(pulse * 2.0)), 5, Color("b5cbc6"))
+    draw_circle(b, 5, Color("b5cbc6"))
     draw_string(ThemeDB.fallback_font, a + Vector2(-42, 42), "RESOURCE", HORIZONTAL_ALIGNMENT_LEFT, 90, 10, Color("657b80"))
     draw_string(ThemeDB.fallback_font, b + Vector2(-48, 48), "RENEW HUB", HORIZONTAL_ALIGNMENT_LEFT, 100, 10, Color("91a6a9"))
     draw_string(ThemeDB.fallback_font, c + Vector2(-35, 42), "MARKET", HORIZONTAL_ALIGNMENT_LEFT, 80, 10, Color("657b80"))
