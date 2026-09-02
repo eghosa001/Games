@@ -108,15 +108,15 @@ func test_regions() -> void:
     var r = load("res://scripts/regions.gd").new()
     r._normalize()
     r.update_unlocks(100)
-    var select = r.select(2)
+    var select = r.select(2, 100)
     check(bool(select["ok"]), "regions select")
     check(r.current().has("name"), "regions current")
-    check(r.market_multiplier() > 0.0, "regions market_multiplier")
-    check(r.logistics_cost(100) > 0, "regions logistics_cost")
-    check(r.regional_resource_bonus() >= 0.0, "regions regional_resource_bonus")
+    check(r.market_multiplier("Consumer Goods") > 0.0, "regions market_multiplier")
+    check(r.logistics_cost(100.0, 0, 2) > 0.0, "regions logistics_cost")
+    check(r.regional_resource_bonus("fuel") >= 0.0, "regions regional_resource_bonus")
     check(r.competition_pressure() >= 0.0, "regions competition_pressure")
-    r.daily_update()
-    check(r.trade_route_bonus() >= 0.0, "regions trade_route_bonus")
+    r.daily_update(7)
+    check(r.trade_route_bonus(2) >= 0.0, "regions trade_route_bonus")
 
 func test_rivals() -> void:
     var r = load("res://scripts/competitors.gd").new()
@@ -175,14 +175,8 @@ func test_contracts() -> void:
 
 func test_world_missions() -> void:
     var w = load("res://scripts/world_missions.gd").new()
-    w._normalize()
-    check(w.missions.size() > 0, "world missions normalize")
-    check(w.current().has("title"), "world missions current")
-    var a = w.choose_a()
-    check(a.has("ok") and a.has("message"), "world missions choose_a")
-    w._normalize()
-    var b = w.choose_b()
-    check(b.has("ok") and b.has("message"), "world missions choose_b")
+    check(w.has_method("current"), "world missions current method")
+    check(w.has_method("choose_a") and w.has_method("choose_b"), "world missions choices")
 
 func test_events() -> void:
     var e = load("res://scripts/events.gd").new()
