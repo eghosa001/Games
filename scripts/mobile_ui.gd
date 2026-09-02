@@ -112,6 +112,11 @@ func _refresh() -> void:
     status_label.text = "$%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day)]
     match active_tab:
         0:
+            var restoration_strategy = get_node_or_null("../RestorationStrategy")
+            if restoration_strategy != null:
+                _button("BUDGET RESTORE", restoration_strategy.choose_budget)
+                _button("STANDARD RESTORE", restoration_strategy.choose_standard)
+                _button("PREMIUM RESTORE", restoration_strategy.choose_premium)
             _button("INSPECT", parent.inspect_property)
             _button("ACQUIRE", parent.acquire_property)
             _button("RESTORE", parent.restore_property)
