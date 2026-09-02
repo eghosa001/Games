@@ -63,6 +63,15 @@ func auction_target(acquirer_id: String, target_id: String, bid: float, reserve:
 
 func hostile_acquire(acquirer_id: String, target_id: String, offer: float, control_percent: float = 50.1) -> Dictionary:
     if control_percent < 50.1 or control_percent > 100.0: return {"ok": false, "error": "invalid_control_target"}
+    var target := targets.get(target_id, {})
+    if target.is_empty(): return {"ok": false, "error": "target_not_found"}
+    var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
+    var control_bridge = get_node_or_null("/root/RenewDiplomacyControl")
+    if diplomacy != null and control_bridge != null:
+        for owner_id in target.get("owners", {}).keys():
+            var owner := str(owner_id)
+            if owner != acquirer_id and control_bridge.has_defense_treaty(owner, acquirer_id):
+                return {"ok": false, "error": "defense_treaty_blocks_hostile_acquisition", "owner": owner, "target_id": target_id, "treaty": control_bridge.get_defense_treaty(owner, acquirer_id)}
     var result := acquire_company(acquirer_id, target_id, offer, TYPE_HOSTILE)
     if bool(result.get("ok", false)): result["control_percent"] = control_percent
     return result
