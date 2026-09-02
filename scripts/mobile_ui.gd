@@ -144,6 +144,8 @@ func _refresh() -> void:
                 _button("DIVIDEND", corporate.pay_dividend)
                 _button("DEFENSE", corporate.strengthen_defense)
                 _button("ALLY DEFENSE", corporate.strategic_ally_defense)
+                _button("BOARD INFLUENCE", corporate.influence_board)
+                _button("HOSTILE TAKEOVER", corporate.hostile_takeover)
             _button("LOAN", parent.take_loan)
             _button("REPAY LOAN", parent.repay_loan)
             _button("END DAY", parent.advance_day)
