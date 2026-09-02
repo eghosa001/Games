@@ -97,7 +97,7 @@ func management_upgrade()->void:
     parent.message=result["message"]
 func district_cycle()->void:
     if parent==null: return
-    var next:=(parent.districts.selected+1)%parent.districts.districts.size()
+    var next: int = (parent.districts.selected+1)%parent.districts.districts.size()
     parent.select_district(next)
 func upgrade_transport()->void:
     parent.upgrade_transport()
