@@ -3,9 +3,23 @@ extends Node2D
 var selected := 0
 var selected_resource := 0
 var parent: Node
+var last_processed_day := 1
+var strategic_news: Array[String] = []
 
 func _ready() -> void:
     parent = get_parent()
+    if parent != null: last_processed_day = parent.day
+    queue_redraw()
+
+func _process(_delta: float) -> void:
+    if parent != null and is_instance_valid(parent):
+        if int(parent.day) != last_processed_day:
+            last_processed_day = int(parent.day)
+            strategic_news = parent.rivals.strategic_update(last_processed_day, parent.districts.selected, parent.reputation)
+            for news in strategic_news:
+                parent._log("MARKET: " + news)
+            if strategic_news.size() > 0:
+                parent.message = strategic_news.back()
     queue_redraw()
 
 func _input(event: InputEvent) -> void:
@@ -28,8 +42,7 @@ func _input(event: InputEvent) -> void:
         KEY_F: buy_selected_resource_site()
         KEY_BRACKETLEFT: upgrade_selected_resource_site()
         KEY_BRACKETRIGHT: management_upgrade()
-        KEY_4 + 0: select_resource(0)
-        KEY_R: district_cycle()
+        KEY_TAB: district_cycle()
         KEY_BACKSPACE: upgrade_transport()
     queue_redraw()
 
@@ -99,10 +112,13 @@ func _draw()->void:
     draw_string(ThemeDB.fallback_font,Vector2(872,519),"OUTPUT %d | RISK %d%%"%[site["output"],site["risk"]],HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("f2d27a"))
     draw_string(ThemeDB.fallback_font,Vector2(872,541),"[4] Materials [5] Food [6] Fuel",HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("c6d0d8"))
     draw_string(ThemeDB.fallback_font,Vector2(872,561),"[W] Generate [F] Acquire [[]] Upgrade",HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("8ee6a8"))
-    draw_string(ThemeDB.fallback_font,Vector2(872,581),"[D] Supply business   [R] Change district",HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("c6d0d8"))
+    draw_string(ThemeDB.fallback_font,Vector2(872,581),"[D] Supply business   [TAB] Change district",HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("c6d0d8"))
     draw_string(ThemeDB.fallback_font,Vector2(872,601),"[BACKSPACE] Upgrade transport",HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("c6d0d8"))
     draw_string(ThemeDB.fallback_font,Vector2(872,623),"Fleet L%d • Capacity %d"%[parent.transport_level,parent.transport_capacity],HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("8ee6a8"))
-    draw_string(ThemeDB.fallback_font,Vector2(872,644),"District: %s"%parent.districts.current()["name"],HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("f2d27a"))
+    var d=parent.districts.current()
+    var pressure=parent.rivals.district_pressure(parent.districts.selected)
+    var supply_pressure=parent.rivals.supplier_pressure(parent.districts.selected)
+    draw_string(ThemeDB.fallback_font,Vector2(872,644),"District: %s | Rival pressure %.0f%% | Supply pressure %d"%[d["name"],pressure*100.0,supply_pressure],HORIZONTAL_ALIGNMENT_LEFT,-1,10,Color("f2d27a"))
     if selected>=0 and selected<parent.expansion.properties.size() and parent.expansion.properties[selected]["owned"]:
         var p=parent.expansion.properties[selected]
         draw_rect(Rect2(855,92,385,320),Color("202e38"),true)
@@ -119,3 +135,6 @@ func _draw()->void:
         draw_string(ThemeDB.fallback_font,Vector2(872,311),"[D] Supply   [Q] Upgrade business",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("8ee6a8"))
         draw_string(ThemeDB.fallback_font,Vector2(872,333),"[7] Retail [8] Factory [9] Warehouse",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("c6d0d8"))
         draw_string(ThemeDB.fallback_font,Vector2(872,355),"HQ level %d | Management overhead $%d"%[parent.expansion.management_level,parent.expansion.management_overhead],HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("c6d0d8"))
+
+    draw_string(ThemeDB.fallback_font,Vector2(872,385),"Rival: %s | Presence %d | Relationship %d"%[parent.rivals.rivals[parent.selected_rival]["name"],parent.rivals.rivals[parent.selected_rival]["presence"],parent.rivals.rivals[parent.selected_rival]["relationship"]],HORIZONTAL_ALIGNMENT_LEFT,-1,10,Color("ffad8f"))
+    draw_string(ThemeDB.fallback_font,Vector2(872,402),"1-3 select rival | L negotiate | C alliance | X acquire asset",HORIZONTAL_ALIGNMENT_LEFT,-1,10,Color("c6d0d8"))
