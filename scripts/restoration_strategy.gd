@@ -52,4 +52,4 @@ func summary() -> String:
     var total: int = 0
     for i in range(1, costs.size()):
         total += int(costs[i])
-    return "%s: $%,d total restoration" % [selected, total]
+    return "%s: $%d total restoration" % [selected, total]
