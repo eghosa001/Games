@@ -56,7 +56,7 @@ func upgrade_infrastructure()->void:
     parent._log("REGIONAL INFRASTRUCTURE: "+message+" (-$%s)."%_money(int(result["cost"])))
 
 func dispatch_goods()->void:
-    var destination:=regions.selected
+    var destination: int = regions.selected
     var origin:=0
     if destination==origin:
         message="The starter region is already local; choose another region first."
