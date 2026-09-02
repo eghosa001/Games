@@ -3,7 +3,6 @@ class_name RenewEmployeeSystem
 
 const SYSTEM_VERSION := 1
 const JAMES_ID := "emp_james_001"
-
 var employees: Array[Dictionary] = []
 var candidates: Array[Dictionary] = []
 var next_id := 2
@@ -12,7 +11,6 @@ var _day := 1
 var _syncing_legacy := false
 var _last_legacy_count := -1
 var _last_game_day := -1
-
 const FIRST_NAMES := ["David", "Sarah", "Michael", "Grace", "Daniel", "Amaka", "Victor", "Esther", "Samuel", "Ada"]
 const ROLES := ["Technician", "Sales Associate", "Logistics Coordinator", "Craft Worker", "Operations Assistant"]
 const SPECIALIZATIONS := ["Restoration", "Sales", "Logistics", "Production", "Operations"]
@@ -174,7 +172,7 @@ func daily_update(day: int, company_performance: int = 0) -> Dictionary:
 func poach_candidate(employee_id: String, rival_name: String, day: int) -> Dictionary:
     var employee := get_employee(employee_id)
     if employee.is_empty() or employee.get("status", "active") != "active": return {"ok": false}
-    var risk := int(employee["ambition"]) + (100 - int(employee["loyalty"])
+    var risk := int(employee["ambition"]) + (100 - int(employee["loyalty"]))
     if risk < 100: return {"ok": false, "message": "%s resisted a poaching attempt by %s." % [employee["name"], rival_name]}
     employee["loyalty"] = max(0, int(employee["loyalty"]) - 12)
     employee["morale"] = max(0, int(employee["morale"]) - 8)
