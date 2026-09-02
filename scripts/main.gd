@@ -7,6 +7,7 @@ const Events = preload("res://scripts/events.gd")
 const Production = preload("res://scripts/production.gd")
 const SaveSystem = preload("res://scripts/save_system.gd")
 const Expansion = preload("res://scripts/expansion.gd")
+const ExpansionState = preload("res://scripts/expansion_state.gd")
 const Districts = preload("res://scripts/districts.gd")
 
 var economy = Economy.new()
@@ -223,7 +224,7 @@ func select_rival(index:int)->void:
     selected_rival=index; relationship=int(rivals.rivals[index]["relationship"]); message="Selected %s."%rivals.rivals[index]["name"]
 func select_expansion(index:int)->void:
     if index<0 or index>=expansion.properties.size(): return
-    selected_expansion=index; message="Selected expansion: %s."%expansion.properties[index]["name"]; _log("EXPANSION SELECTED: %s."%expansion.properties[index]["name"])
+    selected_expansion=index; expansion.selected_index=index; message="Selected expansion: %s."%expansion.properties[index]["name"]; _log("EXPANSION SELECTED: %s."%expansion.properties[index]["name"]); _sync_expansion_runtime()
 func select_district(index:int)->void:
     var result=districts.select(index); message=result["message"]
     if result["ok"]: selected_district=index; _log("DISTRICT: %s selected."%districts.current()["name"])
@@ -258,13 +259,37 @@ func repay_loan()->void:
     if debt==0: loan_payment=0
     _log("BANK: voluntary repayment $%s. Remaining debt $%s."%[_money(amount),_money(debt)]); message="Loan balance reduced."
 func buy_expansion()->void:
-    expansion.unlock_from_reputation(reputation); var result=expansion.buy(selected_expansion,cash)
-    if not result["ok"]: message=result["message"]; return
-    cash-=int(result["cost"]); reputation+=3; _sync_expansion_runtime(); message=result["message"]; _log("EXPANSION: %s (-$%s)."%[result["property"]["name"],_money(int(result["cost"]))])
+    var state=_game_state()
+    if state==null:
+        message="Game state is unavailable."; return
+    expansion.unlock_from_reputation(reputation)
+    var site=expansion.get_property(selected_expansion)
+    if site.is_empty(): message="Unknown expansion property."; return
+    if not bool(site.get("unlocked", true)): message="More reputation is required to access this property."; return
+    var cost:=int(site.get("restoration_cost",site.get("cost",0)))
+    _sync_expansion_runtime()
+    if not ExpansionState.record_purchase(state,selected_expansion,cost,5):
+        message="Expansion purchase could not be committed."; return
+    cash-=cost; reputation+=3
+    state.restore_expansion_runtime(expansion)
+    _sync_expansion_runtime()
+    message="%s restored and acquired." % site.get("name","Expansion")
+    _log("EXPANSION: %s (-$%s) committed to GameState."%[site.get("name","Expansion"),_money(cost)])
 func upgrade_expansion()->void:
-    var result=expansion.upgrade(selected_expansion,cash)
-    if not result["ok"]: message=result["message"]; return
-    cash-=int(result["cost"]); _sync_expansion_runtime(); message=result["message"]; _log("EXPANSION UPGRADE: %s."%result["message"])
+    var state=_game_state()
+    if state==null:
+        message="Game state is unavailable."; return
+    var site=expansion.get_property(selected_expansion)
+    if site.is_empty() or not bool(site.get("owned",false)): message="Own the expansion property first."; return
+    var cost:=7000*int(site.get("level",1))
+    _sync_expansion_runtime()
+    if not ExpansionState.record_property_upgrade(state,selected_expansion,cost,500,5000):
+        message="Expansion upgrade could not be committed."; return
+    cash-=cost
+    state.restore_expansion_runtime(expansion)
+    _sync_expansion_runtime()
+    message="%s upgraded to level %d."%[site.get("name","Expansion"),int(expansion.get_property(selected_expansion).get("level",1))]
+    _log("EXPANSION UPGRADE: %s (-$%s) committed to GameState."%[site.get("name","Expansion"),_money(cost)])
 func acquire_rival_asset()->void:
     var result=rivals.acquire_asset(selected_rival,cash,reputation)
     if not result["ok"]: message=result["message"]; return
