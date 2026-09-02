@@ -21,7 +21,7 @@ func run() -> void:
         quit(1)
         return
     var contracts = ContractSystem.new()
-    var created = contracts.create_customer_contract(["RENEW", "Buyer"], "steel", 10, 200, 70, {"frequency":"daily", "quantity_per_delivery":5, "duration_days":2, "start_day":1}, "Port Warehouse", 50, {"player_can_cancel":true, "fee":100}, {"eligible":true, "term_days":2}, {"on_fulfilled":3, "on_failed":-8})
+    var created = contracts.create_customer_contract(["RENEW", "Buyer"], "steel", 10, 200, 70, {"frequency":"daily", "quantity_per_delivery":5, "duration_days":2, "start_day":1}, "Port Warehouse", 50, {"player_can_cancel":true, "fee":100}, {"eligible":true, "term_days":2, "price_adjustment":0.1}, {"on_fulfilled":3, "on_failed":-8})
     check(bool(created["ok"]), "Contract creation succeeds")
     var contract_id = str(created["contract"]["id"])
     var terms: Dictionary = created["contract"]
@@ -39,16 +39,28 @@ func run() -> void:
     check(str(day2["contract"]["execution_status"]) == "fulfilled", "Fully delivered contract is fulfilled")
     check(bool(day2["contract"]["renewal_offered"]), "Fulfilled eligible contract offers renewal")
 
+    var renewed = contracts.renew_contract(contract_id, 3)
+    check(bool(renewed["ok"]), "Eligible contract can be renewed")
+    check(int(renewed["contract"]["price"]) == 220, "Renewal applies negotiated price adjustment")
+    check(int(renewed["contract"]["signed_day"]) == 3, "Renewal starts on requested day")
+
     var breach = contracts.create_customer_contract(["RENEW", "Buyer"], "lumber", 10, 100, 80, {"quantity_per_delivery":5, "duration_days":1, "start_day":3}, "Warehouse", 50, {"player_can_cancel":true, "fee":100}, {"eligible":true}, {"on_failed":-8})
     var breach_result = contracts.execute_day(str(breach["contract"]["id"]), 2, 40, 3)
     check(str(breach_result["contract"]["execution_status"]) == "breached", "Shortfall or failed quality breaches contract")
     check(int(breach_result["penalty"]) > 0, "Missed delivery incurs penalty")
+
+    var cancellable = contracts.create_customer_contract(["RENEW", "Buyer"], "fuel", 5, 100, 0, {"frequency":"daily", "quantity_per_delivery":5, "duration_days":3, "start_day":4}, "Depot", 20, {"player_can_cancel":true, "notice_days":1, "fee":75}, {"eligible":false}, {"on_cancelled":-4})
+    var cancelled = contracts.cancel_contract(str(cancellable["contract"]["id"]), "capacity crisis", 4)
+    check(bool(cancelled["ok"]), "Allowed cancellation succeeds")
+    check(str(cancelled["contract"]["execution_status"]) == "cancelled", "Cancelled contract records cancellation status")
+    check(int(cancelled["contract"]["penalties_paid"]) == 75, "Cancellation fee is recorded")
 
     var snapshot = contracts.capture_state()
     var restored = ContractSystem.new()
     restored.restore_state(snapshot)
     check(restored.completed_contracts.size() == contracts.completed_contracts.size(), "Completed contracts persist")
     check(restored.history.size() == contracts.history.size(), "Contract execution history persists")
+    check(restored.active_contracts.size() == contracts.active_contracts.size(), "Active contracts persist")
 
     print("CONTRACT SYSTEM RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
