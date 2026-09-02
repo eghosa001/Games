@@ -31,6 +31,7 @@ func _input(event:InputEvent)->void:
         KEY_F6: establish_region()
         KEY_F7: upgrade_infrastructure()
         KEY_F8: dispatch_goods()
+        KEY_F9: establish_trade_route()
 
 func select_region(index:int)->void:
     var count=regions.regions.size()
@@ -54,6 +55,19 @@ func upgrade_infrastructure()->void:
     parent.cash-=int(result["cost"])
     parent.reputation+=2
     parent._log("REGIONAL INFRASTRUCTURE: "+message+" (-$%s)."%_money(int(result["cost"])))
+
+func establish_trade_route()->void:
+    var origin:=0
+    var destination:=regions.selected
+    if destination==origin:
+        message="Select an established region other than the starter region."
+        return
+    var result=regions.establish_trade_route(origin,destination,parent.cash,parent.reputation)
+    message=result["message"]
+    if not result["ok"]: return
+    parent.cash-=int(result["cost"])
+    parent.reputation+=4
+    parent._log("TRADE CORRIDOR: "+message+" (-$%s)."%_money(int(result["cost"])))
 
 func dispatch_goods()->void:
     var destination: int = regions.selected
@@ -85,6 +99,7 @@ func branch_income()->int:
         var r=regions.regions[i]
         var income:=int(round(850.0*float(r["demand"])*float(regions.market_levels[i])))
         income+=int(regions.infrastructure[i])*250
+        income+=int(round(income*regions.trade_route_bonus(i)))
         income-=int(round(220.0*float(r["labor"])))
         income-=int(round(140.0*float(r["logistics"])))
         income-=int(regions.rival_presence[i])*90
@@ -113,5 +128,5 @@ func _draw()->void:
     draw_string(ThemeDB.fallback_font,Vector2(865,262),"Special: %s"%r["special"],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("f2d27a"))
     draw_string(ThemeDB.fallback_font,Vector2(865,286),"Industry: %s | Resource: %s"%[r["industry"],r["resource"]],HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("c6d0d8"))
     draw_string(ThemeDB.fallback_font,Vector2(865,310),"Presence %d | Infrastructure L%d"%[regions.player_presence[regions.selected],regions.infrastructure[regions.selected]],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color.WHITE)
-    draw_string(ThemeDB.fallback_font,Vector2(865,334),"F6 establish | F7 infrastructure | F8 dispatch",HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("c6d0d8"))
+    draw_string(ThemeDB.fallback_font,Vector2(865,334),"Trade bonus %.0f%% | F9 connect"%[regions.trade_route_bonus(regions.selected)*100.0],HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("8ee6a8"))
     draw_string(ThemeDB.fallback_font,Vector2(865,353),message,HORIZONTAL_ALIGNMENT_LEFT,370,11,Color("8ee6a8"))
