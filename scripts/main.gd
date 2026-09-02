@@ -24,7 +24,6 @@ var restoration := 0
 var stage := "Neglected"
 var business_open := false
 var employees := 3
-var inventory := 0
 var player_price := 110
 var last_sales := 0
 var last_profit := 0
@@ -61,6 +60,13 @@ func _input(event: InputEvent) -> void:
             KEY_L: improve_alliance()
             KEY_C: make_alliance_offer()
             KEY_E: buy_expansion()
+            KEY_1: select_rival(0)
+            KEY_2: select_rival(1)
+            KEY_3: select_rival(2)
+            KEY_7: select_expansion(0)
+            KEY_8: select_expansion(1)
+            KEY_9: select_expansion(2)
+            KEY_T: cycle_supplier()
             KEY_F5: save_game()
             KEY_F9: load_game()
 
@@ -118,7 +124,7 @@ func open_business() -> void:
         message = "Need $3,000 working capital."; return
     cash -= 3000
     business_open = true
-    inventory = 10
+    finished_goods = 0
     reputation += 2
     message = "RENEW Goods is open. Buy inputs, produce goods and manage the market."
     _log("OPENED: RENEW Goods. Initial workforce: 3 employees.")
@@ -126,22 +132,30 @@ func open_business() -> void:
 func buy_inputs() -> void:
     if not business_open:
         message = "Open the business first."; return
-    var result = economy.buy_resource(supplier_resource, 12, cash)
-    if not result.ok:
-        message = "Not enough cash for the current input order."; return
-    cash -= result.cost
-    _log("Bought 12 units of %s for $%s." % [supplier_resource, _money(result.cost)])
-    message = "Inputs delivered from your current supplier."
+    var supplier: Dictionary = economy.supplier_for(supplier_resource)
+    if randi_range(1, 100) > int(supplier["reliability"]):
+        message = "%s failed to deliver today's order." % supplier["name"]
+        _log("SUPPLIER FAILURE: %s delayed your inputs." % supplier["name"])
+        return
+    var total_cost := 0
+    for resource in ["materials", "packaging", "fuel"]:
+        var result = economy.buy_resource(resource, 12, cash - total_cost)
+        if not result["ok"]:
+            message = "Not enough cash for the full input order."; return
+        total_cost += int(result["cost"])
+    cash -= total_cost
+    _log("SUPPLY ORDER: 12 materials + 12 packaging + 12 fuel (-$%s)." % _money(total_cost))
+    message = "Inputs delivered by %s." % supplier["name"]
 
 func produce_goods() -> void:
     if not business_open:
         message = "Open the business first."; return
     var result = production.produce(economy, employees)
-    if not result.ok:
+    if not result["ok"]:
         message = "Production stopped: not enough materials, packaging or fuel."; return
-    finished_goods += result.output
-    message = "Produced %d finished goods at quality %d." % [result.output, result.quality]
-    _log("PRODUCTION: %d goods made; quality %d." % [result.output, result.quality])
+    finished_goods += int(result["output"])
+    message = "Produced %d finished goods at quality %d." % [result["output"], result["quality"]]
+    _log("PRODUCTION: %d goods made; quality %d." % [result["output"], result["quality"]])
 
 func change_price() -> void:
     if not business_open:
@@ -182,6 +196,25 @@ func advance_day() -> void:
     _log("DAY %d: %d sold | sales $%s | profit $%s." % [day, units, _money(sales), _money(profit)])
     message = "Day %d closed. %d units sold; profit %s$%s." % [day, units, "+" if profit >= 0 else "-", _money(abs(profit))]
 
+func select_rival(index: int) -> void:
+    if index < 0 or index >= rivals.rivals.size(): return
+    selected_rival = index
+    relationship = int(rivals.rivals[selected_rival]["relationship"])
+    message = "Selected %s." % rivals.rivals[selected_rival]["name"]
+
+func select_expansion(index: int) -> void:
+    expansion.unlock_from_reputation(reputation)
+    if index < 0 or index >= expansion.unlocked: message = "That expansion is not unlocked yet."; return
+    selected_expansion = index
+    message = "Selected %s." % expansion.properties[selected_expansion]["name"]
+
+func cycle_supplier() -> void:
+    var names := ["materials", "packaging", "fuel"]
+    var current := names.find(supplier_resource)
+    supplier_resource = names[(current + 1) % names.size()]
+    var supplier: Dictionary = economy.supplier_for(supplier_resource)
+    message = "Preferred supplier focus: %s." % supplier["name"]
+
 func improve_alliance() -> void:
     var text := rivals.improve_relationship(selected_rival)
     relationship = int(rivals.rivals[selected_rival]["relationship"])
@@ -212,8 +245,7 @@ func load_game() -> void:
     var state := SaveSystem.load_game()
     if state.is_empty():
         message = "No save found."; return
-    for key in state:
-        set(key, state[key])
+    for key in state: set(key, state[key])
     message = "Game loaded."
     _log("SAVE: Previous company state restored.")
 
@@ -255,9 +287,9 @@ func _draw() -> void:
         draw_string(ThemeDB.fallback_font,Vector2(664,247),"Last sales: $%s    Last profit: $%s"%[_money(last_sales),_money(last_profit)],HORIZONTAL_ALIGNMENT_LEFT,-1,17,Color("8ee6a8"))
         draw_string(ThemeDB.fallback_font,Vector2(664,274),"Materials $%d | Packaging $%d | Fuel $%d"%[int(economy.resources["materials"]["price"]),int(economy.resources["packaging"]["price"]),int(economy.resources["fuel"]["price"])],HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("c6d0d8"))
         var supplier: Dictionary = economy.supplier_for(supplier_resource)
-        draw_string(ThemeDB.fallback_font,Vector2(664,306),"Supplier: %s | reliability %d%%"%[supplier["name"],supplier["reliability"]],HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("f2d27a"))
-        draw_string(ThemeDB.fallback_font,Vector2(664,345),"[S] Buy inputs   [B] Produce   [P] Price   [N] End day",HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color.WHITE)
-        draw_string(ThemeDB.fallback_font,Vector2(664,374),"[L] Build relationship   [C] Alliance   [E] Expand",HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("b7d7ff"))
+        draw_string(ThemeDB.fallback_font,Vector2(664,306),"Supplier focus: %s | reliability %d%%"%[supplier["name"],supplier["reliability"]],HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("f2d27a"))
+        draw_string(ThemeDB.fallback_font,Vector2(664,345),"[S] Supplies   [B] Produce   [P] Price   [N] End day",HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color.WHITE)
+        draw_string(ThemeDB.fallback_font,Vector2(664,374),"[L] Trust   [C] Alliance   [1-3] Rival   [E] Expansion",HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("b7d7ff"))
         draw_string(ThemeDB.fallback_font,Vector2(664,403),"Rival: %s | %s | relationship %d"%[rivals.rivals[selected_rival]["name"],rivals.rivals[selected_rival]["stance"],relationship],HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("d0dae1"))
     else:
         draw_string(ThemeDB.fallback_font,Vector2(664,200),"Restore the warehouse to 100%, then open your first company.",HORIZONTAL_ALIGNMENT_LEFT,-1,18,Color("aab8c3"))
@@ -266,12 +298,13 @@ func _draw() -> void:
     draw_rect(Rect2(28,468,1224,224),Color("121b23"),true)
     draw_string(ThemeDB.fallback_font,Vector2(52,500),"MARKET + EMPIRE",HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("7891a5"))
     draw_string(ThemeDB.fallback_font,Vector2(52,530),"Rivals: Giant / Specialist / Network",HORIZONTAL_ALIGNMENT_LEFT,-1,17,Color.WHITE)
-    draw_string(ThemeDB.fallback_font,Vector2(52,557),"Alliance target: %s  |  relationship %d  |  [L] improve / [C] propose"%[rivals.rivals[selected_rival]["name"],relationship],HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("c6d0d8"))
+    draw_string(ThemeDB.fallback_font,Vector2(52,557),"[1-3] select rival | [L] improve trust | [C] propose alliance",HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("c6d0d8"))
     expansion.unlock_from_reputation(reputation)
-    draw_string(ThemeDB.fallback_font,Vector2(52,584),"Expansion unlocked: %d/%d  |  selected: %s"%[expansion.unlocked,expansion.properties.size(),expansion.properties[selected_expansion]["name"]],HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("f2d27a"))
+    draw_string(ThemeDB.fallback_font,Vector2(52,584),"Expansion: %d/%d unlocked | [7-9] select | selected: %s"%[expansion.unlocked,expansion.properties.size(),expansion.properties[selected_expansion]["name"]],HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("f2d27a"))
+    draw_string(ThemeDB.fallback_font,Vector2(52,610),"[T] Change supplier focus | [F5] Save | [F9] Load",HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("b7d7ff"))
     for i in range(log_lines.size()):
         draw_string(ThemeDB.fallback_font,Vector2(520,530+i*22),log_lines[i],HORIZONTAL_ALIGNMENT_LEFT,690,14,Color("aebbc5"))
-    draw_string(ThemeDB.fallback_font,Vector2(52,655),"[F5] Save   [F9] Load     Goal: restore the world, then compete for control of it.",HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("8ee6a8"))
+    draw_string(ThemeDB.fallback_font,Vector2(52,655),"Goal: restore the world, build businesses, make allies and compete for control of the economy.",HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("8ee6a8"))
     draw_string(ThemeDB.fallback_font,Vector2(52,682),message,HORIZONTAL_ALIGNMENT_LEFT,1160,15,Color("f2d27a"))
 
 func _next_cost() -> int:
@@ -288,7 +321,7 @@ func _draw_warehouse(o: Vector2) -> void:
     draw_rect(Rect2(o+Vector2(18,48),Vector2(215,105)),wall)
     for x in [38,88,138,188]:
         draw_rect(Rect2(o+Vector2(x,70),Vector2(28,40)),Color("526775") if restoration>=60 else Color("171b20"))
-    draw_rect(Rect2(o+Vector2(92,112),Vector2(65,41),Color("22292e"))
+    draw_rect(Rect2(o+Vector2(92,112),Vector2(65,41)),Color("22292e"))
     if restoration < 40:
         draw_circle(o+Vector2(32,155),8,Color("675c4d"))
         draw_circle(o+Vector2(205,158),10,Color("675c4d"))
