@@ -4,9 +4,9 @@ This document translates the master design plan into the first playable software
 
 ## Target loop
 
-**Restore → Business → Revenue → Supply Chain → Competition → Ownership → Empire**
+**Restore → Business → Revenue → Supply Chain → Competition → Ownership → Empire → World Events**
 
-The player begins with limited money and a neglected property. The implementation now extends the transformation from abandoned asset to operating business into a connected economic empire where ownership itself becomes a strategic resource.
+The player begins with limited money and a neglected property. The implementation now extends the transformation from abandoned asset to a connected economic empire where ownership and timing become strategic resources.
 
 ## Current playable foundation
 
@@ -44,7 +44,7 @@ The player begins with limited money and a neglected property. The implementatio
 - Districts provide different demand, logistics and competition profiles.
 
 ### Corporate ownership and capital
-- `scripts/corporate.gd` adds a persistent corporate-control layer.
+- `scripts/corporate.gd` adds a corporate-control layer.
 - Company valuation and indicative share price respond to cash, profit, reputation, businesses and acquisitions.
 - The founder begins with 100% ownership.
 - Growth capital can be raised from an independent investor in exchange for minority equity.
@@ -53,7 +53,14 @@ The player begins with limited money and a neglected property. The implementatio
 - Corporate defense can be upgraded to reduce takeover risk.
 - A strong alliance can be called upon for emergency takeover defense.
 - The Giant can attempt a takeover when the player's ownership/control position becomes vulnerable.
-- Corporate state is persisted locally so ownership survives between sessions even though the normal economic save system remains separate.
+- Corporate state is represented in the active prototype and is ready for the normal save system to be unified with it during persistence cleanup.
+
+### World opportunities and narrative pressure
+- `scripts/world_missions.gd` adds recurring, choice-driven opportunities beginning after the early game.
+- Opportunities include community investment, supplier rescue, price-war response, ally support, regional booms and distressed assets.
+- Every opportunity presents a meaningful trade-off between cash, reputation, relationships and strategic growth.
+- Opportunities expire, making timing matter instead of allowing every benefit to be collected safely.
+- `F1` and `F2` resolve the active opportunity.
 
 ## Controls
 
@@ -102,6 +109,10 @@ The player begins with limited money and a neglected property. The implementatio
 - `;` strengthen takeover defense
 - `'` call a strategic alliance for takeover defense
 
+### World opportunities
+- `F1` take the opportunity
+- `F2` decline the opportunity
+
 ## Milestone status
 
 1. First Unity scene/restoration interaction — legacy foundation exists; active playable path is Godot.
@@ -112,25 +123,27 @@ The player begins with limited money and a neglected property. The implementatio
 6. Contracts and competitor reactions — **complete**.
 7. Three NPC corporations — **complete**.
 8. Basic alliances and progression — **complete**.
-9. Save/load — **complete**.
+9. Save/load — **complete for the established economy state**.
 10. Individually playable empire businesses — **complete**.
 11. Internal supply chains and resource ownership — **complete**.
 12. Headquarters management overhead — **complete**.
 13. Districts, transport and regional competition — **complete**.
 14. Corporate ownership, investment and takeover defense — **complete in prototype**.
+15. Dynamic world opportunities and narrative choices — **complete in prototype**.
 
 ## Next bottlenecks
 
-The largest remaining risk is runtime validation. Godot is not currently available in the development environment, so the new corporate layer has been integrated through the repository but has not been executed here. Once Godot is available, the first pass should verify input constants, scene loading, draw ordering and persistence behavior, then tune balance after actually playing the loop.
+The largest remaining risk is runtime validation. Godot is not currently available in the development environment, so the latest layers have been integrated through the repository but have not been executed here. Once Godot is available, the first pass should verify input constants, scene loading, draw ordering and persistence behavior, then tune balance after actually playing the loop.
 
-After validation, the next major content layer should focus on narrative-driven corporate events and multi-region progression rather than adding disconnected mechanics.
+After validation, the next major content layer should be multi-region progression: a larger map with distinct regional economies, cross-region logistics, region-specific industries and stronger corporate expansion behavior.
 
 ## Design guardrails
 
 - Economic competition is the primary conflict; avoid turning the game into a generic military strategy game.
 - Major systems should create a meaningful decision, emotional attachment, or reason to return.
 - The player's restoration choices must have visible consequences.
-- Ownership is now a strategic resource: raising money can accelerate expansion while surrendering control.
+- Ownership is a strategic resource: raising money can accelerate expansion while surrendering control.
+- World opportunities should create stories and consequences, not just free rewards.
 - The Giant should be powerful but beatable through stronger economics, alliances, reputation and corporate defenses.
 - Failure should create stories and consequences rather than simply ending the game.
 - V1 should stay playable before adding a much larger world.
