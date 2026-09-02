@@ -17,6 +17,7 @@ var player_presence := [1,0,0,0,0,0]
 var rival_presence := [1,1,1,0,0,0]
 var infrastructure := [0,0,0,0,0,0]
 var trade_routes: Dictionary = {}
+var opportunity_rotation := 0
 
 func _normalize() -> void:
     while market_levels.size() < regions.size(): market_levels.append(1.0)
@@ -44,6 +45,20 @@ func select(index:int, reputation:int) -> Dictionary:
 func current() -> Dictionary:
     _normalize()
     return regions[selected]
+
+func current_opportunity(day:int=1) -> Dictionary:
+    _normalize()
+    var r := current()
+    var kind := (selected + day + opportunity_rotation) % 4
+    match kind:
+        0: return {"type":"LOCAL CONTRACT","region":r["name"],"industry":r["industry"],"reward":1800+int(r["tier"])*700,"risk":0.04,"message":"A local buyer needs an urgent shipment. Delivering here rewards speed."}
+        1: return {"type":"RESOURCE WINDfall","region":r["name"],"resource":r["resource"],"reward":1400+int(r["tier"])*900,"risk":0.08,"message":"A temporary surplus of %s is available in this region." % r["resource"]}
+        2: return {"type":"MARKET OPENING","region":r["name"],"industry":r["industry"],"bonus":0.12,"duration":3,"risk":0.02,"message":"Demand is surging for %s in this region." % r["industry"]}
+        _: return {"type":"DISTRESSED ASSET","region":r["name"],"discount":0.15,"risk":0.12,"message":"A struggling local operator may be available below normal expansion cost."}
+
+func rotate_opportunity() -> Dictionary:
+    opportunity_rotation = (opportunity_rotation + 1) % 4
+    return current_opportunity(1)
 
 func establish(index:int, cash:int, reputation:int) -> Dictionary:
     _normalize(); update_unlocks(reputation)
@@ -106,6 +121,7 @@ func daily_update(day:int) -> Array[String]:
         if day % 10 == 0 and trade_route_bonus(i) > 0.0:
             market_levels[i]=clamp(float(market_levels[i])+0.02,0.85,1.75)
             news.append("Trade corridor boosted activity in %s."%regions[i]["name"])
+    if day % 3 == 0: opportunity_rotation = (opportunity_rotation + 1) % 4
     return news
 
 func market_multiplier(industry:String) -> float:
