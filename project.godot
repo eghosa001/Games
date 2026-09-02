@@ -34,6 +34,8 @@ RenewHeadquartersSystem="*res://scripts/headquarters_system.gd"
 RenewCollectionSystem="*res://scripts/collection_system.gd"
 RenewCollectionUI="*res://scripts/collection_ui.gd"
 RenewAnalyticsSystem="*res://scripts/analytics_system.gd"
+RenewLiveOpsSystem="*res://scripts/liveops_system.gd"
+RenewLiveOpsUI="*res://scripts/liveops_ui.gd"
 
 [display]
 window/size/viewport_width=1280
