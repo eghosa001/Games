@@ -20,12 +20,21 @@
 
 ### Production integration fixed
 
-- `ProductionSystem` now reads the canonical employee productivity metric from `GameState.analytics.employee_average_productivity`.
+- `ProductionSystem` first consumed `GameState.analytics.employee_average_productivity` so individual employee performance affected throughput.
 - Requested production capacity is converted into staffed production cycles using real workforce productivity.
 - Low-productivity staffing can reduce production throughput; high-productivity staffing can increase it within safe bounds.
 - Production remains compatible with the existing `main.gd` call signature, so this is a safe transitional extraction rather than a broad rewrite.
 - Missing resource keys are now handled safely instead of causing a production crash.
-- Production results now expose `staffing_efficiency` and a failure reason for downstream UI/history systems.
+- Production results expose `staffing_efficiency` and failure reasons for downstream UI/history systems.
+
+### Role suitability integration fixed
+
+- `EmployeeController` now exposes an explicit assignment API for active employees.
+- Supported assignment targets are business, property, branch, logistics, sales and management, with assignment changes recorded in the employee history list.
+- Role-aware operating metrics are calculated from actual employee records rather than treating every employee as interchangeable.
+- Technician/Worker/Supervisor/Manager weighting is stronger for production; Sales is stronger for selling; Logistics is stronger for logistics; Accountant/Supervisor/Manager contribute more to management.
+- Role metrics are published to canonical `GameState.analytics`, including production, sales, logistics and management efficiency plus role-relevant headcounts.
+- `ProductionSystem` now prefers `employee_production_efficiency`, with a safe fallback to the previous average-productivity metric for compatibility with older state.
 
 ### Commits
 
@@ -36,6 +45,8 @@
 - `c94682be5be4db70ca66e5111ffe382027576843` — legacy employee-count load compatibility
 - `123aec00591ffb927ea01842177fc90e4a312e13` — employee synchronization fix
 - `b4df022a45aedd7700809047c4c2131db90d970b` — production staffing integration
+- `0ca8372c2cc319ad841ef027b9d18e4b6796871e` — role-aware employee metrics and assignments
+- `ea165da87103c6f42226d4aa5c3a872c6d7e6c3d` — production consumes role-aware staffing efficiency
 
 ## Story systems verified
 
@@ -49,8 +60,9 @@ These are **foundation implementations**, not yet the full V1.1 completion gate:
 
 ## Still incomplete after this pass
 
-- `main.gd` remains transitional and still contains the legacy scalar employee count.
-- Production role suitability, employee assignments and role-specific production bonuses are not yet modeled.
+- `main.gd` remains transitional and still contains the legacy scalar employee count and direct fixed-role hiring path.
+- Employee assignment is available in the controller API but is not yet exposed through the complete mobile UI.
+- Sales, Logistics and Management role metrics are published but are not yet consumed by their respective business systems.
 - Employee hiring UI does not yet expose candidates, roles, salaries, skills or personalities.
 - Employee firing/promotion/training are not yet exposed through the complete mobile UI.
 - Corporate History does not yet receive every important transaction/event type.
@@ -62,10 +74,11 @@ These are **foundation implementations**, not yet the full V1.1 completion gate:
 
 Continue in the master implementation order:
 
-1. complete direct employee integration with role suitability, hiring and production;
-2. finish history/news runtime event coverage;
-3. refactor Property → Business → Branch boundaries;
-4. extract data-driven balance definitions;
-5. deepen resource/production/supply-chain simulation.
+1. remove the direct legacy hiring path from `main.gd` and route hiring through EmployeeController;
+2. consume Sales/Logistics/Management employee metrics in demand, supply and operating costs;
+3. finish employee management UI and history/news runtime event coverage;
+4. refactor Property → Business → Branch boundaries;
+5. extract data-driven balance definitions;
+6. deepen resource/production/supply-chain simulation.
 
 A feature should only be marked complete after **Code → Integration → Persistence → UI → Simulation behavior → Tests** has been verified.
