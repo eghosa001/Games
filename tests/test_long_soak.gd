@@ -66,7 +66,6 @@ func soak_full_game(days: int) -> void:
         game.advance_day()
         check(int(game.day) == day_before + 1, "soak day progression %d" % (day + 1))
         check(int(game.cash) >= 0 or int(game.debt) > 0, "soak financial state %d" % (day + 1))
-        check(int(game.total_profit) == int(game.total_profit), "soak profit finite %d" % (day + 1))
         check(int(game.cash) != -2147483648 and int(game.cash) != 2147483647, "soak cash bounds %d" % (day + 1))
         if day % 30 == 0:
             game.save_game()
@@ -81,7 +80,8 @@ func soak_full_game(days: int) -> void:
         check(int(game.day) > 0 and int(game.day) == day_before + 1, "soak stable day after actions %d" % (day + 1))
         check(int(game.cash) != cash_before or int(game.total_profit) != 0 or int(game.day) > day_before, "soak state changes %d" % (day + 1))
 
-    check(int(game.day) == days, "soak final day")
+    # Main starts on day 1, so N successful advances finish on day N + 1.
+    check(int(game.day) == days + 1, "soak final day")
     check(game.expansion.properties.size() == 3, "soak expansion count")
     check(game.expansion.resource_sites.size() == 3, "soak resource site count")
     game.free()
