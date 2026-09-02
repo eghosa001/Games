@@ -26,6 +26,8 @@ jobs:
         run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_new_game_flow.gd
       - name: Run employee system test
         run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_employee_system.gd
+      - name: Run history system test
+        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_history_system.gd
       - name: Run regression tests
         run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_runner.gd
       - name: Run extended function tests
