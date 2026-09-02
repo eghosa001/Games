@@ -7,15 +7,23 @@ var observed_contract_id := ""
 func _ready() -> void:
     contract_system = get_node_or_null("/root/RenewContractSystem")
     observed_day = _main_day()
+    if contract_system != null:
+        var existing := contract_system.active_contract()
+        if not existing.is_empty(): observed_contract_id = str(existing.get("id", ""))
 
 func _process(_delta: float) -> void:
     var main = get_parent()
     if main == null or contract_system == null: return
     var legacy_days := int(main.get("contract_days"))
     if legacy_days > 0 and observed_contract_id.is_empty():
-        var created := contract_system.create_default_customer_contract(_main_day(), int(main.get("reputation")))
-        if bool(created.get("ok", false)):
-            observed_contract_id = str(created["contract"]["id"])
+        var existing := contract_system.active_contract()
+        if not existing.is_empty():
+            observed_contract_id = str(existing.get("id", ""))
+        else:
+            var created := contract_system.create_default_customer_contract(_main_day(), int(main.get("reputation")))
+            if bool(created.get("ok", false)):
+                observed_contract_id = str(created["contract"]["id"])
+        if not observed_contract_id.is_empty():
             # Legacy fields are retained only as a compatibility signal; ContractSystem owns terms/execution.
             main.set("contract_bonus", 0)
             observed_day = _main_day()
@@ -45,14 +53,16 @@ func _process(_delta: float) -> void:
         main.set("reputation", int(main.get("reputation")) + 1)
     elif int(result.get("shortfall", 0)) > 0:
         main.set("reputation", max(0, int(main.get("reputation")) - 1))
-    if int(result.get("penalty", 0)) > 0:
+    if penalty > 0:
         _log(main, "CONTRACT: delivered %d; penalty $%s." % [delivered, _money(penalty)])
     else:
         _log(main, "CONTRACT: delivered %d; revenue $%s." % [delivered, _money(revenue)])
     if bool(result.get("finished", false)):
         var final_contract: Dictionary = result["contract"]
         var status := str(final_contract.get("execution_status", "breached"))
-        _log(main, "CONTRACT %s: %s (%d%% fulfilled)." % [final_contract["id"], status.to_upper(), int(round(float(final_contract["quantity_delivered"]) / max(1.0, float(final_contract["quantity_due"])) * 100.0))])
+        var due := max(1.0, float(final_contract["quantity_due"]))
+        var fulfilment_pct := int(round(float(final_contract["quantity_delivered"]) / due * 100.0))
+        _log(main, "CONTRACT %s: %s (%d%% fulfilled)." % [final_contract["id"], status.to_upper(), fulfilment_pct])
         main.set("contract_days", 0)
         main.set("contract_bonus", 0)
         var impact: Dictionary = final_contract.get("reputation_impact", {})
