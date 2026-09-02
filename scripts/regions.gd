@@ -50,7 +50,7 @@ func establish(index:int, cash:int, reputation:int) -> Dictionary:
     if index < 0 or index >= regions.size(): return {"ok":false,"message":"Invalid region."}
     if not bool(regions[index].get("unlocked",false)): return {"ok":false,"message":"Region is locked."}
     if player_presence[index] > 0: return {"ok":false,"message":"You already have an operating presence here."}
-    var cost := 12000 + int(regions[index]["tier"])*6500
+    var cost: int = 12000 + int(regions[index]["tier"])*6500
     if cash < cost: return {"ok":false,"message":"Regional launch requires $%s."%_money(cost)}
     player_presence[index]=1
     return {"ok":true,"cost":cost,"message":"Regional operation established in %s."%regions[index]["name"]}
@@ -61,7 +61,7 @@ func build_infrastructure(index:int, cash:int, reputation:int) -> Dictionary:
     if player_presence[index] <= 0: return {"ok":false,"message":"Establish a regional operation first."}
     var level:int = int(infrastructure[index])
     if level >= 3: return {"ok":false,"message":"Regional infrastructure is already maxed."}
-    var cost := 9000 + level*7000 + int(regions[index]["tier"])*1500
+    var cost: int = 9000 + level*7000 + int(regions[index]["tier"])*1500
     if cash < cost: return {"ok":false,"message":"Infrastructure upgrade requires $%s."%_money(cost)}
     infrastructure[index]=level+1
     return {"ok":true,"cost":cost,"message":"Infrastructure upgraded to level %d."%infrastructure[index]}
@@ -76,7 +76,7 @@ func establish_trade_route(origin:int, destination:int, cash:int, reputation:int
     if trade_routes.has(key):
         return {"ok":false,"message":"This trade corridor is already active."}
     var distance := abs(origin-destination)
-    var cost := 10000 + distance*5000 + int(regions[destination]["tier"])*2000
+    var cost: int = 10000 + distance*5000 + int(regions[destination]["tier"])*2000
     if cash < cost:
         return {"ok":false,"message":"Trade corridor requires $%s."%_money(cost)}
     trade_routes[key] = {"level":1,"origin":origin,"destination":destination}
@@ -96,7 +96,7 @@ func daily_update(day:int) -> Array[String]:
     for i in range(regions.size()):
         market_levels[i]=clamp(float(market_levels[i])+float(regions[i]["growth"]),0.85,1.75)
         if day % 7 == 0 and i == selected:
-            market_levels[i]=clamp(market_levels[i]+0.05,0.85,1.75)
+            market_levels[i]=clamp(float(market_levels[i])+0.05,0.85,1.75)
             news.append("%s market expanded."%regions[i]["name"])
         if day % 6 == 0 and rival_presence[i] > 0:
             rival_presence[i]=min(4,int(rival_presence[i])+1)
