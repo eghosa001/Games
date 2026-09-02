@@ -1,101 +1,46 @@
 extends Node2D
 
-const Regions = preload("res://scripts/regions.gd")
-var parent
-var regions = Regions.new()
-var message := ""
-var last_day := 0
+# Region controller: unlock markets, establish presence, infrastructure and trade routes.
+var parent: Node
+var regions = preload("res://scripts/regions.gd").new()
+var branch_income_cache := 0
 
 func _ready() -> void:
-    parent=get_parent()
-    regions.update_unlocks(parent.reputation)
+    parent = get_parent()
     regions._normalize()
-    last_day=parent.day
     queue_redraw()
 
-func _process(_delta:float)->void:
-    if parent == null: return
-    regions.update_unlocks(parent.reputation)
-    if parent.day != last_day:
-        for news in regions.daily_update(parent.day): parent._log("REGION: "+news)
-        var income:int = apply_branch_income()
-        if income>0: parent._log("REGIONAL REVENUE: $%s from established operations."%_money(income))
-        last_day=parent.day
-    queue_redraw()
+func select_region(index:int)->Dictionary:
+    var result=regions.select(index)
+    if result["ok"]: queue_redraw()
+    return result
 
-func _input(event:InputEvent)->void:
-    if not event is InputEventKey or not event.pressed or event.echo: return
-    match event.keycode:
-        KEY_F3: select_region(regions.selected+1)
-        KEY_F4: select_region(regions.selected-1)
-        KEY_F6: establish_region()
-        KEY_F7: upgrade_infrastructure()
-        KEY_F8: dispatch_goods()
-        KEY_F10: establish_trade_route()
+func current()->Dictionary:
+    return regions.current()
 
-func select_region(index:int)->void:
-    var count:int=regions.regions.size()
-    if count <= 0:
-        return
-    index=(index%count+count)%count
-    var result=regions.select(index,parent.reputation)
-    message=result["message"]
-    if result["ok"]: parent._log("REGION: "+message)
-
-func establish_region()->void:
+func establish_region()->Dictionary:
     var result=regions.establish(regions.selected,parent.cash,parent.reputation)
-    message=result["message"]
-    if not result["ok"]: return
-    parent.cash-=int(result["cost"])
-    parent.reputation+=3
-    parent._log("REGIONAL EXPANSION: "+message+" (-$%s)."%_money(int(result["cost"])))
+    if result["ok"]:
+        parent.cash-=int(result["cost"])
+        queue_redraw()
+    return result
 
-func upgrade_infrastructure()->void:
-    var result=regions.build_infrastructure(regions.selected,parent.cash,parent.reputation)
-    message=result["message"]
-    if not result["ok"]: return
-    parent.cash-=int(result["cost"])
-    parent.reputation+=2
-    parent._log("REGIONAL INFRASTRUCTURE: "+message+" (-$%s)."%_money(int(result["cost"])))
+func upgrade_infrastructure()->Dictionary:
+    var result=regions.upgrade_infrastructure(regions.selected,parent.cash)
+    if result["ok"]:
+        parent.cash-=int(result["cost"])
+        queue_redraw()
+    return result
 
-func establish_trade_route()->void:
-    var origin:int=0
-    var destination:int=regions.selected
-    if destination==origin:
-        message="Select an established region other than the starter region."
-        return
-    var result=regions.establish_trade_route(origin,destination,parent.cash,parent.reputation)
-    message=result["message"]
-    if not result["ok"]: return
-    parent.cash-=int(result["cost"])
-    parent.reputation+=4
-    parent._log("TRADE CORRIDOR: "+message+" (-$%s)."%_money(int(result["cost"])))
-
-func dispatch_goods()->void:
-    var destination:int=regions.selected
-    var origin:int=0
-    if destination==origin:
-        message="The starter region is already local; choose another region first."
-        return
-    var amount:int=min(10,parent.finished_goods)
-    if amount<=0:
-        message="Produce goods before dispatching a regional shipment."
-        return
-    var cost:int=int(round(regions.logistics_cost(amount*45.0,origin,destination)))
-    if parent.transport_capacity<amount:
-        message="Fleet capacity is too low. Upgrade transport before shipping."
-        return
-    if parent.cash<cost:
-        message="Regional freight requires $%s."%_money(cost)
-        return
-    parent.cash-=cost
-    parent.finished_goods-=amount
-    parent.reputation+=1
-    parent._log("SHIPMENT: %d goods sent to %s for $%s freight."%[amount,regions.current()["name"],_money(cost)])
-    message="Shipment delivered. Regional market is now stocked."
+func establish_trade_route()->Dictionary:
+    var result=regions.establish_trade_route(regions.selected,parent.cash)
+    if result["ok"]:
+        parent.cash-=int(result["cost"])
+        queue_redraw()
+    return result
 
 func branch_income()->int:
-    var total:int=0
+    var total:=0
     for i in range(regions.regions.size()):
         if regions.player_presence[i]<=0: continue
         var r=regions.regions[i]
@@ -114,7 +59,7 @@ func apply_branch_income()->int:
     return income
 
 func _money(value:int)->String:
-    return "%,d"%value
+    return String.num_int64(value)
 
 func _draw()->void:
     if parent==null: return
@@ -128,7 +73,3 @@ func _draw()->void:
     draw_string(ThemeDB.fallback_font,Vector2(865,214),"Logistics %.2fx | Labor %.2fx"%[r["logistics"],r["labor"]],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("b7d7ff"))
     draw_string(ThemeDB.fallback_font,Vector2(865,238),"Competition %.2fx | Rivals %d"%[r["competition"],regions.rival_presence[regions.selected]],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("ffad8f"))
     draw_string(ThemeDB.fallback_font,Vector2(865,262),"Special: %s"%r["special"],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("f2d27a"))
-    draw_string(ThemeDB.fallback_font,Vector2(865,286),"Industry: %s | Resource: %s"%[r["industry"],r["resource"]],HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("c6d0d8"))
-    draw_string(ThemeDB.fallback_font,Vector2(865,310),"Presence %d | Infrastructure L%d"%[regions.player_presence[regions.selected],regions.infrastructure[regions.selected]],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color.WHITE)
-    draw_string(ThemeDB.fallback_font,Vector2(865,334),"Trade bonus %.0f%% | F10 connect"%[regions.trade_route_bonus(regions.selected)*100.0],HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("8ee6a8"))
-    draw_string(ThemeDB.fallback_font,Vector2(865,353),message,HORIZONTAL_ALIGNMENT_LEFT,370,11,Color("8ee6a8"))
