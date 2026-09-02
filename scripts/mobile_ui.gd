@@ -19,8 +19,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
     if parent == null or status_label == null:
         return
-    # Do not rebuild action buttons every frame. Recreating them while a finger
-    # is pressing one causes the touch target to disappear before the release.
+    # Never rebuild buttons here: doing so breaks touch release events.
     status_label.text = "$%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day)]
 
 func _build_ui() -> void:
@@ -120,6 +119,15 @@ func _refresh() -> void:
             if supply_controller != null:
                 _button("SUPPLIER CONTRACT", supply_controller.negotiate_supplier_contract)
                 _button("SECURE RESOURCE", supply_controller.secure_resource_rights)
+                _button("BUY MATERIALS", supply_controller.market_buy.bind("materials"))
+                _button("BUY PACKAGING", supply_controller.market_buy.bind("packaging"))
+            var corporate = get_node_or_null("../Corporate")
+            if corporate != null:
+                _button("RAISE CAPITAL", corporate.raise_capital)
+                _button("BUY BACK SHARES", corporate.buyback_shares)
+                _button("DIVIDEND", corporate.pay_dividend)
+                _button("DEFENSE", corporate.strengthen_defense)
+                _button("ALLY DEFENSE", corporate.strategic_ally_defense)
             _button("LOAN", parent.take_loan)
             _button("REPAY LOAN", parent.repay_loan)
             _button("END DAY", parent.advance_day)
@@ -131,6 +139,10 @@ func _refresh() -> void:
                 _button("ESTABLISH", region_controller.establish_region)
                 _button("INFRASTRUCTURE", region_controller.upgrade_infrastructure)
                 _button("DISPATCH GOODS", region_controller.dispatch_goods)
+            var missions = get_node_or_null("../WorldMissions")
+            if missions != null:
+                _button("TAKE OPPORTUNITY", missions.choose_a)
+                _button("DECLINE OPPORTUNITY", missions.choose_b)
             _button("DISTRICT", parent.select_district.bind((int(parent.selected_district) + 1) % parent.districts.districts.size()))
             _button("END DAY", parent.advance_day)
 
