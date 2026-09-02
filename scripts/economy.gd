@@ -45,6 +45,8 @@ func clear_market_modifiers() -> void:
         market_multipliers[resource] = 1.0
 
 func quote(resource: String, amount: int, choice: int = 0) -> Dictionary:
+    if not resources.has(resource) or amount <= 0:
+        return {"ok":false,"cost":0,"supplier":"Unknown"}
     var supplier := supplier_for(resource, choice)
     if supplier.is_empty(): return {"ok":false,"cost":0,"supplier":"Unknown"}
     var market_factor := float(market_multipliers.get(resource, 1.0))
@@ -59,6 +61,40 @@ func buy_resource(resource: String, amount: int, cash: int, choice: int = 0) -> 
         return {"ok":false,"cost":0,"amount":0,"supplier":supplier["name"],"failed":true}
     resources[resource]["stock"] += amount
     return {"ok":true,"cost":q["cost"],"amount":amount,"supplier":supplier["name"]}
+
+# Atomic multi-resource order. Either every requested delivery succeeds or no
+# market stock changes. This prevents a failed third delivery from leaving the
+# company with only the first two inputs of an order.
+func buy_bundle(orders: Array, cash: int, choice: int = 0) -> Dictionary:
+    var total := 0
+    var quotes: Array = []
+    for order in orders:
+        if not (order is Dictionary):
+            return {"ok":false,"cost":0,"delivered":[],"supplier":"Unknown","failed":true}
+        var resource := String(order.get("resource", ""))
+        var amount := int(order.get("amount", 0))
+        var q := quote(resource, amount, choice)
+        if not q["ok"]:
+            return {"ok":false,"cost":0,"delivered":[],"supplier":q.get("supplier","Unknown"),"failed":true}
+        total += int(q["cost"])
+        quotes.append(q)
+    if cash < total:
+        return {"ok":false,"cost":total,"delivered":[],"supplier":"Multiple suppliers","failed":false}
+
+    # Validate every reliability check before mutating any resource stock.
+    for i in range(orders.size()):
+        var resource := String(orders[i]["resource"])
+        var supplier := supplier_for(resource, choice)
+        if randi_range(1,100) > int(supplier["reliability"]):
+            return {"ok":false,"cost":0,"delivered":[],"supplier":supplier["name"],"failed":true}
+
+    var delivered: Array = []
+    for i in range(orders.size()):
+        var resource := String(orders[i]["resource"])
+        var amount := int(orders[i]["amount"])
+        resources[resource]["stock"] += amount
+        delivered.append({"resource":resource,"amount":amount,"cost":int(quotes[i]["cost"]),"supplier":quotes[i]["supplier"]})
+    return {"ok":true,"cost":total,"delivered":delivered,"supplier":"Bundle","failed":false}
 
 func end_market_day() -> void:
     for key in resources:
