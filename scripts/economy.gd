@@ -62,39 +62,52 @@ func buy_resource(resource: String, amount: int, cash: int, choice: int = 0) -> 
     resources[resource]["stock"] += amount
     return {"ok":true,"cost":q["cost"],"amount":amount,"supplier":supplier["name"]}
 
-# Atomic multi-resource order. Either every requested delivery succeeds or no
-# market stock changes. This prevents a failed third delivery from leaving the
-# company with only the first two inputs of an order.
-func buy_bundle(orders: Array, cash: int, choice: int = 0) -> Dictionary:
-    var total := 0
+# Quotes a multi-resource order without changing inventory. Optional economic
+# adjustments are applied here so callers can verify the final transaction cost
+# before any inventory is mutated.
+func quote_bundle(orders: Array, choice: int = 0, discount_rate: float = 0.0, surcharge: int = 0) -> Dictionary:
+    var base_total := 0
     var quotes: Array = []
     for order in orders:
         if not (order is Dictionary):
-            return {"ok":false,"cost":0,"delivered":[],"supplier":"Unknown","failed":true}
+            return {"ok":false,"cost":0,"base_cost":0,"quotes":[]}
         var resource := String(order.get("resource", ""))
         var amount := int(order.get("amount", 0))
         var q := quote(resource, amount, choice)
         if not q["ok"]:
-            return {"ok":false,"cost":0,"delivered":[],"supplier":q.get("supplier","Unknown"),"failed":true}
-        total += int(q["cost"])
+            return {"ok":false,"cost":0,"base_cost":0,"quotes":[]}
+        base_total += int(q["cost"])
         quotes.append(q)
-    if cash < total:
-        return {"ok":false,"cost":total,"delivered":[],"supplier":"Multiple suppliers","failed":false}
+    var discount := int(round(float(base_total) * clamp(discount_rate, 0.0, 1.0)))
+    var final_cost := max(0, base_total - discount + max(0, surcharge))
+    return {"ok":true,"cost":final_cost,"base_cost":base_total,"discount":discount,"surcharge":max(0,surcharge),"quotes":quotes}
+
+# Atomic multi-resource order. Either every requested delivery succeeds or no
+# market stock changes. Economic adjustments are included in the affordability
+# check but do not alter the per-resource inventory quantities.
+func buy_bundle(orders: Array, cash: int, choice: int = 0, discount_rate: float = 0.0, surcharge: int = 0) -> Dictionary:
+    var quote_result := quote_bundle(orders, choice, discount_rate, surcharge)
+    if not quote_result["ok"]:
+        return {"ok":false,"cost":0,"delivered":[],"supplier":"Unknown","failed":true}
+    var final_cost := int(quote_result["cost"])
+    if cash < final_cost:
+        return {"ok":false,"cost":final_cost,"delivered":[],"supplier":"Multiple suppliers","failed":false}
 
     # Validate every reliability check before mutating any resource stock.
-    for i in range(orders.size()):
-        var resource := String(orders[i]["resource"])
+    for order in orders:
+        var resource := String(order["resource"])
         var supplier := supplier_for(resource, choice)
         if randi_range(1,100) > int(supplier["reliability"]):
             return {"ok":false,"cost":0,"delivered":[],"supplier":supplier["name"],"failed":true}
 
     var delivered: Array = []
+    var quotes: Array = quote_result["quotes"]
     for i in range(orders.size()):
         var resource := String(orders[i]["resource"])
         var amount := int(orders[i]["amount"])
         resources[resource]["stock"] += amount
         delivered.append({"resource":resource,"amount":amount,"cost":int(quotes[i]["cost"]),"supplier":quotes[i]["supplier"]})
-    return {"ok":true,"cost":total,"delivered":delivered,"supplier":"Bundle","failed":false}
+    return {"ok":true,"cost":final_cost,"base_cost":int(quote_result["base_cost"]),"discount":int(quote_result["discount"]),"surcharge":int(quote_result["surcharge"]),"delivered":delivered,"supplier":"Bundle","failed":false}
 
 func end_market_day() -> void:
     for key in resources:
