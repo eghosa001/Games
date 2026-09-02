@@ -67,7 +67,7 @@ func _apply_flat_to_domains(flat: Dictionary) -> void:
     _put("resources", flat, ["resources"])
     _put("production", flat, ["finished_goods"])
     _put("supply_chain", flat, ["supplier_choice", "transport_level", "transport_capacity", "resource_sites"])
-    _put("contracts", flat, ["contract_days", "contract_bonus"])
+    _put("contracts", flat, ["contract_days", "contract_bonus", "contract_system"])
     _put("competitors", flat, ["rivals", "selected_rival", "relationship"])
     _put("ownership", flat, ["acquisition_count"])
     _put("finance", flat, ["debt", "loan_payment"])
@@ -107,6 +107,8 @@ func _capture_domain_systems() -> void:
     if production != null: domains["production"]["system"] = production.capture_state()
     var simulation = root.get_node_or_null("RenewSimulationSystem")
     if simulation != null: domains["analytics"]["simulation_system"] = simulation.capture_state()
+    var contracts = root.get_node_or_null("RenewContractSystem")
+    if contracts != null: domains["contracts"]["system"] = contracts.capture_state()
 
 func _restore_domain_systems() -> void:
     var root := get_tree().root
@@ -116,6 +118,8 @@ func _restore_domain_systems() -> void:
     if production != null and domains["production"].get("system", {}) is Dictionary: production.restore_state(domains["production"]["system"])
     var simulation = root.get_node_or_null("RenewSimulationSystem")
     if simulation != null and domains["analytics"].get("simulation_system", {}) is Dictionary: simulation.restore_state(domains["analytics"]["simulation_system"])
+    var contracts = root.get_node_or_null("RenewContractSystem")
+    if contracts != null and domains["contracts"].get("system", {}) is Dictionary: contracts.restore_state(domains["contracts"]["system"])
 
 func _rebuild_data() -> void:
     data = {"state_version": STATE_VERSION, "domains": domains.duplicate(true), "legacy": _domains_to_flat({"domains": domains})}
