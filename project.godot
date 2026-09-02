@@ -25,6 +25,7 @@ RenewDiplomacyControl="*res://scripts/diplomacy_control_bridge.gd"
 RenewInfrastructureSystem="*res://scripts/infrastructure_system.gd"
 RenewInfrastructureUI="*res://scripts/infrastructure_ui.gd"
 RenewResearchSystem="*res://scripts/research_system.gd"
+RenewWorldEventSystem="*res://scripts/world_event_system.gd"
 
 [display]
 window/size/viewport_width=1280
