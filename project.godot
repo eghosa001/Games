@@ -39,4 +39,4 @@ renderer/rendering_method.mobile="gl_compatibility"
 
 [input]
 action_restore={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":82)]}
-action_inspect={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":73)}]
+action_inspect={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":73)]}
