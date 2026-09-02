@@ -2,6 +2,30 @@
 
 > Verified implementation work on `feature/foundation-v11-implementation`.
 
+## 2026-09-02 — Resource mutation API compatibility and regression coverage
+
+### Fixed in this pass
+
+- Corrected `RenewExpansionState.record_resource_generation()` so it accepts the legacy calculated-output argument used by the current Main wrapper while keeping the canonical adapter responsible for the authoritative output calculation.
+- This removes a current GDScript call-signature mismatch between `main.gd` and the canonical expansion mutation adapter.
+- Extended `tests/test_expansion_state.gd` to exercise the compatibility call shape and explicitly verify canonical resource-site cash and reputation mutations.
+- Kept resource generation deterministic from canonical resource-site state (`output × level`) rather than trusting a runtime/UI-supplied output value.
+
+### Verification status
+
+Static source review only. The Godot executable is not available in the current environment, so runtime tests were not claimed as passing.
+
+### Verified commits
+
+- `5175dbc0500fa5cba9a3838deebe3fda3bdae2cf` — preserve resource generation API compatibility
+- `0fab7e344d4d54c76aa9920600981ecb8faaf038` — lock resource mutation API compatibility and balances
+
+### Still next
+
+- Fix Main's transitional cash/reputation projection so canonical resource purchases/upgrades cannot be overwritten by `_sync_expansion_runtime()`.
+- Remove the remaining direct resource-site mutations from `Expansion.gd` and make its public API delegate to the canonical mutation boundary without double mutation.
+- Route expansion operating-day calculation/mutation fully through canonical state.
+
 ## 2026-09-02 — Expansion resource and day mutation integration
 
 ### Fixed in this pass
