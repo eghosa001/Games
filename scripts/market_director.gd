@@ -1,7 +1,7 @@
 extends Node
 
 # Phase B/C market layer: recurring market shocks and strategic responses.
-# It observes the existing simulation instead of replacing the core economy.
+# Events now change input economics for a short period, so decisions have lasting consequences.
 var game: Node
 var market_cycle := 0
 var market_heat := 0
@@ -10,6 +10,8 @@ var event_text := ""
 var event_expiry := 0
 var last_day := 1
 var event_count := 0
+var effect_expiry := 0
+var effect_name := ""
 var events := [
     {"name":"INPUT SHORTAGE","text":"A supplier disruption is squeezing input availability.","type":"shortage"},
     {"name":"DEMAND BOOM","text":"Demand is surging in your current district.","type":"boom"},
@@ -34,6 +36,8 @@ func _process(_delta: float) -> void:
 func _on_new_day(current_day: int) -> void:
     market_cycle += 1
     market_heat = clamp(market_heat + (1 if current_day % 2 == 0 else -1), 0, 5)
+    if effect_expiry > 0 and current_day >= effect_expiry:
+        _clear_effect()
     if active_event != "" and current_day >= event_expiry:
         active_event = ""
         event_text = ""
@@ -47,11 +51,42 @@ func _spawn_event() -> void:
     event_text = String(event["text"])
     event_expiry = int(game.day) + 2
     event_count += 1
+    _apply_event_pressure(String(event["type"]), int(game.day) + 2)
     game._log("MARKET EVENT: %s — %s" % [active_event, event_text])
     game.message = "%s: %s Choose a response in the WORLD tab." % [active_event, event_text]
 
+func _apply_event_pressure(event_type: String, expiry: int) -> void:
+    if game == null or not ("economy" in game):
+        return
+    effect_expiry = expiry
+    effect_name = event_type
+    game.economy.clear_market_modifiers()
+    match event_type:
+        "shortage":
+            game.economy.set_market_modifier("materials", 1.25)
+            game.economy.set_market_modifier("packaging", 1.20)
+            game.economy.set_market_modifier("fuel", 1.30)
+        "boom":
+            game.economy.set_market_modifier("materials", 0.92)
+            game.economy.set_market_modifier("packaging", 0.94)
+            game.economy.set_market_modifier("fuel", 0.96)
+        "war":
+            game.economy.set_market_modifier("packaging", 1.12)
+        "contract":
+            game.economy.set_market_modifier("materials", 1.05)
+        "asset":
+            pass
+
+func _clear_effect() -> void:
+    if game != null and "economy" in game:
+        game.economy.clear_market_modifiers()
+    effect_expiry = 0
+    effect_name = ""
+
 func market_status() -> String:
     if active_event == "":
+        if effect_name != "":
+            return "Market pressure: %s (temporary input effect)." % effect_name.to_upper()
         return "Market stable — next strategic shock can emerge as the economy grows."
     return "%s: %s" % [active_event, event_text]
 
@@ -84,52 +119,64 @@ func _respond(style: String) -> void:
                 game.cash -= spend
                 reward = spend / 2
                 rep = 2
+                _set_response_modifier(0.92, 0.92, 0.95)
                 outcome = "You secured scarce inventory early."
             elif style == "balanced":
                 reward = 1200
                 rep = 1
+                _set_response_modifier(1.08, 1.06, 1.10)
                 outcome = "You rationed supplies and protected cash flow."
             else:
                 game.cash += 500
                 game.reputation = max(0, int(game.reputation) - 1)
+                _set_response_modifier(1.18, 1.15, 1.20)
                 outcome = "You conserved cash but surrendered some market share."
         "boom":
             if style == "aggressive":
                 game.cash -= min(int(game.cash), 2500)
                 reward = 6500
                 rep = 2
+                _set_response_modifier(0.88, 0.90, 0.92)
                 outcome = "You spent to capture the demand spike."
             elif style == "balanced":
                 reward = 3800
                 rep = 2
+                _set_response_modifier(0.94, 0.95, 0.96)
                 outcome = "You captured the most profitable part of the boom."
             else:
                 reward = 1400
+                _set_response_modifier(0.98, 0.99, 1.00)
                 outcome = "You played safely and kept your cash reserves."
         "war":
             if style == "aggressive":
                 game.cash -= min(int(game.cash), 3000)
                 reward = 4200
                 rep = 1
+                _set_response_modifier(1.05, 1.04, 1.00)
                 outcome = "You answered the price war with a targeted campaign."
             elif style == "balanced":
                 reward = 1800
                 rep = 1
+                _set_response_modifier(1.03, 1.02, 1.00)
                 outcome = "You protected margins while keeping customers."
             else:
                 game.reputation = max(0, int(game.reputation) - 1)
+                _set_response_modifier(1.08, 1.05, 1.00)
                 outcome = "You refused to chase the rival downward."
         "contract":
             if style == "aggressive":
                 reward = 5000
                 rep = 3
+                _set_response_modifier(1.04, 1.03, 1.02)
                 outcome = "You committed capacity and won the regional buyer."
             elif style == "balanced":
                 reward = 3000
                 rep = 2
+                _set_response_modifier(1.02, 1.02, 1.01)
                 outcome = "You accepted a manageable regional order."
             else:
                 reward = 800
+                _set_response_modifier(1.00, 1.00, 1.00)
                 outcome = "You declined the risk and preserved flexibility."
         "asset":
             if style == "aggressive":
@@ -152,8 +199,17 @@ func _respond(style: String) -> void:
     event_expiry = 0
     _save_state()
 
+func _set_response_modifier(materials: float, packaging: float, fuel: float) -> void:
+    if game == null or not ("economy" in game):
+        return
+    effect_expiry = int(game.day) + 1
+    effect_name = "response"
+    game.economy.set_market_modifier("materials", materials)
+    game.economy.set_market_modifier("packaging", packaging)
+    game.economy.set_market_modifier("fuel", fuel)
+
 func snapshot() -> Dictionary:
-    return {"market_cycle":market_cycle,"market_heat":market_heat,"active_event":active_event,"event_text":event_text,"event_expiry":event_expiry,"event_count":event_count}
+    return {"market_cycle":market_cycle,"market_heat":market_heat,"active_event":active_event,"event_text":event_text,"event_expiry":event_expiry,"event_count":event_count,"effect_expiry":effect_expiry,"effect_name":effect_name}
 
 func _save_state() -> void:
     var file := FileAccess.open("user://renew_market.json", FileAccess.WRITE)
@@ -174,3 +230,5 @@ func _load_state() -> void:
         event_text = String(parsed.get("event_text", ""))
         event_expiry = int(parsed.get("event_expiry", 0))
         event_count = int(parsed.get("event_count", 0))
+        effect_expiry = int(parsed.get("effect_expiry", 0))
+        effect_name = String(parsed.get("effect_name", ""))
