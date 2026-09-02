@@ -22,6 +22,7 @@ func run() -> void:
     check(FileAccess.file_exists("res://scenes/Main.tscn"), "Main scene exists")
     check(FileAccess.file_exists("res://README.md"), "README exists")
     check(FileAccess.file_exists("res://Docs/V1_IMPLEMENTATION.md"), "V1 implementation document exists")
+    check(FileAccess.file_exists("res://scripts/mobile_ui_polished.gd"), "Polished mobile UI script exists")
 
     var scene = load("res://scenes/Main.tscn")
     check(scene != null, "Main scene loads")
@@ -55,6 +56,9 @@ func run() -> void:
         var mobile = game.get_node_or_null("MobileUI")
         if mobile != null:
             check(mobile.has_method("_layout_responsive"), "Mobile responsive layout API")
+            check(String(mobile.get_script().resource_path).ends_with("mobile_ui_polished.gd"), "Polished mobile UI is wired")
+            mobile._layout_responsive()
+            check(mobile.root != null and mobile.actions != null, "Mobile UI builds its control surface")
 
         var bridge = game.get_node_or_null("GameStateBridge")
         if bridge != null:
