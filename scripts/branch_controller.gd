@@ -10,6 +10,10 @@ var workforce_bound:=false
 func _ready()->void:
     parent=get_parent()
     last_day=parent.day
+    var state=_game_state()
+    if state!=null:
+        branches.restore_from_game_state(state)
+        branches.sync_to_game_state(state) if state.get_value(["branches"],{}).is_empty() else null
     queue_redraw()
 
 func _process(_delta:float)->void:
@@ -19,11 +23,13 @@ func _process(_delta:float)->void:
         if employee_controller!=null and bool(employee_controller.get("initialized")):
             _bind_existing_workforce()
             workforce_bound=true
+            _persist_branches()
     if parent.day!=last_day:
         var region_controller=parent.get_node_or_null("RegionController")
         if region_controller!=null:
             var result=branches.operate_day(region_controller.regions)
             parent.cash+=int(result["profit"])
+            _persist_branches()
             if int(result["businesses"])>0:
                 parent._log("BRANCHES: %d regional businesses generated $%s contribution."%[result["businesses"],_money(int(result["profit"]))])
         last_day=parent.day
@@ -43,6 +49,7 @@ func select_branch(index:int)->void:
     if branches.branches.is_empty(): return
     var result=branches.select((index%branches.branches.size()+branches.branches.size())%branches.branches.size())
     message=result["message"]
+    _persist_branches()
 
 func launch_selected()->void:
     var b=branches.current()
@@ -68,6 +75,7 @@ func launch_selected()->void:
         if bool(hire_result.get("ok",false)): created+=1
     branches.set_staffing_projection(branches.selected,created)
     parent.reputation+=4
+    _persist_branches()
     parent._log("BRANCH OPENED: %s (-$%s, %d staff assigned)."%[b["name"],_money(cost),created])
     message="%s opened with %d persistent employees."%[b["name"],created]
 
@@ -87,6 +95,7 @@ func stock_selected()->void:
     if parent.cash<cost: message="Shipment requires $%s freight."%_money(cost); return
     parent.cash-=cost; parent.finished_goods-=amount
     branches.stock(branches.selected,amount)
+    _persist_branches()
     parent._log("BRANCH SUPPLY: %d goods delivered to %s for $%s."%[amount,b["name"],_money(cost)])
     message="Branch stocked with %d goods."%amount
 
@@ -109,6 +118,7 @@ func hire_selected()->void:
     parent.cash-=cost
     branches.set_staffing_projection(branches.selected,employee_controller.assigned_count("branch",branch_id))
     parent.reputation+=1
+    _persist_branches()
     message="%s hired and assigned to %s. Staff: %d."%[str(result["employee"]["name"]),b["name"],employee_controller.assigned_count("branch",branch_id)]
     parent._log("BRANCH HIRE: %s assigned to %s (-$%s)."%[str(result["employee"]["name"]),b["name"],_money(cost)])
 
@@ -116,21 +126,28 @@ func upgrade_selected()->void:
     var result=branches.upgrade(branches.selected,parent.cash)
     message=result["message"]
     if result["ok"]:
-        parent.cash-=int(result["cost"]); parent.reputation+=2
+        parent.cash-=int(result["cost"]); parent.reputation+=2; _persist_branches()
 
 func price_selected()->void:
     var result=branches.change_price(branches.selected,10)
     message=result["message"]
+    if result["ok"]: _persist_branches()
 
 func _employee_controller():
     if parent==null: return null
     return parent.get_node_or_null("EmployeeController")
 
+func _game_state():
+    if parent==null: return null
+    return parent.get_node_or_null("/root/RenewGameState")
+
+func _persist_branches()->void:
+    var state=_game_state()
+    if state!=null: branches.sync_to_game_state(state)
+
 func _bind_existing_workforce()->void:
     var employee_controller=_employee_controller()
     if employee_controller==null: return
-    # Migration bridge: employees created by older saves used renew_goods.
-    # Bind those people to the existing flagship once, without creating duplicates.
     var flagship_id:="branch_0"
     if not bool(branches.branches[0]["owned"]): return
     for employee in employee_controller.employees.active_employees():
