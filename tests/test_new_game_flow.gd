@@ -41,7 +41,7 @@ func run() -> void:
     # Restore through the actual production path rather than mutating state.
     var guard := 0
     while str(game.stage) != "Operational" and guard < 10:
-        var needed := game._next_cost()
+        var needed: int = int(game._next_cost())
         if int(game.cash) < needed:
             game.cash += needed + 1000
         game.restore_property()
