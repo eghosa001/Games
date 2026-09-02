@@ -7,6 +7,7 @@ run/main_scene="res://scenes/Main.tscn"
 RenewAutosave="*res://scripts/autosave.gd"
 RenewGameState="*res://scripts/game_state.gd"
 RenewEmployeeSystem="*res://scripts/employee_system.gd"
+RenewHistorySystem="*res://scripts/history_system.gd"
 
 [display]
 window/size/viewport_width=1280
