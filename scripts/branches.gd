@@ -1,9 +1,9 @@
 extends RefCounted
 class_name RenewBranches
 
-# Each regional branch is a real operating business: staff, inventory,
-# local sourcing, pricing, quality and daily profit. The branch layer sits
-# above the existing expansion properties and gives regions a reason to matter.
+# Regional branches are operating units. EmployeeController remains the
+# authoritative workforce; this layer keeps a compatibility employee count
+# while using role-aware workforce efficiency for branch operations.
 var branches := [
     {"name":"Old Market Flagship","region":0,"industry":"Consumer Goods","owned":true,"level":1,"employees":3,"stock":12,"price":115,"quality":50,"cashflow":0},
     {"name":"Industrial Works","region":1,"industry":"Building Materials","owned":false,"level":1,"employees":0,"stock":0,"price":145,"quality":50,"cashflow":0},
@@ -71,31 +71,59 @@ func upgrade(index:int,cash:int)->Dictionary:
     b["level"]+=1; b["quality"]=min(100,int(b["quality"])+8)
     return {"ok":true,"cost":cost,"message":"%s upgraded to level %d."%[b["name"],b["level"]]}
 
+# Employee-aware branch operation. The existing branch employee count is a
+# temporary capacity projection; the actual company workforce contributes
+# through GameState analytics. Sales specialists affect demand conversion,
+# logistics specialists protect sellable stock, and management reduces overhead.
 func operate_day(region_system)->Dictionary:
     _normalize()
     var total:=0
     var active:=0
     var sales:=0
+    var operations:=_employee_metrics()
     for b in branches:
         if not bool(b["owned"]): continue
         active+=1
         var region_index:=int(b["region"])
+        if region_index<0 or region_index>=region_system.regions.size(): continue
         var r=region_system.regions[region_index]
         var market:=float(r["demand"])*float(region_system.market_levels[region_index])
         if b["industry"]==r["industry"]: market*=1.15
         if b["industry"]=="Food Processing" and r["special"]=="Food supply abundance": market*=1.12
-        var capacity:=max(1,int(b["employees"])*3+int(b["level"])*2)
+        var branch_staff:=max(1,int(b["employees"]))
+        var staffing_share:=clampf(float(branch_staff)/float(max(1,active*3)),0.35,1.35)
+        var sales_eff:=float(operations["sales_efficiency"])
+        var logistics_eff:=float(operations["logistics_efficiency"])
+        var management_eff:=float(operations["management_efficiency"])
+        var capacity:=max(1,int(float(branch_staff*3+int(b["level"])*2)*staffing_share))
         var price_factor:=clamp(1.25-(float(b["price"])/150.0),0.35,1.15)
         var pressure:=min(0.35,float(r["competition"])*0.08*int(region_system.rival_presence[region_index]))
-        var demand:=max(1,int(round(capacity*market*price_factor*(1.0-pressure)*(0.85+float(b["quality"])/300.0))))
-        var units:=min(int(b["stock"]),demand)
+        var conversion:=clampf(0.72+sales_eff*0.18,0.70,1.20)
+        var supply_protection:=clampf(0.85+logistics_eff*0.10,0.80,1.10)
+        var demand:=max(1,int(round(capacity*market*price_factor*(1.0-pressure)*conversion*(0.85+float(b["quality"])/300.0))))
+        var units:=min(int(b["stock"]),int(round(float(demand)*supply_protection)))
         var revenue: int = units*int(b["price"])
         var wages:=int(b["employees"])*190
-        var overhead:=450+int(b["level"])*120
+        var overhead_base:=450+int(b["level"])*120
+        var overhead:=max(100,int(round(float(overhead_base)*(1.12-management_eff*0.10))))
         var profit: int = revenue-wages-overhead
         b["stock"]-=units; b["cashflow"]=profit
         total+=profit; sales+=revenue
-    return {"profit":total,"businesses":active,"sales":sales}
+    return {"profit":total,"businesses":active,"sales":sales,"employee_metrics":operations}
+
+func _employee_metrics()->Dictionary:
+    var fallback:="RenewGameState"
+    var tree=Engine.get_main_loop()
+    if tree==null: return {"sales_efficiency":1.0,"logistics_efficiency":1.0,"management_efficiency":1.0}
+    var root=tree.get_root()
+    if root==null: return {"sales_efficiency":1.0,"logistics_efficiency":1.0,"management_efficiency":1.0}
+    var state=root.get_node_or_null(fallback)
+    if state==null: return {"sales_efficiency":1.0,"logistics_efficiency":1.0,"management_efficiency":1.0}
+    return {
+        "sales_efficiency":clampf(float(state.get_value(["analytics","employee_sales_efficiency"],1.0)),0.25,2.5),
+        "logistics_efficiency":clampf(float(state.get_value(["analytics","employee_logistics_efficiency"],1.0)),0.25,2.5),
+        "management_efficiency":clampf(float(state.get_value(["analytics","employee_management_efficiency"],1.0)),0.25,2.5)
+    }
 
 func _money(value:int)->String:
     return str(value)
