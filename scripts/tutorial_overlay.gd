@@ -129,6 +129,7 @@ func _dismiss_current() -> void:
 func _hide_overlay() -> void:
     dismissed = true
     overlay_root.hide()
+    collapsed_button.show()
 
 func _collapse() -> void:
     _hide_overlay()
