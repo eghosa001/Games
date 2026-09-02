@@ -36,6 +36,13 @@
 - Role metrics are published to canonical `GameState.analytics`, including production, sales, logistics and management efficiency plus role-relevant headcounts.
 - `ProductionSystem` now prefers `employee_production_efficiency`, with a safe fallback to the previous average-productivity metric for compatibility with older state.
 
+### Logistics integration fixed
+
+- `SupplyChain` now reads the canonical `employee_logistics_efficiency` metric.
+- Resource-site transfers use an effective transport capacity derived from actual logistics staffing, so strong logistics staffing can move more of the available resource each day while weak/mismatched staffing constrains throughput.
+- Daily network update now reports logistics efficiency and effective transport capacity for downstream UI/history systems.
+- The original transport-capacity argument remains supported, preserving compatibility with the existing controllers.
+
 ### Commits
 
 - `d3b2e9e625d178e4183d64bbaa77f3534c8e4ff` — employee system fix
@@ -47,6 +54,8 @@
 - `b4df022a45aedd7700809047c4c2131db90d970b` — production staffing integration
 - `0ca8372c2cc319ad841ef027b9d18e4b6796871e` — role-aware employee metrics and assignments
 - `ea165da87103c6f42226d4aa5c3a872c6d7e6c3d` — production consumes role-aware staffing efficiency
+- `0fc8116918f141eb081ac10338a05470b51b2cf0` — logistics staffing affects network transport capacity
+- `3b07be7c1ea0750ec12d8d38b58ed3836de972a5` — progress log update
 
 ## Story systems verified
 
@@ -62,7 +71,8 @@ These are **foundation implementations**, not yet the full V1.1 completion gate:
 
 - `main.gd` remains transitional and still contains the legacy scalar employee count and direct fixed-role hiring path.
 - Employee assignment is available in the controller API but is not yet exposed through the complete mobile UI.
-- Sales, Logistics and Management role metrics are published but are not yet consumed by their respective business systems.
+- Sales and Management role metrics are published but are not yet consumed by their respective business systems.
+- Logistics is now consumed by the supply-chain network, but branch/business delivery should still be audited for role-aware logistics effects.
 - Employee hiring UI does not yet expose candidates, roles, salaries, skills or personalities.
 - Employee firing/promotion/training are not yet exposed through the complete mobile UI.
 - Corporate History does not yet receive every important transaction/event type.
@@ -74,8 +84,8 @@ These are **foundation implementations**, not yet the full V1.1 completion gate:
 
 Continue in the master implementation order:
 
-1. remove the direct legacy hiring path from `main.gd` and route hiring through EmployeeController;
-2. consume Sales/Logistics/Management employee metrics in demand, supply and operating costs;
+1. consume Sales and Management employee metrics in demand, customer operations and operating costs;
+2. audit branch/business delivery for logistics staffing and persistence;
 3. finish employee management UI and history/news runtime event coverage;
 4. refactor Property → Business → Branch boundaries;
 5. extract data-driven balance definitions;
