@@ -26,6 +26,10 @@ func _ownership():
     var scene = tree.get_current_scene() if tree != null else null
     return scene.get_node_or_null("OwnershipSystem") if scene != null else null
 
+func _finance():
+    var root = get_node_or_null("/root/RenewFinanceSystem")
+    return root
+
 func _sync(diplomacy, day: int) -> void:
     var active_ids: Dictionary = {}
     for treaty in diplomacy.list_treaties("active"):
@@ -72,11 +76,13 @@ func _apply_territory(treaty: Dictionary, state: Dictionary) -> void:
         var quantity := int(floor(1000000.0 * min(transfer_percent, donor_pct) / 100.0))
         if quantity > 0: ownership.transfer_shares(entity_id, donor, recipient, quantity, ownership.VOTE_ORDINARY, "territory treaty:%s" % treaty.get("id", ""))
     var control_threshold := float(terms.get("control_threshold", 50.1))
+    var asset_value := max(0.0, float(terms.get("asset_value", terms.get("territory_value", 0.0))))
     state["territory_id"] = territory_id
     state["entity_id"] = entity_id
     state["recipient"] = recipient
     state["control_percent"] = ownership.get_ownership_percent(entity_id, recipient)
     state["controls_territory"] = state["control_percent"] >= control_threshold
+    state["asset_value"] = asset_value
     state["materialized"] = true
 
 func _apply_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
@@ -94,8 +100,16 @@ func _apply_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
             var b_pct := clampf(float(terms.get("party_b_percent", 100.0 - a_pct)), 0.0, 100.0)
             if not a.is_empty() and a_pct > 0.0: ownership.issue_shares(venture_id, a, int(round(a_pct * 10000.0)), ownership.VOTE_ORDINARY, "joint venture formation")
             if not b.is_empty() and b_pct > 0.0: ownership.issue_shares(venture_id, b, int(round(b_pct * 10000.0)), ownership.VOTE_ORDINARY, "joint venture formation")
+    var asset_value := max(0.0, float(terms.get("asset_value", terms.get("initial_capital", terms.get("joint_capital", 0.0)))))
+    var asset_id := "jv_asset:%s" % treaty.get("id", "")
+    if asset_value > 0.0 and not ownership.has_entity(asset_id):
+        var asset_created := ownership.register_entity(asset_id, ownership.ENTITY_ASSET, 1000000, 1.0)
+        if bool(asset_created.get("ok", false)):
+            ownership.issue_shares(asset_id, venture_id, 1000000, ownership.VOTE_ORDINARY, "joint venture asset capitalization")
     state["venture_id"] = venture_id
     state["venture_name"] = venture_name
+    state["asset_id"] = asset_id
+    state["asset_value"] = asset_value
     state["party_a_ownership"] = ownership.get_ownership_percent(venture_id, str(treaty.get("party_a", "")))
     state["party_b_ownership"] = ownership.get_ownership_percent(venture_id, str(treaty.get("party_b", "")))
     state["control_party"] = str(treaty.get("party_a", "")) if state["party_a_ownership"] >= state["party_b_ownership"] else str(treaty.get("party_b", ""))
@@ -111,7 +125,7 @@ func get_materialized_state(treaty_id: String) -> Dictionary:
     return applied.get(treaty_id, {}).duplicate(true)
 
 func capture_state() -> Dictionary:
-    return {"system_version": 1, "last_day": last_day, "applied": applied.duplicate(true), "defense_pacts": defense_pacts.duplicate(true)}
+    return {"system_version": 2, "last_day": last_day, "applied": applied.duplicate(true), "defense_pacts": defense_pacts.duplicate(true)}
 
 func restore_state(state: Dictionary) -> void:
     last_day = int(state.get("last_day", -1))
