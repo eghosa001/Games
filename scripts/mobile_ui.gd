@@ -139,7 +139,7 @@ func _refresh() -> void:
                 _button("MOVE RESOURCE", supply_controller.supply_resource_to_network); _button("SUPPLY ASSET", supply_controller.supply_selected_expansion); _button("SUPPLIER CONTRACT", supply_controller.negotiate_supplier_contract); _button("SECURE RESOURCE", supply_controller.secure_resource_rights); _button("BUY MATERIALS", supply_controller.market_buy.bind("materials")); _button("BUY PACKAGING", supply_controller.market_buy.bind("packaging"))
             var corporate = get_node_or_null("../Corporate")
             if corporate != null:
-                _button("RAISE CAPITAL", corporate.raise_capital); _button("BUY BACK SHARES", corporate.buyback_shares); _button("DIVIDEND", corporate.pay_dividend); _button("DEFENSE", corporate.strengthen_defense); _button("ALLY DEFENSE", corporate.strategic_ally_defense); _button("BOARD INFLUENCE", corporate.influence_board); _button("HOSTILE TAKEOVER", corporate.hostile_takeover)
+                _button("CORPORATE STATUS", corporate.show_status); _button("RAISE CAPITAL", corporate.raise_capital); _button("BUY BACK SHARES", corporate.buyback_shares); _button("DIVIDEND", corporate.pay_dividend); _button("DEFENSE", corporate.strengthen_defense); _button("ALLY DEFENSE", corporate.strategic_ally_defense); _button("BOARD INFLUENCE", corporate.influence_board); _button("HOSTILE TAKEOVER", corporate.hostile_takeover)
             _button("LOAN", parent.take_loan); _button("REPAY LOAN", parent.repay_loan); _button("END DAY", parent.advance_day)
         3:
             var region_controller = get_node_or_null("../RegionController")
