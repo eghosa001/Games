@@ -36,9 +36,14 @@ func _advance_competition(day: int) -> void:
         var controls: Dictionary = resource_control.get(name, {})
         var rival_pressure := int(rival.get("supplier_pressure", 0))
         for resource in controls:
-            if int(controls[resource]) > 0:
-                pressure += int(controls[resource]) + rival_pressure
-        # Strategic suppliers periodically make demands when relationships are poor.
+            var control_level := int(controls[resource])
+            if control_level <= 0:
+                continue
+            # Player-owned resource rights directly weaken rival control.
+            var rights := int(supply.contracts.player_resource_rights.get(resource, 0))
+            var effective_control := max(0, control_level - rights)
+            if effective_control > 0:
+                pressure += effective_control + rival_pressure
         if int(rival.get("relationship", 0)) < 0 and day % 6 == 0:
             if int(rival.get("supplier_pressure", 0)) < 3:
                 rival["supplier_pressure"] = int(rival.get("supplier_pressure", 0)) + 1
