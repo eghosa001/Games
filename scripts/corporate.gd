@@ -18,6 +18,9 @@ var last_capital_raise := 0
 var takeover_cooldown := 0
 var last_processed_day := 1
 var investor_name := "Independent Growth Fund"
+var board_influence := 0
+var takeover_wins := 0
+var hostile_attempts := 0
 
 func _ready() -> void:
     parent = get_parent()
@@ -46,7 +49,7 @@ func _recalculate() -> void:
         if r["owned"]: business_value += int(r["cost"]) + int(r["level"]) * 7000
     valuation = max(25000, business_value - int(parent.debt))
     share_price = max(10, int(round(float(valuation) / 1000.0)))
-    control_score = clamp(founder_stake + treasury_shares * 0.5 + float(defense_level) * 3.0 + float(board_trust) * 0.1, 0.0, 100.0)
+    control_score = clamp(founder_stake + treasury_shares * 0.5 + float(defense_level) * 3.0 + float(board_trust) * 0.1 + float(board_influence) * 0.4, 0.0, 100.0)
     var fragmentation := max(0.0, 100.0 - founder_stake)
     var weakness := 0.0
     if parent.cash < valuation * 0.15: weakness += 18.0
@@ -146,6 +149,72 @@ func strategic_ally_defense() -> void:
     parent.message = "Strategic ally committed support. Takeover risk temporarily suppressed."
     parent._log("ALLIANCE DEFENSE: strategic partner backed the company against takeover pressure.")
 
+func influence_board() -> void:
+    _recalculate()
+    if not parent.business_open:
+        parent.message = "Open the business before building a corporate board."
+        return
+    if parent.reputation < 25:
+        parent.message = "Board influence requires 25 reputation."
+        return
+    if board_influence >= 10:
+        parent.message = "Board influence is already at maximum."
+        return
+    var cost := 3500 + board_influence * 1500
+    if parent.cash < cost:
+        parent.message = "Board campaign requires $%s." % parent._money(cost)
+        return
+    parent.cash -= cost
+    board_influence += 1
+    board_trust = min(100, board_trust + 4)
+    parent.reputation += 1
+    _persist()
+    parent.message = "Board influence increased to %d/10." % board_influence
+    parent._log("BOARD CAMPAIGN: secured one additional voting influence for $%s." % parent._money(cost))
+
+func hostile_takeover() -> void:
+    _recalculate()
+    if parent.reputation < 60:
+        parent.message = "Hostile takeovers require 60 reputation. Build your empire first."
+        return
+    if parent.total_profit < 30000 or parent.acquisition_count < 2:
+        parent.message = "You need $30,000 lifetime profit and two acquired assets to challenge a major company."
+        return
+    if takeover_cooldown > 0:
+        parent.message = "The board is cooling down after the last control battle. Wait %d days." % takeover_cooldown
+        return
+    if parent.rivals.rivals.size() <= 0:
+        parent.message = "No major rival is available for a takeover."
+        return
+    var target = parent.rivals.rivals[0]
+    var target_cash := max(25000, int(target["cash"]))
+    var offer := max(25000, int(round(float(target_cash) * 0.38)))
+    if parent.cash < offer:
+        parent.message = "A hostile bid needs $%s in acquisition financing." % parent._money(offer)
+        return
+    hostile_attempts += 1
+    var strength := float(control_score) + float(board_influence * 3) + float(parent.reputation) * 0.25 - float(target_cash) / 50000.0
+    var chance := clamp(0.25 + strength / 260.0 - float(defense_level) * 0.04, 0.18, 0.88)
+    parent.cash -= offer
+    if randf() <= chance:
+        target["cash"] = max(0, int(target["cash"]) - offer)
+        takeover_wins += 1
+        parent.acquisition_count += 1
+        parent.reputation += 12
+        board_trust = min(100, board_trust + 15)
+        board_influence = min(10, board_influence + 2)
+        takeover_cooldown = 12
+        _persist()
+        parent.message = "HOSTILE TAKEOVER SUCCESS: You seized strategic control of %s." % target["name"]
+        parent._log("CORPORATE WAR: hostile bid succeeded against %s for $%s. Your empire now controls a rival asset." % [target["name"], parent._money(offer)])
+    else:
+        parent.reputation = max(0, parent.reputation - 6)
+        board_trust = max(0, board_trust - 10)
+        takeover_cooldown = 8
+        _persist()
+        parent.message = "HOSTILE TAKEOVER FAILED: shareholders rejected the bid."
+        parent._log("CORPORATE WAR: hostile bid failed after shareholders backed the target.")
+
 func process_day() -> void:
     if parent == null: return
     if takeover_cooldown > 0: takeover_cooldown -= 1
@@ -166,10 +235,10 @@ func process_day() -> void:
 
 func get_summary() -> Dictionary:
     _recalculate()
-    return {"valuation":valuation,"share_price":share_price,"founder":founder_stake,"investors":investor_stake,"treasury":treasury_shares,"control":control_score,"risk":takeover_risk,"defense":defense_level,"trust":board_trust,"dividends":dividends_paid}
+    return {"valuation":valuation,"share_price":share_price,"founder":founder_stake,"investors":investor_stake,"treasury":treasury_shares,"control":control_score,"risk":takeover_risk,"defense":defense_level,"trust":board_trust,"influence":board_influence,"takeover_wins":takeover_wins,"trust":board_trust,"dividends":dividends_paid}
 
 func save_state() -> Dictionary:
-    return {"founder_stake":founder_stake,"investor_stake":investor_stake,"treasury_shares":treasury_shares,"investor_cash_raised":investor_cash_raised,"dividends_paid":dividends_paid,"control_score":control_score,"takeover_risk":takeover_risk,"defense_level":defense_level,"board_trust":board_trust,"valuation":valuation,"share_price":share_price,"last_capital_raise":last_capital_raise,"takeover_cooldown":takeover_cooldown,"last_processed_day":last_processed_day}
+    return {"founder_stake":founder_stake,"investor_stake":investor_stake,"treasury_shares":treasury_shares,"investor_cash_raised":investor_cash_raised,"dividends_paid":dividends_paid,"control_score":control_score,"takeover_risk":takeover_risk,"defense_level":defense_level,"board_trust":board_trust,"valuation":valuation,"share_price":share_price,"last_capital_raise":last_capital_raise,"takeover_cooldown":takeover_cooldown,"last_processed_day":last_processed_day,"board_influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts}
 
 func load_state(state: Dictionary) -> void:
     founder_stake = float(state.get("founder_stake",100.0))
@@ -186,6 +255,9 @@ func load_state(state: Dictionary) -> void:
     last_capital_raise = int(state.get("last_capital_raise",0))
     takeover_cooldown = int(state.get("takeover_cooldown",0))
     last_processed_day = int(state.get("last_processed_day",parent.day if parent != null else 1))
+    board_influence = int(state.get("board_influence",0))
+    takeover_wins = int(state.get("takeover_wins",0))
+    hostile_attempts = int(state.get("hostile_attempts",0))
 
 func _persist() -> void:
     var file := FileAccess.open("user://renew_corporate.json", FileAccess.WRITE)
@@ -214,9 +286,11 @@ func _draw() -> void:
     draw_string(ThemeDB.fallback_font, Vector2(870, 421), "Founder: %.0f%%   Investors: %.0f%%" % [s["founder"],s["investors"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d6e0e7"))
     draw_string(ThemeDB.fallback_font, Vector2(870, 443), "Control: %.0f/100   Takeover risk: %.0f/100" % [s["control"],s["risk"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d6e0e7"))
     draw_string(ThemeDB.fallback_font, Vector2(870, 465), "Defense: %d/3   Board trust: %d" % [s["defense"],s["trust"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d6e0e7"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 492), "ENTER Raise   - Buyback   = Dividend", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("9fd3ff"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 513), "; Defense   ' Ally defense", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("9fd3ff"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 538), "Ownership is now a strategic resource.", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("c7d0d7"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 487), "Board influence: %d/10   Takeovers: %d" % [s["influence"],s["takeover_wins"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("d6e0e7"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 512), "ENTER Raise   - Buyback   = Dividend", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("9fd3ff"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 533), "; Defense   ' Ally defense", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("9fd3ff"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 554), "Board influence   |   Hostile bid", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("9fd3ff"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 575), "Ownership is now a strategic resource.", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("c7d0d7"))
 
 func _input(event: InputEvent) -> void:
     if not event is InputEventKey or not event.pressed or event.echo: return
@@ -226,3 +300,5 @@ func _input(event: InputEvent) -> void:
         KEY_EQUAL: pay_dividend()
         KEY_SEMICOLON: strengthen_defense()
         KEY_APOSTROPHE: strategic_ally_defense()
+        KEY_I: influence_board()
+        KEY_H: hostile_takeover()
