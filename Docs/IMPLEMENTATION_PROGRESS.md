@@ -18,13 +18,24 @@
 - Converted `game_state_bridge.gd` into a compatibility bridge only; it no longer owns a second save file.
 - Fixed save/load compatibility so canonical employee rosters remain dictionaries inside `GameState`, while the transitional `main.gd` load path receives an integer employee count instead of accidentally assigning a dictionary to the legacy employee variable.
 
+### Production integration fixed
+
+- `ProductionSystem` now reads the canonical employee productivity metric from `GameState.analytics.employee_average_productivity`.
+- Requested production capacity is converted into staffed production cycles using real workforce productivity.
+- Low-productivity staffing can reduce production throughput; high-productivity staffing can increase it within safe bounds.
+- Production remains compatible with the existing `main.gd` call signature, so this is a safe transitional extraction rather than a broad rewrite.
+- Missing resource keys are now handled safely instead of causing a production crash.
+- Production results now expose `staffing_efficiency` and a failure reason for downstream UI/history systems.
+
 ### Commits
 
-- `d3b2e9e625d178e418d3a64bbaa77f3534c8e4ff` — employee system fix
+- `d3b2e9e625d178e4183d64bbaa77f3534c8e4ff` — employee system fix
 - `3af59b2a09a7b229b617a13c80cef1bca7306b82` — canonical employee preservation in GameState
 - `b834c5898a12b7d8f3f802db45c877e0e6e717dc` — save-system employee preservation
 - `ef4e98b484a711daaf7b14bc1ef945a37fc30a13` — employee runtime integration
 - `c94682be5be4db70ca66e5111ffe382027576843` — legacy employee-count load compatibility
+- `123aec00591ffb927ea01842177fc90e4a312e13` — employee synchronization fix
+- `b4df022a45aedd7700809047c4c2131db90d970b` — production staffing integration
 
 ## Story systems verified
 
@@ -39,7 +50,7 @@ These are **foundation implementations**, not yet the full V1.1 completion gate:
 ## Still incomplete after this pass
 
 - `main.gd` remains transitional and still contains the legacy scalar employee count.
-- Production currently receives the employee count/capacity rather than individual employee productivity and role suitability.
+- Production role suitability, employee assignments and role-specific production bonuses are not yet modeled.
 - Employee hiring UI does not yet expose candidates, roles, salaries, skills or personalities.
 - Employee firing/promotion/training are not yet exposed through the complete mobile UI.
 - Corporate History does not yet receive every important transaction/event type.
@@ -51,7 +62,7 @@ These are **foundation implementations**, not yet the full V1.1 completion gate:
 
 Continue in the master implementation order:
 
-1. complete direct employee integration with hiring and production;
+1. complete direct employee integration with role suitability, hiring and production;
 2. finish history/news runtime event coverage;
 3. refactor Property → Business → Branch boundaries;
 4. extract data-driven balance definitions;
