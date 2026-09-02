@@ -13,11 +13,16 @@ func _process(delta: float) -> void:
     _save_current_game()
 
 func _notification(what: int) -> void:
-    if what == NOTIFICATION_WM_CLOSE_REQUEST:
+    if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_GO_BACK_REQUEST:
         _save_current_game()
-        get_tree().quit()
+        if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_WM_GO_BACK_REQUEST:
+            get_tree().quit()
 
 func _save_current_game() -> void:
     var scene := get_tree().current_scene
-    if scene != null and scene.has_method("save_game"):
-        scene.save_game()
+    if scene == null or not scene.has_method("save_game"):
+        return
+    var previous_message := String(scene.message) if "message" in scene else ""
+    scene.save_game()
+    if "message" in scene:
+        scene.message = previous_message
