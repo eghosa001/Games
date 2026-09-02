@@ -2,43 +2,31 @@
 
 **Start with nothing. Restore what others abandoned. Build businesses. Make allies. Control resources. Challenge giants. Build an empire.**
 
-RENEW is an economic restoration and empire-building simulation game. The core experience is:
+RENEW is an economic restoration and empire-building simulation game. The defining loop is:
 
 **Restoration → Business → Economy → Competition → Alliances → Empire**
 
-## Project vision
+## Current status
 
-The player starts with limited money, one neglected property, no employees, no reputation, and no powerful connections. They restore abandoned properties, turn them into businesses, build supply chains, compete with established corporations, form alliances, control resources, make acquisitions, and eventually expand into a global corporation.
+### Prototype 01 — PLAYABLE RESTORATION LOOP
 
-The game's defining identity is:
+A Godot prototype is now included. It demonstrates the first player-facing loop:
 
-> The business empire game where you physically rebuild the world you eventually control.
+**Inspect → Restore → Upgrade → Operate → Earn**
 
-## Development principles
+### Run it
 
-Every major feature must create at least one of:
+1. Install Godot 4.x.
+2. Clone/download this repository.
+3. Open the repository folder in Godot.
+4. Press **F6/F5** to run the project.
+5. Press **I** to inspect the abandoned warehouse.
+6. Press **R** repeatedly to fund restoration stages.
 
-- a meaningful decision
-- an emotional attachment
-- a reason to return
+## Development roadmap
 
-The game should remain economically strategic rather than becoming a generic military strategy game.
+See `Docs/V1_IMPLEMENTATION.md` for the full implementation plan.
 
-## Planned technology
+## Design principle
 
-- Engine: Unity
-- Version control: GitHub
-- Backend: to be selected during technical planning (e.g. PlayFab/Firebase)
-- Analytics: retention, restoration, business progression, economy, alliances, and monetization
-
-## V1 focus
-
-V1 is intentionally limited to proving the core loop:
-
-**Restore → Business → Revenue**
-
-Planned V1 systems include restoration, three property types, three industries, employees, suppliers, customers, five resources, basic supply/demand, pricing, contracts, three NPC corporations, competitor reactions, company progression, one region, basic alliances, cooperative projects, and simple world events.
-
-## Source design documents
-
-The detailed game vision and master design plan are maintained as project documents and will guide implementation.
+The player should become emotionally attached to businesses because they personally transformed them from neglected assets into valuable operations. Economic competition—not combat—is the primary conflict.
