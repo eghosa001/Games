@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -13,12 +13,20 @@
 [ext_resource path="res://scripts/world_view.gd" type="Script" id="11"]
 [ext_resource path="res://scripts/game_balance.gd" type="Script" id="12"]
 [ext_resource path="res://scripts/tutorial_overlay.gd" type="Script" id="13"]
+[ext_resource path="res://scripts/progression.gd" type="Script" id="14"]
+[ext_resource path="res://scripts/restoration_strategy.gd" type="Script" id="15"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
 
 [node name="GameBalance" type="Node" parent="."]
 script = ExtResource("12")
+
+[node name="RestorationStrategy" type="Node" parent="."]
+script = ExtResource("15")
+
+[node name="Progression" type="Node" parent="."]
+script = ExtResource("14")
 
 [node name="WorldView" type="Node2D" parent="."]
 z_index = -1
