@@ -2,13 +2,15 @@ extends Node
 
 var properties: Array = [
     {"name":"Sunrise Apartments","type":"Residential","condition":42,"value":25000,"restoration_cost":12000,"income":1200,"owned":false,"level":1,"inputs":[]},
-    {"name":"Old Market","type":"Retail","condition":35,"value":32000,"restoration_cost":18000,"income":1800,"owned":false,"level":1,"inputs":["materials"]},
+    {"name":"Old Market","type":"Retail","condition":35,"value":32000,"restoration_cost":18000,"income":1800,"owned":false,"level":1,"inputs":["materials","packaging"]},
     {"name":"Harbor Warehouse","type":"Industrial","condition":28,"value":50000,"restoration_cost":28000,"income":2600,"owned":false,"level":1,"inputs":["materials","fuel"]}
 ]
 
+# Resource ownership uses the same commodity vocabulary as the economy and
+# supply-chain systems so owned sites can actually feed the empire network.
 var resource_sites: Array = [
-    {"name":"Stone Quarry","resource":"stone","owned":false,"level":1,"output":8,"risk":12},
-    {"name":"Timber Camp","resource":"timber","owned":false,"level":1,"output":7,"risk":15},
+    {"name":"Stone Quarry","resource":"materials","owned":false,"level":1,"output":8,"risk":12},
+    {"name":"Timber Camp","resource":"packaging","owned":false,"level":1,"output":7,"risk":15},
     {"name":"Fuel Field","resource":"fuel","owned":false,"level":1,"output":5,"risk":18}
 ]
 
@@ -35,6 +37,7 @@ func _normalize_all() -> void:
         site["output"] = int(site.get("output", 0))
         site["risk"] = int(site.get("risk", 0))
         site["owned"] = bool(site.get("owned", false))
+        site["stock"] = int(site.get("stock", 0))
 
 func get_property_count() -> int:
     return properties.size()
@@ -111,6 +114,7 @@ func generate_resource(index: int) -> Dictionary:
         return {"ok":false,"output":0,"message":"Own the resource site first."}
     var site = resource_sites[index]
     var output: int = int(site["output"]) * int(site["level"])
+    site["stock"] = int(site.get("stock",0)) + output
     return {"ok":true,"output":output,"message":"%s generated %d %s." % [site["name"],output,site["resource"]]}
 
 func upgrade_resource_site(index: int, cash_available: int) -> Dictionary:
