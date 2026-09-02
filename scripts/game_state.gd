@@ -1,14 +1,14 @@
 extends Node
 class_name RenewGameState
 
-const STATE_VERSION := 3
+const STATE_VERSION := 4
 const BUSINESS_ID := "renew_goods"
 const CORE_PROPERTY_ID := "old_warehouse"
 var data: Dictionary = {}
 var dirty := false
 
 func new_game() -> Dictionary:
-    data = {"schema_version":STATE_VERSION,"state_version":STATE_VERSION,"meta":{"created_at":Time.get_datetime_string_from_system(true),"last_saved_at":""},"clock":{"day":1},"player":{"cash":25000,"reputation":0},"company":{"id":BUSINESS_ID,"name":"RENEW Goods","founded_day":1},"properties":{},"businesses":{},"branches":{},"employees":{"next_id":1,"records":{}},"economy":{},"resources":{},"production":{},"supply_chain":{},"contracts":{},"competitors":{},"ownership":{},"finance":{},"alliances":{},"diplomacy":{},"regions":{},"infrastructure":{},"technology":{},"events":{},"progression":{},"history":[],"news":{"editions":[]},"analytics":{},"legacy":{"employee_count":3}}
+    data = {"schema_version":STATE_VERSION,"state_version":STATE_VERSION,"meta":{"created_at":Time.get_datetime_string_from_system(true),"last_saved_at":""},"clock":{"day":1},"player":{"cash":25000,"reputation":0},"company":{"id":BUSINESS_ID,"name":"RENEW Goods","founded_day":1},"properties":{},"businesses":{},"branches":{},"employees":{"next_id":1,"records":{}},"expansion":_default_expansion_state(),"economy":{},"resources":{},"production":{},"supply_chain":{},"contracts":{},"competitors":{},"ownership":{},"finance":{},"alliances":{},"diplomacy":{},"regions":{},"infrastructure":{},"technology":{},"events":{},"progression":{},"history":[],"news":{"editions":[]},"analytics":{},"legacy":{"employee_count":3}}
     _ensure_business_record(); _ensure_property_record(CORE_PROPERTY_ID); dirty=true
     return data.duplicate(true)
 
@@ -47,7 +47,7 @@ func sync_property_runtime(core:Dictionary,property_id:String=CORE_PROPERTY_ID)-
     var record:Dictionary=data["properties"][property_id]
     for key in ["owned","inspected","restoration","stage"]:
         if core.has(key): record[key]=core[key]
-    record["active"]=bool(core.get("business_open",record.get("active",false)))
+    record["active"]=str(core.get("stage",record.get("stage","Neglected"))) == "Operational"
     data["properties"][property_id]=record; dirty=true
 func restore_property_runtime(core:Dictionary,property_id:String=CORE_PROPERTY_ID)->void:
     var record:=get_property(property_id)
@@ -66,6 +66,25 @@ func sync_business_runtime(core:Dictionary,business_id:String=BUSINESS_ID)->void
 func restore_business_runtime(core:Dictionary,business_id:String=BUSINESS_ID)->void:
     var record:=get_business(business_id)
     core["business_open"]=bool(record.get("open",false)); core["capacity_level"]=int(record.get("capacity_level",1)); core["marketing_level"]=int(record.get("marketing_level",0)); core["player_price"]=int(record.get("price",110)); core["finished_goods"]=int(record.get("finished_goods",0)); core["last_sales"]=int(record.get("last_sales",0)); core["total_profit"]=int(record.get("total_profit",0)); core["last_profit"]=int(record.get("last_profit",0)); core["contract_days"]=int(record.get("contract_days",0)); core["contract_bonus"]=int(record.get("contract_bonus",0))
+
+func sync_expansion_runtime(expansion)->void:
+    if expansion == null: return
+    if data.is_empty(): new_game()
+    var state:Dictionary = _default_expansion_state()
+    state["properties"] = expansion.properties.duplicate(true)
+    state["resource_sites"] = expansion.resource_sites.duplicate(true)
+    state["day"] = int(expansion.day); state["cash"] = int(expansion.cash); state["reputation"] = int(expansion.reputation)
+    state["population"] = int(expansion.population); state["restored_count"] = int(expansion.restored_count)
+    state["management_level"] = int(expansion.management_level); state["management_overhead"] = int(expansion.management_overhead)
+    state["selected_index"] = int(expansion.selected_index)
+    data["expansion"] = state; dirty=true
+func restore_expansion_runtime(expansion)->void:
+    if expansion == null: return
+    var state:Dictionary = data.get("expansion",{})
+    if state.is_empty(): return
+    if state.get("properties") is Array: expansion.properties = state["properties"].duplicate(true)
+    if state.get("resource_sites") is Array: expansion.resource_sites = state["resource_sites"].duplicate(true)
+    expansion.day=int(state.get("day",expansion.day)); expansion.cash=int(state.get("cash",expansion.cash)); expansion.reputation=int(state.get("reputation",expansion.reputation)); expansion.population=int(state.get("population",expansion.population)); expansion.restored_count=int(state.get("restored_count",expansion.restored_count)); expansion.management_level=int(state.get("management_level",expansion.management_level)); expansion.management_overhead=int(state.get("management_overhead",expansion.management_overhead)); expansion.selected_index=int(state.get("selected_index",expansion.selected_index)); expansion._normalize_all()
 
 func mark_dirty()->void: dirty=true
 func has_state()->bool: return not data.is_empty()
@@ -86,6 +105,8 @@ func set_value(path:Array,value)->void:
     cursor[path[path.size()-1]]=value; dirty=true
 func clear()->void: data.clear(); dirty=false
 
+func _default_expansion_state()->Dictionary:
+    return {"properties":[],"resource_sites":[],"day":1,"cash":50000,"reputation":10,"population":100,"restored_count":0,"management_level":0,"management_overhead":0,"selected_index":0}
 func _ensure_business_record(business_id:String=BUSINESS_ID)->void:
     if data.is_empty(): return
     if not data.has("businesses") or not (data["businesses"] is Dictionary): data["businesses"]={}
@@ -103,6 +124,7 @@ func _merge_legacy_core(snapshot:Dictionary,core:Dictionary)->void:
     if not snapshot.has("legacy") or not (snapshot["legacy"] is Dictionary): snapshot["legacy"]={}
     snapshot["clock"]["day"]=int(core.get("day",snapshot["clock"].get("day",1))); snapshot["player"]["cash"]=int(core.get("cash",snapshot["player"].get("cash",0))); snapshot["player"]["reputation"]=int(core.get("reputation",snapshot["player"].get("reputation",0))); snapshot["legacy"]["employee_count"]=int(core.get("employees",snapshot["legacy"].get("employee_count",0))); snapshot["finance"]={"debt":int(core.get("debt",0)),"loan_payment":int(core.get("loan_payment",0))}
     _ensure_business_record_in_snapshot(snapshot); _ensure_property_record_in_snapshot(snapshot,CORE_PROPERTY_ID)
+    if not snapshot.has("expansion") or not (snapshot["expansion"] is Dictionary): snapshot["expansion"]=_default_expansion_state()
     var business:Dictionary=snapshot["businesses"][BUSINESS_ID]
     var business_map:={"open":"business_open","capacity_level":"capacity_level","marketing_level":"marketing_level","price":"player_price","finished_goods":"finished_goods","last_sales":"last_sales","last_profit":"last_profit","total_profit":"total_profit","contract_days":"contract_days","contract_bonus":"contract_bonus"}
     for key in business_map.keys():
@@ -112,6 +134,7 @@ func _merge_legacy_core(snapshot:Dictionary,core:Dictionary)->void:
     var property:Dictionary=snapshot["properties"][CORE_PROPERTY_ID]
     for key in ["owned","inspected","restoration","stage"]:
         if core.has(key): property[key]=core[key]
+    property["active"] = str(property.get("stage","Neglected")) == "Operational"
     snapshot["properties"][CORE_PROPERTY_ID]=property
     if not snapshot.has("branches") or not (snapshot["branches"] is Dictionary): snapshot["branches"]={}
     if not snapshot.has("employees") or not (snapshot["employees"] is Dictionary): snapshot["employees"]={"next_id":1,"records":{}}
@@ -124,9 +147,9 @@ func _business_default(key:String):
         "finished_goods": return 0
         "last_sales": return 0
         "last_profit": return 0
-        "total_profit": return 0
-        "contract_days": return 0
-        "contract_bonus": return 0
+        "total_profit": 0
+        "contract_days": 0
+        "contract_bonus": 0
         _: return 0
 func _ensure_business_record_in_snapshot(snapshot:Dictionary)->void:
     if not snapshot.has("businesses") or not (snapshot["businesses"] is Dictionary): snapshot["businesses"]={}
@@ -140,10 +163,9 @@ func _migrate(snapshot:Dictionary)->Dictionary:
     var version:=int(snapshot.get("schema_version",snapshot.get("state_version",1)))
     if version>STATE_VERSION: return {}
     var migrated:=snapshot.duplicate(true)
-    if version<3:
-        var base:=new_game()
-        for key in base.keys():
-            if not migrated.has(key): migrated[key]=base[key]
+    var base:=new_game()
+    for key in base.keys():
+        if not migrated.has(key): migrated[key]=base[key]
     if not migrated.has("employees") or not (migrated["employees"] is Dictionary): migrated["employees"]={"next_id":1,"records":{}}
     if migrated["employees"].has("employees") and not migrated["employees"].has("records"): migrated["employees"]["records"]=migrated["employees"]["employees"]; migrated["employees"].erase("employees")
     if migrated.has("branches") and migrated["branches"] is Array:
@@ -153,6 +175,7 @@ func _migrate(snapshot:Dictionary)->Dictionary:
         migrated["branches"]={"selected":0,"records":branch_records}
     elif not migrated.has("branches") or not (migrated["branches"] is Dictionary): migrated["branches"]={}
     _ensure_business_record_in_snapshot(migrated); _ensure_property_record_in_snapshot(migrated,CORE_PROPERTY_ID)
+    if not migrated.has("expansion") or not (migrated["expansion"] is Dictionary): migrated["expansion"]=_default_expansion_state()
     var business:Dictionary=migrated["businesses"][BUSINESS_ID]
     var business_map:={"open":"business_open","capacity_level":"capacity_level","marketing_level":"marketing_level","price":"player_price","finished_goods":"finished_goods","last_sales":"last_sales","last_profit":"last_profit","total_profit":"total_profit","contract_days":"contract_days","contract_bonus":"contract_bonus"}
     for key in business_map.keys():
@@ -161,6 +184,7 @@ func _migrate(snapshot:Dictionary)->Dictionary:
     var property:Dictionary=migrated["properties"][CORE_PROPERTY_ID]
     for key in ["owned","inspected","restoration","stage"]:
         if not property.has(key) and migrated.has(key): property[key]=migrated[key]
+    property["active"] = str(property.get("stage","Neglected")) == "Operational"
     migrated["properties"][CORE_PROPERTY_ID]=property
     if not migrated.has("history") or not (migrated["history"] is Array): migrated["history"]=[]
     if not migrated.has("news") or not (migrated["news"] is Dictionary): migrated["news"]={"editions":[]}
