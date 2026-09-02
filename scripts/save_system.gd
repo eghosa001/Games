@@ -4,7 +4,7 @@ class_name RenewSaveSystem
 const SAVE_PATH := "user://renew_save.json"
 const BACKUP_PATH := "user://renew_save.backup.json"
 const TEMP_PATH := "user://renew_save.tmp.json"
-const SCHEMA_VERSION := 4
+const SCHEMA_VERSION := 5
 
 static func save_game(state: Dictionary) -> bool:
     var payload := state.duplicate(true)
@@ -17,11 +17,11 @@ static func save_game(state: Dictionary) -> bool:
     if history_system != null:
         _sync_history_from_game(history_system)
         payload["history_system"] = history_system.capture_state()
-
+    var news_system = _news_system()
+    if news_system != null:
+        payload["news_system"] = news_system.capture_state()
     var game_state = _game_state()
-    if game_state != null:
-        game_state.capture(payload)
-
+    if game_state != null: game_state.capture(payload)
     var json := JSON.stringify(payload)
     var temp := FileAccess.open(TEMP_PATH, FileAccess.WRITE)
     if temp == null: return false
@@ -43,7 +43,6 @@ static func load_game() -> Dictionary:
     if state.is_empty(): return {}
     state = _migrate(state)
     if state.is_empty(): return {}
-
     var employee_system = _employee_system()
     if employee_system != null:
         if state.has("employee_system"): employee_system.restore_state(state["employee_system"])
@@ -53,6 +52,9 @@ static func load_game() -> Dictionary:
     if history_system != null:
         if state.has("history_system"): history_system.restore_state(state["history_system"])
         else: history_system.ingest_activity_log(state.get("log_lines", []), int(state.get("day", 1)))
+    var news_system = _news_system()
+    if news_system != null and state.has("news_system"):
+        news_system.restore_state(state["news_system"])
     var game_state = _game_state()
     if game_state != null: game_state.restore(state)
     return state
@@ -78,7 +80,7 @@ static func _read_dictionary(path: String) -> Dictionary:
 static func _migrate(state: Dictionary) -> Dictionary:
     var schema := int(state.get("schema_version", 0))
     if schema == SCHEMA_VERSION: return state
-    if schema >= 0 and schema <= 3:
+    if schema >= 0 and schema <= 4:
         var migrated := state.duplicate(true)
         migrated["schema_version"] = SCHEMA_VERSION
         migrated["state_version"] = 2
@@ -105,3 +107,10 @@ static func _history_system():
     var root = tree.get_root()
     if root == null: return null
     return root.get_node_or_null("RenewHistorySystem")
+
+static func _news_system():
+    var tree = Engine.get_main_loop()
+    if tree == null: return null
+    var root = tree.get_root()
+    if root == null: return null
+    return root.get_node_or_null("RenewNewsSystem")
