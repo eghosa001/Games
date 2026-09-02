@@ -1,7 +1,7 @@
 extends Node2D
 
 # RENEW Corporate Layer - ownership, capital, control and takeover defense.
-# This layer runs beside the main economy and uses the parent's cash/reputation.
+# Runs beside the main economy and uses the parent's cash/reputation.
 
 var parent
 var founder_stake := 100.0
@@ -82,7 +82,6 @@ func buyback_shares() -> void:
     parent.cash -= cost
     investor_stake -= amount
     founder_stake += amount
-    treasury_shares = max(0.0, treasury_shares - amount * 0.25)
     board_trust = min(100, board_trust + 2)
     parent.message = "Bought back %.0f%% of company for $%s. Founder stake: %.0f%%." % [amount, parent._money(cost), founder_stake]
     parent._log("BUYBACK: %.0f%% equity repurchased for $%s." % [amount, parent._money(cost)])
@@ -104,12 +103,12 @@ func pay_dividend() -> void:
 
 func strengthen_defense() -> void:
     _recalculate()
+    if defense_level >= 3:
+        parent.message = "Corporate defense is already at maximum strength."
+        return
     var cost := 7000 * (defense_level + 1)
     if parent.cash < cost:
         parent.message = "Corporate defense requires $%s." % parent._money(cost)
-        return
-    if defense_level >= 3:
-        parent.message = "Corporate defense is already at maximum strength."
         return
     parent.cash -= cost
     defense_level += 1
@@ -128,7 +127,7 @@ func strategic_ally_defense() -> void:
         parent.message = "Build a real alliance first; an ordinary relationship is not enough."
         return
     if parent.cash < 5000:
-        parent.message = "Defensive partnership requires $5,000." 
+        parent.message = "Defensive partnership requires $5,000."
         return
     parent.cash -= 5000
     board_trust = min(100, board_trust + 12)
@@ -143,17 +142,16 @@ func process_day() -> void:
     _recalculate()
     if investor_stake > 0 and parent.day % 7 == 0:
         board_trust = min(100, board_trust + 1)
-    if takeover_risk >= 65.0 and takeover_cooldown <= 0 and parent.day % 5 == 0:
-        if parent.rivals.rivals.size() > 0:
-            var giant = parent.rivals.rivals[0]
-            var pressure := max(0, int(float(takeover_risk) * 700))
-            if int(giant["cash"]) > pressure:
-                giant["cash"] = max(0, int(giant["cash"]) - pressure / 4)
-                takeover_cooldown = 5
-                board_trust = max(0, board_trust - 8)
-                parent.reputation = max(0, parent.reputation - 2)
-                parent._log("TAKEOVER ATTEMPT: The Giant offered shareholders a premium bid. Control is under pressure.")
-                parent.message = "TAKEOVER ALERT: The Giant is targeting your company. Defend your control."
+    if takeover_risk >= 65.0 and takeover_cooldown <= 0 and parent.day % 5 == 0 and parent.rivals.rivals.size() > 0:
+        var giant = parent.rivals.rivals[0]
+        var pressure := max(0, int(float(takeover_risk) * 700))
+        if int(giant["cash"]) > pressure:
+            giant["cash"] = max(0, int(giant["cash"]) - pressure / 4)
+            takeover_cooldown = 5
+            board_trust = max(0, board_trust - 8)
+            parent.reputation = max(0, parent.reputation - 2)
+            parent._log("TAKEOVER ATTEMPT: The Giant offered shareholders a premium bid. Control is under pressure.")
+            parent.message = "TAKEOVER ALERT: The Giant is targeting your company. Defend your control."
 
 func get_summary() -> Dictionary:
     _recalculate()
@@ -188,14 +186,14 @@ func _draw() -> void:
     draw_string(ThemeDB.fallback_font, Vector2(870, 421), "Founder: %.0f%%   Investors: %.0f%%" % [s["founder"],s["investors"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d6e0e7"))
     draw_string(ThemeDB.fallback_font, Vector2(870, 443), "Control: %.0f/100   Takeover risk: %.0f/100" % [s["control"],s["risk"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d6e0e7"))
     draw_string(ThemeDB.fallback_font, Vector2(870, 465), "Defense: %d/3   Board trust: %d" % [s["defense"],s["trust"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d6e0e7"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 492), "E  Raise capital     -  Buy back shares", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("9fd3ff"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 513), "=  Pay dividend      ;  Strengthen defense", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("9fd3ff"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 534), "'  Ally defense      [Control is your real empire power]", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("c7d0d7"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 492), "ENTER Raise   - Buyback   = Dividend", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("9fd3ff"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 513), "; Defense   ' Ally defense", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("9fd3ff"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 538), "Ownership is now a strategic resource.", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("c7d0d7"))
 
 func _input(event: InputEvent) -> void:
     if not event is InputEventKey or not event.pressed or event.echo: return
     match event.keycode:
-        KEY_E: raise_capital()
+        KEY_ENTER, KEY_KP_ENTER: raise_capital()
         KEY_MINUS: buyback_shares()
         KEY_EQUAL: pay_dividend()
         KEY_SEMICOLON: strengthen_defense()
