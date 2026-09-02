@@ -23,6 +23,8 @@ func _ready() -> void:
     var next := Button.new(); next.text = "Next Rival ›"; next.pressed.connect(_next_rival); box.add_child(next)
     for entry in [["TRADE", "trade"], ["SUPPLY", "supply"], ["RESEARCH", "research"], ["DEFENSE", "defense"], ["NON-AGGRESSION", "non_aggression"], ["INVESTMENT", "investment"], ["TERRITORY", "territory"], ["INFRASTRUCTURE", "infrastructure"], ["JOINT VENTURE", "joint_venture"]]:
         var button := Button.new(); button.text = "Propose %s (30d)" % entry[0]; button.pressed.connect(_propose.bind(entry[1])); box.add_child(button)
+    var accept := Button.new(); accept.text = "Accept Incoming Treaty"; accept.pressed.connect(_accept_incoming); box.add_child(accept)
+    var cancel := Button.new(); cancel.text = "Cancel Active Treaty"; cancel.pressed.connect(_cancel_active); box.add_child(cancel)
     var refresh := Button.new(); refresh.text = "Refresh Treaty Ledger"; refresh.pressed.connect(_refresh); box.add_child(refresh)
     summary = Label.new(); summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; box.add_child(summary)
     _refresh()
@@ -52,6 +54,27 @@ func _propose(treaty_type: String) -> void:
     var result = diplomacy.propose_treaty("player", str(rival.get("id", "")), treaty_type, terms, 30)
     summary.text = str(result.get("message", "Proposal submitted."))
     _refresh()
+
+func _accept_incoming() -> void:
+    var rival := _rival()
+    var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
+    if rival.is_empty() or diplomacy == null: return
+    for treaty in diplomacy.get_party_treaties("player", false):
+        if treaty.get("status") == "proposed" and treaty.get("party_b") == "player" and treaty.get("party_a") == rival.get("id"):
+            var result = diplomacy.accept_treaty(str(treaty["id"]), "player")
+            summary.text = str(result.get("message", "Treaty accepted.")); _refresh(); return
+    summary.text = "No incoming proposal from this rival."
+
+func _cancel_active() -> void:
+    var rival := _rival()
+    var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
+    if rival.is_empty() or diplomacy == null: return
+    for treaty in diplomacy.get_party_treaties("player", true):
+        var other := str(treaty.get("party_b", "")) if treaty.get("party_a") == "player" else str(treaty.get("party_a", ""))
+        if other == str(rival.get("id", "")):
+            var result = diplomacy.cancel_treaty(str(treaty["id"]), "player", "player cancellation")
+            summary.text = str(result.get("message", "Treaty cancelled.")); _refresh(); return
+    summary.text = "No active treaty with this rival."
 
 func _refresh() -> void:
     var rival := _rival()
