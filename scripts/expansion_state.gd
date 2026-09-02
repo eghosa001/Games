@@ -144,7 +144,7 @@ static func record_resource_upgrade(state, index: int, cost: int, output_delta: 
     state.set_value(EXPANSION_PATH, expansion)
     return true
 
-static func record_resource_generation(state, index: int) -> Dictionary:
+static func record_resource_generation(state, index: int, _legacy_output: int = -1) -> Dictionary:
     var expansion := ensure(state)
     var sites: Array = expansion["resource_sites"]
     if index < 0 or index >= sites.size() or not (sites[index] is Dictionary):
