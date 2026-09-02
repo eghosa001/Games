@@ -114,6 +114,10 @@ func _refresh() -> void:
             _button("SUPPLY DEAL", parent.propose_supply_deal)
             _button("CUSTOMER DEAL", parent.propose_customer_partnership)
             _button("ACQUIRE ASSET", parent.negotiate_selected_acquisition)
+            var supply_controller = get_node_or_null("../SupplyChainController")
+            if supply_controller != null:
+                _button("SUPPLIER CONTRACT", supply_controller.negotiate_supplier_contract)
+                _button("SECURE RESOURCE", supply_controller.secure_resource_rights)
             _button("LOAN", parent.take_loan)
             _button("REPAY LOAN", parent.repay_loan)
             _button("END DAY", parent.advance_day)
