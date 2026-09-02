@@ -79,7 +79,7 @@ func set_value(path: Array, value) -> void:
         return
     if data.is_empty():
         new_game()
-    var cursor := data
+    var cursor: Dictionary = data
     for i in range(path.size() - 1):
         var key = path[i]
         if not cursor.has(key) or not (cursor[key] is Dictionary):
@@ -93,10 +93,12 @@ func clear() -> void:
     dirty = false
 
 func _merge_legacy_core(snapshot: Dictionary, core: Dictionary) -> void:
-    # Keep the current prototype's flat keys during migration so old gameplay
-    # code can continue loading while systems move into the canonical tree.
     for key in core.keys():
         snapshot[key] = core[key]
+    if not snapshot.has("clock") or not (snapshot["clock"] is Dictionary):
+        snapshot["clock"] = {}
+    if not snapshot.has("player") or not (snapshot["player"] is Dictionary):
+        snapshot["player"] = {}
     snapshot["clock"]["day"] = int(core.get("day", snapshot["clock"].get("day", 1)))
     snapshot["player"]["cash"] = int(core.get("cash", snapshot["player"].get("cash", 0)))
     snapshot["player"]["reputation"] = int(core.get("reputation", snapshot["player"].get("reputation", 0)))
@@ -104,6 +106,8 @@ func _merge_legacy_core(snapshot: Dictionary, core: Dictionary) -> void:
         "debt": int(core.get("debt", 0)),
         "loan_payment": int(core.get("loan_payment", 0))
     }
+    if not snapshot.has("businesses") or not (snapshot["businesses"] is Dictionary):
+        snapshot["businesses"] = {}
     snapshot["businesses"]["renew_goods"] = {
         "open": bool(core.get("business_open", false)),
         "capacity_level": int(core.get("capacity_level", 1)),
@@ -116,24 +120,20 @@ func _migrate(snapshot: Dictionary) -> Dictionary:
     if not (snapshot is Dictionary) or snapshot.is_empty():
         return {}
     var version := int(snapshot.get("schema_version", snapshot.get("state_version", 1)))
+    if version > STATE_VERSION:
+        return {}
     var migrated := snapshot.duplicate(true)
-    if version < 2:
-        migrated["state_version"] = 2
     if version < 3:
         var base := new_game()
         for key in base.keys():
             if not migrated.has(key):
                 migrated[key] = base[key]
-        migrated["schema_version"] = 3
-        migrated["state_version"] = 3
-        if not migrated.has("meta") or not (migrated["meta"] is Dictionary):
-            migrated["meta"] = base["meta"]
-        if not migrated["history"] is Array:
-            migrated["history"] = []
-        if not migrated["news"] is Dictionary:
-            migrated["news"] = {"editions": []}
-    if version > STATE_VERSION:
-        return {}
     migrated["schema_version"] = STATE_VERSION
     migrated["state_version"] = STATE_VERSION
+    if not migrated.has("meta") or not (migrated["meta"] is Dictionary):
+        migrated["meta"] = {"created_at": "", "last_saved_at": ""}
+    if not migrated.has("history") or not (migrated["history"] is Array):
+        migrated["history"] = []
+    if not migrated.has("news") or not (migrated["news"] is Dictionary):
+        migrated["news"] = {"editions": []}
     return migrated
