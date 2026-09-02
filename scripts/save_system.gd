@@ -28,6 +28,8 @@ static func save_game(state: Dictionary) -> bool:
     if contract_system != null: payload["contract_system"] = contract_system.capture_state()
     var alliance_system = _alliance_system()
     if alliance_system != null: payload["alliance_system"] = alliance_system.capture_state()
+    var diplomacy_system = _diplomacy_system()
+    if diplomacy_system != null: payload["diplomacy_system"] = diplomacy_system.capture_state()
     var game_state = _game_state()
     if game_state != null: payload["game_state"] = game_state.capture(payload)
     var json := JSON.stringify(payload)
@@ -75,6 +77,8 @@ static func load_game() -> Dictionary:
     if contract_system != null and state.has("contract_system"): contract_system.restore_state(state["contract_system"])
     var alliance_system = _alliance_system()
     if alliance_system != null and state.has("alliance_system"): alliance_system.restore_state(state["alliance_system"])
+    var diplomacy_system = _diplomacy_system()
+    if diplomacy_system != null and state.has("diplomacy_system"): diplomacy_system.restore_state(state["diplomacy_system"])
     if game_state != null: game_state.capture(state)
     return state
 
@@ -121,3 +125,4 @@ static func _production_system(): return _root_node("RenewProductionSystem")
 static func _simulation_system(): return _root_node("RenewSimulationSystem")
 static func _contract_system(): return _root_node("RenewContractSystem")
 static func _alliance_system(): return _root_node("RenewAllianceSystem")
+static func _diplomacy_system(): return _root_node("RenewDiplomacySystem")
