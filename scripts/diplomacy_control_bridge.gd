@@ -19,6 +19,13 @@ func _process(_delta: float) -> void:
     if diplomacy == null: return
     _sync(diplomacy, day)
 
+func _ownership():
+    var root = get_node_or_null("/root/RenewOwnershipSystem")
+    if root != null: return root
+    var tree := Engine.get_main_loop()
+    var scene = tree.get_current_scene() if tree != null else null
+    return scene.get_node_or_null("OwnershipSystem") if scene != null else null
+
 func _sync(diplomacy, day: int) -> void:
     var active_ids: Dictionary = {}
     for treaty in diplomacy.list_treaties("active"):
@@ -39,18 +46,15 @@ func _apply_treaty(treaty: Dictionary, day: int) -> void:
     if not applied.has(id): applied[id] = {}
     var state: Dictionary = applied[id]
     match str(treaty.get("type", "")):
-        "territory":
-            _apply_territory(treaty, state)
-        "joint_venture":
-            _apply_joint_venture(treaty, state)
-        "defense":
-            state["defense_active"] = true
+        "territory": _apply_territory(treaty, state)
+        "joint_venture": _apply_joint_venture(treaty, state)
+        "defense": state["defense_active"] = true
     state["last_day"] = day
     applied[id] = state
 
 func _apply_territory(treaty: Dictionary, state: Dictionary) -> void:
     if bool(state.get("materialized", false)): return
-    var ownership = get_node_or_null("/root/RenewOwnershipSystem")
+    var ownership = _ownership()
     if ownership == null: return
     var terms: Dictionary = treaty.get("terms", {})
     var territory_id := str(terms.get("territory_id", ""))
@@ -77,7 +81,7 @@ func _apply_territory(treaty: Dictionary, state: Dictionary) -> void:
 
 func _apply_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
     if bool(state.get("materialized", false)): return
-    var ownership = get_node_or_null("/root/RenewOwnershipSystem")
+    var ownership = _ownership()
     if ownership == null: return
     var terms: Dictionary = treaty.get("terms", {})
     var venture_name := str(terms.get("venture_name", "JV %s" % treaty.get("id", "")))
