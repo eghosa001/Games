@@ -26,6 +26,8 @@ func _process(_delta: float) -> void:
 func _build_ui() -> void:
     root = Control.new()
     root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    # The full-screen root is only a container. It must never consume touches.
+    root.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(root)
 
     var top := ColorRect.new()
@@ -33,18 +35,21 @@ func _build_ui() -> void:
     top.set_anchors_preset(Control.PRESET_TOP_WIDE)
     top.position.y = 8
     top.size.y = 54
+    top.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(top)
 
     tabs = HBoxContainer.new()
     tabs.position = Vector2(12, 12)
     tabs.size = Vector2(720, 46)
     tabs.add_theme_constant_override("separation", 8)
+    tabs.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(tabs)
     for i in range(tab_names.size()):
         var button := Button.new()
         button.text = tab_names[i]
         button.custom_minimum_size = Vector2(150, 44)
         button.focus_mode = Control.FOCUS_NONE
+        button.mouse_filter = Control.MOUSE_FILTER_STOP
         button.pressed.connect(_set_tab.bind(i))
         tabs.add_child(button)
 
@@ -53,6 +58,7 @@ func _build_ui() -> void:
     status_label.size = Vector2(500, 44)
     status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
     status_label.add_theme_font_size_override("font_size", 15)
+    status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(status_label)
 
     var bottom := ColorRect.new()
@@ -60,6 +66,7 @@ func _build_ui() -> void:
     bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
     bottom.position.y = -138
     bottom.size.y = 138
+    bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(bottom)
 
     action_scroll = ScrollContainer.new()
@@ -69,6 +76,7 @@ func _build_ui() -> void:
     action_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     action_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
     action_scroll.focus_mode = Control.FOCUS_NONE
+    action_scroll.mouse_filter = Control.MOUSE_FILTER_STOP
     root.add_child(action_scroll)
 
     actions = GridContainer.new()
@@ -76,6 +84,7 @@ func _build_ui() -> void:
     actions.custom_minimum_size = Vector2(1200, 0)
     actions.add_theme_constant_override("h_separation", 10)
     actions.add_theme_constant_override("v_separation", 8)
+    actions.mouse_filter = Control.MOUSE_FILTER_IGNORE
     action_scroll.add_child(actions)
 
 func _set_tab(index: int) -> void:
@@ -92,6 +101,7 @@ func _button(text: String, callback: Callable) -> void:
     b.text = text
     b.custom_minimum_size = Vector2(225, 48)
     b.focus_mode = Control.FOCUS_NONE
+    b.mouse_filter = Control.MOUSE_FILTER_STOP
     b.pressed.connect(callback)
     actions.add_child(b)
 
