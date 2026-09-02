@@ -25,9 +25,8 @@ var owned := false
 var inspected := false
 var restoration := 0
 var stage := "Neglected"
+# Runtime compatibility projections. Persistent business truth is GameState.
 var business_open := false
-# Transitional compatibility projection. EmployeeController/GameState is the
-# authoritative workforce; this scalar is synchronized from actual records.
 var employees := 3
 var capacity_level := 1
 var marketing_level := 0
@@ -52,6 +51,9 @@ var stages = [["Neglected",0,0],["Cleaned",20,1500],["Repaired",40,3000],["Rebui
 
 func _ready() -> void:
     randomize()
+    var game_state = _game_state()
+    if game_state != null and not game_state.has_state(): game_state.new_game()
+    if game_state != null: game_state.restore_business_runtime(self)
     rivals._normalize()
     expansion.unlock_from_reputation(reputation)
     districts.update_unlocks(reputation)
@@ -94,12 +96,15 @@ func _input(event: InputEvent) -> void:
             KEY_F9: load_game()
 
 func inspect_property() -> void:
-    inspected = true; message = "Inspection complete: cheap entry, strong demand, moderate renovation risk."; _log("INSPECTION: acquisition $5,000; restoration estimate $26,500.")
+    inspected = true; _sync_property("old_warehouse", {"inspected":true})
+    message = "Inspection complete: cheap entry, strong demand, moderate renovation risk."; _log("INSPECTION: acquisition $5,000; restoration estimate $26,500.")
 func acquire_property() -> void:
     if not inspected: message = "Inspect the property first."; return
     if owned: message = "You already own the warehouse."; return
     if cash < 5000: message = "Not enough cash."; return
-    cash -= 5000; owned = true; reputation += 2; message = "Acquired Old Warehouse. Now restore it into an asset."; _log("ACQUIRED: Old Warehouse for $5,000.")
+    cash -= 5000; owned = true; reputation += 2
+    _sync_property("old_warehouse", {"owned":true,"active":false,"restoration":restoration,"stage":stage})
+    message = "Acquired Old Warehouse. Now restore it into an asset."; _log("ACQUIRED: Old Warehouse for $5,000.")
 func restore_property() -> void:
     if not owned: message = "Acquire the property first."; return
     if stage == "Operational": message = "Restoration is complete."; return
@@ -109,27 +114,29 @@ func restore_property() -> void:
     if idx >= stages.size(): return
     var cost: int = stages[idx][2]
     if cash < cost: message = "Need $%s for the next stage." % _money(cost); return
-    cash -= cost; restoration = stages[idx][1]; stage = stages[idx][0]; reputation += 2; _log("RESTORATION: %s (-$%s)." % [stage,_money(cost)])
-    if restoration >= 100: stage = "Operational"; reputation += 8; message = "RESTORATION COMPLETE. Your neglected property is now productive capital."; _log("The district noticed the transformation.")
+    cash -= cost; restoration = stages[idx][1]; stage = stages[idx][0]; reputation += 2
+    _sync_property("old_warehouse", {"owned":true,"restoration":restoration,"stage":stage,"active":false})
+    _log("RESTORATION: %s (-$%s)." % [stage,_money(cost)])
+    if restoration >= 100:
+        stage = "Operational"; reputation += 8
+        _sync_property("old_warehouse", {"restoration":100,"stage":"Operational","active":true})
+        message = "RESTORATION COMPLETE. Your neglected property is now productive capital."; _log("The district noticed the transformation.")
     else: message = "%s complete. The building is visibly improving." % stage
 func open_business() -> void:
     if not owned or stage != "Operational": message = "Finish restoration first."; return
     if business_open: message = "RENEW Goods is already open."; return
     if cash < 3000: message = "Need $3,000 working capital."; return
-    cash -= 3000; business_open = true; reputation += 2
+    cash -= 3000; reputation += 2; _set_business("open", true); business_open = true
     var employee_controller = _employee_controller()
     if employee_controller != null:
         for employee in employee_controller.employees.active_employees():
-            if str(employee.get("assignment_type", "")) == "renew_goods":
-                employee_controller.assign(str(employee["id"]), "branch", "branch_0")
+            if str(employee.get("assignment_type", "")) == "renew_goods": employee_controller.assign(str(employee["id"]), "branch", "branch_0")
         employees = employee_controller.assigned_count("branch", "branch_0")
     message = "RENEW Goods is open. Build inventory, win customers and reinvest."; _log("OPENED: RENEW Goods with %d employees." % employees)
 func buy_inputs() -> void:
     if not business_open: message = "Open the business first."; return
     var resources := ["materials","packaging","fuel"]
-    var deal := rivals.deal_bonus(selected_rival)
-    var pressure := rivals.supplier_pressure(selected_district)
-    var total := 0
+    var deal := rivals.deal_bonus(selected_rival); var pressure := rivals.supplier_pressure(selected_district); var total := 0
     for resource in resources: total += int(economy.quote(resource,12,supplier_choice)["cost"])
     total = int(round(total * (1.0 - float(deal["discount"]))) + pressure * 120)
     if cash < total: message = "You need $%s for this supply order." % _money(total); return
@@ -142,63 +149,51 @@ func buy_inputs() -> void:
     _log("SUPPLY ORDER: 12 units of every input; district pressure %d." % pressure); message = "Inputs delivered. Supplier pressure: %d." % pressure
 func produce_goods() -> void:
     if not business_open: message = "Open the business first."; return
-    var employee_controller = _employee_controller()
-    var staffing := employees
-    if employee_controller != null:
-        staffing = employee_controller.effective_staffing()
+    var employee_controller = _employee_controller(); var staffing := employees
+    if employee_controller != null: staffing = employee_controller.effective_staffing()
     var result = production.produce(economy, staffing+capacity_level-1)
     if not result["ok"]: message = "Production stopped: inputs are too low."; return
-    finished_goods += int(result["output"]); message = "Produced %d goods at quality %d." % [result["output"],result["quality"]]; _log("PRODUCTION: %d goods; quality %d; staffing %.2fx." % [result["output"],result["quality"],float(result.get("staffing_efficiency",1.0))])
+    var output := int(result["output"]); finished_goods += output; _set_business("finished_goods", finished_goods)
+    message = "Produced %d goods at quality %d." % [output,result["quality"]]; _log("PRODUCTION: %d goods; quality %d; staffing %.2fx." % [output,result["quality"],float(result.get("staffing_efficiency",1.0))])
 func hire_employee() -> void:
     if not business_open: message = "Open the business first."; return
     var employee_controller = _employee_controller()
     if employee_controller == null: message = "Employee system is not ready."; return
-    var current_staff := employee_controller.assigned_count("branch", "branch_0")
-    var cost := 1200 + current_staff*250
+    var current_staff := employee_controller.assigned_count("branch", "branch_0"); var cost := 1200 + current_staff*250
     if cash < cost: message = "Hiring requires $%s." % _money(cost); return
     var result = employee_controller.hire_for_assignment("Worker", "branch", "branch_0")
-    if not bool(result.get("ok", false)):
-        message = str(result.get("message", "Hiring failed.")); return
-    cash -= cost
-    employees = employee_controller.assigned_count("branch", "branch_0")
-    reputation += 1
-    _log("HIRING: %s joined RENEW Goods as a persistent employee (-$%s)." % [str(result["employee"]["name"]),_money(cost)])
-    message = "%s hired for RENEW Goods. Staff: %d." % [str(result["employee"]["name"]),employees]
+    if not bool(result.get("ok", false)): message = str(result.get("message", "Hiring failed.")); return
+    cash -= cost; employees = employee_controller.assigned_count("branch", "branch_0"); reputation += 1
+    _log("HIRING: %s joined RENEW Goods as a persistent employee (-$%s)." % [str(result["employee"]["name"]),_money(cost)]); message = "%s hired for RENEW Goods. Staff: %d." % [str(result["employee"]["name"]),employees]
 func upgrade_business() -> void:
     if not business_open: message = "Open the business first."; return
     var cost := 4500*capacity_level
     if cash < cost: message = "Capacity upgrade requires $%s." % _money(cost); return
-    cash -= cost; capacity_level += 1; reputation += 2; _log("UPGRADE: RENEW Goods capacity level %d." % capacity_level); message = "Production capacity upgraded to level %d." % capacity_level
+    cash -= cost; capacity_level += 1; reputation += 2; _set_business("capacity_level",capacity_level)
+    _log("UPGRADE: RENEW Goods capacity level %d." % capacity_level); message = "Production capacity upgraded to level %d." % capacity_level
 func marketing_campaign() -> void:
     if not business_open: message = "Open the business first."; return
     var cost := 1800+marketing_level*700
     if cash < cost: message = "Marketing requires $%s." % _money(cost); return
-    cash -= cost; marketing_level += 1; reputation += 2; _log("MARKETING: campaign %d launched (-$%s)." % [marketing_level,_money(cost)]); message = "Brand strength increased."
+    cash -= cost; marketing_level += 1; reputation += 2; _set_business("marketing_level",marketing_level)
+    _log("MARKETING: campaign %d launched (-$%s)." % [marketing_level,_money(cost)]); message = "Brand strength increased."
 func change_price() -> void:
     if not business_open: message = "Open the business first."; return
     player_price += 10
     if player_price > 160: player_price = 80
-    message = "Selling price is now $%s." % _money(player_price)
+    _set_business("price",player_price); message = "Selling price is now $%s." % _money(player_price)
 
 func advance_day() -> void:
     if not business_open: message = "There is no operating business yet."; return
     if finished_goods < 5: message = "Produce at least 5 goods before ending the day."; return
-    var rival_price: int = int(rivals.rivals[0]["price"])
-    var alliance := rivals.alliance_bonus(selected_rival)
-    var deal := rivals.deal_bonus(selected_rival)
-    var pressure := rivals.district_pressure(selected_district)
-    var price_factor := clamp(float(rival_price-player_price)/50.0,-0.55,0.75)
-    var district_mult := districts.business_multiplier("Consumer Goods")
+    var rival_price: int = int(rivals.rivals[0]["price"]); var alliance := rivals.alliance_bonus(selected_rival); var deal := rivals.deal_bonus(selected_rival); var pressure := rivals.district_pressure(selected_district)
+    var price_factor := clamp(float(rival_price-player_price)/50.0,-0.55,0.75); var district_mult := districts.business_multiplier("Consumer Goods")
     var demand := clamp(int((55.0*(0.7+price_factor)+reputation*0.7+marketing_level*8+float(alliance["sales"])*40.0+float(deal["sales"])*45.0)*(district_mult-pressure)),5,100)
-    var units := min(demand,finished_goods)
-    var sales: int = units*player_price
-    var overhead := 650+capacity_level*100
-    var contract_income := contract_bonus if contract_days > 0 else 0
-    # EmployeeController charges company payroll once per day. Core business
-    # profit therefore excludes wages here to avoid double charging.
+    var units := min(demand,finished_goods); var sales: int = units*player_price; var overhead := 650+capacity_level*100; var contract_income := contract_bonus if contract_days > 0 else 0
     var profit: int = sales+contract_income-overhead
     cash += profit; finished_goods -= units; last_sales = sales+contract_income; last_profit = profit; total_profit += profit
-    if contract_days > 0: contract_days -= 1
+    _set_business_values({"finished_goods":finished_goods,"last_sales":last_sales,"last_profit":last_profit,"total_profit":total_profit})
+    if contract_days > 0: contract_days -= 1; _set_business("contract_days",contract_days)
     if profit >= 0: reputation += 1
     else: reputation = max(0,reputation-1)
     if debt > 0:
@@ -215,11 +210,9 @@ func advance_day() -> void:
     var empire = expansion.operate_day(); cash += int(empire["profit"])
     if int(empire["businesses"]) > 0: _log("EMPIRE: %d businesses generated $%s net." % [empire["businesses"],_money(int(empire["profit"]))])
     expansion.unlock_from_reputation(reputation); districts.update_unlocks(reputation)
-    _log("DAY %d: %d sold | sales $%s | core profit $%s | district %s." % [day,units,_money(sales),_money(profit),districts.current()["name"]])
-    message = "Day %d closed. %d sold; core profit $%s; empire profit $%s." % [day,units,_money(profit),_money(int(empire["profit"]))]
+    _log("DAY %d: %d sold | sales $%s | core profit $%s | district %s." % [day,units,_money(sales),_money(profit),districts.current()["name"]]); message = "Day %d closed. %d sold; core profit $%s; empire profit $%s." % [day,units,_money(profit),_money(int(empire["profit"]))]
 
-func cycle_supplier() -> void:
-    supplier_choice = (supplier_choice+1)%3; message = "Supplier tier %d selected: lower price tiers trade reliability for savings." % (supplier_choice+1)
+func cycle_supplier() -> void: supplier_choice = (supplier_choice+1)%3; message = "Supplier tier %d selected: lower price tiers trade reliability for savings." % (supplier_choice+1)
 func select_rival(index:int)->void:
     if index<0 or index>=rivals.rivals.size(): return
     selected_rival=index; relationship=int(rivals.rivals[index]["relationship"]); message="Selected %s."%rivals.rivals[index]["name"]
@@ -247,7 +240,8 @@ func sign_contract()->void:
     if not business_open: message="Open a business before signing contracts."; return
     if contract_days>0: message="An active customer contract is already running."; return
     if reputation<10: message="Major customers need at least 10 reputation."; return
-    contract_days=5; contract_bonus=900+reputation*20; reputation+=2; _log("CONTRACT: five-day customer supply deal signed for $%s/day."%_money(contract_bonus)); message="Contract signed. Deliver every day for guaranteed revenue."
+    contract_days=5; contract_bonus=900+reputation*20; reputation+=2; _set_business_values({"contract_days":contract_days,"contract_bonus":contract_bonus})
+    _log("CONTRACT: five-day customer supply deal signed for $%s/day."%_money(contract_bonus)); message="Contract signed. Deliver every day for guaranteed revenue."
 func take_loan()->void:
     if debt>0: message="Repay the current loan before borrowing again."; return
     var amount:=20000+reputation*300; debt=amount; loan_payment=int(ceil(float(amount)/20.0)); cash+=amount; _log("BANK: borrowed $%s. Daily repayment is $%s."%[_money(amount),_money(loan_payment)]); message="Loan approved. Growth is faster, but default will hurt your company."
@@ -271,25 +265,67 @@ func acquire_rival_asset()->void:
     if not result["ok"]: message=result["message"]; return
     cash-=int(result["cost"]); acquisition_count+=1; reputation+=5; message=result["message"]; _log("ACQUISITION: %s for $%s."%[result["asset"],_money(int(result["cost"]))])
 func save_game()->void:
-    var payload=SaveSystem.new().save_game(self)
-    message="Game saved." if payload.get("ok",false) else "Save failed: %s"%payload.get("message","unknown error")
+    var result=SaveSystem.save_game(self)
+    message="Game saved." if result.get("ok",false) else "Save failed: %s"%result.get("message","unknown error")
 func load_game()->void:
-    var result=SaveSystem.new().load_game()
+    var result=SaveSystem.load_game()
     if result.get("ok",false):
         for key in result.keys():
             if key=="ok" or key=="message": continue
             if key=="employees": continue
             if has_variable(key): set(key,result[key])
         if result.has("employees"): employees=int(result["employees"])
+        var state=_game_state()
+        if state!=null: state.restore_business_runtime(self)
         message="Game loaded."; _log("SAVE: restored successfully.")
     else: message="Load failed: %s"%result.get("message","unknown error")
 
-func _employee_controller():
-    return get_node_or_null("EmployeeController")
+func _game_state():
+    var tree=Engine.get_main_loop()
+    if tree==null: return null
+    var root=tree.get_root()
+    if root==null: return null
+    return root.get_node_or_null("RenewGameState")
 
-func _money(value:int)->String:
-    return str(value)
+func _set_business(key:String,value)->void:
+    var state=_game_state()
+    if state!=null: state.set_business_value(key,value)
+    else: return
+    # Keep the legacy projection synchronized for existing UI and simulation consumers.
+    match key:
+        "open": business_open=bool(value)
+        "capacity_level": capacity_level=int(value)
+        "marketing_level": marketing_level=int(value)
+        "price": player_price=int(value)
+        "finished_goods": finished_goods=int(value)
+        "last_sales": last_sales=int(value)
+        "last_profit": last_profit=int(value)
+        "total_profit": total_profit=int(value)
+        "contract_days": contract_days=int(value)
+        "contract_bonus": contract_bonus=int(value)
 
+func _set_business_values(values:Dictionary)->void:
+    var state=_game_state()
+    if state!=null: state.set_business_values(values)
+    for key in values.keys():
+        match key:
+            "open": business_open=bool(values[key])
+            "capacity_level": capacity_level=int(values[key])
+            "marketing_level": marketing_level=int(values[key])
+            "price": player_price=int(values[key])
+            "finished_goods": finished_goods=int(values[key])
+            "last_sales": last_sales=int(values[key])
+            "last_profit": last_profit=int(values[key])
+            "total_profit": total_profit=int(values[key])
+            "contract_days": contract_days=int(values[key])
+            "contract_bonus": contract_bonus=int(values[key])
+
+func _sync_property(property_id:String,values:Dictionary)->void:
+    var state=_game_state()
+    if state!=null: state.set_property_values(property_id,values)
+
+func _employee_controller(): return get_node_or_null("EmployeeController")
+func _money(value:int)->String: return str(value)
 func _log(text:String)->void:
     log_lines.push_front(text)
     if log_lines.size()>14: log_lines.pop_back()
