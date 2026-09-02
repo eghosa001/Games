@@ -2,6 +2,42 @@
 
 > Verified implementation work on `feature/foundation-v11-implementation`.
 
+## 2026-09-02 — Canonical resource mutation coverage
+
+### Fixed in this pass
+
+- Extended `scripts/expansion_state.gd` with `RenewExpansionState.record_resource_generation()`.
+- Resource generation now has an atomic canonical mutation path that validates ownership, calculates output from site output × level, increments site stock, and records the resulting stock in `GameState.expansion.resource_sites`.
+- Added `tests/test_expansion_state.gd` covering canonical expansion/property/resource mutations and state restore.
+- The regression coverage verifies property purchase, property upgrade, resource-site purchase, resource generation, resource-site upgrade, and persistence after `GameState.capture()` → `clear()` → `restore()`.
+- The test also verifies the existing economic deltas: property level/income, resource output/risk, cash deduction, restored property state and generated resource stock.
+
+### Architectural result
+
+Expansion resource generation now has an explicit durable-state mutation API instead of requiring callers to directly edit a runtime resource-site dictionary.
+
+**GameState** remains the durable authority.
+
+**RenewExpansionState** is the controlled mutation boundary.
+
+**Expansion** remains the transitional runtime/UI projection until its public resource and daily-operation methods are routed through the boundary.
+
+### Verified commits
+
+- `bf4700feb13999b000619780549c494879cdbc21` — add canonical resource generation mutation
+- `c29c4233a2481989139c2549854174967ca2005d` — add canonical expansion mutation regression test
+
+### Verification status
+
+The new test source was statically reviewed. A Godot executable is not available in the current environment, so runtime Godot test execution was **not** claimed as passing.
+
+### Next integration step
+
+- Route `Expansion.buy_resource_site()` and `upgrade_resource_site()` through the canonical resource mutation boundary.
+- Route `Expansion.generate_resource()`/`harvest_resource()` through `record_resource_generation()`.
+- Route `Expansion.operate_day()` through canonical day/economic mutations without double-applying cash, day or population.
+- Add legacy-save migration assertions to the expansion regression suite.
+
 ## 2026-09-02 — Expansion purchase/upgrade mutation integration
 
 ### Fixed in this pass
@@ -105,7 +141,8 @@ Main scalar fields remain compatibility projections rather than the intended dur
 
 ### Still incomplete
 
-- Expansion resource-site purchase/upgrade, resource generation and operating-day mutation still need canonical routing.
+- Expansion resource-site purchase/upgrade and operating-day mutation still need canonical routing.
+- `Expansion.generate_resource()` still needs to delegate to the new canonical generation API during runtime integration.
 - The full property catalog is not yet represented canonically; the core boundary currently covers the Old Warehouse lifecycle while expansion assets live under the Expansion container.
 - `main.gd` remains a large orchestration object and still owns runtime compatibility projections and several simulation rules.
 - Employee management UI is incomplete.
