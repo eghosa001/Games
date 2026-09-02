@@ -23,6 +23,9 @@ func run()->void:
     check(float(scarce_state["production_factor"])<1.0,"Scarcity reduces production factor")
 
     var production=Production.new()
+    economy.resources["materials"]["stock"]=100
+    economy.resources["packaging"]["stock"]=140
+    economy.resources["fuel"]["stock"]=180
     production.system.inventory={"materials":100,"packaging":100,"fuel":100,"goods":0}
     var normal_run=production.produce(economy,10)
     economy.resources["materials"]["stock"]=1
