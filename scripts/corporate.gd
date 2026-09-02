@@ -21,6 +21,7 @@ var investor_name := "Independent Growth Fund"
 var board_influence := 0
 var takeover_wins := 0
 var hostile_attempts := 0
+var milestone_level := 0
 
 func _ready() -> void:
     parent = get_parent()
@@ -56,6 +57,37 @@ func _recalculate() -> void:
     if parent.debt > valuation * 0.45: weakness += 20.0
     if parent.reputation < 30: weakness += 8.0
     takeover_risk = clamp(fragmentation * 0.65 + weakness - defense_level * 12.0 - board_trust * 0.12, 0.0, 100.0)
+
+func _milestone_target(level: int) -> String:
+    match level:
+        1: return "Regional Powerhouse"
+        2: return "Corporate Challenger"
+        3: return "Industry Player"
+        4: return "Giant Killer"
+        5: return "RENEW Empire"
+    return "Starting Company"
+
+func _check_milestones() -> void:
+    var reached := milestone_level
+    if valuation >= 100000: reached = max(reached, 1)
+    if parent.reputation >= 50 and parent.acquisition_count >= 2: reached = max(reached, 2)
+    if valuation >= 250000 and parent.acquisition_count >= 4: reached = max(reached, 3)
+    if takeover_wins >= 1: reached = max(reached, 4)
+    if valuation >= 500000 and parent.reputation >= 100 and takeover_wins >= 2: reached = max(reached, 5)
+    if reached > milestone_level:
+        milestone_level = reached
+        parent.message = "MILESTONE UNLOCKED: %s. Your company has entered a new tier of economic power." % _milestone_target(milestone_level)
+        parent._log("MILESTONE: %s reached." % _milestone_target(milestone_level))
+        _persist()
+
+func show_status() -> void:
+    _recalculate()
+    var next := milestone_level + 1
+    var next_name := _milestone_target(next)
+    if next > 5:
+        parent.message = "ENDGAME: You have reached the RENEW Empire tier. Keep expanding, defending control and challenging the giants."
+    else:
+        parent.message = "CORPORATE STATUS: %s | Valuation $%s | Control %.0f%% | Risk %.0f%% | Next: %s." % [_milestone_target(milestone_level), parent._money(valuation), control_score, takeover_risk, next_name]
 
 func raise_capital() -> void:
     _recalculate()
@@ -207,6 +239,7 @@ func hostile_takeover() -> void:
         _persist()
         parent.message = "HOSTILE TAKEOVER SUCCESS: You seized strategic control of %s." % target["name"]
         parent._log("CORPORATE WAR: hostile bid succeeded against %s for $%s. Your empire now controls a rival asset." % [target["name"], parent._money(offer)])
+        _check_milestones()
     else:
         parent.reputation = max(0, parent.reputation - 6)
         board_trust = max(0, board_trust - 10)
@@ -231,14 +264,15 @@ func process_day() -> void:
             parent.reputation = max(0, parent.reputation - 2)
             parent._log("TAKEOVER ATTEMPT: The Giant offered shareholders a premium bid. Control is under pressure.")
             parent.message = "TAKEOVER ALERT: The Giant is targeting your company. Defend your control."
+    _check_milestones()
     _persist()
 
 func get_summary() -> Dictionary:
     _recalculate()
-    return {"valuation":valuation,"share_price":share_price,"founder":founder_stake,"investors":investor_stake,"treasury":treasury_shares,"control":control_score,"risk":takeover_risk,"defense":defense_level,"trust":board_trust,"influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"dividends":dividends_paid}
+    return {"valuation":valuation,"share_price":share_price,"founder":founder_stake,"investors":investor_stake,"treasury":treasury_shares,"control":control_score,"risk":takeover_risk,"defense":defense_level,"trust":board_trust,"influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"dividends":dividends_paid,"milestone":milestone_level,"milestone_name":_milestone_target(milestone_level)}
 
 func save_state() -> Dictionary:
-    return {"founder_stake":founder_stake,"investor_stake":investor_stake,"treasury_shares":treasury_shares,"investor_cash_raised":investor_cash_raised,"dividends_paid":dividends_paid,"control_score":control_score,"takeover_risk":takeover_risk,"defense_level":defense_level,"board_trust":board_trust,"valuation":valuation,"share_price":share_price,"last_capital_raise":last_capital_raise,"takeover_cooldown":takeover_cooldown,"last_processed_day":last_processed_day,"board_influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts}
+    return {"founder_stake":founder_stake,"investor_stake":investor_stake,"treasury_shares":treasury_shares,"investor_cash_raised":investor_cash_raised,"dividends_paid":dividends_paid,"control_score":control_score,"takeover_risk":takeover_risk,"defense_level":defense_level,"board_trust":board_trust,"valuation":valuation,"share_price":share_price,"last_capital_raise":last_capital_raise,"takeover_cooldown":takeover_cooldown,"last_processed_day":last_processed_day,"board_influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"milestone_level":milestone_level}
 
 func load_state(state: Dictionary) -> void:
     founder_stake = float(state.get("founder_stake",100.0))
@@ -258,6 +292,7 @@ func load_state(state: Dictionary) -> void:
     board_influence = int(state.get("board_influence",0))
     takeover_wins = int(state.get("takeover_wins",0))
     hostile_attempts = int(state.get("hostile_attempts",0))
+    milestone_level = int(state.get("milestone_level",0))
 
 func _persist() -> void:
     var file := FileAccess.open("user://renew_corporate.json", FileAccess.WRITE)
@@ -287,3 +322,4 @@ func _draw() -> void:
     draw_string(ThemeDB.fallback_font, Vector2(870, 443), "Control %.0f | Risk %.0f | Defense L%d" % [s["control"], s["risk"], s["defense"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("8ee6a8"))
     draw_string(ThemeDB.fallback_font, Vector2(870, 465), "Board trust %d | Influence %d/10" % [s["trust"], s["influence"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("b7d7ff"))
     draw_string(ThemeDB.fallback_font, Vector2(870, 487), "Takeover wins %d | Attempts %d" % [s["takeover_wins"], s["hostile_attempts"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("ffad8f"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 509), "Tier %d: %s" % [s["milestone"], s["milestone_name"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("ffd27f"))
