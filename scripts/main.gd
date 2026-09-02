@@ -1,6 +1,6 @@
 extends Node2D
 
-# RENEW Prototype 04 - restoration, business empire and economic competition
+# RENEW Prototype 05 - restoration, business empire, supply chains and resource ownership
 const Economy = preload("res://scripts/economy.gd")
 const Rivals = preload("res://scripts/competitors.gd")
 const Events = preload("res://scripts/events.gd")
@@ -226,6 +226,13 @@ func select_rival(index: int) -> void:
     selected_rival = index; relationship = int(rivals.rivals[index]["relationship"])
     message = "Selected %s." % rivals.rivals[index]["name"]
 
+func select_expansion(index: int) -> void:
+    if index < 0 or index >= expansion.properties.size(): return
+    selected_expansion = index
+    var p = expansion.properties[index]
+    message = "Selected expansion: %s." % p["name"]
+    _log("EXPANSION SELECTED: %s." % p["name"])
+
 func improve_alliance() -> void:
     var text := rivals.improve_relationship(selected_rival)
     relationship = int(rivals.rivals[selected_rival]["relationship"])
@@ -285,7 +292,7 @@ func acquire_rival_asset() -> void:
     message = "Acquisition complete. A competitor's foothold is now yours."
 
 func save_game() -> void:
-    var state := {"cash":cash,"reputation":reputation,"day":day,"debt":debt,"loan_payment":loan_payment,"owned":owned,"inspected":inspected,"restoration":restoration,"stage":stage,"business_open":business_open,"employees":employees,"capacity_level":capacity_level,"marketing_level":marketing_level,"player_price":player_price,"finished_goods":finished_goods,"last_sales":last_sales,"last_profit":last_profit,"total_profit":total_profit,"contract_days":contract_days,"contract_bonus":contract_bonus,"acquisition_count":acquisition_count,"supplier_choice":supplier_choice,"expansion":expansion.properties,"rivals":rivals.rivals,"resources":economy.resources}
+    var state := {"cash":cash,"reputation":reputation,"day":day,"debt":debt,"loan_payment":loan_payment,"owned":owned,"inspected":inspected,"restoration":restoration,"stage":stage,"business_open":business_open,"employees":employees,"capacity_level":capacity_level,"marketing_level":marketing_level,"player_price":player_price,"finished_goods":finished_goods,"last_sales":last_sales,"last_profit":last_profit,"total_profit":total_profit,"contract_days":contract_days,"contract_bonus":contract_bonus,"acquisition_count":acquisition_count,"supplier_choice":supplier_choice,"expansion":expansion.properties,"resource_sites":expansion.resource_sites,"management_level":expansion.management_level,"management_overhead":expansion.management_overhead,"rivals":rivals.rivals,"resources":economy.resources}
     message = "Game saved." if SaveSystem.save_game(state) else "Save failed."
 
 func load_game() -> void:
@@ -294,9 +301,14 @@ func load_game() -> void:
     for key in ["cash","reputation","day","debt","loan_payment","owned","inspected","restoration","stage","business_open","employees","capacity_level","marketing_level","player_price","finished_goods","last_sales","last_profit","total_profit","contract_days","contract_bonus","acquisition_count","supplier_choice"]:
         if state.has(key): set(key,state[key])
     if state.has("expansion"): expansion.properties = state["expansion"]
+    if state.has("resource_sites"): expansion.resource_sites = state["resource_sites"]
+    if state.has("management_level"): expansion.management_level = int(state["management_level"])
+    if state.has("management_overhead"): expansion.management_overhead = int(state["management_overhead"])
+    expansion._normalize_all()
     if state.has("rivals"): rivals.rivals = state["rivals"]
     if state.has("resources"): economy.resources = state["resources"]
-    message = "Game loaded."; _log("SAVE: Previous company and empire state restored.")
+    expansion.unlock_from_reputation(reputation)
+    message = "Game loaded."; _log("SAVE: Previous company, empire and resource state restored.")
 
 func _log(text: String) -> void:
     log_lines.push_front("D%d  %s" % [day,text])
@@ -339,7 +351,7 @@ func _draw() -> void:
     draw_string(ThemeDB.fallback_font,Vector2(455,145),"EMPLOYEES %d   CAPACITY %d"%[employees,capacity_level],HORIZONTAL_ALIGNMENT_LEFT,-1,17,Color.WHITE)
     draw_string(ThemeDB.fallback_font,Vector2(455,174),"GOODS %d   PRICE $%d"%[finished_goods,player_price],HORIZONTAL_ALIGNMENT_LEFT,-1,17,Color("8ee6a8"))
     draw_string(ThemeDB.fallback_font,Vector2(455,203),"MARKETING %d"%marketing_level,HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color("b7d7ff"))
-    draw_string(ThemeDB.fallback_font,Vector2(455,234),"B buy inputs  T supplier  P price",HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("c6d0d8"))
+    draw_string(ThemeDB.fallback_font,Vector2(455,234),"S buy inputs  T supplier  P price",HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("c6d0d8"))
     draw_string(ThemeDB.fallback_font,Vector2(455,257),"B produce  H hire  U capacity  M marketing",HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("c6d0d8"))
     draw_string(ThemeDB.fallback_font,Vector2(455,280),"N end day  K contract  J loan  V repay",HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("c6d0d8"))
     draw_string(ThemeDB.fallback_font,Vector2(455,303),"Contract: %d days | $%s/day"%[contract_days,_money(contract_bonus)],HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("f2d27a"))
