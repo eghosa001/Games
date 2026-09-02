@@ -16,6 +16,8 @@ static func save_game(state: Dictionary) -> bool:
     if history_system != null:
         _sync_history_from_game(history_system)
         payload["history_system"] = history_system.capture_state()
+    var legacy_system = _legacy_system()
+    if legacy_system != null: payload["corporate_legacy_system"] = legacy_system.capture_state()
     var news_system = _news_system()
     if news_system != null: payload["news_system"] = news_system.capture_state()
     var finance_system = _finance_system()
@@ -83,6 +85,8 @@ static func load_game() -> Dictionary:
     if history_system != null:
         if state.has("history_system"): history_system.restore_state(state["history_system"])
         else: history_system.ingest_activity_log(state.get("log_lines", []), int(state.get("day", 1)))
+    var legacy_system = _legacy_system()
+    if legacy_system != null and state.has("corporate_legacy_system"): legacy_system.restore_state(state["corporate_legacy_system"])
     var news_system = _news_system()
     if news_system != null and state.has("news_system"): news_system.restore_state(state["news_system"])
     var finance_system = _finance_system()
@@ -159,6 +163,7 @@ static func _root_node(name: String):
 static func _game_state(): return _root_node("RenewGameState")
 static func _employee_system(): return _root_node("RenewEmployeeSystem")
 static func _history_system(): return _root_node("RenewHistorySystem")
+static func _legacy_system(): return _root_node("RenewCorporateLegacy")
 static func _news_system(): return _root_node("RenewNewsSystem")
 static func _finance_system(): return _root_node("RenewFinanceSystem")
 static func _production_system(): return _root_node("RenewProductionSystem")
