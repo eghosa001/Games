@@ -15,7 +15,9 @@
 - Added a canonical `GameState.expansion` boundary containing expansion properties, resource sites, management state, day, population and selected expansion.
 - Added migration defaults for expansion state so older saves receive a valid expansion container without losing existing state.
 - Updated `SaveSystem` to capture the live expansion runtime into GameState at save time and restore it at load time.
-- Removed the unsafe `main.gd` load-time `has_variable()` dependency from the save path. SaveSystem now applies an explicit, known compatibility projection to Main and returns only the small result contract Main expects. Godot's Object API provides `get()`, `set()`, `get_property_list()` and `has_method()`, but not a generic `has_variable()` method. citeturn1view0
+- Removed the unsafe `main.gd` load-time `has_variable()` dependency from the save path. SaveSystem now applies an explicit compatibility projection to Main and returns only the result contract Main expects.
+- Synchronized expansion runtime with the core Main economy around expansion actions and the daily empire simulation. This prevents `expansion.gd`'s legacy `cash`, `reputation`, and `day` fields from drifting away from the actual player state during the transitional architecture.
+- On load, expansion is restored after the canonical core state and then synchronized back to the current Main projection.
 - Kept Branch persistence separate from Business, Property and Expansion persistence.
 - Preserved the existing persistent employee records and role-aware workforce integration.
 
@@ -35,13 +37,14 @@ Main scalar fields remain compatibility projections rather than the intended dur
 
 ### Verified commits from this pass
 
-- `dbea6c6f2ed4b449b5ddf0d8356e39ababa491c3` — canonical expansion state boundary and property activity correction
-- `74638ebda5ff032d23b7a063b45ec6a7a4722771` — safe explicit Main save/load projection and expansion rehydration
-- `fd2783cc7050a7b9d2c761db2f9cfd6f6725a8ed` — previous canonical business save synchronization documentation
+- `dbea6c6f2ed4b449b5ddf0d8356e39ababa491c3` — GameState schema v4, canonical expansion container, migration and property activity correction
+- `74638ebda5ff032d23b7a063b45ec6a7a4722771` — SaveSystem expansion capture/restore and safe explicit Main projection
+- `830a96ed8f67871ec3d0802448543f5b1b150b95` — synchronize expansion runtime with Main's authoritative cash/reputation/day around gameplay mutations
+- `5d80ff29a7724b8516fe62fccfb17f5997ee617f` — documentation update before this latest documentation correction
 
 ### Still incomplete
 
-- Expansion mutations are still executed by `expansion.gd`; canonical GameState is currently the save/load authority, not yet the sole mutation authority. The next step is routing expansion purchase, upgrade, resource generation and operating-day mutations through GameState setters.
+- Expansion mutations are still executed by `expansion.gd`; canonical GameState is currently the save/load authority, not yet the sole mutation authority. The next step is routing expansion purchase, upgrade, resource generation and operating-day mutations through canonical mutation APIs.
 - The full property catalog is not yet represented canonically; the core boundary currently covers the Old Warehouse lifecycle while expansion assets live under the Expansion container.
 - `main.gd` remains a large orchestration object and still owns runtime compatibility projections and several simulation rules.
 - Employee management UI is incomplete.
