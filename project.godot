@@ -9,6 +9,9 @@ RenewGameState="*res://scripts/game_state.gd"
 RenewEmployeeSystem="*res://scripts/employee_system.gd"
 RenewHistorySystem="*res://scripts/history_system.gd"
 RenewNewsSystem="*res://scripts/news_system.gd"
+RenewFinanceSystem="*res://scripts/finance_system.gd"
+RenewProductionSystem="*res://scripts/production_system.gd"
+RenewSimulationSystem="*res://scripts/simulation_system.gd"
 
 [display]
 window/size/viewport_width=1280
