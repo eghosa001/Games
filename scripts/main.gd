@@ -285,7 +285,9 @@ func buy_expansion()->void:
     _sync_expansion_runtime()
     if not ExpansionState.record_purchase(state,selected_expansion,cost,5):
         message="Expansion purchase could not be committed."; return
-    cash-=cost; reputation+=3
+    var canonical_expansion:Dictionary=state.get_value(["expansion"],{})
+    cash=int(canonical_expansion.get("cash",cash))
+    reputation=int(canonical_expansion.get("reputation",reputation))
     state.restore_expansion_runtime(expansion)
     _sync_expansion_runtime()
     message="%s restored and acquired." % site.get("name","Expansion")
@@ -300,7 +302,9 @@ func upgrade_expansion()->void:
     _sync_expansion_runtime()
     if not ExpansionState.record_property_upgrade(state,selected_expansion,cost,500,5000):
         message="Expansion upgrade could not be committed."; return
-    cash-=cost
+    var canonical_expansion:Dictionary=state.get_value(["expansion"],{})
+    cash=int(canonical_expansion.get("cash",cash))
+    reputation=int(canonical_expansion.get("reputation",reputation))
     state.restore_expansion_runtime(expansion)
     _sync_expansion_runtime()
     message="%s upgraded to level %d."%[site.get("name","Expansion"),int(expansion.get_property(selected_expansion).get("level",1))]
@@ -319,6 +323,9 @@ func buy_expansion_resource() -> void:
     var cost := int(site.get("cost", 0))
     if not ExpansionState.record_resource_purchase(state, selected_expansion, cost, 2):
         message = "Resource-site purchase could not be committed."; return
+    var canonical_expansion: Dictionary = state.get_value(["expansion"], {})
+    cash = int(canonical_expansion.get("cash", cash))
+    reputation = int(canonical_expansion.get("reputation", reputation))
     state.restore_expansion_runtime(expansion)
     _sync_expansion_runtime()
     message = "%s acquired." % site.get("name", "Resource site")
@@ -337,6 +344,9 @@ func upgrade_expansion_resource() -> void:
     var cost := 9000 * int(site.get("level", 1))
     if not ExpansionState.record_resource_upgrade(state, selected_expansion, cost, 2, -1):
         message = "Resource-site upgrade could not be committed."; return
+    var canonical_expansion: Dictionary = state.get_value(["expansion"], {})
+    cash = int(canonical_expansion.get("cash", cash))
+    reputation = int(canonical_expansion.get("reputation", reputation))
     state.restore_expansion_runtime(expansion)
     _sync_expansion_runtime()
     message = "%s upgraded to level %d." % [site.get("name", "Resource site"), int(expansion.get_resource_site(selected_expansion).get("level", 1))]
