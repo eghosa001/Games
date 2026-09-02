@@ -18,6 +18,8 @@ RENEW is an economic strategy game about rebuilding neglected assets and gradual
 - [x] Corporate valuation can safely value expansion properties and resource sites.
 - [x] Rival companies expand, adjust pricing/supplier pressure, negotiate alliances and strategic deals, and create acquisition pressure.
 - [x] Supply contracts, resource rights and regional logistics are exposed through the mobile strategy layer.
+- [x] Rival retaliation and competitive status feedback are implemented.
+- [x] Rotating region-specific opportunities are implemented.
 
 ## Gameplay architecture
 
@@ -41,34 +43,46 @@ Relationship is a strategic resource. Improving trust can unlock alliances and s
 Owned resource sites generate physical stock. Stock can be moved into the company network and allocated to owned expansion businesses. External market purchases remain available when internal supply is insufficient.
 
 ### 6. Regions
-Regional demand, logistics, competition, resource specialization, infrastructure and trade corridors determine where expansion is attractive and where it is risky.
+Regional demand, logistics, competition, resource specialization, infrastructure and trade corridors determine where expansion is attractive and where it is risky. Rotating regional opportunities add reasons to revisit established markets.
 
 ### 7. Corporate control
 Capital raises exchange ownership for growth capital. Buybacks restore founder control. Board influence and defense reduce takeover vulnerability. Strategic allies can defend the company. Once the player has enough profit, reputation and acquisitions, hostile takeover becomes an endgame path.
 
-## Full regression test — do this after pulling the latest `main`
+## Player-facing completion pass
 
-Do **one connected run**, not isolated button tests:
+- [x] First-business milestone is visibly celebrated.
+- [x] First profit and expansion milestones are visibly celebrated.
+- [x] Competitor acquisition and hostile-takeover victories receive major celebration feedback.
+- [x] Daily operating results show revenue, profit/loss, cumulative profit and contract status.
+- [x] A contextual next-goal prompt is always visible on the mobile HUD.
+- [x] Celebration feedback uses lightweight Godot tweens rather than blocking gameplay.
+- [x] Very small-screen responsive layout remains part of the mobile HUD.
+- [x] The celebration layer observes state only and does not mutate the simulation.
+
+## Automated verification
+
+The Godot workflow runs regression, extended-function and edge-case suites. The latest celebration-overlay integration completed successfully, including project import and all three test stages.
+
+## Final V1 acceptance run
 
 1. RESTORE: choose Budget/Standard/Premium → Inspect → Acquire → restore all stages → Open Business.
 2. BUSINESS: Buy Inputs → Produce → Hire/Upgrade/Marketing/Price → End Day repeatedly.
-3. MARKET: continue until an event appears → choose an aggressive/balanced/defensive response → continue and observe the changed input economics.
-4. EMPIRE: cycle to an expansion → acquire it → upgrade it.
-5. SUPPLY: acquire a resource site → generate/move resource → supply the selected expansion asset.
-6. RIVALS: cycle rival → improve relationship → attempt an alliance → try the appropriate supply/customer deal.
-7. WORLD: change district/region → establish → infrastructure → trade corridor → dispatch goods.
-8. CORPORATE: raise capital → board influence/defense → buyback or dividend → use alliance defense when an alliance exists.
-9. SAVE/LOAD: save, change several systems, load, and verify the company returns coherently.
-10. End with a long touch-only session and watch Godot output for **new** parse/runtime errors.
+3. MARKET: continue until an event appears → choose an aggressive/balanced/defensive response → observe changed input economics.
+4. EMPIRE: acquire and upgrade an expansion asset.
+5. SUPPLY: acquire a resource site → generate/move resource → supply an expansion asset.
+6. RIVALS: improve relationship → attempt alliance → use an appropriate deal → acquire an asset when ready.
+7. WORLD: change region → establish → infrastructure → trade corridor → dispatch goods.
+8. CORPORATE: raise capital → influence board/defense → buyback or dividend → use alliance defense.
+9. SAVE/LOAD: save, change systems, load, and verify coherent state.
+10. Play a long touch-only session and check Godot output for new parse/runtime errors.
 
-### Known harmless Android warning
-`Image format RGBAFloat not supported by hardware, converting to RGBAHalf` is a graphics compatibility conversion warning. It is not a GDScript parse error.
+## Remaining production work beyond V1
 
-## Remaining V1 polish
+V1 gameplay systems and player-facing feedback are now complete enough for a full manual acceptance playthrough. Remaining work should be treated as production polish rather than foundational V1 implementation:
 
-- Better visual feedback for major corporate victories/defeats.
-- More distinct region-specific opportunities.
-- More rival retaliation after acquisitions.
-- Broader resource network and production chains.
-- Responsive HUD layout for very small screens.
-- Audio, animation, milestone celebrations and final economy balancing.
+- final economy tuning from real play sessions
+- authored visual assets and richer environment presentation
+- final sound/music package
+- additional content packs and more businesses/resources
+- performance profiling on a range of Android devices
+- release packaging, store metadata and monetization decisions
