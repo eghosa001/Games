@@ -7,6 +7,12 @@ var resources := {
     "fuel": {"price": 30, "stock": 180, "base": 30}
 }
 
+var market_multipliers := {
+    "materials": 1.0,
+    "packaging": 1.0,
+    "fuel": 1.0
+}
+
 var suppliers := {
     "materials": [
         {"name":"Harbor Supply Co.","reliability":82,"markup":1.00},
@@ -30,11 +36,20 @@ func supplier_for(resource: String, choice: int = 0) -> Dictionary:
     var list: Array = suppliers[resource]
     return list[clamp(choice, 0, list.size() - 1)]
 
+func set_market_modifier(resource: String, multiplier: float) -> void:
+    if market_multipliers.has(resource):
+        market_multipliers[resource] = clamp(multiplier, 0.65, 1.60)
+
+func clear_market_modifiers() -> void:
+    for resource in market_multipliers:
+        market_multipliers[resource] = 1.0
+
 func quote(resource: String, amount: int, choice: int = 0) -> Dictionary:
     var supplier := supplier_for(resource, choice)
     if supplier.is_empty(): return {"ok":false,"cost":0,"supplier":"Unknown"}
-    var cost := int(round(float(resources[resource]["price"]) * amount * float(supplier["markup"])))
-    return {"ok":true,"cost":cost,"supplier":supplier["name"],"reliability":supplier["reliability"]}
+    var market_factor := float(market_multipliers.get(resource, 1.0))
+    var cost := int(round(float(resources[resource]["price"]) * amount * float(supplier["markup"]) * market_factor))
+    return {"ok":true,"cost":cost,"supplier":supplier["name"],"reliability":supplier["reliability"],"market_factor":market_factor}
 
 func buy_resource(resource: String, amount: int, cash: int, choice: int = 0) -> Dictionary:
     var q := quote(resource, amount, choice)
