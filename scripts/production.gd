@@ -5,10 +5,9 @@ var recipe := {"materials": 1, "packaging": 1, "fuel": 1}
 var output_per_cycle := 2
 var quality := 60
 
-# Staffing is read from canonical GameState analytics rather than from the
-# legacy integer employee count. This keeps ProductionSystem independent from
-# employee identities while still making individual employee performance
-# affect real production output.
+# Production now consumes the role-aware metric published by EmployeeController.
+# Technician/Worker/Supervisor/Manager staffing is therefore more valuable to a
+# factory than assigning a sales or accounting specialist to the production line.
 func produce(economy: RenewEconomy, cycles: int) -> Dictionary:
     var requested_cycles := max(0, cycles)
     var staffing_efficiency := _staffing_efficiency()
@@ -39,5 +38,8 @@ func _staffing_efficiency() -> float:
     var game_state = root.get_node_or_null("RenewGameState")
     if game_state == null:
         return 1.0
-    var value = game_state.get_value(["analytics", "employee_average_productivity"], 1.0)
-    return clampf(float(value), 0.25, 2.5)
+    var role_metric = game_state.get_value(["analytics", "employee_production_efficiency"], null)
+    if role_metric != null:
+        return clampf(float(role_metric), 0.25, 2.5)
+    var legacy_metric = game_state.get_value(["analytics", "employee_average_productivity"], 1.0)
+    return clampf(float(legacy_metric), 0.25, 2.5)
