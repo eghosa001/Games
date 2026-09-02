@@ -39,7 +39,7 @@ func run() -> void:
     }
     var snapshot: Dictionary = state.capture(core)
 
-    check(snapshot.get("state_version", 0) == 3, "GameState writes current version")
+    check(snapshot.get("state_version", 0) == 4, "GameState writes current version")
     check(snapshot.has("domains"), "GameState contains domain map")
     check(snapshot.has("legacy"), "GameState preserves migration-compatible flat state")
 
