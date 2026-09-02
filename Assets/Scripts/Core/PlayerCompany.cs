@@ -31,10 +31,15 @@ namespace Renew.Core
 
         public bool Restore(RestorableProperty property)
         {
-            if (property == null || market == null) return false;
-            float cost;
-            if (!property.RestoreNextStep(Cash, out cost)) return false;
-            return company.Spend(cost);
+            if (property == null) return false;
+            float cost = property.GetNextCost();
+            if (cost < 0f || !company.Spend(cost)) return false;
+            if (!property.RestoreNextStep(out _))
+            {
+                company.AddCash(cost);
+                return false;
+            }
+            return true;
         }
 
         public bool RunBusiness(Business business, float customerDemand)
