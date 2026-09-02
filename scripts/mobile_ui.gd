@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-# Mobile-first control surface. Buttons provide feedback without rebuilding the pressed control mid-signal.
+# Mobile-first control surface. Actions are refreshed after the signal completes.
 var parent: Node
 var visible_mobile := true
 var active_tab := 0
@@ -13,7 +13,6 @@ var feedback_panel: Panel
 var feedback_label: Label
 var feedback_timer := 0.0
 var refresh_pending := false
-
 var tab_names := ["RESTORE", "BUSINESS", "EMPIRE", "WORLD"]
 
 func _ready() -> void:
@@ -22,13 +21,11 @@ func _ready() -> void:
     _refresh()
 
 func _process(delta: float) -> void:
-    if parent == null or status_label == null:
-        return
+    if parent == null or status_label == null: return
     status_label.text = "$%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day)]
     if feedback_timer > 0.0:
         feedback_timer -= delta
-        if feedback_timer <= 0.0 and feedback_panel != null:
-            feedback_panel.hide()
+        if feedback_timer <= 0.0 and feedback_panel != null: feedback_panel.hide()
 
 func _build_ui() -> void:
     root = Control.new()
@@ -63,7 +60,6 @@ func _build_ui() -> void:
     status_label.add_theme_font_size_override("font_size", 15)
     status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(status_label)
-
     feedback_panel = Panel.new()
     feedback_panel.position = Vector2(24, 245)
     feedback_panel.size = Vector2(720, 92)
@@ -77,7 +73,6 @@ func _build_ui() -> void:
     feedback_label.add_theme_font_size_override("font_size", 15)
     feedback_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     feedback_panel.add_child(feedback_label)
-
     var bottom := ColorRect.new()
     bottom.color = Color("101820")
     bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
@@ -109,8 +104,7 @@ func _set_tab(index: int) -> void:
     _show_feedback("TAB: %s\nChoose an action below." % tab_names[index])
 
 func _clear_actions() -> void:
-    for child in actions.get_children():
-        child.queue_free()
+    for child in actions.get_children(): child.queue_free()
 
 func _button(text: String, callback: Callable) -> void:
     var b := Button.new()
@@ -125,55 +119,39 @@ func _run_action(label: String, callback: Callable) -> void:
     if not callback.is_valid():
         _show_feedback("%s\nAction is currently unavailable." % label)
         return
-
     var before_cash := int(parent.cash)
     var before_rep := int(parent.reputation)
     var before_day := int(parent.day)
     var before_goods := int(parent.finished_goods)
     var before_message := String(parent.message)
-
     var result = callback.call()
-
     var message := ""
-    if result is Dictionary and result.has("message"):
-        message = String(result["message"])
-    if message.is_empty():
-        message = _callback_message(callback, before_message)
-    if message.is_empty():
-        message = "%s completed." % label
-
+    if result is Dictionary and result.has("message"): message = String(result["message"])
+    if message.is_empty(): message = _callback_message(callback, before_message)
+    if message.is_empty(): message = "%s completed." % label
     var changes: Array[String] = []
     var cash_change := int(parent.cash) - before_cash
     var rep_change := int(parent.reputation) - before_rep
     var goods_change := int(parent.finished_goods) - before_goods
-    if cash_change != 0:
-        changes.append("Cash %s$%s" % [("+" if cash_change > 0 else "-"), _money(abs(cash_change))])
-    if rep_change != 0:
-        changes.append("REP %s%d" % [("+" if rep_change > 0 else ""), rep_change])
-    if goods_change != 0:
-        changes.append("Goods %s%d" % [("+" if goods_change > 0 else ""), goods_change])
-    if int(parent.day) != before_day:
-        changes.append("Day %d" % int(parent.day))
-    if changes.size() > 0:
-        message += "\n" + "  |  ".join(changes)
-
+    if cash_change != 0: changes.append("Cash %s$%s" % [("+" if cash_change > 0 else "-"), _money(abs(cash_change))])
+    if rep_change != 0: changes.append("REP %s%d" % [("+" if rep_change > 0 else ""), rep_change])
+    if goods_change != 0: changes.append("Goods %s%d" % [("+" if goods_change > 0 else ""), goods_change])
+    if int(parent.day) != before_day: changes.append("Day %d" % int(parent.day))
+    if changes.size() > 0: message += "\n" + "  |  ".join(changes)
     _show_feedback(message)
     _queue_refresh()
 
 func _callback_message(callback: Callable, before_parent_message: String) -> String:
     var parent_message := String(parent.message)
-    if not parent_message.is_empty() and parent_message != before_parent_message:
-        return parent_message
+    if not parent_message.is_empty() and parent_message != before_parent_message: return parent_message
     var target = callback.get_object()
     if target != null and "message" in target:
         var controller_message := String(target.message)
-        if not controller_message.is_empty():
-            return controller_message
+        if not controller_message.is_empty(): return controller_message
     return ""
 
 func _queue_refresh() -> void:
-    if refresh_pending:
-        return
+    if refresh_pending: return
     refresh_pending = true
     call_deferred("_deferred_refresh")
 
@@ -182,15 +160,13 @@ func _deferred_refresh() -> void:
     _refresh()
 
 func _show_feedback(text: String) -> void:
-    if feedback_panel == null or feedback_label == null:
-        return
+    if feedback_panel == null or feedback_label == null: return
     feedback_label.text = text
     feedback_panel.show()
     feedback_timer = 5.0
 
 func _refresh() -> void:
-    if parent == null or actions == null:
-        return
+    if parent == null or actions == null: return
     _clear_actions()
     status_label.text = "$%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day)]
     match active_tab:
@@ -216,9 +192,12 @@ func _refresh() -> void:
             _button("CONTRACT", parent.sign_contract)
             _button("END DAY", parent.advance_day)
         2:
+            _button("NEXT RIVAL", _next_rival)
+            _button("NEXT ASSET", _next_asset)
             _button("EXPANSION", parent.buy_expansion)
             _button("UPGRADE BUSINESS", parent.upgrade_expansion)
             _button("ALLIANCE", parent.make_alliance_offer)
+            _button("IMPROVE RELATION", parent.improve_alliance)
             _button("SUPPLY DEAL", parent.propose_supply_deal)
             _button("CUSTOMER DEAL", parent.propose_customer_partnership)
             _button("ACQUIRE ASSET", parent.negotiate_selected_acquisition)
@@ -243,8 +222,8 @@ func _refresh() -> void:
         3:
             var region_controller = get_node_or_null("../RegionController")
             if region_controller != null:
-                _button("NEXT REGION", region_controller.select_region.bind(region_controller.regions.selected + 1))
-                _button("PREVIOUS REGION", region_controller.select_region.bind(region_controller.regions.selected - 1))
+                _button("NEXT REGION", _next_region)
+                _button("PREVIOUS REGION", _previous_region)
                 _button("ESTABLISH", region_controller.establish_region)
                 _button("INFRASTRUCTURE", region_controller.upgrade_infrastructure)
                 _button("TRADE CORRIDOR", region_controller.establish_trade_route)
@@ -258,10 +237,35 @@ func _refresh() -> void:
                 _button("MARKET AGGRESSIVE", market.respond_aggressively)
                 _button("MARKET BALANCED", market.respond_balanced)
                 _button("MARKET DEFENSIVE", market.respond_defensively)
-            _button("DISTRICT", parent.select_district.bind((int(parent.selected_district) + 1) % parent.districts.districts.size()))
+            _button("DISTRICT", _next_district)
             _button("SAVE GAME", parent.save_game)
             _button("LOAD GAME", parent.load_game)
             _button("END DAY", parent.advance_day)
+
+func _next_rival() -> void:
+    var count: int = int(parent.rivals.rivals.size())
+    if count <= 0: return
+    parent.select_rival((int(parent.selected_rival) + 1) % count)
+
+func _next_asset() -> void:
+    var count: int = int(parent.expansion.properties.size())
+    if count <= 0: return
+    parent.select_expansion((int(parent.selected_expansion) + 1) % count)
+
+func _next_region() -> void:
+    var controller = get_node_or_null("../RegionController")
+    if controller != null:
+        controller.select_region((int(controller.regions.selected) + 1) % int(controller.regions.regions.size()))
+
+func _previous_region() -> void:
+    var controller = get_node_or_null("../RegionController")
+    if controller != null:
+        var count: int = int(controller.regions.regions.size())
+        controller.select_region((int(controller.regions.selected) - 1 + count) % count)
+
+func _next_district() -> void:
+    var count: int = int(parent.districts.districts.size())
+    if count > 0: parent.select_district((int(parent.selected_district) + 1) % count)
 
 func _money(value: int) -> String:
     return "%,d" % value
