@@ -4,7 +4,7 @@ class_name RenewSaveSystem
 const SAVE_PATH := "user://renew_save.json"
 const BACKUP_PATH := "user://renew_save.backup.json"
 const TEMP_PATH := "user://renew_save.tmp.json"
-const SCHEMA_VERSION := 1
+const SCHEMA_VERSION := 2
 
 static func save_game(state: Dictionary) -> bool:
     var payload := state.duplicate(true)
@@ -34,8 +34,11 @@ static func save_game(state: Dictionary) -> bool:
 static func load_game() -> Dictionary:
     var state := _read_dictionary(SAVE_PATH)
     if not state.is_empty():
-        return state
-    return _read_dictionary(BACKUP_PATH)
+        return _migrate(state)
+    state = _read_dictionary(BACKUP_PATH)
+    if not state.is_empty():
+        return _migrate(state)
+    return {}
 
 static func _read_dictionary(path: String) -> Dictionary:
     if not FileAccess.file_exists(path):
@@ -46,7 +49,17 @@ static func _read_dictionary(path: String) -> Dictionary:
     var parsed = JSON.parse_string(file.get_as_text())
     if not (parsed is Dictionary):
         return {}
-    var schema := int(parsed.get("schema_version", 0))
-    if schema != SCHEMA_VERSION:
-        return {}
     return parsed
+
+static func _migrate(state: Dictionary) -> Dictionary:
+    var schema := int(state.get("schema_version", 0))
+    if schema == SCHEMA_VERSION:
+        return state
+    # V1 saves used a flat runtime snapshot. Preserve every known field and
+    # upgrade them into the new state boundary rather than discarding progress.
+    if schema == 1:
+        var migrated := state.duplicate(true)
+        migrated["schema_version"] = SCHEMA_VERSION
+        migrated["state_version"] = 2
+        return migrated
+    return {}
