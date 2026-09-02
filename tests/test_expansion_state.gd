@@ -44,7 +44,6 @@ func run() -> void:
     check(int(canonical["cash"]) == resource_cash_before - 15000, "resource purchase cash mutation persists")
     check(int(canonical["reputation"]) == resource_rep_before + 2, "resource purchase reputation mutation persists")
 
-    # The public Expansion API is now canonical-aware when explicitly bound.
     expansion.bind_game_state(state)
     check(bool(expansion.get_resource_site(0).get("owned", false)), "bound Expansion reflects canonical resource ownership")
     var bound_generation: Dictionary = expansion.generate_resource(0)
@@ -61,12 +60,26 @@ func run() -> void:
     check(int(canonical["resource_sites"][0]["risk"]) == 11, "bound upgrade risk is canonical")
     check(int(canonical["cash"]) == resource_cash_before - 15000 - 9000, "bound upgrade deducts canonical cash once")
 
-    # Main's transitional wrapper historically supplied the calculated output.
-    # The canonical adapter now owns that calculation but accepts the argument for compatibility.
     var generated: Dictionary = adapter.record_resource_generation(state, 0, 8)
     check(bool(generated.get("ok", false)), "canonical resource generation with legacy argument")
     check(int(generated.get("output", 0)) == 10, "resource generation ignores stale legacy output argument")
     check(int(generated.get("stock", 0)) == 18, "resource stock remains canonical after second generation")
+
+    var operating := adapter.calculate_operating_day(state)
+    check(int(operating.get("revenue", 0)) == 5400, "canonical operating revenue calculation")
+    check(int(operating.get("expense", 0)) == 850, "canonical operating expense calculation")
+    check(int(operating.get("profit", 0)) == 4550, "canonical operating profit calculation")
+    check(int(operating.get("businesses", 0)) == 1, "canonical operating business count")
+    check(int(operating.get("cash", 0)) == int(canonical["cash"]) + 4550, "canonical operating cash projection")
+    check(int(operating.get("day", 0)) == int(canonical.get("day", 1)) + 1, "canonical operating next day")
+    check(int(operating.get("population_delta", 0)) == 2, "canonical operating population delta")
+    check(int(canonical["day"]) == 1, "operating calculation is non-mutating")
+    check(int(canonical["cash"]) == 7000, "operating calculation does not mutate cash")
+
+    var advanced := adapter.advance_day(state, int(operating["profit"]), int(operating["population_delta"]))
+    check(int(advanced["day"]) == 2, "canonical operating day commit")
+    check(int(advanced["cash"]) == 11550, "canonical operating profit committed once")
+    check(int(advanced["population"]) == 102, "canonical operating population committed")
 
     var snapshot: Dictionary = state.capture({})
     state.clear()
@@ -78,6 +91,7 @@ func run() -> void:
     check(bool(canonical["resource_sites"][0]["owned"]), "resource purchase survives state restore")
     check(int(canonical["resource_sites"][0]["stock"]) == 18, "resource stock survives state restore")
     check(int(canonical["resource_sites"][0]["level"]) == 2, "resource upgrade survives state restore")
+    check(int(canonical["day"]) == 2 and int(canonical["cash"]) == 11550, "operating-day state survives restore")
 
     print("EXPANSION STATE RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
