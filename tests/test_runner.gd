@@ -31,6 +31,7 @@ func run() -> void:
     test_events()
     test_progression()
     test_main_scene()
+    test_main_gameplay_chain()
     print("\nRENEW TEST RESULT: %d passed, %d failed" % [passed, failed])
     if failed > 0:
         for item in failures:
@@ -211,4 +212,90 @@ func test_main_scene() -> void:
     check(instance.has_method("save_game"), "main save_game")
     check(instance.has_method("load_game"), "main load_game")
     instance.free()
+    await process_frame
+
+func test_main_gameplay_chain() -> void:
+    var scene = load("res://scenes/Main.tscn")
+    if scene == null:
+        check(false, "gameplay scene available")
+        return
+    var game = scene.instantiate()
+    root.add_child(game)
+    await process_frame
+    game.cash = 500000
+    game.reputation = 100
+    game.expansion.unlock_from_reputation(game.reputation)
+
+    game.inspect_property()
+    check(game.inspected, "chain inspect")
+    game.acquire_property()
+    check(game.owned, "chain acquire")
+
+    for i in range(5):
+        game.restore_property()
+    check(game.stage == "Operational" and int(game.restoration) >= 100, "chain complete restoration")
+
+    game.open_business()
+    check(game.business_open, "chain open business")
+    game.cycle_supplier()
+    check(game.supplier_choice == 1, "chain cycle supplier")
+    game.buy_inputs()
+    check(game.economy.resources["materials"]["stock"] >= 12, "chain buy inputs")
+    game.produce_goods()
+    check(game.finished_goods > 0, "chain produce goods")
+    game.hire_employee()
+    check(game.employees >= 4, "chain hire employee")
+    game.upgrade_business()
+    check(game.capacity_level >= 2, "chain upgrade business")
+    game.marketing_campaign()
+    check(game.marketing_level >= 1, "chain marketing")
+    var old_price = game.player_price
+    game.change_price()
+    check(game.player_price != old_price, "chain change price")
+    game.sign_contract()
+    check(game.contract_days > 0, "chain sign contract")
+
+    while game.finished_goods < 5:
+        game.produce_goods()
+    var old_day = game.day
+    var old_profit = game.total_profit
+    game.advance_day()
+    check(game.day == old_day + 1, "chain advance day")
+    check(game.total_profit != old_profit or game.last_profit != 0, "chain profit recorded")
+
+    game.select_expansion(0)
+    check(game.selected_expansion == 0, "chain select expansion")
+    var expansion_result = game.expansion.buy(0, 500000)
+    check(bool(expansion_result.get("ok", false)), "chain expansion acquire")
+    game.cash -= int(expansion_result.get("cost", 0))
+    var upgrade_result = game.expansion.upgrade(0, game.cash)
+    check(bool(upgrade_result.get("ok", false)), "chain expansion upgrade")
+    game.expansion.buy_resource_site(0, game.cash)
+    game.expansion.generate_resource(0)
+    check(int(game.expansion.resource_sites[0].get("stock", 0)) > 0, "chain resource generation")
+
+    game.select_rival(0)
+    check(game.selected_rival == 0, "chain select rival")
+    game.improve_alliance()
+    game.make_alliance_offer()
+    game.propose_supply_deal()
+    game.propose_customer_partnership()
+    check(game.message != "", "chain rival interactions")
+
+    game.take_loan()
+    check(game.debt > 0, "chain take loan")
+    var debt_before = game.debt
+    game.repay_loan()
+    check(game.debt < debt_before, "chain repay loan")
+    game.upgrade_transport()
+    check(game.transport_level >= 2, "chain upgrade transport")
+
+    game.cash = 123456
+    game.save_game()
+    game.cash = 1
+    game.load_game()
+    check(game.cash == 123456, "chain save and load")
+    check(game.expansion.properties.size() == 3 and game.expansion.resource_sites.size() == 3, "chain expansion state restored")
+
+    game.free()
     await process_frame
