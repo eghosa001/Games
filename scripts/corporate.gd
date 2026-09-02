@@ -1,7 +1,6 @@
 extends Node2D
 
 # RENEW Corporate Layer - ownership, capital, control and takeover defense.
-# Runs beside the main economy and uses the parent's cash/reputation.
 
 var parent
 var founder_stake := 100.0
@@ -17,14 +16,19 @@ var valuation := 25000
 var share_price := 25
 var last_capital_raise := 0
 var takeover_cooldown := 0
+var last_processed_day := 1
 var investor_name := "Independent Growth Fund"
 
 func _ready() -> void:
     parent = get_parent()
+    if parent != null: last_processed_day = parent.day
     queue_redraw()
 
 func _process(_delta: float) -> void:
     if parent == null: return
+    if parent.day != last_processed_day:
+        last_processed_day = parent.day
+        process_day()
     _recalculate()
     queue_redraw()
 
@@ -158,7 +162,7 @@ func get_summary() -> Dictionary:
     return {"valuation":valuation,"share_price":share_price,"founder":founder_stake,"investors":investor_stake,"treasury":treasury_shares,"control":control_score,"risk":takeover_risk,"defense":defense_level,"trust":board_trust,"dividends":dividends_paid}
 
 func save_state() -> Dictionary:
-    return {"founder_stake":founder_stake,"investor_stake":investor_stake,"treasury_shares":treasury_shares,"investor_cash_raised":investor_cash_raised,"dividends_paid":dividends_paid,"control_score":control_score,"takeover_risk":takeover_risk,"defense_level":defense_level,"board_trust":board_trust,"valuation":valuation,"share_price":share_price,"last_capital_raise":last_capital_raise,"takeover_cooldown":takeover_cooldown}
+    return {"founder_stake":founder_stake,"investor_stake":investor_stake,"treasury_shares":treasury_shares,"investor_cash_raised":investor_cash_raised,"dividends_paid":dividends_paid,"control_score":control_score,"takeover_risk":takeover_risk,"defense_level":defense_level,"board_trust":board_trust,"valuation":valuation,"share_price":share_price,"last_capital_raise":last_capital_raise,"takeover_cooldown":takeover_cooldown,"last_processed_day":last_processed_day}
 
 func load_state(state: Dictionary) -> void:
     founder_stake = float(state.get("founder_stake",100.0))
@@ -174,6 +178,7 @@ func load_state(state: Dictionary) -> void:
     share_price = int(state.get("share_price",25))
     last_capital_raise = int(state.get("last_capital_raise",0))
     takeover_cooldown = int(state.get("takeover_cooldown",0))
+    last_processed_day = int(state.get("last_processed_day",parent.day if parent != null else 1))
 
 func _draw() -> void:
     if parent == null: return
