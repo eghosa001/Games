@@ -34,6 +34,8 @@ static func save_game(state: Dictionary) -> bool:
     if diplomacy_control != null: payload["diplomacy_control"] = diplomacy_control.capture_state()
     var ownership_system = _ownership_system()
     if ownership_system != null: payload["ownership_system"] = ownership_system.save_state()
+    var infrastructure_system = _infrastructure_system()
+    if infrastructure_system != null: payload["infrastructure_system"] = infrastructure_system.capture_state()
     var game_state = _game_state()
     if game_state != null: payload["game_state"] = game_state.capture(payload)
     var json := JSON.stringify(payload)
@@ -87,6 +89,8 @@ static func load_game() -> Dictionary:
     if diplomacy_control != null and state.has("diplomacy_control"): diplomacy_control.restore_state(state["diplomacy_control"])
     var ownership_system = _ownership_system()
     if ownership_system != null and state.has("ownership_system"): ownership_system.load_state(state["ownership_system"])
+    var infrastructure_system = _infrastructure_system()
+    if infrastructure_system != null and state.has("infrastructure_system"): infrastructure_system.restore_state(state["infrastructure_system"])
     if game_state != null: game_state.capture(state)
     return state
 
@@ -140,3 +144,4 @@ static func _alliance_system(): return _root_node("RenewAllianceSystem")
 static func _diplomacy_system(): return _root_node("RenewDiplomacySystem")
 static func _diplomacy_control(): return _root_node("RenewDiplomacyControl")
 static func _ownership_system(): return _root_node("OwnershipSystem")
+static func _infrastructure_system(): return _root_node("RenewInfrastructureSystem")
