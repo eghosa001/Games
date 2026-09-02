@@ -32,6 +32,8 @@ static func save_game(state: Dictionary) -> bool:
     if diplomacy_system != null: payload["diplomacy_system"] = diplomacy_system.capture_state()
     var diplomacy_control = _diplomacy_control()
     if diplomacy_control != null: payload["diplomacy_control"] = diplomacy_control.capture_state()
+    var ownership_system = _ownership_system()
+    if ownership_system != null: payload["ownership_system"] = ownership_system.save_state()
     var game_state = _game_state()
     if game_state != null: payload["game_state"] = game_state.capture(payload)
     var json := JSON.stringify(payload)
@@ -83,6 +85,8 @@ static func load_game() -> Dictionary:
     if diplomacy_system != null and state.has("diplomacy_system"): diplomacy_system.restore_state(state["diplomacy_system"])
     var diplomacy_control = _diplomacy_control()
     if diplomacy_control != null and state.has("diplomacy_control"): diplomacy_control.restore_state(state["diplomacy_control"])
+    var ownership_system = _ownership_system()
+    if ownership_system != null and state.has("ownership_system"): ownership_system.load_state(state["ownership_system"])
     if game_state != null: game_state.capture(state)
     return state
 
@@ -118,7 +122,11 @@ static func _root_node(name: String):
     var tree = Engine.get_main_loop()
     if tree == null: return null
     var root = tree.get_root()
-    return root.get_node_or_null(name) if root != null else null
+    if root == null: return null
+    var node = root.get_node_or_null(name)
+    if node != null: return node
+    var scene = tree.get_current_scene()
+    return scene.get_node_or_null(name) if scene != null else null
 
 static func _game_state(): return _root_node("RenewGameState")
 static func _employee_system(): return _root_node("RenewEmployeeSystem")
@@ -131,3 +139,4 @@ static func _contract_system(): return _root_node("RenewContractSystem")
 static func _alliance_system(): return _root_node("RenewAllianceSystem")
 static func _diplomacy_system(): return _root_node("RenewDiplomacySystem")
 static func _diplomacy_control(): return _root_node("RenewDiplomacyControl")
+static func _ownership_system(): return _root_node("OwnershipSystem")
