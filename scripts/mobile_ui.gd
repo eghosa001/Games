@@ -127,4 +127,4 @@ func _previous_region() -> void:
 func _next_district() -> void:
     var count: int = int(parent.districts.districts.size())
     if count > 0: parent.select_district((int(parent.selected_district) + 1) % count)
-func _money(value: int) -> String: return "%,d" % value
+func _money(value: int) -> String: return str(value)
