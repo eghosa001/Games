@@ -78,7 +78,8 @@
 
 - Added an explicit `RenewGameState` business boundary for `renew_goods` with stable business ID and durable fields for open state, capacity, marketing, price, inventory, sales, profit and contract state.
 - Added `get_business()`, `set_business_value()`, `sync_business_runtime()` and `restore_business_runtime()` APIs so future systems can stop treating `main.gd` scalars as persistent ownership.
-- `GameState.capture()` no longer blindly copies business scalar fields into the canonical record when that record already exists. Legacy scalar fields are imported only when a canonical field is genuinely missing.
+- `GameState.capture()` now synchronizes the current runtime business projection into the canonical `businesses.renew_goods` record during save. This fixes the previous directionality bug where a canonical record could exist but later runtime changes would not be written back to it.
+- Legacy scalar fields are used only as the runtime compatibility source during capture; canonical state remains the durable save representation and is restored in the opposite direction during load.
 - Save/load now routes business synchronization through `GameState` instead of maintaining a second business save structure in `SaveSystem`.
 - Load restores the complete business compatibility projection, including sales/profit totals and contract state, not only open/capacity/marketing/price/inventory.
 - Older saves that contain only top-level business fields are migrated into the canonical `businesses.renew_goods` record.
@@ -116,6 +117,7 @@
 - `d0d634b78c63f667a4774b7a5cd1e6615cb828a5` — save/load rehydration for canonical business and branch state
 - `dd1a662af809a816606833396c65f8344e66d932` — canonical business state boundary and migration safety
 - `35ceda5aba06bc139363da95a74d6a5429b5955d` — save/load routed through canonical business boundary
+- `83c2cf85fb346e665a3afd0811c6fc71755b16b6` — runtime business projection synchronized into canonical GameState during save
 
 ## Story systems verified
 
@@ -129,7 +131,7 @@ These are **foundation implementations**, not yet the full V1.1 completion gate:
 
 ## Still incomplete after this pass
 
-- `main.gd` remains transitional and still contains compatibility business/workforce scalars; these are no longer intended to be persistent authority, but business mutations are still performed there at runtime.
+- `main.gd` remains transitional and still contains compatibility business/workforce scalars; business mutation code is still located there even though its save boundary is now canonical.
 - Employee assignment is available in the controller API but is not yet exposed through the complete mobile UI.
 - Employee hiring UI does not yet expose candidates, roles, salaries, skills or personalities.
 - Employee firing/promotion/training are not yet exposed through the complete mobile UI.
