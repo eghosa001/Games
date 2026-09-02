@@ -4,9 +4,9 @@ class_name RenewCompetitors
 # Persistent economic actors. Rivals expand, negotiate, compete and can become
 # valuable partners or dangerous buyers as the player's empire grows.
 var rivals := [
-    {"name":"The Giant","cash":500000,"price":105,"relationship":-20,"stance":"Aggressive","strength":"capital","districts":[0],"presence":1,"supplier_pressure":0,"offer_cooldown":0,"deal":"none","deal_days":0},
-    {"name":"The Specialist","cash":90000,"price":118,"relationship":5,"stance":"Efficient","strength":"quality","districts":[1],"presence":1,"supplier_pressure":0,"offer_cooldown":0,"deal":"none","deal_days":0},
-    {"name":"The Network","cash":180000,"price":125,"relationship":15,"stance":"Connected","strength":"suppliers","districts":[2],"presence":1,"supplier_pressure":1,"offer_cooldown":0,"deal":"none","deal_days":0}
+    {"name":"The Giant","cash":500000,"price":105,"relationship":-20,"stance":"Aggressive","strength":"capital","districts":[0],"presence":1,"supplier_pressure":0,"offer_cooldown":0,"deal":"none","deal_days":0,"retaliation":0},
+    {"name":"The Specialist","cash":90000,"price":118,"relationship":5,"stance":"Efficient","strength":"quality","districts":[1],"presence":1,"supplier_pressure":0,"offer_cooldown":0,"deal":"none","deal_days":0,"retaliation":0},
+    {"name":"The Network","cash":180000,"price":125,"relationship":15,"stance":"Connected","strength":"suppliers","districts":[2],"presence":1,"supplier_pressure":1,"offer_cooldown":0,"deal":"none","deal_days":0,"retaliation":0}
 ]
 
 func _normalize() -> void:
@@ -17,6 +17,7 @@ func _normalize() -> void:
         if not rival.has("offer_cooldown"): rival["offer_cooldown"] = 0
         if not rival.has("deal"): rival["deal"] = "none"
         if not rival.has("deal_days"): rival["deal_days"] = 0
+        if not rival.has("retaliation"): rival["retaliation"] = 0
 
 func daily_update(day: int) -> Array[String]:
     _normalize()
@@ -34,6 +35,9 @@ func daily_update(day: int) -> Array[String]:
         elif rival["name"] == "The Network" and day % 5 == 0:
             rival["supplier_pressure"] = min(3, int(rival["supplier_pressure"]) + 1)
             news.append("The Network locks down a major supplier agreement.")
+        if int(rival["retaliation"]) > 0:
+            rival["retaliation"] = int(rival["retaliation"]) - 1
+            if int(rival["retaliation"]) == 0: news.append("%s has cooled its retaliation campaign." % rival["name"])
         if int(rival["offer_cooldown"]) > 0: rival["offer_cooldown"] = int(rival["offer_cooldown"]) - 1
         if int(rival["deal_days"]) > 0:
             rival["deal_days"] = int(rival["deal_days"]) - 1
@@ -68,6 +72,24 @@ func strategic_update(day: int, selected_district: int, reputation: int) -> Arra
             news.append("BOARDROOM: %s is considering an acquisition approach against your company." % rival["name"])
     return news
 
+func retaliation_after_acquisition(index: int) -> Dictionary:
+    _normalize()
+    if index < 0 or index >= rivals.size(): return {"ok":false,"message":"Unknown company."}
+    var r = rivals[index]
+    var pressure_gain := 1 if index != 1 else 0
+    r["retaliation"] = max(int(r["retaliation"]), 6)
+    r["offer_cooldown"] = max(int(r["offer_cooldown"]), 6)
+    r["relationship"] = max(-100, int(r["relationship"]) - 12)
+    r["supplier_pressure"] = min(3, int(r["supplier_pressure"]) + pressure_gain)
+    r["price"] = max(78, int(r["price"]) - (3 if index == 0 else 1))
+    return {"ok":true,"message":"%s retaliated: competition intensified for the next several days." % r["name"]}
+
+func competitive_status(index: int) -> Dictionary:
+    _normalize()
+    if index < 0 or index >= rivals.size(): return {"ok":false,"message":"Unknown company."}
+    var r = rivals[index]
+    return {"ok":true,"name":r["name"],"stance":r["stance"],"strength":r["strength"],"relationship":int(r["relationship"]),"presence":int(r["presence"]),"supplier_pressure":int(r["supplier_pressure"]),"retaliation_days":int(r["retaliation"]),"message":"%s — %s. Strength: %s. Presence %d." % [r["name"],r["stance"],r["strength"],int(r["presence"])]}
+
 func _district_name(index: int) -> String:
     var names := ["Old Market","Industrial Belt","River Port","North Growth Corridor"]
     return names[index] if index >= 0 and index < names.size() else "Unknown District"
@@ -78,6 +100,7 @@ func district_pressure(district_index: int) -> float:
     for rival in rivals:
         if district_index in rival["districts"]:
             pressure += 0.05 * float(rival["presence"])
+            if int(rival["retaliation"]) > 0: pressure += 0.025
     return pressure
 
 func supplier_pressure(district_index: int) -> int:
