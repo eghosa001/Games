@@ -24,7 +24,7 @@ func _process(_delta:float)->void:
     queue_redraw()
 
 func _input(event:InputEvent)->void:
-    if not event is InputEventKey or not event.pressed or event.echo: return
+    if not event is InputEventKey or not event.pressed or event.echo or not event.ctrl_pressed: return
     match event.keycode:
         KEY_F6: select_branch(branches.selected+1)
         KEY_F7: launch_selected()
@@ -34,6 +34,7 @@ func _input(event:InputEvent)->void:
         KEY_F12: price_selected()
 
 func select_branch(index:int)->void:
+    if branches.branches.is_empty(): return
     var result=branches.select((index%branches.branches.size()+branches.branches.size())%branches.branches.size())
     message=result["message"]
 
@@ -42,7 +43,7 @@ func launch_selected()->void:
     var region_controller=parent.get_node_or_null("RegionController")
     if region_controller==null: return
     var region=int(b["region"])
-    if region_controller.regions.player_presence[region]<=0:
+    if region<0 or region>=region_controller.regions.player_presence.size() or region_controller.regions.player_presence[region]<=0:
         message="Establish a regional presence before opening this branch."
         return
     var result=branches.launch(branches.selected,parent.cash)
@@ -59,6 +60,9 @@ func stock_selected()->void:
     if amount<=0: message="Produce core goods before stocking a branch."; return
     var origin:=0
     var destination:=int(b["region"])
+    if destination<0 or destination>=region_controller.regions.regions.size():
+        message="Branch region is invalid."
+        return
     var cost:=int(round(region_controller.regions.logistics_cost(amount*45.0,origin,destination)))
     if parent.cash<cost: message="Shipment requires $%s freight."%_money(cost); return
     parent.cash-=cost; parent.finished_goods-=amount
@@ -90,8 +94,8 @@ func _draw()->void:
     draw_rect(Rect2(25,510,800,180),Color("111b23"),true)
     draw_string(ThemeDB.fallback_font,Vector2(45,538),"REGIONAL BRANCHES",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("7891a5"))
     var b=branches.current()
-    draw_string(ThemeDB.fallback_font,Vector2(45,565),"F6 select | %s | %s"%[b["name"],b["industry"]],HORIZONTAL_ALIGNMENT_LEFT,-1,17,Color.WHITE)
+    draw_string(ThemeDB.fallback_font,Vector2(45,565),"CTRL+F6 select | %s | %s"%[b["name"],b["industry"]],HORIZONTAL_ALIGNMENT_LEFT,-1,17,Color.WHITE)
     draw_string(ThemeDB.fallback_font,Vector2(45,590),"Status: %s | Staff %d | Stock %d | Level %d"%["OPEN" if b["owned"] else "CLOSED",b["employees"],b["stock"],b["level"]],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("8ee6a8"))
     draw_string(ThemeDB.fallback_font,Vector2(45,613),"Price $%d | Quality %d | Last P&L $%s"%[b["price"],b["quality"],_money(int(b["cashflow"]))],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("f2d27a"))
-    draw_string(ThemeDB.fallback_font,Vector2(45,637),"F7 launch | F8 stock | F10 hire | F11 upgrade | F12 price +" ,HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("c6d0d8"))
+    draw_string(ThemeDB.fallback_font,Vector2(45,637),"CTRL+F7 launch | CTRL+F8 stock | CTRL+F10 hire | CTRL+F11 upgrade | CTRL+F12 price +" ,HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("c6d0d8"))
     draw_string(ThemeDB.fallback_font,Vector2(45,663),message,HORIZONTAL_ALIGNMENT_LEFT,750,12,Color("b7d7ff"))
