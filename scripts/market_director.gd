@@ -55,31 +55,38 @@ func _spawn_event() -> void:
     game._log("MARKET EVENT: %s — %s" % [active_event, event_text])
     game.message = "%s: %s Choose a response in the WORLD tab." % [active_event, event_text]
 
+func _economy() -> Node:
+    if game == null:
+        return null
+    return game.get("economy")
+
 func _apply_event_pressure(event_type: String, expiry: int) -> void:
-    if game == null or not ("economy" in game):
+    var economy = _economy()
+    if economy == null:
         return
     effect_expiry = expiry
     effect_name = event_type
-    game.economy.clear_market_modifiers()
+    economy.clear_market_modifiers()
     match event_type:
         "shortage":
-            game.economy.set_market_modifier("materials", 1.25)
-            game.economy.set_market_modifier("packaging", 1.20)
-            game.economy.set_market_modifier("fuel", 1.30)
+            economy.set_market_modifier("materials", 1.25)
+            economy.set_market_modifier("packaging", 1.20)
+            economy.set_market_modifier("fuel", 1.30)
         "boom":
-            game.economy.set_market_modifier("materials", 0.92)
-            game.economy.set_market_modifier("packaging", 0.94)
-            game.economy.set_market_modifier("fuel", 0.96)
+            economy.set_market_modifier("materials", 0.92)
+            economy.set_market_modifier("packaging", 0.94)
+            economy.set_market_modifier("fuel", 0.96)
         "war":
-            game.economy.set_market_modifier("packaging", 1.12)
+            economy.set_market_modifier("packaging", 1.12)
         "contract":
-            game.economy.set_market_modifier("materials", 1.05)
+            economy.set_market_modifier("materials", 1.05)
         "asset":
             pass
 
 func _clear_effect() -> void:
-    if game != null and "economy" in game:
-        game.economy.clear_market_modifiers()
+    var economy = _economy()
+    if economy != null:
+        economy.clear_market_modifiers()
     effect_expiry = 0
     effect_name = ""
 
@@ -200,13 +207,14 @@ func _respond(style: String) -> void:
     _save_state()
 
 func _set_response_modifier(materials: float, packaging: float, fuel: float) -> void:
-    if game == null or not ("economy" in game):
+    var economy = _economy()
+    if economy == null:
         return
     effect_expiry = int(game.day) + 1
     effect_name = "response"
-    game.economy.set_market_modifier("materials", materials)
-    game.economy.set_market_modifier("packaging", packaging)
-    game.economy.set_market_modifier("fuel", fuel)
+    economy.set_market_modifier("materials", materials)
+    economy.set_market_modifier("packaging", packaging)
+    economy.set_market_modifier("fuel", fuel)
 
 func snapshot() -> Dictionary:
     return {"market_cycle":market_cycle,"market_heat":market_heat,"active_event":active_event,"event_text":event_text,"event_expiry":event_expiry,"event_count":event_count,"effect_expiry":effect_expiry,"effect_name":effect_name}
