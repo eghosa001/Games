@@ -92,6 +92,15 @@
 - The durable business record remains under `GameState`; the top-level business values returned during load exist only as a compatibility bridge for the transitional `main.gd` runtime.
 - This closes a persistence gap where business/branch data could be written to the canonical state but not fully rehydrated into the currently running scene after an in-session load.
 
+### Save API/runtime boundary fixed — latest
+
+- Fixed a critical interface mismatch between `main.gd` and `SaveSystem`: `main.gd` passes its Node instance, while the previous save API expected a Dictionary and returned a boolean even though `main.gd` expected `{ ok, message }`.
+- `SaveSystem.save_game()` now accepts the runtime object and creates an explicit, audited snapshot of RENEW's script state before handing it to `GameState`.
+- `SaveSystem.save_game()` now returns a result dictionary compatible with the existing UI (`ok`, `message`, `day`).
+- `SaveSystem.load_game()` now returns `{ ok, message, ...state }`, so the existing `main.gd` load path can actually distinguish a successful load from failure instead of treating every valid save as an unsuccessful operation.
+- Engine/object properties are not serialized; only explicit RENEW runtime fields enter the save boundary.
+- This fix preserves the canonical GameState business/employee/branch boundaries while removing a runtime save/load failure in the transitional Main orchestration layer.
+
 ### Commits
 
 - `d3b2e9e625d178e4183d64bbaa77f3534c8e4ff` — employee system fix
@@ -103,7 +112,7 @@
 - `b4df022a45aedd7700809047c4c2131db90d970b` — production staffing integration
 - `0ca8372c2cc319ad841ef027b9d18e4b6796871e` — role-aware employee metrics and assignments
 - `ea165da87103c6f42226d4aa5c3a872c6d7e6c3d` — production consumes role-aware staffing efficiency
-- `0fc8116918f141eb081ac10338a05470b51b2cf0` — logistics staffing affects network transport capacity
+- `0fc8116918f141eb081ac1038a05470b51b2cf0` — logistics staffing affects network transport capacity
 - `93d40d2943edb72ae618626e61138a659e3ba0f4` — branch operations consume Sales/Logistics/Management metrics
 - `26446b9a80226e90bfbb8564fd2c46c9c34d4ae4` — employee assignment query helpers and authoritative branch staffing API
 - `1bf80082f449b4f924b00cc1439a32ba425bd535` — branch launch/hiring routed through persistent employee records
@@ -118,6 +127,7 @@
 - `dd1a662af809a816606833396c65f8344e66d932` — canonical business state boundary and migration safety
 - `35ceda5aba06bc139363da95a74d6a5429b5955d` — save/load routed through canonical business boundary
 - `83c2cf85fb346e665a3afd0811c6fc71755b16b6` — runtime business projection synchronized into canonical GameState during save
+- `9d0a4e9f705175e6321e272a66f581e2a11df75b` — save API/runtime snapshot and result-contract fix
 
 ## Story systems verified
 
