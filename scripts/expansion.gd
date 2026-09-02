@@ -1,5 +1,7 @@
 extends Node
 
+const ExpansionState = preload("res://scripts/expansion_state.gd")
+
 var properties: Array = [
     {"name":"Sunrise Apartments","type":"Residential","industry":"Housing","condition":42,"value":25000,"cost":12000,"restoration_cost":12000,"income":1200,"owned":false,"active":false,"level":1,"inputs":{},"input_need":{},"unlock_rep":10},
     {"name":"Old Market","type":"Retail","industry":"Consumer Goods","condition":35,"value":32000,"cost":18000,"restoration_cost":18000,"income":1800,"owned":false,"active":false,"level":1,"inputs":{},"input_need":{"materials":2,"packaging":1},"unlock_rep":20},
@@ -19,8 +21,20 @@ var management_level: int = 0
 var management_overhead: int = 0
 var selected_index: int = 0
 
+# Transitional runtime binding. When present, resource mutations use GameState as the
+# durable authority and this node is refreshed as a runtime projection.
+var game_state = null
+
 func _ready() -> void:
     _normalize_all()
+
+func bind_game_state(state) -> void:
+    game_state = state
+    if game_state != null and game_state.has_method("restore_expansion_runtime"):
+        game_state.restore_expansion_runtime(self)
+
+func _canonical_state_enabled() -> bool:
+    return game_state != null and game_state.has_method("get_value") and game_state.has_method("set_value")
 
 func _normalize_all() -> void:
     for p in properties:
@@ -87,8 +101,16 @@ func buy_resource_site(index: int, cash_available: int) -> Dictionary:
     _normalize_all()
     if index < 0 or index >= resource_sites.size(): return {"ok":false,"cost":0,"message":"Unknown resource site."}
     var site: Dictionary = resource_sites[index]
-    if bool(site["owned"]): return {"ok":false,"cost":0,"message":"Already owned."}
     var cost: int = int(site["cost"])
+    if _canonical_state_enabled():
+        var canonical_cash := int(game_state.get_value(["expansion", "cash"], 0))
+        if bool(site.get("owned", false)): return {"ok":false,"cost":0,"message":"Already owned."}
+        if canonical_cash < cost: return {"ok":false,"cost":cost,"message":"Purchase requires $%d." % cost}
+        if not ExpansionState.record_resource_purchase(game_state, index, cost, 2):
+            return {"ok":false,"cost":cost,"message":"Resource site purchase could not be completed."}
+        game_state.restore_expansion_runtime(self)
+        return {"ok":true,"cost":cost,"message":"%s acquired. Generate its resource to build network stock." % site["name"]}
+    if bool(site["owned"]): return {"ok":false,"cost":0,"message":"Already owned."}
     if cash_available < cost: return {"ok":false,"cost":cost,"message":"Purchase requires $%d." % cost}
     site["owned"] = true; reputation += 2
     return {"ok":true,"cost":cost,"message":"%s acquired. Generate its resource to build network stock." % site["name"]}
@@ -117,8 +139,16 @@ func upgrade_property(index: int, cash_available: int) -> Dictionary:
 
 func generate_resource(index: int) -> Dictionary:
     _normalize_all()
-    if index < 0 or index >= resource_sites.size() or not bool(resource_sites[index]["owned"]): return {"ok":false,"output":0,"message":"Own the resource site first."}
-    var site: Dictionary = resource_sites[index]; var output: int = int(site["output"]) * int(site["level"])
+    if index < 0 or index >= resource_sites.size(): return {"ok":false,"output":0,"message":"Unknown resource site."}
+    var site: Dictionary = resource_sites[index]
+    if _canonical_state_enabled():
+        if not bool(site.get("owned", false)): return {"ok":false,"output":0,"message":"Own the resource site first."}
+        var generated: Dictionary = ExpansionState.record_resource_generation(game_state, index)
+        if not bool(generated.get("ok", false)): return {"ok":false,"output":0,"message":"Resource generation could not be completed."}
+        game_state.restore_expansion_runtime(self)
+        return {"ok":true,"output":int(generated.get("output", 0)),"message":"%s generated %d %s. Stock: %d." % [site["name"],int(generated.get("output", 0)),site["resource"],int(generated.get("stock", 0))]}
+    if not bool(site["owned"]): return {"ok":false,"output":0,"message":"Own the resource site first."}
+    var output: int = int(site["output"]) * int(site["level"])
     site["stock"] += output
     return {"ok":true,"output":output,"message":"%s generated %d %s. Stock: %d." % [site["name"],output,site["resource"],site["stock"]]}
 
@@ -188,8 +218,18 @@ func management_upgrade(cash_available: int) -> Dictionary:
 
 func upgrade_resource_site(index: int, cash_available: int) -> Dictionary:
     _normalize_all()
-    if index < 0 or index >= resource_sites.size() or not bool(resource_sites[index]["owned"]): return {"ok":false,"cost":0,"message":"Own the resource site first."}
-    var site: Dictionary = resource_sites[index]; var cost: int = 9000 * int(site["level"])
+    if index < 0 or index >= resource_sites.size(): return {"ok":false,"cost":0,"message":"Unknown resource site."}
+    var site: Dictionary = resource_sites[index]
+    var cost: int = 9000 * int(site["level"])
+    if _canonical_state_enabled():
+        if not bool(site.get("owned", false)): return {"ok":false,"cost":0,"message":"Own the resource site first."}
+        var canonical_cash := int(game_state.get_value(["expansion", "cash"], 0))
+        if canonical_cash < cost: return {"ok":false,"cost":cost,"message":"Resource upgrade requires $%d." % cost}
+        if not ExpansionState.record_resource_upgrade(game_state, index, cost, 2, -1):
+            return {"ok":false,"cost":cost,"message":"Resource upgrade could not be completed."}
+        game_state.restore_expansion_runtime(self)
+        return {"ok":true,"cost":cost,"message":"%s upgraded to level %d." % [site["name"],int(site["level"]) + 1]}
+    if not bool(site["owned"]): return {"ok":false,"cost":0,"message":"Own the resource site first."}
     if cash_available < cost: return {"ok":false,"cost":cost,"message":"Resource upgrade requires $%d." % cost}
     site["level"] += 1; site["output"] += 2; site["risk"] = max(3, int(site["risk"]) - 1)
     return {"ok":true,"cost":cost,"message":"%s upgraded to level %d." % [site["name"],site["level"]]}
