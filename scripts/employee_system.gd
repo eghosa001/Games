@@ -11,6 +11,8 @@ var candidates: Array[Dictionary] = []
 var next_id := 2
 var history: Array[Dictionary] = []
 var _day := 1
+var _syncing_legacy := false
+var _last_legacy_count := -1
 
 const FIRST_NAMES := ["David", "Sarah", "Michael", "Grace", "Daniel", "Amaka", "Victor", "Esther", "Samuel", "Ada"]
 const ROLES := ["Technician", "Sales Associate", "Logistics Coordinator", "Craft Worker", "Operations Assistant"]
@@ -20,6 +22,9 @@ func _ready() -> void:
     if employees.is_empty():
         _create_initial_roster()
     refresh_candidates()
+
+func _process(_delta: float) -> void:
+    _sync_legacy_gameplay()
 
 func _create_initial_roster() -> void:
     employees.clear()
@@ -84,6 +89,12 @@ func get_employee(employee_id: String) -> Dictionary:
     for employee in employees:
         if employee.get("id", "") == employee_id: return employee
     return {}
+
+func get_roster() -> Array[Dictionary]:
+    return employees.duplicate(true)
+
+func get_candidates() -> Array[Dictionary]:
+    return candidates.duplicate(true)
 
 func hire_candidate(candidate_id: String, day: int) -> Dictionary:
     for candidate in candidates:
@@ -177,14 +188,13 @@ func daily_update(day: int, company_performance: int = 0) -> Dictionary:
         employee["productivity"] = clamp(int(round(float(performance) / 2.0)), 20, 100)
         if int(employee["ambition"]) >= 80 and int(employee["career_level"]) < 4 and int(employee["experience"]) % 12 == 0:
             warnings.append("%s is ready for a career conversation." % employee["name"])
-    _day = day
     refresh_candidates()
     return {"warnings": warnings, "salary": total_salary(), "productivity": total_productivity()}
 
 func poach_candidate(employee_id: String, rival_name: String, day: int) -> Dictionary:
     var employee := get_employee(employee_id)
     if employee.is_empty() or employee.get("status", "active") != "active": return {"ok": false}
-    var risk := int(employee["ambition"]) + (100 - int(employee["loyalty"]))
+    var risk := int(employee["ambition"]) + (100 - int(employee["loyalty"])
     if risk < 100: return {"ok": false, "message": "%s resisted a poaching attempt by %s." % [employee["name"], rival_name]}
     employee["loyalty"] = max(0, int(employee["loyalty"]) - 12)
     employee["morale"] = max(0, int(employee["morale"]) - 8)
@@ -228,6 +238,38 @@ func _ensure_james() -> void:
     var james := _make_employee(JAMES_ID, "James", "Worker", "Restoration", 58, 6, 450, 82, 78, 76, 82, 1, "Restoration", "", 1)
     employees.push_front(james)
     _record(JAMES_ID, "restored_identity", {})
+
+func _sync_legacy_gameplay() -> void:
+    if _syncing_legacy: return
+    var tree := get_tree()
+    if tree == null: return
+    var main := tree.get_first_node_in_group("game_root")
+    if main == null:
+        main = tree.current_scene
+    if main == null or not ("employees" in main): return
+    var legacy_count := int(main.get("employees"))
+    var active := active_count()
+    if _last_legacy_count < 0:
+        _last_legacy_count = legacy_count
+        if active != legacy_count:
+            _syncing_legacy = true
+            main.set("employees", active)
+            _syncing_legacy = false
+        return
+    if legacy_count > active:
+        while active_count() < legacy_count:
+            var result := hire_default(int(main.get("day")))
+            if not result.get("ok", false): break
+            active = active_count()
+    elif legacy_count < active:
+        # Legacy UI has no employee selector yet. Keep the persistent roster authoritative
+        # and restore the displayed count so an accidental count mutation cannot delete staff.
+        legacy_count = active
+    if int(main.get("employees")) != active_count():
+        _syncing_legacy = true
+        main.set("employees", active_count())
+        _syncing_legacy = false
+    _last_legacy_count = active_count()
 
 func _record(employee_id: String, event_type: String, details: Dictionary) -> void:
     var entry := {"employee_id": employee_id, "type": event_type, "details": details}
