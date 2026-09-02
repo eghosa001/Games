@@ -134,4 +134,4 @@ func competition_pressure() -> float:
     return min(0.35,float(r["competition"])*0.08*int(rival_presence[selected]))
 
 func _money(value:int)->String:
-    return "%,d"%value
+    return str(value)
