@@ -6,13 +6,24 @@ RENEW is an economic restoration and empire-building simulation game. The defini
 
 **Restoration → Business → Economy → Competition → Alliances → Empire**
 
-## Current status
+## Current status — PLAYABLE GODOT PROTOTYPE
 
-### Prototype 01 — PLAYABLE RESTORATION LOOP
+The active game is a Godot 4.x prototype demonstrating the restoration-to-empire loop:
 
-A Godot prototype is now included. It demonstrates the first player-facing loop:
+**Inspect → Acquire → Restore → Open → Operate → Earn → Reinvest → Expand → Control Supply**
 
-**Inspect → Restore → Upgrade → Operate → Earn**
+Implemented systems now include:
+- staged visual restoration of the first abandoned warehouse
+- RENEW Goods production, staffing, pricing, marketing and customer contracts
+- dynamic resource prices and supplier reliability choices
+- three NPC corporations with relationships, alliances and acquisition pressure
+- loans, repayments, events and competitor reactions
+- three individually playable expansion businesses
+- business-level inventory, quality, staffing, pricing and open/paused operations
+- internal logistics between owned resource sites and businesses
+- owned materials, food and fuel resource sites with production, risk and upgrades
+- headquarters management overhead and upgrades
+- save/load persistence for the expanded empire state
 
 ### Run it
 
@@ -20,12 +31,27 @@ A Godot prototype is now included. It demonstrates the first player-facing loop:
 2. Clone/download this repository.
 3. Open the repository folder in Godot.
 4. Press **F6/F5** to run the project.
-5. Press **I** to inspect the abandoned warehouse.
-6. Press **R** repeatedly to fund restoration stages.
+5. Start with **I** to inspect, **A** to acquire, then **R** repeatedly to restore.
+
+### Empire controls
+
+- **7 / 8 / 9** — select Retail / Factory / Warehouse
+- **Z** — produce selected business
+- **Y** — sell selected business inventory
+- **G** — hire at selected business
+- **, / .** — lower/raise business price
+- **0** — open/pause selected business
+- **4 / 5 / 6** — select Materials / Food / Fuel resource site
+- **W** — generate resource stock
+- **F** — acquire selected resource site
+- **[** — upgrade selected resource site
+- **D** — move internal resources into the selected business
+- **]** — upgrade headquarters management
+- **F5 / F9** — save / load
 
 ## Development roadmap
 
-See `Docs/V1_IMPLEMENTATION.md` for the full implementation plan.
+See `Docs/V1_IMPLEMENTATION.md` for the implementation plan and current milestone status.
 
 ## Design principle
 
