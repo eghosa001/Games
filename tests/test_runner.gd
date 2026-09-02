@@ -78,7 +78,7 @@ func test_restoration() -> void:
     var r = load("res://scripts/restoration_strategy.gd").new()
     check(r.plans.has("Budget") and r.plans.has("Standard") and r.plans.has("Premium"), "restoration plans")
     var game = load("res://tests/fake_game.gd").new()
-    add_child(game)
+    root.add_child(game)
     r.game = game
     r.choose_budget()
     check(r.applied and r.selected == "Budget", "restoration choose_budget")
@@ -164,7 +164,7 @@ func test_contracts() -> void:
     var fake = load("res://tests/fake_game.gd").new()
     fake.set("reputation", 100)
     fake.set("cash", 100000)
-    add_child(fake)
+    root.add_child(fake)
     var negotiated = c.negotiate(0, "materials", fake)
     check(negotiated.has("ok") and negotiated.has("message"), "contracts negotiate")
     var rights = c.secure_resource("materials", fake)
@@ -203,7 +203,7 @@ func test_main_scene() -> void:
         return
     var instance = scene.instantiate()
     check(instance != null, "main scene instantiates")
-    add_child(instance)
+    root.add_child(instance)
     await process_frame
     check(instance.has_method("inspect_property"), "main inspect_property")
     check(instance.has_method("advance_day"), "main advance_day")
