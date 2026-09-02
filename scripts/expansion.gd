@@ -31,6 +31,10 @@ func _normalize_all() -> void:
         p["cost"] = int(p.get("cost", p["restoration_cost"])); p["income"] = int(p.get("income", 0))
         p["level"] = max(1, int(p.get("level", 1))); p["owned"] = bool(p.get("owned", false))
         p["active"] = bool(p.get("active", p["owned"]))
+        p["stock"] = max(0, int(p.get("stock", 0)))
+        p["price"] = clamp(int(p.get("price", 100)), 50, 250)
+        p["quality"] = clamp(int(p.get("quality", 60)), 30, 100)
+        p["employees"] = max(1, int(p.get("employees", 1)))
         if not p.has("inputs") or not (p["inputs"] is Dictionary): p["inputs"] = {}
         if not p.has("input_need") or not (p["input_need"] is Dictionary): p["input_need"] = {}
         p["unlock_rep"] = int(p.get("unlock_rep", 10)); p["unlocked"] = bool(p.get("unlocked", false))
@@ -40,6 +44,8 @@ func _normalize_all() -> void:
                 "Retail": p["industry"] = "Consumer Goods"
                 "Industrial": p["industry"] = "Building Materials"
                 _: p["industry"] = "General"
+        for resource in p["input_need"]:
+            p["inputs"][resource] = max(0, int(p["inputs"].get(resource, 0)))
     for site in resource_sites:
         site["cost"] = int(site.get("cost", 15000)); site["level"] = max(1, int(site.get("level", 1)))
         site["output"] = max(0, int(site.get("output", 0))); site["risk"] = clamp(int(site.get("risk", 0)), 0, 100)
@@ -77,7 +83,7 @@ func restore_property(index: int, cash_available: int) -> Dictionary:
     if bool(site["owned"]): return {"ok":false,"cost":0,"message":"Already owned."}
     var cost: int = int(site["restoration_cost"])
     if cash_available < cost: return {"ok":false,"cost":cost,"message":"Restoration requires $%d." % cost}
-    site["owned"] = true; site["active"] = true; site["condition"] = 100; site["inputs"] = {}
+    site["owned"] = true; site["active"] = true; site["condition"] = 100; site["inputs"] = site["inputs"].duplicate(true)
     restored_count += 1; reputation += 5
     return {"ok":true,"cost":cost,"message":"%s restored and acquired." % site["name"]}
 
@@ -102,7 +108,6 @@ func operate_day() -> Dictionary:
     management_overhead = management_level * 350; expense += management_overhead
     var profit: int = revenue - expense
     day += 1; population += restored_count * 2
-    # The caller owns the global cash ledger and applies the returned profit once.
     return {"revenue":revenue,"expense":expense,"profit":profit,"cash":cash + profit,"day":day,"businesses":businesses}
 
 func upgrade_property(index: int, cash_available: int) -> Dictionary:
@@ -121,7 +126,6 @@ func generate_resource(index: int) -> Dictionary:
     site["stock"] += output
     return {"ok":true,"output":output,"message":"%s generated %d %s. Stock: %d." % [site["name"],output,site["resource"],site["stock"]]}
 
-# Compatibility API used by the mobile/keyboard empire controller.
 func harvest_resource(index: int) -> Dictionary:
     return generate_resource(index)
 
@@ -215,16 +219,13 @@ func supply_business(index: int, resource: String, amount: int) -> Dictionary:
     if index < 0 or index >= properties.size(): return {"ok":false,"moved":0,"message":"Unknown business."}
     var p = properties[index]
     if not bool(p["owned"]): return {"ok":false,"moved":0,"message":"Own the business first."}
-    if not p["input_need"].has(resource): return {"ok":false,"moved":0,"message":"%s does not use %s." % [p["name"],resource]}
-    var site_index := -1
-    for i in range(resource_sites.size()):
-        if String(resource_sites[i]["resource"]) == resource and bool(resource_sites[i]["owned"]): site_index = i; break
-    if site_index < 0: return {"ok":false,"moved":0,"message":"No owned %s source is available." % resource}
-    var source = resource_sites[site_index]; var available: int = int(source["stock"]); var moved: int = min(max(0, amount), available)
-    if moved <= 0: return {"ok":false,"moved":0,"message":"Generate %s before supplying this business." % resource}
-    source["stock"] = available - moved; p["inputs"][resource] = int(p["inputs"].get(resource,0)) + moved
-    return {"ok":true,"moved":moved,"message":"Supplied %d %s to %s from your owned source." % [moved,resource,p["name"]]}
-
-func get_summary() -> Dictionary:
-    _normalize_all()
-    return {"day":day,"cash":cash,"reputation":reputation,"population":population,"restored_count":restored_count,"properties":properties,"resource_sites":resource_sites,"management_level":management_level,"management_overhead":management_overhead}
+    var need := max(0, amount)
+    if need <= 0: return {"ok":false,"moved":0,"message":"Supply amount must be positive."}
+    for site in resource_sites:
+        if bool(site["owned"]) and String(site["resource"]) == resource:
+            var moved := min(need, int(site["stock"]))
+            if moved <= 0: continue
+            site["stock"] -= moved
+            p["inputs"][resource] = int(p["inputs"].get(resource, 0)) + moved
+            return {"ok":true,"moved":moved,"message":"Moved %d %s from %s to %s." % [moved,resource,site["name"],p["name"]]}
+    return {"ok":false,"moved":0,"message":"No owned stock is available for %s." % resource}
