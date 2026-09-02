@@ -100,3 +100,7 @@ See `Docs/V1_IMPLEMENTATION.md` for the implementation plan and current mileston
 ## Design principle
 
 The player should become emotionally attached to businesses because they personally transformed them from neglected assets into valuable operations. Economic competition—not combat—is the primary conflict. Rivals should react to the player's growth, making expansion feel like entering a living market rather than unlocking static menus.
+
+## Production polish
+
+The current build is undergoing the final mobile UI, presentation, balancing and release-readiness pass. Automated regression remains the release gate.
