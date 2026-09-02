@@ -1,4 +1,4 @@
-[gd_scene load_steps=21 format=3]
+[gd_scene load_steps=22 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -19,6 +19,7 @@
 [ext_resource path="res://scripts/empire_goals.gd" type="Script" id="17"]
 [ext_resource path="res://scripts/strategy_hud.gd" type="Script" id="18"]
 [ext_resource path="res://scripts/v1_celebration.gd" type="Script" id="19"]
+[ext_resource path="res://scripts/employee_controller.gd" type="Script" id="20"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -65,6 +66,9 @@ script = ExtResource("9")
 
 [node name="GameStateBridge" type="Node2D" parent="."]
 script = ExtResource("10")
+
+[node name="EmployeeController" type="Node" parent="."]
+script = ExtResource("20")
 
 [node name="MobileUI" type="CanvasLayer" parent="."]
 script = ExtResource("7")
