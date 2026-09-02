@@ -118,6 +118,9 @@ func operate_day(region_system)->Dictionary:
         var demand:=max(1,int(round(capacity*market*price_factor*(1.0-pressure)*conversion*(0.85+float(b["quality"])/300.0))))
         var units:=min(int(b["stock"]),int(round(float(demand)*supply_protection)))
         var revenue: int = units*int(b["price"])
+        # Payroll is charged once by EmployeeController at company level. Keep
+        # branch P&L fully loaded with wage expense, but only return the cash
+        # contribution before payroll so parent cash is not double-charged.
         var wages:=0
         if employee_controller!=null:
             for employee_id in employee_controller.assigned_employee_ids("branch", "branch_%d" % index):
@@ -128,8 +131,9 @@ func operate_day(region_system)->Dictionary:
         var overhead_base:=450+int(b["level"])*120
         var overhead:=max(100,int(round(float(overhead_base)*(1.12-management_eff*0.10))))
         var profit: int = revenue-wages-overhead
+        var cash_contribution: int = revenue-overhead
         b["stock"]-=units; b["cashflow"]=profit
-        total+=profit; sales+=revenue
+        total+=cash_contribution; sales+=revenue
     return {"profit":total,"businesses":active,"sales":sales,"employee_metrics":operations}
 
 func _employee_controller():
