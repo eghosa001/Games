@@ -38,11 +38,9 @@ func _process(_delta: float) -> void:
     var tree := Engine.get_main_loop()
     if tree == null: return
     var scene = tree.get_current_scene()
-    if scene == null or not scene.get("day") is int: return
+    if scene == null or typeof(scene.get("day")) != TYPE_INT: return
     var day := int(scene.get("day"))
-    if day != last_day:
-        process_day(day)
-        last_day = day
+    if day != last_day: process_day(day)
 
 func build(type: String, region: int, owner_id: String, cash: int, day: int, construction_days: int = -1) -> Dictionary:
     if not base_specs.has(type): return {"ok":false,"message":"Unknown infrastructure type."}
@@ -53,13 +51,7 @@ func build(type: String, region: int, owner_id: String, cash: int, day: int, con
     var id := "infra_%d" % next_id
     next_id += 1
     var duration := int(spec["build_days"]) if construction_days < 0 else max(1, construction_days)
-    assets[id] = {
-        "id":id,"type":type,"name":spec["name"],"region":region,"owner_id":owner_id,
-        "status":CONSTRUCTING,"level":1,"capacity":float(spec["capacity"]),"utilization":0.0,
-        "maintenance":cost_to_maintenance(cost),"construction_cost":cost,"upgrade_count":0,
-        "built_day":day,"completion_day":day+duration,"disruption_until":0,"disruption_reason":"",
-        "location":region,"created_day":day
-    }
+    assets[id] = {"id":id,"type":type,"name":spec["name"],"region":region,"owner_id":owner_id,"status":CONSTRUCTING,"level":1,"capacity":float(spec["capacity"]),"utilization":0.0,"maintenance":cost_to_maintenance(cost),"construction_cost":cost,"upgrade_count":0,"built_day":day,"completion_day":day+duration,"disruption_until":0,"disruption_reason":"","location":region,"created_day":day}
     _register_ownership(id, owner_id)
     _event(day, "%s started construction in region %d." % [spec["name"],region])
     return {"ok":true,"id":id,"cost":cost,"message":"%s construction started." % spec["name"]}
@@ -69,10 +61,8 @@ func upgrade(asset_id: String, owner_id: String, cash: int, day: int) -> Diction
     var asset: Dictionary = assets[asset_id]
     if str(asset.get("owner_id")) != owner_id: return {"ok":false,"message":"Only the infrastructure owner can upgrade it."}
     if str(asset.get("status")) != ACTIVE: return {"ok":false,"message":"Infrastructure must be active before upgrading."}
-    var type := str(asset.get("type"))
-    var spec: Dictionary = base_specs[type]
-    var level := int(asset.get("level",1))
-    var cost := int(spec["upgrade_cost"]) * level
+    var type := str(asset.get("type")); var spec: Dictionary = base_specs[type]
+    var level := int(asset.get("level",1)); var cost := int(spec["upgrade_cost"]) * level
     if cash < cost: return {"ok":false,"message":"Upgrade requires $%s." % _money(cost)}
     asset["level"] = level + 1
     asset["capacity"] = float(asset.get("capacity",spec["capacity"])) + float(spec["upgrade_capacity"])
@@ -86,9 +76,7 @@ func upgrade(asset_id: String, owner_id: String, cash: int, day: int) -> Diction
 func disrupt(asset_id: String, duration: int, reason: String, day: int) -> Dictionary:
     if not assets.has(asset_id): return {"ok":false,"message":"Infrastructure asset not found."}
     var asset: Dictionary = assets[asset_id]
-    asset["status"] = DISRUPTED
-    asset["disruption_until"] = max(day + 1, day + duration)
-    asset["disruption_reason"] = reason
+    asset["status"] = DISRUPTED; asset["disruption_until"] = max(day + 1, day + duration); asset["disruption_reason"] = reason
     assets[asset_id] = asset
     _event(day, "%s disrupted: %s." % [asset["name"],reason])
     return {"ok":true,"message":"Infrastructure disrupted."}
@@ -100,43 +88,38 @@ func repair(asset_id: String, owner_id: String, cash: int, day: int) -> Dictiona
     if str(asset.get("status")) != DISRUPTED: return {"ok":false,"message":"Asset is not disrupted."}
     var cost := max(500, int(round(float(asset.get("maintenance",500)) * 2.5)))
     if cash < cost: return {"ok":false,"message":"Repair requires $%s." % _money(cost)}
-    asset["status"] = ACTIVE
-    asset["disruption_until"] = 0
-    asset["disruption_reason"] = ""
-    asset["last_repair_day"] = day
+    asset["status"] = ACTIVE; asset["disruption_until"] = 0; asset["disruption_reason"] = ""; asset["last_repair_day"] = day
     assets[asset_id] = asset
     return {"ok":true,"cost":cost,"message":"%s repaired and operational." % asset["name"]}
 
 func process_day(day: int) -> Dictionary:
-    var maintenance_due := 0
-    var completed := 0
-    var recovered := 0
+    var maintenance_due := 0; var completed := 0; var recovered := 0; var disrupted := 0
     for id in assets.keys():
         var asset: Dictionary = assets[id]
         if str(asset.get("status")) == CONSTRUCTING and day >= int(asset.get("completion_day",day+1)):
-            asset["status"] = ACTIVE
-            completed += 1
+            asset["status"] = ACTIVE; completed += 1
             _event(day, "%s construction completed in region %d." % [asset["name"],int(asset["region"])])
         elif str(asset.get("status")) == DISRUPTED and day >= int(asset.get("disruption_until",day+1)):
-            asset["status"] = ACTIVE
-            asset["disruption_reason"] = ""
-            recovered += 1
+            asset["status"] = ACTIVE; asset["disruption_reason"] = ""; recovered += 1
             _event(day, "%s disruption cleared." % asset["name"])
         if str(asset.get("status")) == ACTIVE:
             var region_factor := 1.0 + float(int(asset.get("region",0)) % 3) * 0.04
             var utilization := clamp((0.45 + float(asset.get("level",1)) * 0.05) * region_factor,0.10,0.98)
             asset["utilization"] = utilization
-            maintenance_due += int(round(float(asset.get("maintenance",0)) * (0.75 + utilization * 0.50)))
+            if day > int(asset.get("created_day",day)) and day % 23 == (int(str(id).replace("infra_","")) % 23):
+                asset["status"] = DISRUPTED; asset["disruption_until"] = day + 2; asset["disruption_reason"] = "regional infrastructure incident"; disrupted += 1
+                _event(day, "%s suffered a regional infrastructure incident." % asset["name"])
+            else:
+                maintenance_due += int(round(float(asset.get("maintenance",0)) * (0.75 + utilization * 0.50)))
         assets[id] = asset
     last_day = day
-    return {"maintenance":maintenance_due,"completed":completed,"recovered":recovered}
+    return {"maintenance":maintenance_due,"completed":completed,"recovered":recovered,"disrupted":disrupted}
 
-func maintenance_cost(day: int = -1) -> int:
+func maintenance_cost(_day: int = -1) -> int:
     var total := 0
     for asset in assets.values():
         if str(asset.get("status")) == ACTIVE:
-            var utilization := float(asset.get("utilization",0.0))
-            total += int(round(float(asset.get("maintenance",0)) * (0.75 + utilization * 0.50)))
+            total += int(round(float(asset.get("maintenance",0)) * (0.75 + float(asset.get("utilization",0.0)) * 0.50)))
     return total
 
 func capacity(region: int, type: String = "") -> float:
@@ -155,15 +138,13 @@ func total_capacity(region: int, type: String = "") -> float:
         total += float(asset.get("capacity",0.0))
     return total
 
-func utilization(asset_id: String) -> float:
-    return float(assets.get(asset_id,{}).get("utilization",0.0))
+func utilization(asset_id: String) -> float: return float(assets.get(asset_id,{}).get("utilization",0.0))
 
 func regional_modifier(region: int) -> Dictionary:
     var result := {"logistics":1.0,"production":1.0,"energy":1.0,"storage":1.0,"technology":1.0,"capacity":total_capacity(region)}
     for asset in assets.values():
         if int(asset.get("region",-1)) != region or str(asset.get("status")) != ACTIVE: continue
-        var u := float(asset.get("utilization",0.0))
-        var level := float(asset.get("level",1))
+        var u := float(asset.get("utilization",0.0)); var level := float(asset.get("level",1))
         match str(asset.get("type")):
             ROAD: result["logistics"] *= max(0.72,1.0 - 0.035*level*u)
             RAILWAY: result["logistics"] *= max(0.58,1.0 - 0.055*level*u)
@@ -201,20 +182,11 @@ func _ownership():
     var scene := get_tree().current_scene
     return scene.get_node_or_null("OwnershipSystem") if scene != null else null
 
-func cost_to_maintenance(cost: int) -> int:
-    return max(100,int(round(float(cost)*0.01)))
-
+func cost_to_maintenance(cost: int) -> int: return max(100,int(round(float(cost)*0.01)))
 func _event(day: int, text: String) -> void:
     events.append({"day":day,"text":text})
     if events.size() > 100: events.pop_front()
-
 func _money(value: int) -> String: return String.num_int64(value)
-
-func capture_state() -> Dictionary:
-    return {"assets":assets.duplicate(true),"next_id":next_id,"events":events.duplicate(true),"last_day":last_day}
-
+func capture_state() -> Dictionary: return {"assets":assets.duplicate(true),"next_id":next_id,"events":events.duplicate(true),"last_day":last_day}
 func restore_state(state: Dictionary) -> void:
-    assets = state.get("assets",{}).duplicate(true)
-    next_id = int(state.get("next_id",1))
-    events = state.get("events",[]).duplicate(true)
-    last_day = int(state.get("last_day",0))
+    assets = state.get("assets",{}).duplicate(true); next_id = int(state.get("next_id",1)); events = state.get("events",[]).duplicate(true); last_day = int(state.get("last_day",0))
