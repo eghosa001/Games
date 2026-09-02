@@ -2,6 +2,31 @@
 
 > Verified implementation work on `feature/foundation-v11-implementation`.
 
+## 2026-09-02 — Canonical expansion balance projection fix
+
+### Fixed in this pass
+
+- Corrected the transitional Main projection after canonical expansion purchase and upgrade mutations.
+- `buy_expansion()` now reads the authoritative `GameState.expansion.cash` and `GameState.expansion.reputation` after `RenewExpansionState.record_purchase()` instead of manually applying a second cash/reputation mutation.
+- `upgrade_expansion()` now reads the authoritative canonical balances after `RenewExpansionState.record_property_upgrade()` instead of manually subtracting the upgrade cost from the legacy Main projection.
+- Applied the same projection rule to resource-site purchase and resource-site upgrade: canonical mutation first, then Main pulls the resulting balances before runtime synchronization.
+- This prevents `_sync_expansion_runtime()` from overwriting canonical cash/reputation changes with stale Main scalar values.
+- The mutation flow is now explicitly **canonical mutation → canonical balance read → runtime restore → compatibility projection** for these expansion actions.
+
+### Verification status
+
+Static source review only. The Godot executable is not available in the current environment, so runtime tests were not claimed as passing.
+
+### Verified commit
+
+- `e15a025eac8753070f6b4233f7f38e0f2cd98ae1` — preserve canonical expansion balances in Main projection
+
+### Still next
+
+- Route the remaining direct resource-site mutations in `Expansion.gd` through `RenewExpansionState` without double mutation.
+- Add regression coverage for the Main-facing resource purchase/upgrade path and save/load projection.
+- Route expansion operating-day mutation fully through canonical state.
+
 ## 2026-09-02 — Resource mutation API compatibility and regression coverage
 
 ### Fixed in this pass
@@ -143,7 +168,6 @@ Main scalar fields remain compatibility projections rather than the intended dur
 
 ### Still incomplete
 
-- Final Main cash/reputation projection cleanup for canonical resource-site mutations.
 - Direct `Expansion.gd` resource-site mutation removal.
 - Full resource → extraction → transport → processing → manufacturing → distribution → retail → customer chain.
 - Expansion operating-day mutation still has a transitional runtime calculation layer.
@@ -155,4 +179,4 @@ Main scalar fields remain compatibility projections rather than the intended dur
 - Competitor memory, ownership/shareholder systems, acquisitions/mergers, finance consequences, technology, research, global rankings, HQ progression, museum, liveops and multiplayer remain incomplete.
 - Automated balance tests and Android/manual playtest verification remain outstanding.
 
-A system is not marked complete until **Code → Integration → Persistence → UI → Simulation behavior → Tests** are verified.
+A system is not marked complete until **Code → Integration → Persistence → UI → Simulation behavior → Tests** is verified.
