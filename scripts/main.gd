@@ -89,6 +89,9 @@ func _input(event: InputEvent) -> void:
             KEY_J: take_loan()
             KEY_V: repay_loan()
             KEY_X: acquire_rival_asset()
+            KEY_Y: buy_expansion_resource()
+            KEY_Z: upgrade_expansion_resource()
+            KEY_G: generate_expansion_resource()
             KEY_1: select_rival(0)
             KEY_2: select_rival(1)
             KEY_3: select_rival(2)
@@ -164,7 +167,7 @@ func hire_employee() -> void:
     var employee_controller = _employee_controller()
     if employee_controller == null: message = "Employee system is not ready."; return
     var current_staff := employee_controller.assigned_count("branch", "branch_0"); var cost := 1200 + current_staff*250
-    if cash < cost: message = "Hiring requires $%s." % _money(cost); return
+    if cash < cost: message = "Hiring requires $%s" % _money(cost); return
     var result = employee_controller.hire_for_assignment("Worker", "branch", "branch_0")
     if not bool(result.get("ok", false)): message = str(result.get("message", "Hiring failed.")); return
     cash -= cost; employees = employee_controller.assigned_count("branch", "branch_0"); reputation += 1
@@ -212,11 +215,23 @@ func advance_day() -> void:
     if day % 2 == 0:
         var event: Dictionary = events.roll(); cash += int(event["cash"]); reputation += int(event["rep"]); _log("EVENT: %s — %s" % [event["title"],event["text"]])
     _sync_expansion_runtime()
-    var empire = expansion.operate_day(); cash += int(empire["profit"])
-    if int(empire["businesses"]) > 0: _log("EMPIRE: %d businesses generated $%s net." % [empire["businesses"],_money(int(empire["profit"]))])
+    var empire = expansion.operate_day()
+    var empire_profit := int(empire["profit"])
+    var state := _game_state()
+    if state != null:
+        var expansion_result := ExpansionState.advance_day(state, empire_profit, int(expansion.restored_count) * 2)
+        cash += empire_profit
+        state.restore_expansion_runtime(expansion)
+        expansion.day = int(expansion_result["day"])
+    else:
+        cash += empire_profit
+        expansion.day = day
+        expansion.cash = cash
+        expansion.population += expansion.restored_count * 2
+    if int(empire["businesses"]) > 0: _log("EMPIRE: %d businesses generated $%s net." % [empire["businesses"],_money(empire_profit)])
     expansion.unlock_from_reputation(reputation); districts.update_unlocks(reputation)
     _sync_expansion_runtime()
-    _log("DAY %d: %d sold | sales $%s | core profit $%s | district %s." % [day,units,_money(sales),_money(profit),districts.current()["name"]]); message = "Day %d closed. %d sold; core profit $%s; empire profit $%s." % [day,units,_money(profit),_money(int(empire["profit"]))]
+    _log("DAY %d: %d sold | sales $%s | core profit $%s | district %s." % [day,units,_money(sales),_money(profit),districts.current()["name"]]); message = "Day %d closed. %d sold; core profit $%s; empire profit $%s." % [day,units,_money(profit),_money(empire_profit)]
 
 func cycle_supplier() -> void: supplier_choice = (supplier_choice+1)%3; message = "Supplier tier %d selected: lower price tiers trade reliability for savings." % (supplier_choice+1)
 func select_rival(index:int)->void:
@@ -290,6 +305,61 @@ func upgrade_expansion()->void:
     _sync_expansion_runtime()
     message="%s upgraded to level %d."%[site.get("name","Expansion"),int(expansion.get_property(selected_expansion).get("level",1))]
     _log("EXPANSION UPGRADE: %s (-$%s) committed to GameState."%[site.get("name","Expansion"),_money(cost)])
+
+func buy_expansion_resource() -> void:
+    var state = _game_state()
+    if state == null:
+        message = "Game state is unavailable."; return
+    if selected_expansion < 0 or selected_expansion >= expansion.resource_sites.size():
+        message = "Select a valid resource site."; return
+    _sync_expansion_runtime()
+    var site: Dictionary = expansion.get_resource_site(selected_expansion)
+    if site.is_empty():
+        message = "Unknown resource site."; return
+    var cost := int(site.get("cost", 0))
+    if not ExpansionState.record_resource_purchase(state, selected_expansion, cost, 2):
+        message = "Resource-site purchase could not be committed."; return
+    state.restore_expansion_runtime(expansion)
+    _sync_expansion_runtime()
+    message = "%s acquired." % site.get("name", "Resource site")
+    _log("RESOURCE SITE: %s (-$%s) committed to GameState." % [site.get("name", "Resource site"), _money(cost)])
+
+func upgrade_expansion_resource() -> void:
+    var state = _game_state()
+    if state == null:
+        message = "Game state is unavailable."; return
+    if selected_expansion < 0 or selected_expansion >= expansion.resource_sites.size():
+        message = "Select a valid resource site."; return
+    _sync_expansion_runtime()
+    var site: Dictionary = expansion.get_resource_site(selected_expansion)
+    if site.is_empty():
+        message = "Unknown resource site."; return
+    var cost := 9000 * int(site.get("level", 1))
+    if not ExpansionState.record_resource_upgrade(state, selected_expansion, cost, 2, -1):
+        message = "Resource-site upgrade could not be committed."; return
+    state.restore_expansion_runtime(expansion)
+    _sync_expansion_runtime()
+    message = "%s upgraded to level %d." % [site.get("name", "Resource site"), int(expansion.get_resource_site(selected_expansion).get("level", 1))]
+    _log("RESOURCE UPGRADE: %s (-$%s) committed to GameState." % [site.get("name", "Resource site"), _money(cost)])
+
+func generate_expansion_resource() -> void:
+    var state = _game_state()
+    if state == null:
+        message = "Game state is unavailable."; return
+    if selected_expansion < 0 or selected_expansion >= expansion.resource_sites.size():
+        message = "Select a valid resource site."; return
+    _sync_expansion_runtime()
+    var site: Dictionary = expansion.get_resource_site(selected_expansion)
+    if site.is_empty() or not bool(site.get("owned", false)):
+        message = "Own the resource site first."; return
+    var output := int(site.get("output", 0)) * int(site.get("level", 1))
+    if not ExpansionState.record_resource_generation(state, selected_expansion, output):
+        message = "Resource generation could not be committed."; return
+    state.restore_expansion_runtime(expansion)
+    _sync_expansion_runtime()
+    message = "%s generated %d %s." % [site.get("name", "Resource site"), output, site.get("resource", "resource")]
+    _log("RESOURCE GENERATION: %s +%d %s; stock %d." % [site.get("name", "Resource site"), output, site.get("resource", "resource"), int(expansion.get_resource_site(selected_expansion).get("stock", 0))])
+
 func acquire_rival_asset()->void:
     var result=rivals.acquire_asset(selected_rival,cash,reputation)
     if not result["ok"]: message=result["message"]; return
@@ -364,7 +434,7 @@ func _log(text:String)->void:
     if log_lines.size()>14: log_lines.pop_back()
 
 func _draw()->void:
-    draw_rect(Rect2(25,25,825,455),Color("101820"),true)
+    draw_rect(Rect2(25,25,800,455),Color("101820"),true)
     draw_string(ThemeDB.fallback_font,Vector2(45,55),"RENEW — RESTORE. BUILD. CONTROL.",HORIZONTAL_ALIGNMENT_LEFT,-1,22,Color.WHITE)
     draw_string(ThemeDB.fallback_font,Vector2(45,82),"Day %d | Cash $%s | Reputation %d | Debt $%s"%[day,_money(cash),reputation,_money(debt)],HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("8ee6a8"))
     draw_string(ThemeDB.fallback_font,Vector2(45,108),"Property: %s | Restoration %d%% | Business %s | Employees %d"%[stage,restoration,"OPEN" if business_open else "CLOSED",employees],HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("c6d0d8"))
@@ -372,7 +442,7 @@ func _draw()->void:
     draw_string(ThemeDB.fallback_font,Vector2(45,165),message,HORIZONTAL_ALIGNMENT_LEFT,750,15,Color("b7d7ff"))
     draw_string(ThemeDB.fallback_font,Vector2(45,195),"I inspect | A acquire | R restore | O open | S inputs | B produce | H hire | N end day",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("8fa5b5"))
     draw_string(ThemeDB.fallback_font,Vector2(45,218),"U upgrade | M marketing | P price | J loan | V repay | K contract | E expansion | X rival asset",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("8fa5b5"))
-    draw_string(ThemeDB.fallback_font,Vector2(45,245),"Rivals 1-3 | Expansion 7-9 | T supplier | F5 save | F9 load",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("8fa5b5"))
+    draw_string(ThemeDB.fallback_font,Vector2(45,245),"Rivals 1-3 | Expansion 7-9 | T supplier | Y buy resource | Z upgrade resource | G generate | F5 save | F9 load",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("8fa5b5"))
     var y:=285
     for line in log_lines:
         draw_string(ThemeDB.fallback_font,Vector2(45,y),line,HORIZONTAL_ALIGNMENT_LEFT,750,11,Color("aebcc6")); y+=19
