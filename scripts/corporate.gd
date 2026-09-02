@@ -131,7 +131,7 @@ func strategic_ally_defense() -> void:
     if parent.reputation < 35:
         parent.message = "You need 35 reputation to call on a strategic ally."
         return
-    var ally := parent.rivals.alliance_bonus(parent.selected_rival)
+    var ally: Dictionary = parent.rivals.alliance_bonus(parent.selected_rival)
     if float(ally["sales"]) <= 0.0:
         parent.message = "Build a real alliance first; an ordinary relationship is not enough."
         return
