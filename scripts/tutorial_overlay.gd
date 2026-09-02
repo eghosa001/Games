@@ -23,7 +23,7 @@ func _process(_delta: float) -> void:
         return
     var current_action: String = String(tutorial.current().get("action", "COMPLETE"))
     if not tutorial.completed and current_action != "COMPLETE":
-        var old_step := tutorial.step
+        var old_step: int = int(tutorial.step)
         tutorial.notify(current_action, game)
         if tutorial.step != old_step:
             game.message = "TUTORIAL COMPLETE: %s" % String(tutorial.current().get("title", "Next step"))
