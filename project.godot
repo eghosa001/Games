@@ -24,6 +24,7 @@ RenewDiplomacyEffects="*res://scripts/diplomacy_effects.gd"
 RenewDiplomacyControl="*res://scripts/diplomacy_control_bridge.gd"
 RenewInfrastructureSystem="*res://scripts/infrastructure_system.gd"
 RenewInfrastructureUI="*res://scripts/infrastructure_ui.gd"
+RenewResearchSystem="*res://scripts/research_system.gd"
 
 [display]
 window/size/viewport_width=1280
