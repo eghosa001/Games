@@ -2,7 +2,7 @@ extends RefCounted
 class_name RenewSupplyChain
 
 # Supply-chain simulation: resources are produced at owned sites, moved through
-# the player's network, and consumed by operating businesses. Shortages create
+the player's network, and consumed by operating businesses. Shortages create
 # real economic consequences instead of being cosmetic inventory numbers.
 var network_stock := {"materials":0,"packaging":0,"fuel":0,"food":0}
 var shipped_today := 0
@@ -54,7 +54,7 @@ func supply_business(property:Dictionary, amount:int, transport_capacity:int)->D
     var moved:=0
     var missing:Array[String]=[]
     for resource in property.get("input_need",{}):
-        var need:=int(property["input_need"][resource])*max(1,amount)
+        var need: int = int(property["input_need"][resource])*max(1,amount)
         var available:=int(network_stock.get(resource,0))
         var send:=min(min(need,available),max(0,transport_capacity))
         if send>0:
