@@ -17,9 +17,11 @@ func _ready() -> void:
     _refresh()
 
 func _process(_delta: float) -> void:
-    if parent == null:
+    if parent == null or status_label == null:
         return
-    _refresh()
+    # Do not rebuild action buttons every frame. Recreating them while a finger
+    # is pressing one causes the touch target to disappear before the release.
+    status_label.text = "$%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day)]
 
 func _build_ui() -> void:
     root = Control.new()
