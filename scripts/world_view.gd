@@ -86,7 +86,7 @@ func _draw_regions(w: float, h: float) -> void:
     if controller == null:
         return
     var regions = controller.regions
-    var count := regions.regions.size()
+    var count: int = int(regions.regions.size())
     var card_w := (w - 72.0) / 3.0
     var card_h := 78.0
     var start_y := 350.0
