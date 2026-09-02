@@ -30,8 +30,8 @@ func _input(event: InputEvent) -> void:
         KEY_W: harvest_selected_resource()
         KEY_D: dispatch_internal_supply()
         KEY_F: buy_selected_resource_site()
-        KEY_B: upgrade_selected_resource_site()
-        KEY_KP_ADD: management_upgrade()
+        KEY_BRACKETLEFT: upgrade_selected_resource_site()
+        KEY_BRACKETRIGHT: management_upgrade()
     queue_redraw()
 
 func select_business(index: int) -> void:
@@ -131,7 +131,6 @@ func dispatch_internal_supply() -> void:
         if result["ok"]:
             moved_total += int(result["moved"])
             messages.append("%d %s" % [result["moved"],resource])
-    # Retail can also receive finished goods made by the headquarters business.
     if p["inputs"].has("goods"):
         var goods_result = parent.expansion.transfer_core_goods(selected, 20, parent.finished_goods)
         if goods_result["ok"]:
@@ -171,7 +170,7 @@ func _draw() -> void:
     draw_string(ThemeDB.fallback_font, Vector2(872,243), "INPUTS " + input_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("d5dee6"))
     draw_string(ThemeDB.fallback_font, Vector2(872,267), "[Z] Produce   [Y] Sell   [G] Hire", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("c6d0d8"))
     draw_string(ThemeDB.fallback_font, Vector2(872,289), "[,] Price -10   [.] Price +10   [0] Open/Pause", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("c6d0d8"))
-    draw_string(ThemeDB.fallback_font, Vector2(872,311), "[D] Internal supply   [+] Upgrade HQ", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("8ee6a8"))
+    draw_string(ThemeDB.fallback_font, Vector2(872,311), "[D] Internal supply   [] HQ upgrade", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("8ee6a8"))
     draw_string(ThemeDB.fallback_font, Vector2(872,333), "[7] Retail  [8] Factory  [9] Warehouse", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("c6d0d8"))
-    draw_string(ThemeDB.fallback_font, Vector2(872,355), "[4/5/6] Resource sites  [W] Harvest  [F] Acquire  [B] Upgrade", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("c6d0d8"))
+    draw_string(ThemeDB.fallback_font, Vector2(872,355), "[4/5/6] Resource sites  [W] Harvest  [F] Acquire  [[]] Upgrade site", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("c6d0d8"))
     draw_string(ThemeDB.fallback_font, Vector2(872,377), "Last net: $%s   HQ level: %d" % [parent._money(int(p["last_profit"])),parent.expansion.management_level], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("8ee6a8"))
