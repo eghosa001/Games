@@ -1,8 +1,8 @@
 extends Node
 
 ## Autonomous NPC corporate politics for AllianceSystem.
-## NPCs use the real AllianceSystem as the source of truth for membership,
-## treasury contributions, votes, sanctions, defections and governance contests.
+## NPCs can join/form alliances, contribute, vote, sanction, defect and contest
+## leadership. Successful control challenges can replace the Chairman.
 
 var _last_day := 0
 
@@ -89,7 +89,7 @@ func _vote(system: Node, npc: Dictionary, alliance: Dictionary, news: Array[Stri
         var text := str(motion.get("motion", "")).to_lower()
         var choice := relationship >= 0
         if text.contains("sanction") or text.contains("expel"): choice = relationship < -10
-        if text.contains("director") or text.contains("governance"): choice = relationship >= 10
+        if text.contains("director") or text.contains("governance") or text.contains("chairman") or text.contains("control"): choice = relationship >= 10
         var result := system.vote(str(alliance["id"]), str(npc.get("id", "")), str(motion_id), choice)
         if bool(result.get("ok", false)) and str(result.get("status", "")) == "passed":
             news.append("%s helped pass '%s' in %s." % [npc.get("name", "corporation"), motion.get("motion", motion_id), alliance.get("name", "the alliance")])
@@ -123,14 +123,25 @@ func _contest_governance(system: Node, npc: Dictionary, alliance: Dictionary, da
     if str(alliance.get("founder_id", "")) == id: return
     var member: Dictionary = alliance.get("members", {}).get(id, {})
     var contribution := int(member.get("contributed", 0))
-    var chairman: Dictionary = alliance.get("members", {}).get(str(alliance.get("founder_id", "")), {})
+    var chairman_id := str(alliance.get("founder_id", ""))
+    var chairman: Dictionary = alliance.get("members", {}).get(chairman_id, {})
     var chairman_contribution := int(chairman.get("contributed", 0))
-    if contribution <= max(1, chairman_contribution) * 1.25 or int(npc.get("relationship", 0)) < 10: return
+    if contribution <= max(1, chairman_contribution) * 1.25: return
+    if int(npc.get("relationship", 0)) < 10: return
+    var control := get_node_or_null("/root/RenewAllianceControl")
+    if control == null: return
     var motion_id := "control_%s_%d" % [id, day]
-    var opened := system.open_vote(str(alliance["id"]), id, motion_id, "%s governance seat for major contributor" % id)
+    var opened := system.open_vote(str(alliance["id"]), id, motion_id, "%s control challenge against Chairman" % id)
     if not bool(opened.get("ok", false)): return
+    # The challenger votes first; other NPC votes are processed on their turns.
     var result := system.vote(str(alliance["id"]), id, motion_id, true)
-    if bool(result.get("ok", false)): news.append("%s challenged the leadership balance of %s through a governance vote." % [npc.get("name", id), alliance.get("name", "the alliance")])
+    if not bool(result.get("ok", false)): return
+    if str(result.get("status", "")) != "passed": return
+    var support := float(result.get("yes_percent", 0.0)) / 100.0
+    if support < 0.67: return
+    var coup := control.execute_coup(str(alliance["id"]), id, support, "NPC governance coup")
+    if bool(coup.get("ok", false)):
+        news.append("%s seized control of %s and became Chairman." % [npc.get("name", id), alliance.get("name", "the alliance")])
 
 func _find(npcs: Array, id: String) -> Dictionary:
     for npc in npcs:
