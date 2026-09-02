@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-# Mobile-first control surface. Buttons now provide visible feedback after every action.
+# Mobile-first control surface. Buttons provide feedback without rebuilding the pressed control mid-signal.
 var parent: Node
 var visible_mobile := true
 var active_tab := 0
@@ -12,6 +12,7 @@ var status_label: Label
 var feedback_panel: Panel
 var feedback_label: Label
 var feedback_timer := 0.0
+var refresh_pending := false
 
 var tab_names := ["RESTORE", "BUSINESS", "EMPIRE", "WORLD"]
 
@@ -121,15 +122,22 @@ func _button(text: String, callback: Callable) -> void:
     actions.add_child(b)
 
 func _run_action(label: String, callback: Callable) -> void:
+    if not callback.is_valid():
+        _show_feedback("%s\nAction is currently unavailable." % label)
+        return
+
     var before_cash := int(parent.cash)
     var before_rep := int(parent.reputation)
     var before_day := int(parent.day)
     var before_goods := int(parent.finished_goods)
     var before_message := String(parent.message)
+
     callback.call()
-    var message := String(parent.message)
+
+    var message := _callback_message(callback)
     if message.is_empty() or message == before_message:
         message = "%s completed." % label
+
     var changes: Array[String] = []
     var cash_change := int(parent.cash) - before_cash
     var rep_change := int(parent.reputation) - before_rep
@@ -144,7 +152,27 @@ func _run_action(label: String, callback: Callable) -> void:
         changes.append("Day %d" % int(parent.day))
     if changes.size() > 0:
         message += "\n" + "  |  ".join(changes)
+
     _show_feedback(message)
+    _queue_refresh()
+
+func _callback_message(callback: Callable) -> String:
+    var parent_message := String(parent.message)
+    if not parent_message.is_empty():
+        return parent_message
+    var target = callback.get_object()
+    if target != null and "message" in target:
+        return String(target.message)
+    return ""
+
+func _queue_refresh() -> void:
+    if refresh_pending:
+        return
+    refresh_pending = true
+    call_deferred("_deferred_refresh")
+
+func _deferred_refresh() -> void:
+    refresh_pending = false
     _refresh()
 
 func _show_feedback(text: String) -> void:
