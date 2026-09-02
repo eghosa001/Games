@@ -35,12 +35,18 @@ func run() -> void:
     check(int(expansion["properties"][0]["level"]) == 2, "property upgrade level persists")
     check(int(expansion["properties"][0]["income"]) == 1700, "property upgrade income persists")
 
+    var resource_cash_before := int(expansion["cash"])
+    var resource_rep_before := int(expansion.get("reputation", 0))
     check(adapter.record_resource_purchase(state, 0, 15000, 2), "canonical resource purchase")
     expansion = state.get_value(["expansion"], {})
     check(bool(expansion["resource_sites"][0]["owned"]), "resource ownership persists")
+    check(int(expansion["cash"]) == resource_cash_before - 15000, "resource purchase cash mutation persists")
+    check(int(expansion["reputation"]) == resource_rep_before + 2, "resource purchase reputation mutation persists")
 
-    var generated: Dictionary = adapter.record_resource_generation(state, 0)
-    check(bool(generated.get("ok", false)), "canonical resource generation")
+    # Main's transitional wrapper historically supplied the calculated output.
+    # The canonical adapter now owns that calculation but accepts the argument for compatibility.
+    var generated: Dictionary = adapter.record_resource_generation(state, 0, 8)
+    check(bool(generated.get("ok", false)), "canonical resource generation with legacy argument")
     check(int(generated.get("output", 0)) == 8, "resource generation output is correct")
     check(int(generated.get("stock", 0)) == 8, "resource stock persists")
 
