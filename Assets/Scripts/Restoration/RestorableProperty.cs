@@ -20,7 +20,7 @@ namespace Renew.Restoration
         [SerializeField] private string propertyName = "Abandoned Property";
         [SerializeField] private PropertyType propertyType = PropertyType.Warehouse;
         [SerializeField] private RestorationStage stage = RestorationStage.Neglected;
-        [SerializeField] private float condition = 0f;
+        [SerializeField] private float condition;
         [SerializeField] private RestorationCosts costs = new RestorationCosts();
 
         public string PropertyId => propertyId;
@@ -32,10 +32,10 @@ namespace Renew.Restoration
 
         public event Action<RestorationStage> StageChanged;
 
-        public bool RestoreNextStep(float availableCash, out float cost)
+        public bool RestoreNextStep(out float cost)
         {
             cost = GetNextCost();
-            if (cost < 0f || availableCash < cost) return false;
+            if (cost < 0f) return false;
 
             switch (stage)
             {
