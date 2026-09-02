@@ -36,8 +36,8 @@ func product_cost_multiplier(economy)->float:
     var total:=0.0
     var count:=0
     for resource in economy.resources:
-        var state:=profile(String(resource),economy.resources[resource])
-        total+=float(state["price_multiplier"]); count+=1
+        total+=float(profile(String(resource),economy.resources[resource])["price_multiplier"])
+        count+=1
     return clamp(total/max(1,count),0.70,2.20)
 
 func product_market_price(economy,base_price:float=110.0)->float:
@@ -45,11 +45,14 @@ func product_market_price(economy,base_price:float=110.0)->float:
 
 func _process(_delta:float)->void:
     var main:=get_tree().current_scene
-    if main==null or not "economy" in main: return
-    apply_to_economy(main.economy)
-    if not "rivals" in main or main.rivals==null: return
-    var multiplier:=product_cost_multiplier(main.economy)
-    for rival in main.rivals.rivals:
+    if main==null: return
+    var economy=main.get("economy")
+    if economy==null: return
+    apply_to_economy(economy)
+    var rivals=main.get("rivals")
+    if rivals==null: return
+    var multiplier:=product_cost_multiplier(economy)
+    for rival in rivals.rivals:
         if not rival.has("_scarcity_base_price"): rival["_scarcity_base_price"]=int(rival.get("price",110))
         rival["price"]=clamp(int(round(float(rival["_scarcity_base_price"])*multiplier)),50,300)
 
