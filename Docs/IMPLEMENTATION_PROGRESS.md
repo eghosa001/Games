@@ -46,10 +46,11 @@
 
 - Branch launch no longer invents a staffing count. It opens the operating unit with zero staff and the controller creates three persistent employee records assigned to that branch.
 - Branch hiring now routes through `EmployeeController.hire_for_assignment()` and assigns the new employee to a concrete `branch_<index>` target.
-- Existing employees from older saves whose assignment is still `renew_goods` are migrated to the existing flagship branch at controller startup instead of being duplicated.
+- Existing employees from older saves whose assignment is still `renew_goods` are migrated to the existing flagship branch instead of being duplicated.
 - Branch staffing projections are refreshed from actual active employee assignments before daily operations and UI rendering.
-- Branch production/sales capacity now reaches zero when a branch has no assigned employees, preventing a branch from generating operating output from an orphaned integer count.
+- Branch production/sales capacity reaches zero when a branch has no assigned employees, preventing a branch from generating operating output from an orphaned integer count.
 - Branch P&L still includes employee wage expense, but branch cash contribution excludes payroll because `EmployeeController` charges company payroll once per day. This removes the previous double-charge while preserving wage expense in branch P&L.
+- Fixed startup ordering: branch migration now waits until `EmployeeController` has completed restore/bootstrap, preventing old employees from being missed because `Main.tscn` initializes `BranchController` before `EmployeeController`.
 - Branch operation results continue to expose the employee metrics used by the simulation.
 
 ### Commits
@@ -68,7 +69,8 @@
 - `26446b9a80226e90bfbb8564fd2c46c9c34d4ae4` — employee assignment query helpers and authoritative branch staffing API
 - `1bf80082f449b4f924b00cc1439a32ba425bd535` — branch launch/hiring routed through persistent employee records
 - `831d77cf55be4b80b5e1e390e2b7d3e153a66250` — branch payroll double-charge prevention
-- `2536af30cd57975c0c90d581c45809269016ec36` — previous progress documentation update
+- `f992e66ead24d1601737892af37dfeca5dbe63f1` — startup-safe employee migration into branch assignments
+- `5bee414b476e847a96e4510b3dccb61d48ee86e6` — progress documentation update
 
 ## Story systems verified
 
