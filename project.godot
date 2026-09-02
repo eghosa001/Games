@@ -20,6 +20,7 @@ RenewAllianceCoupAI="*res://scripts/alliance_coup_ai.gd"
 RenewDiplomacySystem="*res://scripts/diplomacy_system.gd"
 RenewDiplomacyAI="*res://scripts/diplomacy_ai.gd"
 RenewDiplomacyUI="*res://scripts/diplomacy_ui.gd"
+RenewDiplomacyEffects="*res://scripts/diplomacy_effects.gd"
 
 [display]
 window/size/viewport_width=1280
@@ -38,4 +39,4 @@ renderer/rendering_method.mobile="gl_compatibility"
 
 [input]
 action_restore={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":82)]}
-action_inspect={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":73)]}
+action_inspect={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":73)}]
