@@ -22,6 +22,7 @@ var investor_name := "Independent Growth Fund"
 func _ready() -> void:
     parent = get_parent()
     if parent != null: last_processed_day = parent.day
+    _load_persistent_state()
     queue_redraw()
 
 func _process(_delta: float) -> void:
@@ -70,6 +71,7 @@ func raise_capital() -> void:
     last_capital_raise = offer
     board_trust = min(100, board_trust + 3)
     parent.reputation += 3
+    _persist()
     parent.message = "Capital raised: $%s for %.0f%% equity. Founder control remains %.0f%%." % [parent._money(offer), new_stake, founder_stake]
     parent._log("INVESTMENT: %s invested $%s for %.0f%% equity." % [investor_name, parent._money(offer), new_stake])
 
@@ -87,6 +89,7 @@ func buyback_shares() -> void:
     investor_stake -= amount
     founder_stake += amount
     board_trust = min(100, board_trust + 2)
+    _persist()
     parent.message = "Bought back %.0f%% of company for $%s. Founder stake: %.0f%%." % [amount, parent._money(cost), founder_stake]
     parent._log("BUYBACK: %.0f%% equity repurchased for $%s." % [amount, parent._money(cost)])
 
@@ -102,6 +105,7 @@ func pay_dividend() -> void:
     parent.cash -= payout
     dividends_paid += payout
     board_trust = min(100, board_trust + 5)
+    _persist()
     parent.message = "Paid $%s dividend. Investors are happier, but growth capital is lower." % parent._money(payout)
     parent._log("DIVIDEND: $%s paid to shareholders." % parent._money(payout))
 
@@ -118,6 +122,7 @@ func strengthen_defense() -> void:
     defense_level += 1
     board_trust = min(100, board_trust + 6)
     parent.reputation += 2
+    _persist()
     parent.message = "Defense upgraded to level %d. Takeover risk reduced." % defense_level
     parent._log("BOARD: corporate defense upgraded to level %d (-$%s)." % [defense_level, parent._money(cost)])
 
@@ -137,6 +142,7 @@ func strategic_ally_defense() -> void:
     board_trust = min(100, board_trust + 12)
     defense_level = min(3, defense_level + 1)
     takeover_cooldown = 10
+    _persist()
     parent.message = "Strategic ally committed support. Takeover risk temporarily suppressed."
     parent._log("ALLIANCE DEFENSE: strategic partner backed the company against takeover pressure.")
 
@@ -156,6 +162,7 @@ func process_day() -> void:
             parent.reputation = max(0, parent.reputation - 2)
             parent._log("TAKEOVER ATTEMPT: The Giant offered shareholders a premium bid. Control is under pressure.")
             parent.message = "TAKEOVER ALERT: The Giant is targeting your company. Defend your control."
+    _persist()
 
 func get_summary() -> Dictionary:
     _recalculate()
@@ -179,6 +186,22 @@ func load_state(state: Dictionary) -> void:
     last_capital_raise = int(state.get("last_capital_raise",0))
     takeover_cooldown = int(state.get("takeover_cooldown",0))
     last_processed_day = int(state.get("last_processed_day",parent.day if parent != null else 1))
+
+func _persist() -> void:
+    var file := FileAccess.open("user://renew_corporate.json", FileAccess.WRITE)
+    if file != null:
+        file.store_string(JSON.stringify(save_state()))
+        file.close()
+
+func _load_persistent_state() -> void:
+    if not FileAccess.file_exists("user://renew_corporate.json"): return
+    var file := FileAccess.open("user://renew_corporate.json", FileAccess.READ)
+    if file == null: return
+    var parsed = JSON.parse_string(file.get_as_text())
+    file.close()
+    if parsed is Dictionary:
+        load_state(parsed)
+        if parent != null: last_processed_day = parent.day
 
 func _draw() -> void:
     if parent == null: return
