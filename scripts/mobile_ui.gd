@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-# Mobile-first control surface. Keyboard controls remain available for desktop.
+# Mobile-first control surface. Buttons now provide visible feedback after every action.
 var parent: Node
 var visible_mobile := true
 var active_tab := 0
@@ -9,6 +9,9 @@ var tabs: HBoxContainer
 var actions: GridContainer
 var action_scroll: ScrollContainer
 var status_label: Label
+var feedback_panel: Panel
+var feedback_label: Label
+var feedback_timer := 0.0
 
 var tab_names := ["RESTORE", "BUSINESS", "EMPIRE", "WORLD"]
 
@@ -17,16 +20,21 @@ func _ready() -> void:
     _build_ui()
     _refresh()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
     if parent == null or status_label == null:
         return
     status_label.text = "$%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day)]
+    if feedback_timer > 0.0:
+        feedback_timer -= delta
+        if feedback_timer <= 0.0 and feedback_panel != null:
+            feedback_panel.hide()
 
 func _build_ui() -> void:
     root = Control.new()
     root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     root.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(root)
+
     var top := ColorRect.new()
     top.color = Color("101820")
     top.set_anchors_preset(Control.PRESET_TOP_WIDE)
@@ -34,6 +42,7 @@ func _build_ui() -> void:
     top.size.y = 54
     top.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(top)
+
     tabs = HBoxContainer.new()
     tabs.position = Vector2(12, 12)
     tabs.size = Vector2(720, 46)
@@ -48,6 +57,7 @@ func _build_ui() -> void:
         button.mouse_filter = Control.MOUSE_FILTER_STOP
         button.pressed.connect(_set_tab.bind(i))
         tabs.add_child(button)
+
     status_label = Label.new()
     status_label.position = Vector2(760, 17)
     status_label.size = Vector2(500, 44)
@@ -55,6 +65,22 @@ func _build_ui() -> void:
     status_label.add_theme_font_size_override("font_size", 15)
     status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(status_label)
+
+    feedback_panel = Panel.new()
+    feedback_panel.position = Vector2(24, 245)
+    feedback_panel.size = Vector2(720, 92)
+    feedback_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    feedback_panel.hide()
+    root.add_child(feedback_panel)
+
+    feedback_label = Label.new()
+    feedback_label.position = Vector2(16, 10)
+    feedback_label.size = Vector2(688, 72)
+    feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    feedback_label.add_theme_font_size_override("font_size", 15)
+    feedback_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    feedback_panel.add_child(feedback_label)
+
     var bottom := ColorRect.new()
     bottom.color = Color("101820")
     bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
@@ -62,6 +88,7 @@ func _build_ui() -> void:
     bottom.size.y = 138
     bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(bottom)
+
     action_scroll = ScrollContainer.new()
     action_scroll.position = Vector2(18, -132)
     action_scroll.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
@@ -71,6 +98,7 @@ func _build_ui() -> void:
     action_scroll.focus_mode = Control.FOCUS_NONE
     action_scroll.mouse_filter = Control.MOUSE_FILTER_STOP
     root.add_child(action_scroll)
+
     actions = GridContainer.new()
     actions.columns = 5
     actions.custom_minimum_size = Vector2(1200, 0)
@@ -83,6 +111,7 @@ func _set_tab(index: int) -> void:
     active_tab = index
     action_scroll.scroll_vertical = 0
     _refresh()
+    _show_feedback("TAB: %s\nChoose an action below." % tab_names[index])
 
 func _clear_actions() -> void:
     for child in actions.get_children():
@@ -94,14 +123,50 @@ func _button(text: String, callback: Callable) -> void:
     b.custom_minimum_size = Vector2(225, 48)
     b.focus_mode = Control.FOCUS_NONE
     b.mouse_filter = Control.MOUSE_FILTER_STOP
-    b.pressed.connect(callback)
+    b.pressed.connect(_run_action.bind(text, callback))
     actions.add_child(b)
+
+func _run_action(label: String, callback: Callable) -> void:
+    var before_cash := int(parent.cash)
+    var before_rep := int(parent.reputation)
+    var before_day := int(parent.day)
+    var before_goods := int(parent.finished_goods)
+    var before_message := String(parent.message)
+
+    callback.call()
+
+    var message := String(parent.message)
+    if message.is_empty() or message == before_message:
+        message = "%s completed." % label
+    var changes: Array[String] = []
+    var cash_change := int(parent.cash) - before_cash
+    var rep_change := int(parent.reputation) - before_rep
+    var goods_change := int(parent.finished_goods) - before_goods
+    if cash_change != 0:
+        changes.append("Cash %s$%s" % [("+" if cash_change > 0 else "-"), _money(abs(cash_change))])
+    if rep_change != 0:
+        changes.append("REP %s%d" % [("+" if rep_change > 0 else ""), rep_change])
+    if goods_change != 0:
+        changes.append("Goods %s%d" % [("+" if goods_change > 0 else ""), goods_change])
+    if int(parent.day) != before_day:
+        changes.append("Day %d" % int(parent.day))
+    if changes.size() > 0:
+        message += "\n" + "  |  ".join(changes)
+    _show_feedback(message)
+    _refresh()
+
+func _show_feedback(text: String) -> void:
+    if feedback_panel == null or feedback_label == null:
+        return
+    feedback_label.text = text
+    feedback_panel.show()
+    feedback_timer = 5.0
 
 func _refresh() -> void:
     if parent == null or actions == null:
         return
     _clear_actions()
-    status_label.text = "$%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day)]
+    status_label.text = "$%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day))]
     match active_tab:
         0:
             var restoration_strategy = get_node_or_null("../RestorationStrategy")
