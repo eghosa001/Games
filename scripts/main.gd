@@ -54,6 +54,9 @@ func _ready() -> void:
     var game_state = _game_state()
     if game_state != null and not game_state.has_state(): game_state.new_game()
     if game_state != null: game_state.restore_business_runtime(self)
+    if game_state != null: game_state.restore_property_runtime(self)
+    if game_state != null: game_state.restore_expansion_runtime(expansion)
+    _sync_expansion_runtime()
     rivals._normalize()
     expansion.unlock_from_reputation(reputation)
     districts.update_unlocks(reputation)
@@ -207,9 +210,11 @@ func advance_day() -> void:
     for news in rivals.strategic_update(day,selected_district,reputation): _log("MARKET: " + news)
     if day % 2 == 0:
         var event: Dictionary = events.roll(); cash += int(event["cash"]); reputation += int(event["rep"]); _log("EVENT: %s — %s" % [event["title"],event["text"]])
+    _sync_expansion_runtime()
     var empire = expansion.operate_day(); cash += int(empire["profit"])
     if int(empire["businesses"]) > 0: _log("EMPIRE: %d businesses generated $%s net." % [empire["businesses"],_money(int(empire["profit"]))])
     expansion.unlock_from_reputation(reputation); districts.update_unlocks(reputation)
+    _sync_expansion_runtime()
     _log("DAY %d: %d sold | sales $%s | core profit $%s | district %s." % [day,units,_money(sales),_money(profit),districts.current()["name"]]); message = "Day %d closed. %d sold; core profit $%s; empire profit $%s." % [day,units,_money(profit),_money(int(empire["profit"]))]
 
 func cycle_supplier() -> void: supplier_choice = (supplier_choice+1)%3; message = "Supplier tier %d selected: lower price tiers trade reliability for savings." % (supplier_choice+1)
@@ -255,43 +260,46 @@ func repay_loan()->void:
 func buy_expansion()->void:
     expansion.unlock_from_reputation(reputation); var result=expansion.buy(selected_expansion,cash)
     if not result["ok"]: message=result["message"]; return
-    cash-=int(result["cost"]); reputation+=3; message=result["message"]; _log("EXPANSION: %s (-$%s)."%[result["property"]["name"],_money(int(result["cost"]))])
+    cash-=int(result["cost"]); reputation+=3; _sync_expansion_runtime(); message=result["message"]; _log("EXPANSION: %s (-$%s)."%[result["property"]["name"],_money(int(result["cost"]))])
 func upgrade_expansion()->void:
     var result=expansion.upgrade(selected_expansion,cash)
     if not result["ok"]: message=result["message"]; return
-    cash-=int(result["cost"]); message=result["message"]; _log("EXPANSION UPGRADE: %s."%result["message"])
+    cash-=int(result["cost"]); _sync_expansion_runtime(); message=result["message"]; _log("EXPANSION UPGRADE: %s."%result["message"])
 func acquire_rival_asset()->void:
     var result=rivals.acquire_asset(selected_rival,cash,reputation)
     if not result["ok"]: message=result["message"]; return
     cash-=int(result["cost"]); acquisition_count+=1; reputation+=5; message=result["message"]; _log("ACQUISITION: %s for $%s."%[result["asset"],_money(int(result["cost"]))])
 func save_game()->void:
+    _sync_expansion_runtime()
     var result=SaveSystem.save_game(self)
     message="Game saved." if result.get("ok",false) else "Save failed: %s"%result.get("message","unknown error")
 func load_game()->void:
     var result=SaveSystem.load_game()
     if result.get("ok",false):
-        for key in result.keys():
-            if key=="ok" or key=="message": continue
-            if key=="employees": continue
-            if has_variable(key): set(key,result[key])
-        if result.has("employees"): employees=int(result["employees"])
         var state=_game_state()
-        if state!=null: state.restore_business_runtime(self)
+        if state!=null:
+            state.restore_business_runtime(self)
+            state.restore_property_runtime(self)
+            state.restore_expansion_runtime(expansion)
+        if result.has("employees"): employees=int(result["employees"])
         message="Game loaded."; _log("SAVE: restored successfully.")
-    else: message="Load failed: %s"%result.get("message","unknown error")
+
+func _sync_expansion_runtime()->void:
+    expansion.cash=cash
+    expansion.reputation=reputation
+    expansion.day=day
+    expansion.selected_index=selected_expansion
+    var state=_game_state()
+    if state!=null: state.sync_expansion_runtime(expansion)
 
 func _game_state():
-    var tree=Engine.get_main_loop()
-    if tree==null: return null
-    var root=tree.get_root()
-    if root==null: return null
-    return root.get_node_or_null("RenewGameState")
+    var tree=get_tree()
+    if tree==null:return null
+    return tree.root.get_node_or_null("RenewGameState")
 
 func _set_business(key:String,value)->void:
     var state=_game_state()
     if state!=null: state.set_business_value(key,value)
-    else: return
-    # Keep the legacy projection synchronized for existing UI and simulation consumers.
     match key:
         "open": business_open=bool(value)
         "capacity_level": capacity_level=int(value)
@@ -331,7 +339,7 @@ func _log(text:String)->void:
     if log_lines.size()>14: log_lines.pop_back()
 
 func _draw()->void:
-    draw_rect(Rect2(25,25,800,455),Color("101820"),true)
+    draw_rect(Rect2(25,25,825,455),Color("101820"),true)
     draw_string(ThemeDB.fallback_font,Vector2(45,55),"RENEW — RESTORE. BUILD. CONTROL.",HORIZONTAL_ALIGNMENT_LEFT,-1,22,Color.WHITE)
     draw_string(ThemeDB.fallback_font,Vector2(45,82),"Day %d | Cash $%s | Reputation %d | Debt $%s"%[day,_money(cash),reputation,_money(debt)],HORIZONTAL_ALIGNMENT_LEFT,-1,15,Color("8ee6a8"))
     draw_string(ThemeDB.fallback_font,Vector2(45,108),"Property: %s | Restoration %d%% | Business %s | Employees %d"%[stage,restoration,"OPEN" if business_open else "CLOSED",employees],HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("c6d0d8"))
