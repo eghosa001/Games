@@ -50,6 +50,8 @@ static func save_game(state: Dictionary) -> bool:
     if world_power_system != null: payload["world_power_system"] = world_power_system.capture_state()
     var headquarters_system = _headquarters_system()
     if headquarters_system != null: payload["headquarters_system"] = headquarters_system.capture_state()
+    var collection_system = _collection_system()
+    if collection_system != null: payload["collection_system"] = collection_system.capture_state()
     var game_state = _game_state()
     if game_state != null: payload["game_state"] = game_state.capture(payload)
     var json := JSON.stringify(payload)
@@ -119,6 +121,8 @@ static func load_game() -> Dictionary:
     if world_power_system != null and state.has("world_power_system"): world_power_system.restore_state(state["world_power_system"])
     var headquarters_system = _headquarters_system()
     if headquarters_system != null and state.has("headquarters_system"): headquarters_system.restore_state(state["headquarters_system"])
+    var collection_system = _collection_system()
+    if collection_system != null and state.has("collection_system"): collection_system.restore_state(state["collection_system"])
     if game_state != null: game_state.capture(state)
     return state
 
@@ -180,3 +184,4 @@ static func _economic_cycle_system(): return _root_node("RenewEconomicCycleSyste
 static func _ranking_system(): return _root_node("RenewGlobalRankingSystem")
 static func _world_power_system(): return _root_node("RenewWorldPowerSystem")
 static func _headquarters_system(): return _root_node("RenewHeadquartersSystem")
+static func _collection_system(): return _root_node("RenewCollectionSystem")
