@@ -164,7 +164,7 @@ func upgrade_resource_site(index: int, cash: int) -> Dictionary:
     site["level"] += 1
     site["output"] += 2
     site["risk"] = max(3, int(site["risk"]) - 1)
-    return {"ok":true,"cost":cost,"message":"%s upgraded to level %d." % [site["name"],site["level"]}
+    return {"ok":true,"cost":cost,"message":"%s upgraded to level %d." % [site["name"],site["level"]]}
 
 func supply_business(index: int, resource: String, amount: int) -> Dictionary:
     _normalize_all()
