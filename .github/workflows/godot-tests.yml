@@ -27,3 +27,6 @@ jobs:
 
       - name: Run regression tests
         run: ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_runner.gd
+
+      - name: Run extended function tests
+        run: ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_extended.gd
