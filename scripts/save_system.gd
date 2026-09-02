@@ -40,6 +40,8 @@ static func save_game(state: Dictionary) -> bool:
     if research_system != null: payload["research_system"] = research_system.capture_state()
     var world_event_system = _world_event_system()
     if world_event_system != null: payload["world_event_system"] = world_event_system.capture_state()
+    var economic_cycle_system = _economic_cycle_system()
+    if economic_cycle_system != null: payload["economic_cycle_system"] = economic_cycle_system.capture_state()
     var game_state = _game_state()
     if game_state != null: payload["game_state"] = game_state.capture(payload)
     var json := JSON.stringify(payload)
@@ -99,6 +101,8 @@ static func load_game() -> Dictionary:
     if research_system != null and state.has("research_system"): research_system.restore_state(state["research_system"])
     var world_event_system = _world_event_system()
     if world_event_system != null and state.has("world_event_system"): world_event_system.restore_state(state["world_event_system"])
+    var economic_cycle_system = _economic_cycle_system()
+    if economic_cycle_system != null and state.has("economic_cycle_system"): economic_cycle_system.restore_state(state["economic_cycle_system"])
     if game_state != null: game_state.capture(state)
     return state
 
@@ -155,3 +159,4 @@ static func _ownership_system(): return _root_node("OwnershipSystem")
 static func _infrastructure_system(): return _root_node("RenewInfrastructureSystem")
 static func _research_system(): return _root_node("RenewResearchSystem")
 static func _world_event_system(): return _root_node("RenewWorldEventSystem")
+static func _economic_cycle_system(): return _root_node("RenewEconomicCycleSystem")
