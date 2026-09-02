@@ -18,7 +18,7 @@ func _process(_delta:float)->void:
     regions.update_unlocks(parent.reputation)
     if parent.day != last_day:
         for news in regions.daily_update(parent.day): parent._log("REGION: "+news)
-        var income:=apply_branch_income()
+        var income:int = apply_branch_income()
         if income>0: parent._log("REGIONAL REVENUE: $%s from established operations."%_money(income))
         last_day=parent.day
     queue_redraw()
@@ -34,7 +34,7 @@ func _input(event:InputEvent)->void:
         KEY_F9: establish_trade_route()
 
 func select_region(index:int)->void:
-    var count=regions.regions.size()
+    var count:int=regions.regions.size()
     index=(index%count+count)%count
     var result=regions.select(index,parent.reputation)
     message=result["message"]
@@ -57,8 +57,8 @@ func upgrade_infrastructure()->void:
     parent._log("REGIONAL INFRASTRUCTURE: "+message+" (-$%s)."%_money(int(result["cost"])))
 
 func establish_trade_route()->void:
-    var origin:=0
-    var destination:=regions.selected
+    var origin:int=0
+    var destination:int=regions.selected
     if destination==origin:
         message="Select an established region other than the starter region."
         return
@@ -70,16 +70,16 @@ func establish_trade_route()->void:
     parent._log("TRADE CORRIDOR: "+message+" (-$%s)."%_money(int(result["cost"])))
 
 func dispatch_goods()->void:
-    var destination: int = regions.selected
-    var origin:=0
+    var destination:int=regions.selected
+    var origin:int=0
     if destination==origin:
         message="The starter region is already local; choose another region first."
         return
-    var amount:=min(10,parent.finished_goods)
+    var amount:int=min(10,parent.finished_goods)
     if amount<=0:
         message="Produce goods before dispatching a regional shipment."
         return
-    var cost:=int(round(regions.logistics_cost(amount*45.0,origin,destination)))
+    var cost:int=int(round(regions.logistics_cost(amount*45.0,origin,destination)))
     if parent.transport_capacity<amount:
         message="Fleet capacity is too low. Upgrade transport before shipping."
         return
@@ -93,11 +93,11 @@ func dispatch_goods()->void:
     message="Shipment delivered. Regional market is now stocked."
 
 func branch_income()->int:
-    var total:=0
+    var total:int=0
     for i in range(regions.regions.size()):
         if regions.player_presence[i]<=0: continue
         var r=regions.regions[i]
-        var income:=int(round(850.0*float(r["demand"])*float(regions.market_levels[i])))
+        var income:int=int(round(850.0*float(r["demand"])*float(regions.market_levels[i])))
         income+=int(regions.infrastructure[i])*250
         income+=int(round(income*regions.trade_route_bonus(i)))
         income-=int(round(220.0*float(r["labor"])))
@@ -107,7 +107,7 @@ func branch_income()->int:
     return total
 
 func apply_branch_income()->int:
-    var income:=branch_income()
+    var income:int=branch_income()
     if income>0: parent.cash+=income
     return income
 
