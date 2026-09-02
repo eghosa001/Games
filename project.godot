@@ -9,7 +9,7 @@ window/size/window_width_override=1280
 window/size/window_height_override=720
 
 [debug]
-gdscript/warnings/inference_on_variant=1
+gdscript/warnings/enable=false
 
 [rendering]
 renderer/rendering_method="gl_compatibility"
