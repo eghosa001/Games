@@ -12,14 +12,9 @@ func _ready() -> void:
     queue_redraw()
 
 func _process(_delta: float) -> void:
-    if parent != null and is_instance_valid(parent):
-        if int(parent.day) != last_processed_day:
-            last_processed_day = int(parent.day)
-            strategic_news = parent.rivals.strategic_update(last_processed_day, parent.districts.selected, parent.reputation)
-            for news in strategic_news:
-                parent._log("MARKET: " + news)
-            if strategic_news.size() > 0:
-                parent.message = strategic_news.back()
+    # Strategic rival simulation is advanced by main.gd as part of the atomic
+    # end-of-day transaction. Keeping this controller presentation-only avoids
+    # running the same strategic tick twice on fast/mobile sessions.
     queue_redraw()
 
 func _input(event: InputEvent) -> void:
@@ -81,6 +76,7 @@ func upgrade_selected_resource_site()->void:
     if result["ok"]: parent.cash-=int(result["cost"]); parent.reputation+=2
     parent.message=result["message"]
 func dispatch_internal_supply()->void:
+    if selected<0 or selected>=parent.expansion.properties.size(): parent.message="No business selected."; return
     var p=parent.expansion.properties[selected]; var moved_total:=0; var messages:Array[String]=[]
     for resource in p["inputs"]:
         var need:=int(p["input_need"].get(resource,0)); var current:=int(p["inputs"].get(resource,0)); var amount:=max(0,need*2-current)
@@ -105,6 +101,7 @@ func upgrade_transport()->void:
 func _draw()->void:
     if parent==null or not is_instance_valid(parent): return
     draw_rect(Rect2(855,425,385,245),Color("18242d"),true)
+    if selected_resource < 0 or selected_resource >= parent.expansion.resource_sites.size(): return
     var site=parent.expansion.resource_sites[selected_resource]
     draw_string(ThemeDB.fallback_font,Vector2(872,449),"RESOURCE / LOGISTICS",HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("7891a5"))
     draw_string(ThemeDB.fallback_font,Vector2(872,475),"%s • %s"%[site["name"],site["resource"]],HORIZONTAL_ALIGNMENT_LEFT,-1,16,Color.WHITE)
