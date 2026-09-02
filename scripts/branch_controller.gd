@@ -9,6 +9,7 @@ var message:=""
 func _ready()->void:
     parent=get_parent()
     last_day=parent.day
+    _bind_existing_workforce()
     queue_redraw()
 
 func _process(_delta:float)->void:
@@ -48,8 +49,23 @@ func launch_selected()->void:
         return
     var result=branches.launch(branches.selected,parent.cash)
     message=result["message"]
-    if result["ok"]:
-        parent.cash-=int(result["cost"]); parent.reputation+=4; parent._log("BRANCH OPENED: %s (-$%s)."%[b["name"],_money(int(result["cost"]))])
+    if not result["ok"]: return
+    var cost:=int(result["cost"])
+    var employee_controller=_employee_controller()
+    if employee_controller==null:
+        # Do not leave an opened branch with an invented staffing count.
+        branches.branches[branches.selected]["owned"]=false
+        message="Employee system is not ready; branch launch cancelled."
+        return
+    parent.cash-=cost
+    var created:=0
+    for _i in range(3):
+        var hire_result=employee_controller.hire_for_assignment("Worker","branch","branch_%d" % branches.selected)
+        if bool(hire_result.get("ok",false)): created+=1
+    branches.set_staffing_projection(branches.selected,created)
+    parent.reputation+=4
+    parent._log("BRANCH OPENED: %s (-$%s, %d staff assigned)."%[b["name"],_money(cost),created])
+    message="%s opened with %d persistent employees."%[b["name"],created]
 
 func stock_selected()->void:
     var b=branches.current()
@@ -71,10 +87,25 @@ func stock_selected()->void:
     message="Branch stocked with %d goods."%amount
 
 func hire_selected()->void:
-    var result=branches.hire(branches.selected,parent.cash)
-    message=result["message"]
-    if result["ok"]:
-        parent.cash-=int(result["cost"]); parent.reputation+=1
+    var b=branches.current()
+    if not bool(b["owned"]): message="Launch the branch first."; return
+    var employee_controller=_employee_controller()
+    if employee_controller==null: message="Employee system is not ready."; return
+    var branch_id:="branch_%d" % branches.selected
+    var current_staff:=employee_controller.assigned_count("branch",branch_id)
+    var cost:=1100+current_staff*220
+    if parent.cash<cost:
+        message="Branch hiring requires $%s."%_money(cost)
+        return
+    var result=employee_controller.hire_for_assignment("Worker","branch",branch_id)
+    if not bool(result.get("ok",false)):
+        message=str(result.get("message","Hiring failed."))
+        return
+    parent.cash-=cost
+    branches.set_staffing_projection(branches.selected,employee_controller.assigned_count("branch",branch_id))
+    parent.reputation+=1
+    message="%s hired and assigned to %s. Staff: %d."%[str(result["employee"]["name"]),b["name"],employee_controller.assigned_count("branch",branch_id)]
+    parent._log("BRANCH HIRE: %s assigned to %s (-$%s)."%[str(result["employee"]["name"]),b["name"],_money(cost)])
 
 func upgrade_selected()->void:
     var result=branches.upgrade(branches.selected,parent.cash)
@@ -86,6 +117,22 @@ func price_selected()->void:
     var result=branches.change_price(branches.selected,10)
     message=result["message"]
 
+func _employee_controller():
+    if parent==null: return null
+    return parent.get_node_or_null("EmployeeController")
+
+func _bind_existing_workforce()->void:
+    var employee_controller=_employee_controller()
+    if employee_controller==null: return
+    # Migration bridge: employees created by older saves used renew_goods.
+    # Bind those people to the existing flagship once, without creating duplicates.
+    var flagship_id:="branch_0"
+    if not bool(branches.branches[0]["owned"]): return
+    for employee in employee_controller.employees.active_employees():
+        if str(employee.get("assignment_type",""))=="renew_goods":
+            employee_controller.assign(str(employee["id"]),"branch",flagship_id)
+    branches.set_staffing_projection(0,employee_controller.assigned_count("branch",flagship_id))
+
 func _money(value:int)->String:
     return str(value)
 
@@ -94,8 +141,13 @@ func _draw()->void:
     draw_rect(Rect2(25,510,800,180),Color("111b23"),true)
     draw_string(ThemeDB.fallback_font,Vector2(45,538),"REGIONAL BRANCHES",HORIZONTAL_ALIGNMENT_LEFT,-1,14,Color("7891a5"))
     var b=branches.current()
+    var staff:=int(b["employees"])
+    var employee_controller=_employee_controller()
+    if employee_controller!=null and bool(b["owned"]):
+        staff=employee_controller.assigned_count("branch","branch_%d" % branches.selected)
+        branches.set_staffing_projection(branches.selected,staff)
     draw_string(ThemeDB.fallback_font,Vector2(45,565),"CTRL+F6 select | %s | %s"%[b["name"],b["industry"]],HORIZONTAL_ALIGNMENT_LEFT,-1,17,Color.WHITE)
-    draw_string(ThemeDB.fallback_font,Vector2(45,590),"Status: %s | Staff %d | Stock %d | Level %d"%["OPEN" if b["owned"] else "CLOSED",b["employees"],b["stock"],b["level"]],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("8ee6a8"))
+    draw_string(ThemeDB.fallback_font,Vector2(45,590),"Status: %s | Staff %d | Stock %d | Level %d"%["OPEN" if b["owned"] else "CLOSED",staff,b["stock"],b["level"]],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("8ee6a8"))
     draw_string(ThemeDB.fallback_font,Vector2(45,613),"Price $%d | Quality %d | Last P&L $%s"%[b["price"],b["quality"],_money(int(b["cashflow"]))],HORIZONTAL_ALIGNMENT_LEFT,-1,13,Color("f2d27a"))
     draw_string(ThemeDB.fallback_font,Vector2(45,637),"CTRL+F7 launch | CTRL+F8 stock | CTRL+F10 hire | CTRL+F11 upgrade | CTRL+F12 price +" ,HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("c6d0d8"))
     draw_string(ThemeDB.fallback_font,Vector2(45,663),message,HORIZONTAL_ALIGNMENT_LEFT,750,12,Color("b7d7ff"))
