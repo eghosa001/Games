@@ -12,8 +12,9 @@ func _ready()->void:
     last_day=parent.day
     var state=_game_state()
     if state!=null:
-        branches.restore_from_game_state(state)
-        branches.sync_to_game_state(state) if state.get_value(["branches"],{}).is_empty() else null
+        var saved=state.get_value(["branches"],{})
+        if saved is Dictionary and not saved.is_empty(): branches.restore_from_game_state(state)
+        else: branches.sync_to_game_state(state)
     queue_redraw()
 
 func _process(_delta:float)->void:
