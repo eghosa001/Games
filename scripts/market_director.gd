@@ -55,7 +55,7 @@ func _spawn_event() -> void:
     game._log("MARKET EVENT: %s — %s" % [active_event, event_text])
     game.message = "%s: %s Choose a response in the WORLD tab." % [active_event, event_text]
 
-func _economy() -> Node:
+func _economy():
     if game == null:
         return null
     return game.get("economy")
@@ -223,6 +223,7 @@ func _save_state() -> void:
     var file := FileAccess.open("user://renew_market.json", FileAccess.WRITE)
     if file != null:
         file.store_string(JSON.stringify(snapshot()))
+        file.close()
 
 func _load_state() -> void:
     if not FileAccess.file_exists("user://renew_market.json"):
@@ -240,3 +241,4 @@ func _load_state() -> void:
         event_count = int(parsed.get("event_count", 0))
         effect_expiry = int(parsed.get("effect_expiry", 0))
         effect_name = String(parsed.get("effect_name", ""))
+    file.close()
