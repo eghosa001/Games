@@ -21,11 +21,13 @@ static func save_game(state: Dictionary) -> bool:
         if FileAccess.file_exists(BACKUP_PATH):
             DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP_PATH))
         if DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(BACKUP_PATH)) != OK:
+            DirAccess.remove_absolute(ProjectSettings.globalize_path(TEMP_PATH))
             return false
 
     if FileAccess.file_exists(SAVE_PATH):
         DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
     if DirAccess.rename_absolute(ProjectSettings.globalize_path(TEMP_PATH), ProjectSettings.globalize_path(SAVE_PATH)) != OK:
+        DirAccess.remove_absolute(ProjectSettings.globalize_path(TEMP_PATH))
         return false
     return true
 
@@ -42,4 +44,9 @@ static func _read_dictionary(path: String) -> Dictionary:
     if file == null:
         return {}
     var parsed = JSON.parse_string(file.get_as_text())
-    return parsed if parsed is Dictionary else {}
+    if not (parsed is Dictionary):
+        return {}
+    var schema := int(parsed.get("schema_version", 0))
+    if schema != SCHEMA_VERSION:
+        return {}
+    return parsed
