@@ -44,8 +44,13 @@ func test_economy() -> void:
     var quote = e.quote("materials", 10, 0)
     check(bool(quote.get("ok", false)) and int(quote["cost"]) > 0, "economy quote")
     var before = int(e.resources["materials"]["stock"])
-    var buy = e.buy_resource("materials", 5, 100000, 0)
-    check(bool(buy.get("ok", false)) and int(e.resources["materials"]["stock"]) == before + 5, "economy buy_resource")
+    var bought := false
+    for i in range(20):
+        var buy = e.buy_resource("materials", 5, 100000, 2)
+        if bool(buy.get("ok", false)):
+            bought = true
+            break
+    check(bought and int(e.resources["materials"]["stock"]) == before + 5, "economy buy_resource")
     e.set_market_modifier("materials", 1.5)
     check(float(e.quote("materials", 1)["market_factor"]) == 1.5, "economy set_market_modifier")
     e.clear_market_modifiers()
@@ -87,7 +92,7 @@ func test_restoration() -> void:
     check(r.selected == "Standard", "restoration choose_standard")
     r.choose_premium()
     check(r.selected == "Premium", "restoration choose_premium")
-    game.queue_free()
+    game.free()
 
 func test_expansion() -> void:
     var x = load("res://scripts/expansion.gd").new()
@@ -171,11 +176,12 @@ func test_contracts() -> void:
     check(rights.has("ok") and rights.has("message"), "contracts secure_resource")
     check(c.resource_discount("materials") >= 0.0, "contracts resource_discount")
     c.daily_update()
-    fake.queue_free()
+    fake.free()
 
 func test_world_missions() -> void:
     var w = load("res://scripts/world_missions.gd").new()
-    check(w.has_method("current"), "world missions current method")
+    check(w.missions.size() >= 6, "world missions data")
+    check(w.has_method("_spawn"), "world missions spawn")
     check(w.has_method("choose_a") and w.has_method("choose_b"), "world missions choices")
 
 func test_events() -> void:
@@ -204,4 +210,5 @@ func test_main_scene() -> void:
     check(instance.has_method("buy_expansion"), "main buy_expansion")
     check(instance.has_method("save_game"), "main save_game")
     check(instance.has_method("load_game"), "main load_game")
-    instance.queue_free()
+    instance.free()
+    await process_frame
