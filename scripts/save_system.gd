@@ -4,7 +4,7 @@ class_name RenewSaveSystem
 const SAVE_PATH := "user://renew_save.json"
 const BACKUP_PATH := "user://renew_save.backup.json"
 const TEMP_PATH := "user://renew_save.tmp.json"
-const SCHEMA_VERSION := 3
+const SCHEMA_VERSION := 4
 
 static func save_game(state) -> Dictionary:
     var payload := _runtime_snapshot(state)
@@ -13,6 +13,8 @@ static func save_game(state) -> Dictionary:
     if game_state != null:
         game_state.sync_property_runtime(payload)
         game_state.sync_business_runtime(payload)
+        var expansion = _expansion()
+        if expansion != null: game_state.sync_expansion_runtime(expansion)
         payload = game_state.capture(payload)
     payload["schema_version"] = SCHEMA_VERSION; payload["state_version"] = SCHEMA_VERSION
     payload["save_metadata"] = {"saved_at":Time.get_datetime_string_from_system(true),"day":int(payload.get("day",payload.get("clock",{}).get("day",1)))}
@@ -39,6 +41,8 @@ static func load_game() -> Dictionary:
         game_state.restore(state)
         game_state.restore_property_runtime(state)
         game_state.restore_business_runtime(state)
+        var expansion = _expansion()
+        if expansion != null: game_state.restore_expansion_runtime(expansion)
     else:
         _restore_legacy_property_projection(state); _restore_legacy_business_projection(state)
     _restore_branch_controller(game_state)
@@ -87,9 +91,9 @@ static func _migrate(state:Dictionary)->Dictionary:
     var schema:=int(state.get("schema_version",state.get("state_version",1)))
     if schema>SCHEMA_VERSION:return {}
     var migrated:=state.duplicate(true)
-    if schema<SCHEMA_VERSION:
-        var game_state=_game_state()
-        if game_state!=null:migrated=game_state.restore(migrated)
+    var game_state=_game_state()
+    if game_state!=null:
+        migrated=game_state.restore(migrated)
         if migrated.is_empty():return {}
     migrated["schema_version"]=SCHEMA_VERSION; migrated["state_version"]=SCHEMA_VERSION; return migrated
 static func _validate(state:Dictionary)->bool:
@@ -104,3 +108,11 @@ static func _game_state():
     var root=tree.get_root()
     if root==null:return null
     return root.get_node_or_null("RenewGameState")
+static func _expansion():
+    var tree=Engine.get_main_loop()
+    if tree==null:return null
+    var root=tree.get_root()
+    if root==null:return null
+    var main=root.get_node_or_null("Main")
+    if main==null:return null
+    return main.get("expansion")
