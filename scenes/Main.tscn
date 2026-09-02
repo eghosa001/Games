@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -16,6 +16,8 @@
 [ext_resource path="res://scripts/progression.gd" type="Script" id="14"]
 [ext_resource path="res://scripts/restoration_strategy.gd" type="Script" id="15"]
 [ext_resource path="res://scripts/market_director.gd" type="Script" id="16"]
+[ext_resource path="res://scripts/empire_goals.gd" type="Script" id="17"]
+[ext_resource path="res://scripts/strategy_hud.gd" type="Script" id="18"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -31,6 +33,9 @@ script = ExtResource("14")
 
 [node name="MarketDirector" type="Node" parent="."]
 script = ExtResource("16")
+
+[node name="EmpireGoals" type="Node" parent="."]
+script = ExtResource("17")
 
 [node name="WorldView" type="Node2D" parent="."]
 z_index = -1
@@ -63,6 +68,10 @@ script = ExtResource("10")
 [node name="MobileUI" type="CanvasLayer" parent="."]
 script = ExtResource("7")
 layer = 20
+
+[node name="StrategyHUD" type="CanvasLayer" parent="."]
+script = ExtResource("18")
+layer = 25
 
 [node name="TutorialOverlay" type="CanvasLayer" parent="."]
 script = ExtResource("13")
