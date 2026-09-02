@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -8,6 +8,7 @@
 [ext_resource path="res://scripts/branch_controller.gd" type="Script" id="6"]
 [ext_resource path="res://scripts/mobile_ui.gd" type="Script" id="7"]
 [ext_resource path="res://scripts/supply_chain_controller.gd" type="Script" id="8"]
+[ext_resource path="res://scripts/rival_supply_controller.gd" type="Script" id="9"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -29,6 +30,9 @@ script = ExtResource("6")
 
 [node name="SupplyChainController" type="Node2D" parent="."]
 script = ExtResource("8")
+
+[node name="RivalSupplyController" type="Node2D" parent="."]
+script = ExtResource("9")
 
 [node name="MobileUI" type="CanvasLayer" parent="."]
 script = ExtResource("7")
