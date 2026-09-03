@@ -47,9 +47,9 @@ func summary() -> Dictionary:
 func _scan(day: int) -> void:
     var main = get_tree().current_scene if get_tree() != null else null
     if main == null: return
-    if bool(main.get("owned", false)):
+    if bool(main.get("owned")) if main.get("owned") != null else false:
         record("founding", "First property — Old Warehouse", {"property":"Old Warehouse"}, 1, "first_property")
-    if int(main.get("finished_goods", 0)) > 0:
+    if int(main.get("finished_goods")) if main.get("finished_goods") != null else 0 > 0:
         record("products", "First product — RENEW Goods", {"product":"RENEW Goods"}, day, "first_product")
     _scan_employees(day)
     _scan_research(day)

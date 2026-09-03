@@ -62,7 +62,7 @@ func upgrade(asset_id: String, owner_id: String, cash: int, day: int) -> Diction
     if str(asset.get("owner_id")) != owner_id: return {"ok":false,"message":"Only the infrastructure owner can upgrade it."}
     if str(asset.get("status")) != ACTIVE: return {"ok":false,"message":"Infrastructure must be active before upgrading."}
     var type: Variant = str(asset.get("type")); var spec: Dictionary = base_specs[type]
-    var level: Variant = int(asset.get("level",1)); var cost := int(spec["upgrade_cost"]) * level
+    var level: Variant = int(asset.get("level",1)); var cost: int = int(spec["upgrade_cost"]) * int(level)
     if cash < cost: return {"ok":false,"message":"Upgrade requires $%s." % _money(cost)}
     asset["level"] = level + 1
     asset["capacity"] = float(asset.get("capacity",spec["capacity"])) + float(spec["upgrade_capacity"])

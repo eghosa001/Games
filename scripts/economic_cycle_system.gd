@@ -58,15 +58,15 @@ func force_phase(new_phase: String, day: int = -1) -> bool:
 
 func _advance_phase(signal: float, day: int) -> void:
     var duration: Variant = day - phase_start_day
-    var next: Variant = phase
+    var next_phase: Variant = phase
     match phase:
-        BOOM: if duration >= 10 or signal > 1.28: next = OVERHEATING
-        EXPANSION: if duration >= 8 and signal > 1.08: next = BOOM
-        OVERHEATING: if duration >= 6 or signal < 0.92: next = RECESSION
-        RECESSION: if duration >= 8 and signal > 0.96: next = RECOVERY
-        RECOVERY: if duration >= 7 and signal > 1.08: next = EXPANSION
-    if next != phase:
-        phase = next; phase_start_day = day; phase_strength = 0.5; cycle_index += 1
+        BOOM: if duration >= 10 or signal > 1.28: next_phase = OVERHEATING
+        EXPANSION: if duration >= 8 and signal > 1.08: next_phase = BOOM
+        OVERHEATING: if duration >= 6 or signal < 0.92: next_phase = RECESSION
+        RECESSION: if duration >= 8 and signal > 0.96: next_phase = RECOVERY
+        RECOVERY: if duration >= 7 and signal > 1.08: next_phase = EXPANSION
+    if next_phase != phase:
+        phase = next_phase; phase_start_day = day; phase_strength = 0.5; cycle_index += 1
         _publish("Economic cycle entered %s." % phase.capitalize(), day)
     else:
         phase_strength = clamp(phase_strength + 0.05, 0.0, 1.0)

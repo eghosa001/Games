@@ -40,10 +40,10 @@ func _personality_for(name:String)->String:
 func refresh_candidates()->void:
     candidates.clear()
     for i in range(4):
-        var n:=FIRST_NAMES[(i+_day)%FIRST_NAMES.size()]
-        var role:=ROLES[(i+_day)%ROLES.size()]
-        var spec:=SPECIALIZATIONS[(i+_day)%SPECIALIZATIONS.size()]
-        var base_skill:=40+((i*9+_day*3)%31)
+        var n:String=FIRST_NAMES[(i+_day)%FIRST_NAMES.size()]
+        var role:String=ROLES[(i+_day)%ROLES.size()]
+        var spec:String=SPECIALIZATIONS[(i+_day)%SPECIALIZATIONS.size()]
+        var base_skill:int=40+((i*9+_day*3)%31)
         candidates.append({"id":"candidate_%d_%d"%[_day,i],"name":n,"role":role,"level":1,"skills":{"production":base_skill,"logistics":max(20,base_skill-10),"management":max(10,base_skill-25)},"experience":3+i*4,"salary":360+i*55,"loyalty":50+i*4,"morale":70,"productivity":0.55+i*0.05,"ambition":50+i*7,"specialization":spec,"status":"candidate","assignment":"factory_001"})
 
 func get_active_employee_count()->int:

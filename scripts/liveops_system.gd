@@ -64,8 +64,8 @@ func _advance_community_goal(day: int) -> void:
     if float(community_goal["progress"]) >= float(community_goal["target"]):
         var main = get_tree().current_scene
         if main != null:
-            main.set("cash", float(main.get("cash", 0.0)) + float(community_goal["reward"].get("cash",0.0)))
-            main.set("reputation", int(main.get("reputation",0)) + int(community_goal["reward"].get("reputation",0)))
+            main.set("cash", float(main.get("cash")) if main.get("cash") != null else 0.0 + float(community_goal["reward"].get("cash",0.0)))
+            main.set("reputation", int(main.get("reputation")) if main.get("reputation") != null else 0 + int(community_goal["reward"].get("reputation",0)))
         community_goal["progress"] = 0.0
         _track("liveops_community_goal_completed", {"day":day})
 
@@ -76,8 +76,8 @@ func complete_challenge(challenge_id: String, progress := 1) -> Dictionary:
     if int(c["progress"]) >= int(c.get("target",1)):
         var main = get_tree().current_scene
         if main != null:
-            main.set("cash", float(main.get("cash",0.0)) + float(c["reward"].get("cash",0.0)))
-            main.set("reputation", int(main.get("reputation",0)) + int(c["reward"].get("reputation",0)))
+            main.set("cash", float(main.get("cash")) if main.get("cash") != null else 0.0 + float(c["reward"].get("cash",0.0)))
+            main.set("reputation", int(main.get("reputation")) if main.get("reputation") != null else 0 + int(c["reward"].get("reputation",0)))
         _track("liveops_challenge_completed", {"id":challenge_id})
     challenges[challenge_id] = c
     return {"ok":true,"challenge":c.duplicate(true)}

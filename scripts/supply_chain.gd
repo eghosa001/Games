@@ -117,7 +117,7 @@ func _extract_from_expansion(expansion)->Dictionary:
     if expansion==null: return {"generated":0,"disruptions":[]}
     for site in expansion.resource_sites:
         if not bool(site.get("owned",false)): continue
-        var output:=int(site.get("output",0))*max(1,int(site.get("level",1))); var risk:=float(site.get("risk",0))/100.0
+        var output:int=int(site.get("output",0))*max(1,int(site.get("level",1))); var risk:=float(site.get("risk",0))/100.0
         if randf()<risk: output=max(0,int(round(output*0.55))); disruptions.append("%s suffered an extraction disruption."%site.get("name","Resource site"))
         site["stock"]=int(site.get("stock",0))+output; generated+=output
     return {"generated":generated,"disruptions":disruptions}
@@ -181,7 +181,7 @@ func load_snapshot(state:Dictionary)->void:
 func supply_business(property:Dictionary,amount:int,transport_capacity:int)->Dictionary:
     var moved:=0; var missing:Array[String]=[]
     for resource in property.get("input_need",{}):
-        var need:=int(property["input_need"][resource])*max(1,amount); var available:=int(network_stock.get(resource,0)); var send:=min(min(need,available),max(0,transport_capacity)); network_stock[resource]=available-send; property["inputs"][resource]=int(property["inputs"].get(resource,0))+send; moved+=send
+        var need:int=int(property["input_need"][resource])*max(1,amount); var available:=int(network_stock.get(resource,0)); var send:=min(min(need,available),max(0,transport_capacity)); network_stock[resource]=available-send; property["inputs"][resource]=int(property["inputs"].get(resource,0))+send; moved+=send
         if send<need: missing.append(resource)
     if not missing.is_empty(): return {"ok":false,"moved":moved,"missing":missing,"message":"Network shortage: %s."%", ".join(missing)}
     return {"ok":true,"moved":moved}

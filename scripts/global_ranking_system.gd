@@ -132,17 +132,17 @@ func _derive_player_metrics(main) -> Dictionary:
     var ownership = main.get_node_or_null("OwnershipSystem")
     var cash: Variant = float(main.get("cash", 0.0))
     var reputation: Variant = float(main.get("reputation", 0.0))
-    var revenue: Variant = float(main.get("revenue", 0.0))
-    var profit: Variant = float(main.get("profit", 0.0))
+    var revenue: Variant = float(main.get("revenue")) if main.get("revenue") != null else 0.0
+    var profit: Variant = float(main.get("profit")) if main.get("profit") != null else 0.0
     var assets: Variant = cash
     var valuation: Variant = cash
     if finance != null:
         var bs = finance.get("balance_sheet")
-        if bs is Dictionary: assets = float(bs.get("assets", assets)); valuation = float(finance.get("valuation", assets))
-        revenue = max(revenue, float(finance.get("revenue", revenue)))
-        profit = max(profit, float(finance.get("profit", profit)))
+        if bs is Dictionary: assets = float(bs.get("assets", assets)); valuation = float(finance.get("valuation")) if finance.get("valuation") != null else assets
+        revenue = max(revenue, float(finance.get("revenue")) if finance.get("revenue") != null else revenue)
+        profit = max(profit, float(finance.get("profit")) if finance.get("profit") != null else profit)
     var infra_score: Variant = float(infrastructure.total_capacity("")) if infrastructure != null else 0.0
-    var employee_count: Variant = float(employees.active_count()) if employees != null else float(main.get("employees", 0))
+    var employee_count: Variant = float(employees.active_count()) if employees != null else float(main.get("employees")) if main.get("employees") != null else 0.0
     var alliance_score: Variant = 0.0
     if alliance != null:
         var a = alliance.get_member_alliance("founder")

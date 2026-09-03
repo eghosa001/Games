@@ -108,7 +108,7 @@ func _run_action(label: String, callback: Callable) -> void:
     if result is Dictionary and result.has("message"): message = String(result["message"])
     if message.is_empty(): message = _callback_message(callback, before_message)
     if message.is_empty(): message = "%s completed." % label
-    var changes: Array[String] = []; var cash_change := int(parent.cash) - before_cash; var rep_change := int(parent.reputation) - before_rep; var goods_change := int(parent.finished_goods) - before_goods
+    var changes: Array[String] = []; var cash_change: float = int(parent.cash) - before_cash; var rep_change := int(parent.reputation) - before_rep; var goods_change := int(parent.finished_goods) - before_goods
     if cash_change != 0: changes.append("Cash %s$%s" % [("+" if cash_change > 0 else "-"), _money(abs(cash_change))])
     if rep_change != 0: changes.append("REP %s%d" % [("+" if rep_change > 0 else ""), rep_change])
     if goods_change != 0: changes.append("Goods %s%d" % [("+" if goods_change > 0 else ""), goods_change])
