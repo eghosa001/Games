@@ -1,10 +1,10 @@
 extends Node2D
 
-# RENEW Prototype 07 - restoration, empire, districts, logistics and dynamic deals
+# RENEW Prototype 07 - restoration, empire, districts, logistics and dynamic deals.
+# Main is now a scene/controller only. Persistent gameplay state lives in RenewGameState.
 const Economy = preload("res://scripts/economy.gd")
 const Rivals = preload("res://scripts/competitors.gd")
 const Events = preload("res://scripts/events.gd")
-const Production = preload("res://scripts/production.gd")
 const SaveSystem = preload("res://scripts/save_system.gd")
 const Expansion = preload("res://scripts/expansion.gd")
 const Districts = preload("res://scripts/districts.gd")
@@ -12,48 +12,129 @@ const Districts = preload("res://scripts/districts.gd")
 var economy = Economy.new()
 var rivals = Rivals.new()
 var events = Events.new()
-var production = Production.new()
 var expansion = Expansion.new()
 var districts = Districts.new()
+var production
 
-var cash := 25000
-var reputation := 0
-var day := 1
-var debt := 0
-var loan_payment := 0
-var owned := false
-var inspected := false
-var restoration := 0
-var stage := "Neglected"
-var business_open := false
-var employees := 3
-var capacity_level := 1
-var marketing_level := 0
-var player_price := 110
-var finished_goods := 0
-var last_sales := 0
-var last_profit := 0
-var total_profit := 0
-var relationship := 15
-var selected_rival := 0
-var selected_expansion := 0
-var supplier_choice := 0
-var contract_days := 0
-var contract_bonus := 0
-var acquisition_count := 0
-var transport_level := 1
-var transport_capacity := 40
-var selected_district := 0
-var message := "Inspect the abandoned warehouse. Your empire starts here."
-var log_lines: Array[String] = []
+# Compatibility properties: existing UI/controllers can keep reading Main.cash, etc.,
+# while the actual values are stored only in RenewGameState.
+var cash: int:
+    get: return _state_value("economy", "cash", 25000)
+    set(value): _set_state_value("economy", "cash", value)
+var reputation: int:
+    get: return _state_value("player", "reputation", 0)
+    set(value): _set_state_value("player", "reputation", value)
+var day: int:
+    get: return _state_value("player", "day", 1)
+    set(value): _set_state_value("player", "day", value)
+var debt: int:
+    get: return _state_value("finance", "debt", 0)
+    set(value): _set_state_value("finance", "debt", value)
+var loan_payment: int:
+    get: return _state_value("finance", "loan_payment", 0)
+    set(value): _set_state_value("finance", "loan_payment", value)
+var owned: bool:
+    get: return _state_value("properties", "owned", false)
+    set(value): _set_state_value("properties", "owned", value)
+var inspected: bool:
+    get: return _state_value("properties", "inspected", false)
+    set(value): _set_state_value("properties", "inspected", value)
+var restoration: int:
+    get: return _state_value("properties", "restoration", 0)
+    set(value): _set_state_value("properties", "restoration", value)
+var stage: String:
+    get: return _state_value("properties", "stage", "Neglected")
+    set(value): _set_state_value("properties", "stage", value)
+var business_open: bool:
+    get: return _state_value("businesses", "business_open", false)
+    set(value): _set_state_value("businesses", "business_open", value)
+var employees: int:
+    get: return _state_value("employees", "employees", 3)
+    set(value): _set_state_value("employees", "employees", value)
+var capacity_level: int:
+    get: return _state_value("businesses", "capacity_level", 1)
+    set(value): _set_state_value("businesses", "capacity_level", value)
+var marketing_level: int:
+    get: return _state_value("businesses", "marketing_level", 0)
+    set(value): _set_state_value("businesses", "marketing_level", value)
+var player_price: int:
+    get: return _state_value("businesses", "player_price", 110)
+    set(value): _set_state_value("businesses", "player_price", value)
+var finished_goods: int:
+    get: return _state_value("production", "finished_goods", 0)
+    set(value): _set_state_value("production", "finished_goods", value)
+var last_sales: int:
+    get: return _state_value("economy", "last_sales", 0)
+    set(value): _set_state_value("economy", "last_sales", value)
+var last_profit: int:
+    get: return _state_value("economy", "last_profit", 0)
+    set(value): _set_state_value("economy", "last_profit", value)
+var total_profit: int:
+    get: return _state_value("economy", "total_profit", 0)
+    set(value): _set_state_value("economy", "total_profit", value)
+var relationship: int:
+    get: return _state_value("competitors", "relationship", 15)
+    set(value): _set_state_value("competitors", "relationship", value)
+var selected_rival: int:
+    get: return _state_value("competitors", "selected_rival", 0)
+    set(value): _set_state_value("competitors", "selected_rival", value)
+var selected_expansion: int:
+    get: return _state_value("branches", "selected_expansion", 0)
+    set(value): _set_state_value("branches", "selected_expansion", value)
+var supplier_choice: int:
+    get: return _state_value("supply_chain", "supplier_choice", 0)
+    set(value): _set_state_value("supply_chain", "supplier_choice", value)
+var contract_days: int:
+    get: return _state_value("contracts", "contract_days", 0)
+    set(value): _set_state_value("contracts", "contract_days", value)
+var contract_bonus: int:
+    get: return _state_value("contracts", "contract_bonus", 0)
+    set(value): _set_state_value("contracts", "contract_bonus", value)
+var acquisition_count: int:
+    get: return _state_value("ownership", "acquisition_count", 0)
+    set(value): _set_state_value("ownership", "acquisition_count", value)
+var transport_level: int:
+    get: return _state_value("supply_chain", "transport_level", 1)
+    set(value): _set_state_value("supply_chain", "transport_level", value)
+var transport_capacity: int:
+    get: return _state_value("supply_chain", "transport_capacity", 40)
+    set(value): _set_state_value("supply_chain", "transport_capacity", value)
+var selected_district: int:
+    get: return _state_value("regions", "selected_district", 0)
+    set(value): _set_state_value("regions", "selected_district", value)
+var message: String:
+    get: return _state_value("company", "message", "Inspect the abandoned warehouse. Your empire starts here.")
+    set(value): _set_state_value("company", "message", value)
+var log_lines: Array[String]:
+    get: return _state_value("company", "log_lines", []).duplicate(true)
+    set(value): _set_state_value("company", "log_lines", value.duplicate(true))
+
 var stages = [["Neglected",0,0],["Cleaned",20,1500],["Repaired",40,3000],["Rebuilt",60,4500],["Installed",80,6000],["Designed",100,7500]]
+
+func _game_state():
+    return get_node_or_null("/root/RenewGameState")
+
+func _state_value(domain: String, key: String, default_value):
+    var state = _game_state()
+    if state == null:
+        return default_value
+    return state.get_value(domain, key, default_value)
+
+func _set_state_value(domain: String, key: String, value) -> void:
+    var state = _game_state()
+    if state != null:
+        state.set_value(domain, key, value)
 
 func _ready() -> void:
     randomize()
+    production = get_node_or_null("/root/RenewProductionSystem")
+    if production == null:
+        push_error("RenewProductionSystem autoload is unavailable.")
     rivals._normalize()
     expansion.unlock_from_reputation(reputation)
     districts.update_unlocks(reputation)
-    _log("Opportunity discovered: an abandoned warehouse in a growing district.")
+    if log_lines.is_empty():
+        _log("Opportunity discovered: an abandoned warehouse in a growing district.")
     queue_redraw()
 
 func _process(_delta: float) -> void:
@@ -133,9 +214,11 @@ func buy_inputs() -> void:
     _log("SUPPLY ORDER: 12 units of every input; district pressure %d." % pressure); message = "Inputs delivered. Supplier pressure: %d." % pressure
 func produce_goods() -> void:
     if not business_open: message = "Open the business first."; return
+    if production == null: message = "ProductionSystem is unavailable."; return
     var result = production.produce(economy,employees+capacity_level-1)
     if not result["ok"]: message = "Production stopped: inputs are too low."; return
-    finished_goods += int(result["output"]); message = "Produced %d goods at quality %d." % [result["output"],result["quality"]]; _log("PRODUCTION: %d goods; quality %d." % [result["output"],result["quality"]])
+    finished_goods = int(result["finished_goods"] if result.has("finished_goods") else production.finished_goods)
+    message = "Produced %d goods at quality %d." % [result["output"],result["quality"]]; _log("PRODUCTION: %d goods; quality %d." % [result["output"],result["quality"]])
 func hire_employee() -> void:
     if not business_open: message = "Open the business first."; return
     var cost := 1200 + employees*250
@@ -209,13 +292,27 @@ func sign_contract()->void:
     contract_days=5; contract_bonus=900+reputation*20; reputation+=2; _log("CONTRACT: customer supply agreement requested."); message="Contract requested. The SimulationSystem will execute its deliveries."
 func take_loan()->void:
     if debt>0: message="Repay the current loan before borrowing again."; return
-    var amount:=20000+reputation*300; debt=amount; loan_payment=int(ceil(float(amount)/20.0)); cash+=amount; _log("BANK: borrowed $%s. Daily repayment is $%s."%[_money(amount),_money(loan_payment)]); message="Loan approved. Growth is faster, but default will hurt your company."
+    var finance = get_node_or_null("/root/RenewFinanceSystem")
+    var amount:=20000+reputation*300
+    if finance != null:
+        var result: Dictionary = finance.take_loan(amount)
+        if not bool(result.get("ok", false)): message=str(result.get("message", "Loan request failed.")); return
+        cash = int(result.get("cash", cash)); debt = int(result.get("debt", debt)); loan_payment = int(result.get("payment", loan_payment))
+    else:
+        debt=amount; loan_payment=int(ceil(float(amount)/20.0)); cash+=amount
+    _log("BANK: borrowed $%s. Daily repayment is $%s."%[_money(amount),_money(loan_payment)]); message="Loan approved. Growth is faster, but default will hurt your company."
 func repay_loan()->void:
     if debt<=0: message="You have no outstanding loan."; return
     var amount:=min(debt,max(1000,debt/4))
-    if cash<amount: message="Not enough cash to make a voluntary repayment."; return
-    cash-=amount; debt-=amount
-    if debt==0: loan_payment=0
+    var finance = get_node_or_null("/root/RenewFinanceSystem")
+    if finance != null:
+        var result: Dictionary = finance.repay(amount)
+        if not bool(result.get("ok", false)): message=str(result.get("message", "Repayment failed.")); return
+        cash = int(result.get("cash", cash)); debt = int(result.get("debt", debt)); loan_payment = int(finance.loan_payment)
+    else:
+        if cash<amount: message="Not enough cash to make a voluntary repayment."; return
+        cash-=amount; debt-=amount
+        if debt==0: loan_payment=0
     _log("BANK: voluntary repayment $%s. Remaining debt $%s."%[_money(amount),_money(debt)]); message="Loan balance reduced."
 func buy_expansion()->void:
     expansion.unlock_from_reputation(reputation); var result=expansion.buy(selected_expansion,cash)
@@ -237,16 +334,24 @@ func load_game()->void:
     _apply_loaded_state(state); message="Game loaded."; queue_redraw()
 func _state_dict()->Dictionary:
     var state={"cash":cash,"reputation":reputation,"day":day,"debt":debt,"loan_payment":loan_payment,"owned":owned,"inspected":inspected,"restoration":restoration,"stage":stage,"business_open":business_open,"employees":employees,"capacity_level":capacity_level,"marketing_level":marketing_level,"player_price":player_price,"finished_goods":finished_goods,"last_sales":last_sales,"last_profit":last_profit,"total_profit":total_profit,"relationship":relationship,"selected_rival":selected_rival,"selected_expansion":selected_expansion,"supplier_choice":supplier_choice,"contract_days":contract_days,"contract_bonus":contract_bonus,"acquisition_count":acquisition_count,"transport_level":transport_level,"transport_capacity":transport_capacity,"selected_district":selected_district,"message":message,"log_lines":log_lines,"rivals":rivals.rivals,"events":events.state,"expansion":expansion.state,"districts":districts.state}
+    var game_state = _game_state()
+    if game_state != null:
+        return game_state.capture(state).merged({"schema_version": 8})
     return state
 func _apply_loaded_state(state:Dictionary)->void:
+    var game_state = _game_state()
+    if game_state != null and state.has("game_state") and state["game_state"] is Dictionary:
+        state = game_state.restore(state["game_state"])
     for key in ["cash","reputation","day","debt","loan_payment","owned","inspected","restoration","stage","business_open","employees","capacity_level","marketing_level","player_price","finished_goods","last_sales","last_profit","total_profit","relationship","selected_rival","selected_expansion","supplier_choice","contract_days","contract_bonus","acquisition_count","transport_level","transport_capacity","selected_district","message"]:
         if state.has(key): set(key,state[key])
-    if state.has("log_lines"): log_lines=state["log_lines"]
-    if state.has("rivals"): rivals.rivals=state["rivals"]
-    if state.has("events"): events.state=state["events"]
-    if state.has("expansion"): expansion.state=state["expansion"]
-    if state.has("districts"): districts.state=state["districts"]
+    if state.has("log_lines"): log_lines=state["log_lines"].duplicate(true)
+    if state.has("rivals"): rivals.rivals=state["rivals"].duplicate(true)
+    if state.has("events"): events.state=state["events"].duplicate(true)
+    if state.has("expansion"): expansion.state=state["expansion"].duplicate(true)
+    if state.has("districts"): districts.state=state["districts"].duplicate(true)
 func _log(text:String)->void:
-    log_lines.append(text)
-    if log_lines.size()>100: log_lines.pop_front()
+    var logs := log_lines
+    logs.append(text)
+    if logs.size()>100: logs.pop_front()
+    log_lines=logs
 func _money(value:int)->String: return "%d"%value
