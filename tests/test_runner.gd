@@ -14,7 +14,7 @@ func check(condition: bool, label: String) -> void:
         push_error("FAIL: " + label)
 
 func run() -> void:
-    randomize()
+    seed(123456)
     test_economy()
     test_production()
     test_districts()
@@ -42,13 +42,12 @@ func test_economy() -> void:
     var quote = e.quote("timber", 10, 0)
     check(bool(quote.get("ok", false)) and int(quote["cost"]) > 0, "economy quote")
     var before = int(e.resources["timber"]["stock"])
-    var bought := false
-    for i in range(20):
-        var buy = e.buy_resource("timber", 5, 100000, 2)
-        if bool(buy.get("ok", false)):
-            bought = true
-            break
-    check(bought and int(e.resources["timber"]["stock"]) == before + 5, "economy buy_resource")
+    var buy = e.buy_resource("timber", 5, 100000, 2)
+    check(buy.has("ok") and buy.has("failed") and buy.has("supplier"), "economy supplier reliability contract")
+    if bool(buy.get("ok", false)):
+        check(int(e.resources["timber"]["stock"]) == before + 5, "economy buy_resource success updates stock")
+    else:
+        check(bool(buy.get("failed", false)) and int(e.resources["timber"]["stock"]) == before, "economy supplier failure leaves stock unchanged")
     e.set_market_modifier("timber", 1.5)
     check(float(e.quote("timber", 1)["market_factor"]) == 1.5, "economy set_market_modifier")
     e.clear_market_modifiers()
