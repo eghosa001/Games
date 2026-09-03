@@ -1,10 +1,10 @@
 extends SceneTree
 
 func _init() -> void:
-    var script := load("res://scripts/news_system.gd")
+    var script = load("res://scripts/news_system.gd")
     assert(script != null, "NewsSystem script must load")
     var news = script.new()
-    add_child(news)
+    root.add_child(news)
     assert(news.SECTIONS.size() == 10, "RENEW Daily must expose all ten sections")
     assert(news.SECTIONS.has("Your Company"), "Company section missing")
     assert(news.SECTIONS.has("People"), "People section missing")
@@ -16,7 +16,7 @@ func _init() -> void:
     assert(news.SECTIONS.has("Regions"), "Regions section missing")
     assert(news.SECTIONS.has("World"), "World section missing")
     assert(news.SECTIONS.has("Corporate History"), "Corporate History section missing")
-    var snapshot := news.capture_state()
+    var snapshot: Dictionary = news.capture_state()
     assert(snapshot.has("archive"), "News archive must be persisted")
     assert(snapshot.has("current_issue"), "Current newspaper must be persisted")
     news.restore_state(snapshot)
