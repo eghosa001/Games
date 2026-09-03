@@ -49,7 +49,6 @@ func restore_next() -> Dictionary:
     if step.is_empty():
         return {"ok": false, "reason": "complete"}
     return restore_step(step)
-
 func _complete(state,seasonal:Dictionary)->void:
     seasonal["completed"]=true;seasonal["active"]=false;seasonal["completed_day"]=int(state.get_value("player","day",1));seasonal["decoration"]=REWARD["decoration"];seasonal["achievement"]=REWARD["achievement"];seasonal["museum_item"]=REWARD["museum_item"]
     _set_seasonal(seasonal)
