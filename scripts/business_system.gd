@@ -35,8 +35,7 @@ func _ready() -> void:
 
 func get_business_purposes() -> Array:
     var property_type := _origin_property_type()
-    var result: Array = PURPOSES.get(property_type, []).duplicate(true)
-    return result
+    return PURPOSES.get(property_type, []).duplicate(true)
 
 func get_business_purpose(index: int) -> Dictionary:
     var choices := get_business_purposes()
@@ -65,8 +64,8 @@ func choose_business_purpose(index: int) -> void:
     if purpose.is_empty():
         state_adapter.message("Invalid business purpose."); return
     state_adapter.set_value("businesses", "business_purpose", str(purpose.get("id", "")))
-    state_adapter.message("Purpose selected: %s. Press O to create the business." % purpose.get("name", "Business"))
     state_adapter.log_message("PURPOSE SELECTED: %s -> %s." % [_origin_property_name(), purpose.get("name", "Business")])
+    create_business(str(purpose.get("id", "")))
 
 func create_business(purpose_id: String = "") -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)) or str(state_adapter.get_value("properties", "stage", "Neglected")) != "Operational":
