@@ -165,7 +165,7 @@ func _employee_by_id(employee_id: String) -> Dictionary:
     if employees == null or not employees.has_method("get_employee"):
         return {}
     return employees.get_employee(employee_id)
-func _main() -> Node:
+func _main() -> Variant:
     var tree = get_tree()
     if tree == null:
         return null
