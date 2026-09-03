@@ -49,11 +49,20 @@ func run() -> void:
     check(str(game.stage) == "Operational", "Restoration reaches operational state")
     check(int(game.restoration) == 100, "Restoration reaches 100 percent")
 
+    # All three V1 industries must be available before the player commits to
+    # one. Selecting a purpose is intentionally required by the business flow.
+    var purposes: Array = game.get_business_purposes()
+    check(purposes.size() == 3, "All three V1 industries are available")
+    check(str(purposes[0].get("industry_id", "")) == "furniture", "Furniture industry is selectable")
+    check(str(purposes[1].get("industry_id", "")) == "construction_materials", "Construction Materials industry is selectable")
+    check(str(purposes[2].get("industry_id", "")) == "consumer_electronics", "Consumer Electronics industry is selectable")
+
     if not game.business_open:
         if int(game.cash) < 3000:
             game.cash += 3000
+        game.choose_business_purpose(0)
         game.open_business()
-    check(game.business_open, "Business can open after restoration")
+    check(game.business_open, "Business can open after restoration and industry selection")
 
     game.cash += 100000
     game.buy_inputs()
