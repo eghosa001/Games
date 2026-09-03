@@ -88,9 +88,10 @@ func chain_factor()->float:
 
 func route_metrics(from_stage:String,to_stage:String,units:int)->Dictionary:
     var route:=route_for(from_stage,to_stage)
-    if route.is_empty(): return {"ok":false,"capacity":0,"cost":0,"delay":0,"reliability":0.0,"risk":1.0,"controlled":false,"owner":"none"}
-    var send:=min(max(0,units),int(route["capacity"]))
-    return {"ok":send>0,"capacity":send,"cost":int(round(float(send)*float(route["cost_per_unit"]))),"delay":int(route["delay"]),"reliability":float(route["reliability"]),"risk":float(route["risk"]),"controlled":bool(route["controlled"]),"owner":String(route["owner"])}
+    if route.is_empty(): return {"ok":false,"capacity":0,"cost":0,"delay":0,"reliability":0.0,"risk":1.0,"controlled":false,"owner":"none","cost_per_unit":0.0}
+    var send:=min(max(0,units),int(route.get("capacity",0)))
+    var unit_cost:=max(0.0,float(route.get("cost_per_unit",0.0)))
+    return {"ok":send>0,"capacity":send,"cost":int(round(float(send)*unit_cost)),"cost_per_unit":unit_cost,"delay":int(route.get("delay",0)),"reliability":float(route.get("reliability",0.0)),"risk":float(route.get("risk",1.0)),"controlled":bool(route.get("controlled",false)),"owner":String(route.get("owner","none"))}
 
 func resource_price(resource:String,regions=null)->int:
     if resource not in valid_resources: return 0
