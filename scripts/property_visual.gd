@@ -25,7 +25,8 @@ func _visual_stage(property: Dictionary, owned: bool) -> String:
     if int(property.get("cleaning", 0)) < 100: return "Abandoned"
     if int(property.get("repair", 0)) < 100: return "Cleaned"
     if int(property.get("painting", 0)) < 100: return "Repaired"
-    if int(property.get("furnishing", 0)) < 100: return "Painted"
+    if int(property.get("furnishing", 0)) < 50: return "Painted"
+    if int(property.get("furnishing", 0)) < 100: return "Furnished"
     return "Operational"
 
 func _draw_property(origin: Vector2, property: Dictionary, stage: String) -> void:
@@ -35,7 +36,7 @@ func _draw_property(origin: Vector2, property: Dictionary, stage: String) -> voi
     var roof := Color("30373d")
     var trim := Color("252b30")
     if stage in ["Cleaned", "Repaired"]: wall = Color("707b82")
-    if stage in ["Painted", "Operational"]:
+    if stage in ["Painted", "Furnished", "Operational"]:
         wall = Color("b8c4ca")
         roof = Color("47525a")
         trim = Color("d8e1e5")
@@ -48,7 +49,7 @@ func _draw_property(origin: Vector2, property: Dictionary, stage: String) -> voi
     var window_count := 4 if type == "Warehouse" else (3 if type == "Workshop" else 5)
     for i in range(window_count):
         var wx := origin.x - float(window_count - 1) * 25.0 + float(i) * 50.0
-        var lit := stage == "Operational" or (stage == "Painted" and i % 2 == 0)
+        var lit := stage == "Operational" or (stage in ["Furnished"] and i % 2 == 0)
         draw_rect(Rect2(wx - 13, origin.y - 70, 26, 30), Color("dcecf2") if lit else Color("252c31"), true)
         draw_line(Vector2(wx, origin.y - 70), Vector2(wx, origin.y - 40), Color("59656d"), 2.0)
         draw_line(Vector2(wx - 13, origin.y - 55), Vector2(wx + 13, origin.y - 55), Color("59656d"), 2.0)
@@ -68,7 +69,7 @@ func _draw_property(origin: Vector2, property: Dictionary, stage: String) -> voi
     elif stage == "Repaired":
         draw_line(Vector2(origin.x - 125, origin.y - 35), Vector2(origin.x - 85, origin.y - 8), Color("9aa6ab"), 4.0)
         draw_line(Vector2(origin.x + 85, origin.y - 8), Vector2(origin.x + 125, origin.y - 35), Color("9aa6ab"), 4.0)
-    elif stage in ["Painted", "Operational"]:
+    elif stage in ["Painted", "Furnished", "Operational"]:
         draw_rect(Rect2(origin.x - 120, origin.y + 30, 240, 5), Color("d8e1e5"), true)
 
     if stage == "Operational":
