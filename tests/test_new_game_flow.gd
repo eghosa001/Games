@@ -1,7 +1,9 @@
 extends SceneTree
 
-# Player-facing first-session flow: verifies a brand-new player can progress
-# from discovery to a functioning business without hidden state or softlocks.
+# Player-facing first-session journey. This test must use the real V1 starting
+# economy and must never inject cash/resources to make the journey succeed.
+# Restoration mechanics with controlled/injected funds belong in
+# test_restoration_mechanics.gd.
 var passed := 0
 var failed := 0
 
@@ -27,7 +29,8 @@ func run() -> void:
     root.add_child(game)
     await process_frame
 
-    check(int(game.cash) >= 0, "New game starts with valid cash")
+    var starting_cash := int(game.cash)
+    check(starting_cash >= 0, "New game starts with valid V1 cash")
     check(not game.owned, "New game starts without the property")
     check(not game.inspected, "Property starts uninspected")
     check(str(game.stage) == "Neglected", "Property starts neglected")
@@ -38,24 +41,21 @@ func run() -> void:
     game.acquire_property()
     check(game.owned, "Acquisition succeeds after inspection")
 
-    # A first-session test must use the real starting economy. Do not inject
-    # cash to force restoration through; the game's starting balance and
-    # restoration costs must be sufficient for the intended onboarding path.
-    var starting_cash := int(game.cash)
+    # Genuine player journey: restoration must be affordable from the actual
+    # V1 starting balance. Never top up cash here. If this fails, it exposes a
+    # real onboarding/balance problem instead of hiding it.
     var guard := 0
     while str(game.stage) != "Operational" and guard < 10:
         var needed: int = int(game._next_cost())
-        check(int(game.cash) >= needed, "Starting economy can fund restoration step %d" % [guard + 1])
+        check(int(game.cash) >= needed, "V1 starting economy can fund restoration step %d" % [guard + 1])
         if int(game.cash) < needed:
             break
         game.restore_property()
         guard += 1
-    check(int(game.cash) <= starting_cash, "Restoration consumes starting funds")
-    check(str(game.stage) == "Operational", "Restoration reaches operational state")
+    check(int(game.cash) < starting_cash, "Restoration consumes real starting funds")
+    check(str(game.stage) == "Operational", "V1 starting economy reaches operational state")
     check(int(game.restoration) == 100, "Restoration reaches 100 percent")
 
-    # All three V1 industries must be available before the player commits to
-    # one. Selecting a purpose is intentionally required by the business flow.
     var purposes: Array = game.get_business_purposes()
     check(purposes.size() == 3, "All three V1 industries are available")
     check(str(purposes[0].get("industry_id", "")) == "furniture", "Furniture industry is selectable")
@@ -67,10 +67,8 @@ func run() -> void:
         game.open_business()
     check(game.business_open, "Business can open after restoration and industry selection")
 
-    # The first-session flow should use only canonical V1 economy resources.
-    # Business production may procure missing inputs through the authoritative
-    # supply-chain system, so this test does not mutate individual stocks.
-    game.cash += 100000
+    # Production is also part of the real first-session journey. No cash or
+    # resource injection is allowed; procurement must use the live V1 economy.
     var canonical_resources := ["timber", "iron", "energy", "food", "electronics"]
     for resource in canonical_resources:
         check(game.economy.resources.has(resource), "Canonical resource available: %s" % resource)
@@ -78,7 +76,7 @@ func run() -> void:
 
     var goods_before := int(game.finished_goods)
     game.produce_goods()
-    check(int(game.finished_goods) > goods_before, "Production creates sellable goods")
+    check(int(game.finished_goods) > goods_before, "Production creates sellable goods from V1 economy")
 
     var day_before := int(game.day)
     game.advance_day()
