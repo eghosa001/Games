@@ -1,14 +1,14 @@
 extends Node2D
 
-# Makes competitors economically meaningful: they can control resource flows,
-# raise spot-market prices and create temporary shortages without combat.
+# Phase 14: competitor-driven resource pressure. Resource control is keyed by
+# stable corporation IDs so names can change without breaking gameplay.
 var parent
 var last_day := 0
 var news: Array[String] = []
 var resource_control := {
-    "The Giant": {"materials": 0, "packaging": 0, "fuel": 1, "food": 0},
-    "The Specialist": {"materials": 0, "packaging": 1, "fuel": 0, "food": 0},
-    "The Network": {"materials": 1, "packaging": 1, "fuel": 0, "food": 0}
+    "apex_materials": {"iron": 2, "energy": 1},
+    "northstar_logistics": {"energy": 2, "food": 1},
+    "greenbuild_industries": {"timber": 2, "electronics": 1}
 }
 
 func _ready() -> void:
@@ -32,14 +32,13 @@ func _advance_competition(day: int) -> void:
         return
     var pressure := 0
     for rival in competitors.rivals:
-        var name := String(rival.get("name", ""))
-        var controls: Dictionary = resource_control.get(name, {})
+        var rival_id := String(rival.get("id", ""))
+        var controls: Dictionary = resource_control.get(rival_id, {})
         var rival_pressure := int(rival.get("supplier_pressure", 0))
         for resource in controls:
             var control_level := int(controls[resource])
             if control_level <= 0:
                 continue
-            # Player-owned resource rights directly weaken rival control.
             var rights := int(supply.contracts.player_resource_rights.get(resource, 0))
             var effective_control := max(0, control_level - rights)
             if effective_control > 0:
@@ -47,7 +46,7 @@ func _advance_competition(day: int) -> void:
         if int(rival.get("relationship", 0)) < 0 and day % 6 == 0:
             if int(rival.get("supplier_pressure", 0)) < 3:
                 rival["supplier_pressure"] = int(rival.get("supplier_pressure", 0)) + 1
-                news.append("%s tightened supplier control. Negotiations are becoming important." % name)
+                news.append("%s tightened supplier control. Negotiations are becoming important." % rival.get("name", "Rival"))
     supply.supply.competitor_pressure = clamp(pressure, 0, 20)
     if pressure > 0 and day % 3 == 0:
         news.append("RESOURCE MARKET: Rival control is increasing the cost of independent sourcing.")
@@ -56,8 +55,10 @@ func _advance_competition(day: int) -> void:
 
 func control_summary() -> String:
     var parts: Array[String] = []
-    for name in resource_control:
-        var controls: Dictionary = resource_control[name]
+    for rival in parent.rivals.rivals:
+        var rival_id := String(rival.get("id", ""))
+        var name := String(rival.get("name", rival_id))
+        var controls: Dictionary = resource_control.get(rival_id, {})
         var held: Array[String] = []
         for resource in controls:
             if int(controls[resource]) > 0:
