@@ -38,14 +38,19 @@ func run() -> void:
     game.acquire_property()
     check(game.owned, "Acquisition succeeds after inspection")
 
-    # Restore through the actual production path rather than mutating state.
+    # A first-session test must use the real starting economy. Do not inject
+    # cash to force restoration through; the game's starting balance and
+    # restoration costs must be sufficient for the intended onboarding path.
+    var starting_cash := int(game.cash)
     var guard := 0
     while str(game.stage) != "Operational" and guard < 10:
         var needed: int = int(game._next_cost())
+        check(int(game.cash) >= needed, "Starting economy can fund restoration step %d" % [guard + 1])
         if int(game.cash) < needed:
-            game.cash += needed + 1000
+            break
         game.restore_property()
         guard += 1
+    check(int(game.cash) <= starting_cash, "Restoration consumes starting funds")
     check(str(game.stage) == "Operational", "Restoration reaches operational state")
     check(int(game.restoration) == 100, "Restoration reaches 100 percent")
 
@@ -58,26 +63,23 @@ func run() -> void:
     check(str(purposes[2].get("industry_id", "")) == "consumer_electronics", "Consumer Electronics industry is selectable")
 
     if not game.business_open:
-        if int(game.cash) < 3000:
-            game.cash += 3000
         game.choose_business_purpose(0)
         game.open_business()
     check(game.business_open, "Business can open after restoration and industry selection")
 
+    # The first-session flow should use only canonical V1 economy resources.
+    # Business production may procure missing inputs through the authoritative
+    # supply-chain system, so this test does not mutate individual stocks.
     game.cash += 100000
-    game.buy_inputs()
-    check(int(game.economy.resources["materials"]["stock"]) > 100, "Materials can be replenished")
-    check(int(game.economy.resources["packaging"]["stock"]) > 140, "Packaging can be replenished")
-    check(int(game.economy.resources["fuel"]["stock"]) > 180, "Fuel can be replenished")
+    var canonical_resources := ["timber", "iron", "energy", "food", "electronics"]
+    for resource in canonical_resources:
+        check(game.economy.resources.has(resource), "Canonical resource available: %s" % resource)
+    check(not game.economy.resources.has("materials") and not game.economy.resources.has("packaging") and not game.economy.resources.has("fuel"), "Legacy resources are not live economy resources")
 
+    var goods_before := int(game.finished_goods)
     game.produce_goods()
-    check(int(game.finished_goods) > 0, "Production creates sellable goods")
+    check(int(game.finished_goods) > goods_before, "Production creates sellable goods")
 
-    if int(game.finished_goods) < 5:
-        game.economy.resources["materials"]["stock"] += 20
-        game.economy.resources["packaging"]["stock"] += 20
-        game.economy.resources["fuel"]["stock"] += 20
-        game.produce_goods()
     var day_before := int(game.day)
     game.advance_day()
     check(int(game.day) == day_before + 1, "A prepared business can close a day")
