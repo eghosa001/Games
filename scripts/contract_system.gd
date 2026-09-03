@@ -1,6 +1,6 @@
 extends Node
 
-const SYSTEM_VERSION := 3
+const SYSTEM_VERSION := 4
 const MAX_HISTORY := 500
 const DEFAULT_CUSTOMER := "Harbor Retail Cooperative"
 const INITIAL_RELATIONSHIP := 50
@@ -20,14 +20,25 @@ func _set_relationship(customer_id: String, value: int) -> void:
 func get_customer_relationship(customer_id: String = DEFAULT_CUSTOMER) -> int:
     return _get_relationship(customer_id)
 
+func _competitor_bid_modifier() -> float:
+    var reaction = get_node_or_null("/root/RenewCompetitorReactionSystem")
+    if reaction == null or reaction.rivals == null:
+        return 0.0
+    var total := 0.0
+    for i in range(reaction.rivals.rivals.size()):
+        total += float(reaction.get_future_bid_modifier(i))
+    return min(0.20, total / max(1.0, float(reaction.rivals.rivals.size())))
+
 func get_future_contract_offer(reputation: int, customer_id: String = DEFAULT_CUSTOMER) -> Dictionary:
     var relationship := _get_relationship(customer_id)
     if relationship < 20:
         return {"ok": false, "eligible": false, "relationship": relationship, "message": "Customer relationship is too weak for a new contract."}
     var quantity := max(10, 25 + int(round(float(relationship - 50) * 0.2)))
-    var price := max(120, 180 + reputation * 2 + int(round(float(relationship - 50) * 0.8)))
+    var base_price := max(120, 180 + reputation * 2 + int(round(float(relationship - 50) * 0.8)))
+    var competitor_pressure := _competitor_bid_modifier()
+    var price := int(round(float(base_price) * (1.0 + competitor_pressure)))
     var duration := 5 if relationship >= 60 else 4
-    return {"ok": true, "eligible": true, "relationship": relationship, "quantity": quantity, "price": price, "duration_days": duration, "message": "Customer contract offer available."}
+    return {"ok": true, "eligible": true, "relationship": relationship, "quantity": quantity, "price": price, "duration_days": duration, "competitor_bid_pressure": competitor_pressure, "message": "Customer contract offer available."}
 
 func _new_id() -> String:
     var value := "contract_%04d" % next_contract_id
@@ -55,7 +66,8 @@ func create_customer_contract(parties: Array, product: String, quantity: int, pr
         "revenue_earned": 0, "penalties_paid": 0, "missed_deliveries": 0, "cancel_reason": "",
         "renewal_offered": false, "renewed_contract_id": "", "last_execution": {},
         "next_delivery_day": int(delivery_schedule.get("start_day", 1)), "schedule_frequency": frequency,
-        "schedule_quantity": quantity_per_delivery, "customer_relationship_at_signing": _get_relationship(customer_id)
+        "schedule_quantity": quantity_per_delivery, "customer_relationship_at_signing": _get_relationship(customer_id),
+        "competitor_bid_pressure_at_signing": _competitor_bid_modifier()
     }
     active_contracts[id] = contract
     _record("signed", id, {"customer": customer_id, "product": product, "quantity": quantity, "relationship": _get_relationship(customer_id)})
