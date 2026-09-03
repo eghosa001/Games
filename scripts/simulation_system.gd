@@ -1,11 +1,15 @@
 extends Node
 
 const DemandModel = preload("res://scripts/demand_model.gd")
-const SYSTEM_VERSION := 8
+const SYSTEM_VERSION := 9
 var command_count: Variant = 0
 var last_command: Variant = ""
 var last_result: Dictionary = {}
 var demand_model = DemandModel.new()
+var production_system: Node = null
+
+func set_production_system(production: Node) -> void:
+    production_system = production
 
 func execute(command: String, args: Dictionary = {}) -> Dictionary:
     command_count += 1
@@ -22,6 +26,9 @@ func execute(command: String, args: Dictionary = {}) -> Dictionary:
         _: result = {"ok": false, "message": "Unknown simulation command: %s" % command}
     last_result = result
     return result
+
+func _production() -> Node:
+    return production_system
 
 func _produce(args: Dictionary) -> Dictionary:
     var production = _production()
@@ -158,9 +165,9 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     var district_name: String = str(districts.current()["name"])
     _append_log(state, "DAY %d: %d sold | demand %d | price $%s vs rival $%s | sales $%s | profit $%s | production cost $%s | district %s." % [int(state["day"]), int(units_sold), int(customer_demand), _money(int(player_price)), _money(rival_price), _money(sales), _money(profit), _money(int(production_operating_cost)), district_name])
     state["message"] = "Day %d closed. %d/%d demand sold at $%s; profit $%s; production cost $%s; empire profit $%s." % [int(state["day"]), int(units_sold), int(customer_demand), _money(int(player_price)), _money(profit), _money(int(production_operating_cost)), _money(int(empire["profit"]))]
-    var production_system = _production()
-    if production_system != null:
-        production_system.advance_day()
+    var production_system_for_day = _production()
+    if production_system_for_day != null:
+        production_system_for_day.advance_day()
     return {"ok":true,"message":state["message"],"state":state.duplicate(true),"contract":contract_result,"wages":wages,"production_operating_cost":production_operating_cost,"production_config":production_config,"employee_update":employee_result,"customer_demand":customer_demand,"units_sold":units_sold,"player_price":player_price,"competitor_price":rival_price,"demand_modifiers":demand_modifiers,"relative_price":float(demand_result.get("relative_price",1.0)),"raw_demand":float(demand_result.get("raw_demand",customer_demand))}
 
 func _execute_contract(state: Dictionary, available_after_sales: int) -> Dictionary:
@@ -220,6 +227,7 @@ func end_day(args: Dictionary = {}) -> Dictionary:
         economy.end_market_day()
     last_result = debt_result
     return debt_result
+
 func capture_state() -> Dictionary:
     var result: Dictionary = {"system_version":SYSTEM_VERSION,"command_count":command_count,"last_command":last_command,"last_result":last_result.duplicate(true)}
     var finance = _finance()
@@ -257,21 +265,6 @@ func _finance() -> Node:
     if autoload != null:
         return autoload
     return root.get_node_or_null("FinanceSystem")
-
-func _production() -> Node:
-    var root = get_tree().root
-    if root == null:
-        return null
-    var autoload = root.get_node_or_null("RenewProductionSystem")
-    if autoload != null:
-        return autoload
-    var named = root.get_node_or_null("ProductionSystem")
-    if named != null:
-        return named
-    for child in root.get_children():
-        if child != null and child.has_method("capture_state") and child.has_method("produce") and child.has_method("advance_day"):
-            return child
-    return null
 
 func _economy() -> Node:
     var root = get_tree().current_scene
