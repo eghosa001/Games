@@ -5,6 +5,7 @@ extends Node2D
 const Economy = preload("res://scripts/economy.gd")
 const Rivals = preload("res://scripts/competitors.gd")
 const Events = preload("res://scripts/events.gd")
+const Production = preload("res://scripts/production.gd")
 const SaveSystem = preload("res://scripts/save_system.gd")
 const Expansion = preload("res://scripts/expansion.gd")
 const Districts = preload("res://scripts/districts.gd")
@@ -12,9 +13,9 @@ const Districts = preload("res://scripts/districts.gd")
 var economy = Economy.new()
 var rivals = Rivals.new()
 var events = Events.new()
+var production = Production.new()
 var expansion = Expansion.new()
 var districts = Districts.new()
-var production
 
 # Compatibility properties: existing UI/controllers can keep reading Main.cash, etc.,
 # while the actual values are stored only in RenewGameState.
@@ -105,8 +106,10 @@ var selected_district: int:
 var message: String:
     get: return _state_value("company", "message", "Inspect the abandoned warehouse. Your empire starts here.")
     set(value): _set_state_value("company", "message", value)
-var log_lines: Array[String]:
-    get: return _state_value("company", "log_lines", []).duplicate(true)
+var log_lines: Array:
+    get:
+        var value = _state_value("company", "log_lines", [])
+        return value.duplicate(true) if value is Array else []
     set(value): _set_state_value("company", "log_lines", value.duplicate(true))
 
 var stages = [["Neglected",0,0],["Cleaned",20,1500],["Repaired",40,3000],["Rebuilt",60,4500],["Installed",80,6000],["Designed",100,7500]]
@@ -127,9 +130,6 @@ func _set_state_value(domain: String, key: String, value) -> void:
 
 func _ready() -> void:
     randomize()
-    production = get_node_or_null("/root/RenewProductionSystem")
-    if production == null:
-        push_error("RenewProductionSystem autoload is unavailable.")
     rivals._normalize()
     expansion.unlock_from_reputation(reputation)
     districts.update_unlocks(reputation)
@@ -214,7 +214,6 @@ func buy_inputs() -> void:
     _log("SUPPLY ORDER: 12 units of every input; district pressure %d." % pressure); message = "Inputs delivered. Supplier pressure: %d." % pressure
 func produce_goods() -> void:
     if not business_open: message = "Open the business first."; return
-    if production == null: message = "ProductionSystem is unavailable."; return
     var result = production.produce(economy,employees+capacity_level-1)
     if not result["ok"]: message = "Production stopped: inputs are too low."; return
     finished_goods = int(result["finished_goods"] if result.has("finished_goods") else production.finished_goods)
@@ -292,27 +291,13 @@ func sign_contract()->void:
     contract_days=5; contract_bonus=900+reputation*20; reputation+=2; _log("CONTRACT: customer supply agreement requested."); message="Contract requested. The SimulationSystem will execute its deliveries."
 func take_loan()->void:
     if debt>0: message="Repay the current loan before borrowing again."; return
-    var finance = get_node_or_null("/root/RenewFinanceSystem")
-    var amount:=20000+reputation*300
-    if finance != null:
-        var result: Dictionary = finance.take_loan(amount)
-        if not bool(result.get("ok", false)): message=str(result.get("message", "Loan request failed.")); return
-        cash = int(result.get("cash", cash)); debt = int(result.get("debt", debt)); loan_payment = int(result.get("payment", loan_payment))
-    else:
-        debt=amount; loan_payment=int(ceil(float(amount)/20.0)); cash+=amount
-    _log("BANK: borrowed $%s. Daily repayment is $%s."%[_money(amount),_money(loan_payment)]); message="Loan approved. Growth is faster, but default will hurt your company."
+    var amount:=20000+reputation*300; debt=amount; loan_payment=int(ceil(float(amount)/20.0)); cash+=amount; _log("BANK: borrowed $%s. Daily repayment is $%s."%[_money(amount),_money(loan_payment)]); message="Loan approved. Growth is faster, but default will hurt your company."
 func repay_loan()->void:
     if debt<=0: message="You have no outstanding loan."; return
     var amount:=min(debt,max(1000,debt/4))
-    var finance = get_node_or_null("/root/RenewFinanceSystem")
-    if finance != null:
-        var result: Dictionary = finance.repay(amount)
-        if not bool(result.get("ok", false)): message=str(result.get("message", "Repayment failed.")); return
-        cash = int(result.get("cash", cash)); debt = int(result.get("debt", debt)); loan_payment = int(finance.loan_payment)
-    else:
-        if cash<amount: message="Not enough cash to make a voluntary repayment."; return
-        cash-=amount; debt-=amount
-        if debt==0: loan_payment=0
+    if cash<amount: message="Not enough cash to make a voluntary repayment."; return
+    cash-=amount; debt-=amount
+    if debt==0: loan_payment=0
     _log("BANK: voluntary repayment $%s. Remaining debt $%s."%[_money(amount),_money(debt)]); message="Loan balance reduced."
 func buy_expansion()->void:
     expansion.unlock_from_reputation(reputation); var result=expansion.buy(selected_expansion,cash)
