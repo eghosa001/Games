@@ -4,10 +4,15 @@ var passed := 0
 var failed := 0
 
 func check(ok: bool, label: String) -> void:
-    if ok: passed += 1; print("PASS: " + label)
-    else: failed += 1; push_error("FAIL: " + label)
+    if ok:
+        passed += 1
+        print("PASS: " + label)
+    else:
+        failed += 1
+        push_error("FAIL: " + label)
 
-func _init() -> void: call_deferred("run")
+func _init() -> void:
+    call_deferred("run")
 
 func run() -> void:
     var Finance = load("res://scripts/finance_system.gd")
@@ -17,11 +22,15 @@ func run() -> void:
     check(Production != null, "ProductionSystem loads")
     check(Simulation != null, "SimulationSystem loads")
     if Finance == null or Production == null or Simulation == null:
-        quit(1); return
+        quit(1)
+        return
 
-    var finance = Finance.new(); root.add_child(finance)
-    var production = Production.new(); root.add_child(production)
-    var simulation = Simulation.new(); root.add_child(simulation)
+    var finance = Finance.new()
+    root.add_child(finance)
+    var production = Production.new()
+    root.add_child(production)
+    var simulation = Simulation.new()
+    root.add_child(simulation)
     await process_frame
 
     check(finance.spend(1000, "test")["ok"], "Finance owns spending")
@@ -29,12 +38,14 @@ func run() -> void:
     check(finance.take_loan(5000)["ok"], "Finance owns borrowing")
     check(finance.debt == 5000, "Finance owns debt")
 
+    # Use the canonical V1 economy resources. The old materials/packaging/fuel
+    # fixture belonged to an obsolete pre-Phase-11 economy model.
     var economy_script = load("res://scripts/economy.gd")
     var economy = economy_script.new()
-    economy.resources["materials"]["stock"] = 5
-    economy.resources["packaging"]["stock"] = 5
-    economy.resources["fuel"]["stock"] = 5
-    var produced = production.produce(economy, 3)
+    economy.resources["timber"]["stock"] = 20
+    economy.resources["iron"]["stock"] = 20
+    economy.resources["energy"]["stock"] = 20
+    var produced = production.produce(economy, 3, "furniture")
     check(produced["ok"], "Production command succeeds")
     check(production.finished_goods == produced["output"], "ProductionSystem owns finished goods")
 
