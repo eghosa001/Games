@@ -5,6 +5,7 @@ run/main_scene="res://scenes/Main.tscn"
 
 [autoload]
 RenewGameState="*res://scripts/game_state.gd"
+RenewGameStateBridge="*res://scripts/game_state_bridge.gd"
 RenewAutosave="*res://scripts/autosave.gd"
 RenewFinanceSystem="*res://scripts/finance_system.gd"
 RenewSimulationSystem="*res://scripts/simulation_system.gd"
