@@ -8,6 +8,10 @@ var detail_label: Label
 var empty_label: Label
 var selected_contract_id := ""
 
+const STATUS_GREEN := Color(0.25, 0.85, 0.45)
+const STATUS_YELLOW := Color(0.95, 0.75, 0.20)
+const STATUS_RED := Color(0.95, 0.30, 0.30)
+
 func _ready() -> void:
     layer = 57
     _build_ui()
@@ -68,20 +72,66 @@ func _refresh() -> void:
     if selected_contract_id.is_empty() or not _contains_contract(active, selected_contract_id):
         selected_contract_id = str(active[0].get("id", ""))
     for contract in active:
-        var id := str(contract.get("id", ""))
-        var customer := str(contract.get("customer_id", "Customer"))
-        var product := str(contract.get("resource_product", "product")).replace("_", " ").capitalize()
-        var delivered := int(contract.get("quantity_delivered", 0))
-        var quantity := int(contract.get("quantity", 0))
-        var missed := int(contract.get("missed_deliveries", 0))
-        var button := Button.new()
-        button.text = "%s  •  %s  •  %d/%d  •  missed %d" % [customer, product, delivered, quantity, missed]
-        button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-        button.custom_minimum_size = Vector2(0, 34)
-        if id == selected_contract_id: button.text += "  ◀"
-        button.pressed.connect(_select_contract.bind(id))
-        contract_list.add_child(button)
+        _add_contract_row(contract)
     _show_detail(_find_contract(active, selected_contract_id))
+
+func _add_contract_row(contract: Dictionary) -> void:
+    var id := str(contract.get("id", ""))
+    var customer := str(contract.get("customer_id", "Customer"))
+    var product := str(contract.get("resource_product", "product")).replace("_", " ").capitalize()
+    var delivered := int(contract.get("quantity_delivered", 0))
+    var quantity := max(1, int(contract.get("quantity", 0)))
+    var days_elapsed := int(contract.get("days_elapsed", 0))
+    var schedule: Dictionary = contract.get("delivery_schedule", {})
+    var duration := max(1, int(schedule.get("duration_days", 1)))
+    var days_left := max(0, duration - days_elapsed)
+    var expected := quantity * minf(1.0, float(days_elapsed) / float(duration))
+    var progress := clampf(float(delivered) / float(quantity), 0.0, 1.0)
+    var status := _delivery_status(delivered, expected, days_left, quantity)
+    var status_color: Color = status[1]
+
+    var row := VBoxContainer.new()
+    row.add_theme_constant_override("separation", 2)
+    contract_list.add_child(row)
+
+    var button := Button.new()
+    button.text = "%s  •  %s  •  %d/%d" % [customer, product, delivered, quantity]
+    button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+    button.custom_minimum_size = Vector2(0, 32)
+    if id == selected_contract_id: button.text += "  ◀"
+    button.pressed.connect(_select_contract.bind(id))
+    row.add_child(button)
+
+    var progress_bar := ProgressBar.new()
+    progress_bar.min_value = 0.0
+    progress_bar.max_value = 1.0
+    progress_bar.value = progress
+    progress_bar.show_percentage = false
+    progress_bar.custom_minimum_size = Vector2(0, 9)
+    progress_bar.modulate = status_color
+    row.add_child(progress_bar)
+
+    var status_label := Label.new()
+    status_label.text = "%s  •  %d day%s left" % [status[0], days_left, "" if days_left == 1 else "s"]
+    status_label.add_theme_font_size_override("font_size", 11)
+    status_label.modulate = status_color
+    row.add_child(status_label)
+
+func _delivery_status(delivered: int, expected: float, days_left: int, quantity: int) -> Array:
+    if days_left <= 0:
+        if delivered >= quantity:
+            return ["ON TRACK • COMPLETE", STATUS_GREEN]
+        return ["OVERDUE • ACTION NEEDED", STATUS_RED]
+    if delivered >= quantity:
+        return ["ON TRACK • COMPLETE", STATUS_GREEN]
+    if float(delivered) >= expected:
+        return ["ON TRACK", STATUS_GREEN]
+    var gap_ratio := 1.0
+    if expected > 0.0:
+        gap_ratio = float(delivered) / expected
+    if gap_ratio >= 0.70:
+        return ["AT RISK", STATUS_YELLOW]
+    return ["BEHIND • ACTION NEEDED", STATUS_RED]
 
 func _contains_contract(contracts: Array, id: String) -> bool:
     return not _find_contract(contracts, id).is_empty()
@@ -112,12 +162,15 @@ func _show_detail(contract: Dictionary) -> void:
     var schedule: Dictionary = contract.get("delivery_schedule", {})
     var duration := max(1, int(schedule.get("duration_days", 1)))
     var days_left := max(0, duration - days_elapsed)
+    var expected := quantity * minf(1.0, float(days_elapsed) / float(duration))
+    var status := _delivery_status(delivered, expected, days_left, max(1, quantity))
     var relationship := 50
     var contracts = _contracts()
     if contracts != null and contracts.has_method("get_customer_relationship"):
         relationship = int(contracts.get_customer_relationship(customer))
-    var renewal := "Likely" if relationship >= 60 and delivered >= due and due > 0 else ("Possible" if relationship >= 50 else "Unlikely")
-    detail_label.text = "%s  |  %s\nDelivered: %d / %d   •   Due: %d\nDeadline: %d day%s left   •   Price: $%d/unit\nPenalty: $%d/unit   •   Paid: $%d   •   Quality ≥ %d\nCustomer relationship: %d/100   •   Renewal: %s" % [customer, product, delivered, quantity, due, days_left, "" if days_left == 1 else "s", price, penalty, penalties_paid, quality, relationship, renewal]
+    var fulfillment_ratio := float(delivered) / float(max(1, quantity))
+    var renewal := "Likely" if relationship >= 70 and fulfillment_ratio >= 0.80 else ("Possible" if relationship >= 50 else "Unlikely")
+    detail_label.text = "%s  |  %s\nDelivery: %d / %d   •   Progress: %d%%   •   Due: %d\nStatus: %s\nDeadline: %d day%s left   •   Price: $%d/unit\nPenalty: $%d/unit   •   Paid: $%d   •   Quality ≥ %d\nCustomer relationship: %d/100   •   Renewal: %s" % [customer, product, delivered, quantity, roundi(fulfillment_ratio * 100.0), due, status[0], days_left, "" if days_left == 1 else "s", price, penalty, penalties_paid, quality, relationship, renewal]
 
 func _layout() -> void:
     var size := get_viewport().get_visible_rect().size
