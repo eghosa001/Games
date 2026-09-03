@@ -40,20 +40,20 @@ func _ensure_resource(resource:String,config:Dictionary)->void:
     if not resources.has(resource):
         var c:Dictionary = config
         resources[resource] = {"base_price":c["base_price"],"current_price":c["base_price"],"price":c["base_price"],"supply":c["production_rate"],"demand":c["consumption_rate"],"production_rate":c["production_rate"],"consumption_rate":c["consumption_rate"],"stock":c["stock"],"scarcity":0.0,"region":c["region"],"target_stock":c["stock"]}
-    var d:Dictionary = resources[resource]
-    d["base_price"] = float(d.get("base_price",config["base_price"]))
-    d["current_price"] = clamp(float(d.get("current_price",d.get("price",d["base_price"]))),MIN_PRICE,MAX_PRICE)
-    d["price"] = d["current_price"]
-    d["production_rate"] = float(d.get("production_rate",config["production_rate"]))
-    d["consumption_rate"] = float(d.get("consumption_rate",config["consumption_rate"]))
-    d["stock"] = max(0.0,float(d.get("stock",config["stock"])))
-    d["supply"] = max(0.0,float(d.get("supply",d["production_rate"])))
-    d["demand"] = max(0.0,float(d.get("demand",d["consumption_rate"])))
-    d["region"] = String(d.get("region",config["region"]))
-    d["target_stock"] = max(1.0,float(d.get("target_stock",config["stock"])))
-    resources[resource] = d
-    market_multipliers[resource] = float(market_multipliers.get(resource,1.0))
-    suppliers[resource] = _default_suppliers(resource)
+    var d:Dictionary=resources[resource]
+    d["base_price"]=float(d.get("base_price",config["base_price"]))
+    d["current_price"]=clamp(float(d.get("current_price",d.get("price",d["base_price"]))),MIN_PRICE,MAX_PRICE)
+    d["price"]=d["current_price"]
+    d["production_rate"]=float(d.get("production_rate",config["production_rate"]))
+    d["consumption_rate"]=float(d.get("consumption_rate",config["consumption_rate"]))
+    d["stock"]=max(0.0,float(d.get("stock",config["stock"])))
+    d["supply"]=max(0.0,float(d.get("supply",d["production_rate"])))
+    d["demand"]=max(0.0,float(d.get("demand",d["consumption_rate"])))
+    d["region"]=String(d.get("region",config["region"]))
+    d["target_stock"]=max(1.0,float(d.get("target_stock",config["stock"])))
+    resources[resource]=d
+    market_multipliers[resource]=float(market_multipliers.get(resource,1.0))
+    suppliers[resource]=_default_suppliers(resource)
 
 func _default_suppliers(resource:String)->Array:
     return [{"name":"Regional Producer","reliability":90,"markup":1.00,"region":String(resources.get(resource,{}).get("region","Unknown"))},{"name":"National Broker","reliability":76,"markup":1.12,"region":"National"},{"name":"Emergency Importer","reliability":60,"markup":1.30,"region":"International"}]
@@ -98,8 +98,10 @@ func quote(resource:String,amount:int,choice:int=0)->Dictionary:
     if not resources.has(resource) or amount<=0: return {"ok":false,"cost":0,"supplier":"Unknown"}
     var supplier:=supplier_for(resource,choice)
     if supplier.is_empty(): return {"ok":false,"cost":0,"supplier":"Unknown"}
-    var market_factor:=float(market_multipliers.get(resource,1.0)); var market_price:=current_price(resource); var cost:=int(round(market_price*amount*float(supplier["markup"])*market_factor))
-    return {"ok":true,"cost":cost,"unit_price":market_price,"supplier":supplier["name"],"reliability":supplier["reliability"],"market_factor":market_factor,"region":resources[resource]["region"]}
+    var scarcity_state:=scarcity(resource)
+    var scarcity_factor:=float(scarcity_state.get("price_multiplier",1.0))
+    var market_factor:=float(market_multipliers.get(resource,1.0)); var market_price:=current_price(resource); var effective_price:=market_price*scarcity_factor; var cost:=int(round(effective_price*amount*float(supplier["markup"])*market_factor))
+    return {"ok":true,"cost":cost,"unit_price":effective_price,"market_price":market_price,"supplier":supplier["name"],"reliability":supplier["reliability"],"market_factor":market_factor,"scarcity_multiplier":scarcity_factor,"region":resources[resource]["region"]}
 func production_cost(orders:Array,choice:int=0)->Dictionary:
     var total:=0; var quotes:Array=[]
     for order in orders:
@@ -138,7 +140,7 @@ func buy_bundle(orders:Array,cash:int,choice:int=0,discount_rate:float=0.0,surch
 
 func set_demand(resource:String,value:float)->void:
     if not resources.has(resource): return
-    resources[resource]["demand"] = max(0.0,value); _recalculate_price(resource)
+    resources[resource]["demand"]=max(0.0,value); _recalculate_price(resource)
 func add_demand(resource:String,amount:float)->void:
     if not resources.has(resource) or amount<=0.0: return
     set_demand(resource,demand(resource)+amount)
