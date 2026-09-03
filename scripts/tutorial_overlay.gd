@@ -11,8 +11,8 @@ var progress_label: Label
 var hint_label: Label
 var continue_button: Button
 var collapsed_button: Button
-var dismissed := false
-var last_step := -1
+var dismissed: Variant = false
+var last_step: Variant = -1
 
 func _ready() -> void:
     game = get_parent()
@@ -74,9 +74,9 @@ func _build() -> void:
 func _layout_responsive() -> void:
     if overlay_root == null or panel == null:
         return
-    var w := maxf(overlay_root.size.x, 320.0)
-    var h := maxf(overlay_root.size.y, 480.0)
-    var narrow := w < 700.0
+    var w: Variant = maxf(overlay_root.size.x, 320.0)
+    var h: Variant = maxf(overlay_root.size.y, 480.0)
+    var narrow: Variant = w < 700.0
     if narrow:
         panel.position = Vector2(12, minf(418.0, h - 150.0))
         panel.size = Vector2(w - 24.0, 86.0)

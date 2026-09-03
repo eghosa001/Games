@@ -5,7 +5,7 @@ var panel: PanelContainer
 var issue_label: Label
 var archive_label: Label
 var content: VBoxContainer
-var open := false
+var open: Variant = false
 
 func _ready() -> void:
     layer = 70
@@ -36,29 +36,29 @@ func _build() -> void:
     panel.size = Vector2(1060, 610)
     panel.custom_minimum_size = Vector2(1060, 610)
     add_child(panel)
-    var margin := MarginContainer.new()
+    var margin: Variant = MarginContainer.new()
     for pair in [["margin_left", 24], ["margin_right", 24], ["margin_top", 20], ["margin_bottom", 20]]:
         margin.add_theme_constant_override(str(pair[0]), int(pair[1]))
     panel.add_child(margin)
-    var root := VBoxContainer.new()
+    var root: Variant = VBoxContainer.new()
     root.add_theme_constant_override("separation", 10)
     margin.add_child(root)
-    var header := HBoxContainer.new()
+    var header: Variant = HBoxContainer.new()
     root.add_child(header)
     issue_label = Label.new()
     issue_label.text = "RENEW DAILY"
     issue_label.add_theme_font_size_override("font_size", 28)
     header.add_child(issue_label)
-    var spacer := Control.new()
+    var spacer: Variant = Control.new()
     spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     header.add_child(spacer)
-    var close := Button.new()
+    var close: Variant = Button.new()
     close.text = "Close [Esc]"
     close.pressed.connect(toggle)
     header.add_child(close)
     archive_label = Label.new()
     root.add_child(archive_label)
-    var scroll := ScrollContainer.new()
+    var scroll: Variant = ScrollContainer.new()
     scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     root.add_child(scroll)
     content = VBoxContainer.new()
@@ -77,35 +77,35 @@ func _refresh() -> void:
     for child in content.get_children(): child.queue_free()
     var stories: Array = issue.get("stories", [])
     if stories.is_empty():
-        var empty := Label.new()
+        var empty: Variant = Label.new()
         empty.text = "The newsroom has no verified developments yet."
         content.add_child(empty)
         return
-    var current_section := ""
+    var current_section: Variant = ""
     for story in stories:
-        var section := str(story.get("section", "Your Company"))
+        var section: Variant = str(story.get("section", "Your Company"))
         if section != current_section:
             current_section = section
-            var section_label := Label.new()
+            var section_label: Variant = Label.new()
             section_label.text = "— %s —" % section.to_upper()
             section_label.add_theme_font_size_override("font_size", 18)
             content.add_child(section_label)
-        var card := PanelContainer.new()
+        var card: Variant = PanelContainer.new()
         card.custom_minimum_size = Vector2(0, 82)
         content.add_child(card)
-        var box := VBoxContainer.new()
+        var box: Variant = VBoxContainer.new()
         box.add_theme_constant_override("separation", 3)
         card.add_child(box)
-        var kicker := Label.new()
+        var kicker: Variant = Label.new()
         kicker.text = str(story.get("kicker", "News desk")).to_upper()
         kicker.add_theme_font_size_override("font_size", 11)
         box.add_child(kicker)
-        var headline := Label.new()
+        var headline: Variant = Label.new()
         headline.text = str(story.get("headline", "Verified development"))
         headline.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         headline.add_theme_font_size_override("font_size", 16)
         box.add_child(headline)
-        var body := Label.new()
+        var body: Variant = Label.new()
         body.text = str(story.get("body", ""))
         body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         box.add_child(body)

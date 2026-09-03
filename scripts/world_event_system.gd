@@ -8,10 +8,10 @@ const STATUS_EXPIRED := "expired"
 var events: Dictionary = {}
 var active_events: Dictionary = {}
 var history: Array = []
-var next_instance_id := 1
-var last_day := -1
+var next_instance_id: Variant = 1
+var last_day: Variant = -1
 
-var catalog := {
+var catalog: Variant = {
     "energy_crisis": {"id":"energy_crisis","category":"energy","duration":4,"scope":"global","causes":["grid_shortage","fuel_disruption"],"effects":{"energy_price":1.35,"factory_cost":1.12},"choices":[{"id":"ration","label":"Ration energy","effects":{"factory_output":0.88,"energy_price":1.10}},{"id":"subsidize","label":"Subsidize supply","effects":{"cash":-5000.0,"energy_price":0.95}}],"follow_up_events":["energy_price_shock"]},
     "energy_price_shock": {"id":"energy_price_shock","category":"market","duration":3,"scope":"global","causes":["energy_crisis"],"effects":{"energy_price":1.50,"factory_cost":1.20,"factory_output":0.92},"choices":[{"id":"adapt","label":"Adapt factories","effects":{"cash":-3000.0,"factory_output":0.97}},{"id":"hold","label":"Hold production","effects":{"factory_output":0.90}}],"follow_up_events":["alternative_energy_demand"]},
     "alternative_energy_demand": {"id":"alternative_energy_demand","category":"opportunity","duration":5,"scope":"global","causes":["energy_price_shock"],"effects":{"alternative_energy_demand":1.60,"investment_opportunity":1.25},"choices":[{"id":"invest","label":"Invest in alternatives","effects":{"investment_opportunity":1.50}},{"id":"research","label":"Fund energy research","effects":{"research_opportunity":1.50}}],"follow_up_events":["energy_investment_boom","energy_research_breakthrough"]},
@@ -24,7 +24,7 @@ var catalog := {
 }
 
 func register_event(definition: Dictionary) -> bool:
-    var id := str(definition.get("id", ""))
+    var id: Variant = str(definition.get("id", ""))
     if id == "": return false
     events[id] = definition.duplicate(true)
     return true
@@ -32,11 +32,11 @@ func register_event(definition: Dictionary) -> bool:
 func trigger(event_id: String, scope_data: Dictionary = {}, day: int = -1) -> Dictionary:
     if not events.has(event_id): return {"ok":false,"error":"unknown_event"}
     var def: Dictionary = events[event_id]
-    var actual_day := day if day >= 0 else _current_day()
-    var instance_id := "world_event:%d" % next_instance_id
+    var actual_day: Variant = day if day >= 0 else _current_day()
+    var instance_id: Variant = "world_event:%d" % next_instance_id
     next_instance_id += 1
-    var duration := int(def.get("duration", 0))
-    var instance := {"instance_id":instance_id,"id":event_id,"category":def.get("category","general"),"start_day":actual_day,"duration":duration,"end_day":actual_day+duration,"scope":def.get("scope","global"),"scope_data":scope_data.duplicate(true),"causes":def.get("causes",[]).duplicate(true),"effects":def.get("effects",{}).duplicate(true),"choices":def.get("choices",[]).duplicate(true),"follow_up_events":def.get("follow_up_events",[]).duplicate(true),"resolution":{},"status":STATUS_ACTIVE}
+    var duration: Variant = int(def.get("duration", 0))
+    var instance: Variant = {"instance_id":instance_id,"id":event_id,"category":def.get("category","general"),"start_day":actual_day,"duration":duration,"end_day":actual_day+duration,"scope":def.get("scope","global"),"scope_data":scope_data.duplicate(true),"causes":def.get("causes",[]).duplicate(true),"effects":def.get("effects",{}).duplicate(true),"choices":def.get("choices",[]).duplicate(true),"follow_up_events":def.get("follow_up_events",[]).duplicate(true),"resolution":{},"status":STATUS_ACTIVE}
     active_events[instance_id] = instance
     history.append(instance.duplicate(true))
     _publish("World event: %s" % event_id)
@@ -97,7 +97,7 @@ func _roll_scheduled_events(day: int) -> void:
     if day > 1 and day % 31 == 0: trigger("financial_crisis", {"cause":"credit_cycle"}, day)
 
 func _apply_effects(effects: Dictionary) -> void:
-    var main := get_tree().current_scene if get_tree() != null else null
+    var main: Variant = get_tree().current_scene if get_tree() != null else null
     if main == null: return
     var game = get_node_or_null("/root/RenewGameState")
     if effects.has("cash") and main.get("cash") != null: main.set("cash", float(main.get("cash")) + float(effects["cash"]))
@@ -115,7 +115,7 @@ func _publish(text: String) -> void:
     if news != null and news.has_method("publish"): news.publish(text, _current_day())
 
 func _current_day() -> int:
-    var scene := get_tree().current_scene if get_tree() != null else null
+    var scene: Variant = get_tree().current_scene if get_tree() != null else null
     return int(scene.get("day")) if scene != null else 1
 
 func capture_state() -> Dictionary:
@@ -130,9 +130,9 @@ func restore_state(state: Dictionary) -> void:
     last_day = int(state.get("last_day",-1))
 
 func _process(_delta: float) -> void:
-    var scene := get_tree().current_scene if get_tree() != null else null
+    var scene: Variant = get_tree().current_scene if get_tree() != null else null
     if scene == null: return
-    var day := int(scene.get("day"))
+    var day: Variant = int(scene.get("day"))
     if day != last_day:
         last_day = day
         process_day(day)

@@ -3,16 +3,16 @@ extends Node
 # Phase B/C market layer: recurring market shocks and strategic responses.
 # Events now change input economics for a short period, so decisions have lasting consequences.
 var game: Node
-var market_cycle := 0
-var market_heat := 0
-var active_event := ""
-var event_text := ""
-var event_expiry := 0
-var last_day := 1
-var event_count := 0
-var effect_expiry := 0
-var effect_name := ""
-var events := [
+var market_cycle: Variant = 0
+var market_heat: Variant = 0
+var active_event: Variant = ""
+var event_text: Variant = ""
+var event_expiry: Variant = 0
+var last_day: Variant = 1
+var event_count: Variant = 0
+var effect_expiry: Variant = 0
+var effect_name: Variant = ""
+var events: Variant = [
     {"name":"INPUT SHORTAGE","text":"A supplier disruption is squeezing input availability.","type":"shortage"},
     {"name":"DEMAND BOOM","text":"Demand is surging in your current district.","type":"boom"},
     {"name":"PRICE WAR","text":"A major rival has cut prices to pressure your business.","type":"war"},
@@ -28,7 +28,7 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
     if game == null:
         return
-    var current_day := int(game.day)
+    var current_day: Variant = int(game.day)
     if current_day != last_day:
         last_day = current_day
         _on_new_day(current_day)
@@ -111,18 +111,18 @@ func _respond(style: String) -> void:
         if game != null:
             game.message = "No active market event needs a response."
         return
-    var event_type := ""
+    var event_type: Variant = ""
     for event in events:
         if String(event["name"]) == active_event:
             event_type = String(event["type"])
             break
-    var reward := 0
-    var rep := 0
-    var outcome := ""
+    var reward: Variant = 0
+    var rep: Variant = 0
+    var outcome: Variant = ""
     match event_type:
         "shortage":
             if style == "aggressive":
-                var spend := min(int(game.cash), 3500)
+                var spend: Variant = min(int(game.cash), 3500)
                 game.cash -= spend
                 reward = spend / 2
                 rep = 2
@@ -220,7 +220,7 @@ func snapshot() -> Dictionary:
     return {"market_cycle":market_cycle,"market_heat":market_heat,"active_event":active_event,"event_text":event_text,"event_expiry":event_expiry,"event_count":event_count,"effect_expiry":effect_expiry,"effect_name":effect_name}
 
 func _save_state() -> void:
-    var file := FileAccess.open("user://renew_market.json", FileAccess.WRITE)
+    var file: Variant = FileAccess.open("user://renew_market.json", FileAccess.WRITE)
     if file != null:
         file.store_string(JSON.stringify(snapshot()))
         file.close()
@@ -228,7 +228,7 @@ func _save_state() -> void:
 func _load_state() -> void:
     if not FileAccess.file_exists("user://renew_market.json"):
         return
-    var file := FileAccess.open("user://renew_market.json", FileAccess.READ)
+    var file: Variant = FileAccess.open("user://renew_market.json", FileAccess.READ)
     if file == null:
         return
     var parsed = JSON.parse_string(file.get_as_text())

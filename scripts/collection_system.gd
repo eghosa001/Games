@@ -9,7 +9,7 @@ var collections: Dictionary = {}
 var seen: Dictionary = {}
 var active_bonuses: Dictionary = {}
 var events: Array[Dictionary] = []
-var last_day := -1
+var last_day: Variant = -1
 
 const TYPE_BONUSES := {
     "historic_properties": {"reputation": 2, "property_income": 0.04, "regional_presence": 1},
@@ -27,7 +27,7 @@ func _ready() -> void:
     _recalculate_bonuses()
 
 func _process(_delta: float) -> void:
-    var day := _day()
+    var day: Variant = _day()
     if day != last_day:
         last_day = day
         _scan_sources(day)
@@ -35,10 +35,10 @@ func _process(_delta: float) -> void:
 
 func collect(type: String, title: String, details: Dictionary = {}, reward: Dictionary = {}, day: int = -1, signature: String = "") -> Dictionary:
     if not TYPES.has(type): return {"ok": false, "reason": "Unknown collection type."}
-    var actual_day := _day() if day < 0 else day
-    var key := signature if not signature.is_empty() else "%s|%s" % [type, title]
+    var actual_day: Variant = _day() if day < 0 else day
+    var key: Variant = signature if not signature.is_empty() else "%s|%s" % [type, title]
     if seen.has(key): return {"ok": true, "item": seen[key], "already_collected": true}
-    var item := {"id": "collection_%06d" % (_total_count() + 1), "type": type, "title": title, "day": actual_day, "details": details.duplicate(true), "reward": reward.duplicate(true)}
+    var item: Variant = {"id": "collection_%06d" % (_total_count() + 1), "type": type, "title": title, "day": actual_day, "details": details.duplicate(true), "reward": reward.duplicate(true)}
     collections[type].append(item)
     if collections[type].size() > MAX_ITEMS: collections[type].pop_front()
     seen[key] = item
@@ -60,14 +60,14 @@ func get_bonuses() -> Dictionary:
     return active_bonuses.duplicate(true)
 
 func get_collection_value() -> int:
-    var value := 0
+    var value: Variant = 0
     for item in get_all():
         var reward: Dictionary = item.get("reward", {})
         value += int(reward.get("value", 1000))
     return value
 
 func get_status() -> Dictionary:
-    var counts := {}
+    var counts: Variant = {}
     for type in TYPES: counts[type] = collections[type].size()
     return {"total": _total_count(), "counts": counts, "value": get_collection_value(), "bonuses": active_bonuses.duplicate(true)}
 
@@ -75,10 +75,10 @@ func _scan_sources(day: int) -> void:
     var legacy = get_node_or_null("/root/RenewCorporateLegacy")
     if legacy != null:
         for item in legacy.list_category("founding"):
-            var title := str(item.get("title", "Historic property"))
+            var title: Variant = str(item.get("title", "Historic property"))
             collect("historic_properties", title, item.get("details", {}), {"value": 25000, "reputation": 2}, int(item.get("day", day)), "legacy_property|" + str(item.get("id", title)))
         for item in legacy.list_category("technologies"):
-            var title := str(item.get("title", "Unique technology"))
+            var title: Variant = str(item.get("title", "Unique technology"))
             collect("unique_technologies", title, item.get("details", {}), {"value": 30000, "technology": 3}, int(item.get("day", day)), "legacy_technology|" + str(item.get("id", title)))
         for item in legacy.list_category("employees"):
             var details: Dictionary = item.get("details", {})
@@ -94,21 +94,21 @@ func _scan_sources(day: int) -> void:
     var infrastructure = get_node_or_null("/root/RenewInfrastructureSystem")
     if infrastructure != null:
         for asset in infrastructure.list_assets():
-            var type := str(asset.get("type", ""))
+            var type: Variant = str(asset.get("type", ""))
             if type in ["industrial_zone", "technology_park", "power_plant"] and int(asset.get("level", 1)) >= 3:
                 collect("rare_machinery", "Rare machinery — %s" % asset.get("name", asset.get("id", "Machine")), {"asset_id":asset.get("id", ""), "region":asset.get("region", "")}, {"value":50000, "production":0.06}, day, "machinery|" + str(asset.get("id", "")))
 
     var world_events = get_node_or_null("/root/RenewWorldEventSystem")
     if world_events != null:
         for event in world_events.history_list():
-            var category := str(event.get("category", ""))
+            var category: Variant = str(event.get("category", ""))
             if category in ["energy", "supply", "financial"]:
                 collect("world_event_artifacts", "World event artifact — %s" % event.get("title", event.get("id", "Event")), {"event_id":event.get("id", ""), "category":category}, {"value":35000, "resilience":0.06}, int(event.get("day", day)), "world_event|" + str(event.get("id", "")))
 
 func _recalculate_bonuses() -> void:
     active_bonuses.clear()
     for type in TYPES:
-        var count := collections[type].size()
+        var count: Variant = collections[type].size()
         if count <= 0: continue
         var spec: Dictionary = TYPE_BONUSES[type]
         for key in spec.keys():
@@ -133,10 +133,10 @@ func restore_state(state: Dictionary) -> void:
     last_day = int(state.get("last_day", -1))
 
 func _total_count() -> int:
-    var total := 0
+    var total: Variant = 0
     for type in TYPES: total += collections[type].size()
     return total
 
 func _day() -> int:
-    var scene := get_tree().current_scene if get_tree() != null else null
+    var scene: Variant = get_tree().current_scene if get_tree() != null else null
     return int(scene.get("day")) if scene != null else 1

@@ -69,7 +69,7 @@ func current() -> Dictionary:
     return result
 
 func current_opportunity(day:int=1) -> Dictionary:
-    _normalize(); var r := current(); var kind := (selected + day + opportunity_rotation) % 4
+    _normalize(); var r: Dictionary = current(); var kind: Variant = (selected + day + opportunity_rotation) % 4
     match kind:
         0: return {"type":"LOCAL CONTRACT","region":r["name"],"industry":r["industry"],"reward":1800+int(r["tier"])*700,"risk":0.04,"message":"A local buyer needs an urgent shipment. Delivering here rewards speed."}
         1: return {"type":"RESOURCE WINDFALL","region":r["name"],"resource":r["resource"],"reward":1400+int(r["tier"])*900,"risk":0.08,"message":"A temporary surplus of %s is available in this region." % r["resource"]}

@@ -20,7 +20,7 @@ func _build_ui() -> void:
     top_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(top_bar)
 
-    var brand := Label.new()
+    var brand: Variant = Label.new()
     brand.text = "RENEW"
     brand.position = Vector2(18, 10)
     brand.size = Vector2(120, 36)
@@ -29,7 +29,7 @@ func _build_ui() -> void:
     brand.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(brand)
 
-    var subtitle := Label.new()
+    var subtitle: Variant = Label.new()
     subtitle.text = "REBUILD • OPERATE • EXPAND"
     subtitle.position = Vector2(18, 37)
     subtitle.size = Vector2(240, 22)
@@ -45,7 +45,7 @@ func _build_ui() -> void:
     tabs.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(tabs)
     for i in range(tab_names.size()):
-        var button := Button.new()
+        var button: Variant = Button.new()
         button.text = tab_names[i]
         button.custom_minimum_size = Vector2(150, 42)
         button.focus_mode = Control.FOCUS_NONE
@@ -114,21 +114,21 @@ func _build_ui() -> void:
     button_theme = _make_button_theme()
 
 func _make_button_theme() -> Theme:
-    var theme := Theme.new()
+    var theme: Variant = Theme.new()
     theme.default_font_size = 14
-    var normal := StyleBoxFlat.new()
+    var normal: Variant = StyleBoxFlat.new()
     normal.bg_color = Color("18282e")
     normal.border_color = Color("30474f")
     normal.set_border_width_all(1)
     normal.set_corner_radius_all(8)
     normal.content_margin_left = 10.0
     normal.content_margin_right = 10.0
-    var hover := normal.duplicate()
+    var hover: Variant = normal.duplicate()
     hover.bg_color = Color("274047")
     hover.border_color = Color("6d9d91")
-    var pressed := hover.duplicate()
+    var pressed: Variant = hover.duplicate()
     pressed.bg_color = Color("315b5c")
-    var disabled := normal.duplicate()
+    var disabled: Variant = normal.duplicate()
     disabled.bg_color = Color("10191d")
     disabled.border_color = Color("203137")
     theme.set_stylebox("normal", "Button", normal)
@@ -142,7 +142,7 @@ func _make_button_theme() -> Theme:
     return theme
 
 func _button(text: String, callback: Callable) -> void:
-    var b := Button.new()
+    var b: Variant = Button.new()
     b.text = text
     b.tooltip_text = "Tap to " + text.to_lower()
     b.custom_minimum_size = Vector2(225, 48)
@@ -155,15 +155,15 @@ func _button(text: String, callback: Callable) -> void:
 func _layout_responsive() -> void:
     if root == null or tabs == null or action_scroll == null or actions == null:
         return
-    var w := maxf(root.size.x, 320.0)
-    var h := maxf(root.size.y, 480.0)
+    var w: Variant = maxf(root.size.x, 320.0)
+    var h: Variant = maxf(root.size.y, 480.0)
     if top_bar != null:
         top_bar.size = Vector2(w, 64.0)
     if bottom_bar != null:
         bottom_bar.position = Vector2(0, maxf(0.0, h - 150.0))
         bottom_bar.size = Vector2(w, 150.0)
-    var narrow := w < 700.0
-    var tab_width := maxf(70.0, (w - 48.0) / 4.0)
+    var narrow: Variant = w < 700.0
+    var tab_width: Variant = maxf(70.0, (w - 48.0) / 4.0)
     tabs.position = Vector2(12, 10)
     tabs.size = Vector2(w - 24.0, 44.0)
     for child in tabs.get_children():
@@ -178,7 +178,7 @@ func _layout_responsive() -> void:
         action_scroll.size = Vector2(w - 20.0, 150)
         actions.columns = 2
         actions.custom_minimum_size = Vector2(w - 20.0, 0)
-        var button_width := maxf(120.0, (w - 29.0) / 2.0)
+        var button_width: Variant = maxf(120.0, (w - 29.0) / 2.0)
         for child in actions.get_children():
             if child is Button:
                 child.custom_minimum_size = Vector2(button_width, 48)

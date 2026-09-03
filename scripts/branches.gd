@@ -4,7 +4,7 @@ class_name RenewBranches
 # Each regional branch is a real operating business: staff, inventory,
 # local sourcing, pricing, quality and daily profit. The branch layer sits
 # above the existing expansion properties and gives regions a reason to matter.
-var branches := [
+var branches: Variant = [
     {"name":"Old Market Flagship","region":0,"industry":"Consumer Goods","owned":true,"level":1,"employees":3,"stock":12,"price":115,"quality":50,"cashflow":0},
     {"name":"Industrial Works","region":1,"industry":"Building Materials","owned":false,"level":1,"employees":0,"stock":0,"price":145,"quality":50,"cashflow":0},
     {"name":"Port Distribution Hub","region":2,"industry":"Consumer Goods","owned":false,"level":1,"employees":0,"stock":0,"price":120,"quality":50,"cashflow":0},
@@ -12,7 +12,7 @@ var branches := [
     {"name":"Northern Retail Center","region":4,"industry":"Consumer Goods","owned":false,"level":1,"employees":0,"stock":0,"price":130,"quality":50,"cashflow":0},
     {"name":"Basin Materials Yard","region":5,"industry":"Building Materials","owned":false,"level":1,"employees":0,"stock":0,"price":150,"quality":50,"cashflow":0}
 ]
-var selected := 0
+var selected: Variant = 0
 
 func _normalize() -> void:
     while branches.size() < 6:

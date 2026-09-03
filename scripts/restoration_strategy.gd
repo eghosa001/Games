@@ -1,10 +1,10 @@
 extends Node
 
 var game: Node
-var selected := "Standard"
-var applied := false
+var selected: Variant = "Standard"
+var applied: Variant = false
 
-var plans := {
+var plans: Variant = {
     "Budget": {"costs": [0, 800, 2200, 3500, 4800, 5200], "final_message": "Budget restoration favors cash preservation. The warehouse opens lean and practical."},
     "Standard": {"costs": [0, 1000, 3000, 4500, 6000, 7500], "final_message": "Standard restoration balances cost, reputation and operating quality."},
     "Premium": {"costs": [0, 1400, 3800, 6000, 8000, 10000], "final_message": "Premium restoration creates a stronger launch and a better first impression in the district."}

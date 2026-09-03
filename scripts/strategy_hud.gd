@@ -31,8 +31,8 @@ func _ready() -> void:
 func _layout_responsive() -> void:
     if root == null or panel == null or label == null:
         return
-    var w := maxf(root.size.x, 320.0)
-    var h := maxf(root.size.y, 480.0)
+    var w: Variant = maxf(root.size.x, 320.0)
+    var h: Variant = maxf(root.size.y, 480.0)
     if w < 700.0:
         # MobileUI reserves the lower strip for navigation/actions. This slot
         # sits between the goal area and that strip without covering buttons.
@@ -53,10 +53,10 @@ func _process(_delta: float) -> void:
         return
     var market = game.get_node_or_null("MarketDirector")
     var goals = game.get_node_or_null("EmpireGoals")
-    var market_text := "MARKET: stable"
+    var market_text: Variant = "MARKET: stable"
     if market != null:
         market_text = "MARKET: " + market.market_status()
-    var goal_text := "NEXT GOAL: build your company"
+    var goal_text: Variant = "NEXT GOAL: build your company"
     if goals != null:
         var goal: Dictionary = goals.current_goal()
         goal_text = "GOAL %d/%d: %s — %s" % [goals.completed_count(), goals.goals.size(), String(goal.get("title", "")), String(goal.get("text", ""))]

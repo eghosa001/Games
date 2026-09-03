@@ -2,18 +2,18 @@ extends Node2D
 
 # RENEW World Missions - recurring narrative opportunities and economic choices.
 var parent
-var active := false
-var title := ""
-var text := ""
-var option_a := ""
-var option_b := ""
-var mission_type := ""
-var expires_day := 0
-var reward_preview := ""
-var cooldown := 2
-var completed := 0
+var active: Variant = false
+var title: Variant = ""
+var text: Variant = ""
+var option_a: Variant = ""
+var option_b: Variant = ""
+var mission_type: Variant = ""
+var expires_day: Variant = 0
+var reward_preview: Variant = ""
+var cooldown: Variant = 2
+var completed: Variant = 0
 
-var missions := [
+var missions: Variant = [
     {"type":"community","title":"The Neighborhood Is Watching","text":"A neglected block near your district needs cleanup. A visible investment could build loyalty before a rival moves in.","a":"Spend $3,000","b":"Ignore it","reward":"+6 reputation"},
     {"type":"supplier","title":"Supplier in Trouble","text":"A small supplier has lost a major customer. Helping them now could secure favorable terms for your growing empire.","a":"Invest $5,000","b":"Walk away","reward":"+8 relationship"},
     {"type":"giant","title":"The Giant Starts a Price War","text":"The Giant has slashed prices in your district. You can defend your customers or protect your cash.","a":"Defend market ($4,000)","b":"Hold prices","reward":"+8 reputation"},
@@ -40,7 +40,7 @@ func _process(_delta: float) -> void:
     queue_redraw()
 
 func _spawn() -> void:
-    var pool := missions.duplicate()
+    var pool: Variant = missions.duplicate()
     pool.shuffle()
     var m: Dictionary = pool[0]
     mission_type = str(m["type"])
@@ -56,7 +56,7 @@ func _spawn() -> void:
 
 func choose_a() -> void:
     if not active: parent.message = "No active world opportunity."; return
-    var success := true
+    var success: Variant = true
     match mission_type:
         "community":
             success = _spend(3000)
@@ -115,7 +115,7 @@ func _complete(result: String) -> void:
 
 func _draw() -> void:
     if parent == null or not active: return
-    var panel := Rect2(855, 80, 385, 255)
+    var panel: Variant = Rect2(855, 80, 385, 255)
     draw_rect(panel, Color("171c25"), true)
     draw_rect(panel, Color("7c91a3"), false, 2.0)
     draw_string(ThemeDB.fallback_font, Vector2(870, 105), "WORLD OPPORTUNITY", HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("f0f4f7"))

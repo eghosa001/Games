@@ -5,7 +5,7 @@ var main
 var panel: PanelContainer
 var summary: Label
 var content: VBoxContainer
-var selected_type := "all"
+var selected_type: Variant = "all"
 const TYPES := ["all", "historic_properties", "rare_machinery", "landmark_businesses", "unique_technologies", "special_contracts", "famous_employees", "world_event_artifacts"]
 
 func _ready() -> void:
@@ -30,21 +30,21 @@ func _build_ui() -> void:
     panel.position = Vector2(110, 55)
     panel.size = Vector2(1060, 610)
     add_child(panel)
-    var root := VBoxContainer.new()
+    var root: Variant = VBoxContainer.new()
     panel.add_child(root)
-    var header := HBoxContainer.new()
+    var header: Variant = HBoxContainer.new()
     root.add_child(header)
-    var title := Label.new()
+    var title: Variant = Label.new()
     title.text = "CORPORATE COLLECTIONS  [C]"
     title.add_theme_font_size_override("font_size", 24)
     header.add_child(title)
-    var spacer := Control.new(); spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL; header.add_child(spacer)
-    var close := Button.new(); close.text = "Close"; close.pressed.connect(func(): _set_visible(false)); header.add_child(close)
+    var spacer: Variant = Control.new(); spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL; header.add_child(spacer)
+    var close: Variant = Button.new(); close.text = "Close"; close.pressed.connect(func(): _set_visible(false)); header.add_child(close)
     summary = Label.new(); summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; root.add_child(summary)
-    var tabs := HBoxContainer.new(); root.add_child(tabs)
+    var tabs: Variant = HBoxContainer.new(); root.add_child(tabs)
     for type in TYPES:
-        var b := Button.new(); b.text = "All" if type == "all" else type.replace("_", " ").capitalize(); b.pressed.connect(_select.bind(type)); tabs.add_child(b)
-    var scroll := ScrollContainer.new(); scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; root.add_child(scroll)
+        var b: Variant = Button.new(); b.text = "All" if type == "all" else type.replace("_", " ").capitalize(); b.pressed.connect(_select.bind(type)); tabs.add_child(b)
+    var scroll: Variant = ScrollContainer.new(); scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; root.add_child(scroll)
     content = VBoxContainer.new(); content.size_flags_horizontal = Control.SIZE_EXPAND_FILL; scroll.add_child(content)
 
 func _set_visible(value: bool) -> void:
@@ -62,14 +62,14 @@ func _refresh() -> void:
     for child in content.get_children(): child.queue_free()
     var items: Array = system.get_all() if selected_type == "all" else system.list_collection(selected_type)
     if items.is_empty():
-        var empty := Label.new(); empty.text = "No items collected in this category yet."; content.add_child(empty); return
+        var empty: Variant = Label.new(); empty.text = "No items collected in this category yet."; content.add_child(empty); return
     for item in items:
-        var card := PanelContainer.new(); card.custom_minimum_size = Vector2(0, 82); content.add_child(card)
-        var box := VBoxContainer.new(); card.add_child(box)
-        var head := Label.new(); head.text = "%s  •  Day %d" % [str(item.get("title", "Collection item")), int(item.get("day", 1))]; head.add_theme_font_size_override("font_size", 16); box.add_child(head)
+        var card: Variant = PanelContainer.new(); card.custom_minimum_size = Vector2(0, 82); content.add_child(card)
+        var box: Variant = VBoxContainer.new(); card.add_child(box)
+        var head: Variant = Label.new(); head.text = "%s  •  Day %d" % [str(item.get("title", "Collection item")), int(item.get("day", 1))]; head.add_theme_font_size_override("font_size", 16); box.add_child(head)
         var details: Dictionary = item.get("details", {})
         var reward: Dictionary = item.get("reward", {})
-        var detail := Label.new(); detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; detail.text = "Type: %s\n%s\nReward: %s" % [str(item.get("type", "")).replace("_", " ").capitalize(), _dict_text(details), _dict_text(reward)]; box.add_child(detail)
+        var detail: Variant = Label.new(); detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; detail.text = "Type: %s\n%s\nReward: %s" % [str(item.get("type", "")).replace("_", " ").capitalize(), _dict_text(details), _dict_text(reward)]; box.add_child(detail)
 
 func _bonus_text(bonuses: Dictionary) -> String:
     var parts: Array[String] = []
@@ -77,7 +77,7 @@ func _bonus_text(bonuses: Dictionary) -> String:
     return ", ".join(parts) if not parts.is_empty() else "None yet"
 
 func _format_bonus(value) -> String:
-    var number := float(value)
+    var number: Variant = float(value)
     return "+%.0f%%" % (number * 100.0) if abs(number) < 1.0 else "+%d" % int(number)
 
 func _dict_text(data: Dictionary) -> String:

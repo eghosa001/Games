@@ -5,15 +5,15 @@ extends Node
 const LEVEL_THRESHOLDS := [0, 100, 250, 500, 900, 1400, 2000, 2800, 3800, 5000]
 const XP_REWARDS := {"restoration_step":10,"property_operational":50,"profit_per_100":1,"contract_signed":25,"contract_completed":40,"employee_hired":15,"production_run":12,"expansion_purchased":35,"expansion_upgraded":20}
 var state_adapter = null
-var _tracking_ready := false
-var _last_restoration := 0
-var _last_profit := 0
-var _last_employees := 0
-var _last_goods := 0
-var _last_contract_days := 0
-var _last_expansion_count := 0
-var _last_expansion_signature := ""
-var _last_operational := false
+var _tracking_ready: Variant = false
+var _last_restoration: Variant = 0
+var _last_profit: Variant = 0
+var _last_employees: Variant = 0
+var _last_goods: Variant = 0
+var _last_contract_days: Variant = 0
+var _last_expansion_count: Variant = 0
+var _last_expansion_signature: Variant = ""
+var _last_operational: Variant = false
 func _ready() -> void:
     state_adapter = get_node_or_null("/root/RenewGameState"); _ensure_state(); call_deferred("sync_tracking")
 func _process(_delta:float) -> void:

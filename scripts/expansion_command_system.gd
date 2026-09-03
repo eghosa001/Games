@@ -11,7 +11,7 @@ func _ready() -> void:
     add_child(state_adapter)
 
 func initialize() -> void:
-    var reputation := int(state_adapter.get_value("player", "reputation", 0))
+    var reputation: Variant = int(state_adapter.get_value("player", "reputation", 0))
     expansion.unlock_from_reputation(reputation)
     districts.update_unlocks(reputation)
 
@@ -29,10 +29,10 @@ func select_district(index: int) -> void:
         state_adapter.log_message("DISTRICT: %s selected." % districts.current()["name"])
 
 func buy_expansion() -> void:
-    var reputation := int(state_adapter.get_value("player", "reputation", 0))
+    var reputation: Variant = int(state_adapter.get_value("player", "reputation", 0))
     expansion.unlock_from_reputation(reputation)
-    var selected := int(state_adapter.get_value("branches", "selected_expansion", 0))
-    var cash := int(state_adapter.get_value("economy", "cash", 25000))
+    var selected: Variant = int(state_adapter.get_value("branches", "selected_expansion", 0))
+    var cash: Variant = int(state_adapter.get_value("economy", "cash", 25000))
     var result = expansion.buy(selected, cash)
     if not result["ok"]: state_adapter.message(result["message"]); return
     state_adapter.set_value("economy", "cash", cash - int(result["cost"]))
@@ -41,8 +41,8 @@ func buy_expansion() -> void:
     state_adapter.message(result["message"])
 
 func upgrade_expansion() -> void:
-    var selected := int(state_adapter.get_value("branches", "selected_expansion", 0))
-    var cash := int(state_adapter.get_value("economy", "cash", 25000))
+    var selected: Variant = int(state_adapter.get_value("branches", "selected_expansion", 0))
+    var cash: Variant = int(state_adapter.get_value("economy", "cash", 25000))
     var result = expansion.upgrade(selected, cash)
     if not result["ok"]: state_adapter.message(result["message"]); return
     state_adapter.set_value("economy", "cash", cash - int(result["cost"]))

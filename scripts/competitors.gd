@@ -7,7 +7,7 @@ class_name RenewCompetitors
 # simulation systems already depend on this class.
 const SYSTEM_VERSION := 4
 
-var rivals := [
+var rivals: Variant = [
     {
         "id":"apex_materials", "name":"Apex Materials", "personality":"aggressive",
         "strategy":"low_price_aggressive", "cash":220000, "debt":70000,
@@ -59,7 +59,7 @@ func _normalize() -> void:
     for r in rivals:
         if not r.has("id"):
             r["id"] = "corp_" + str(r.get("name", "rival")).to_lower().replace(" ", "_")
-        var defaults := {
+        var defaults: Variant = {
             "name":"Rival Corporation", "personality":"balanced", "strategy":"balanced",
             "cash":100000, "debt":0, "assets":1, "businesses":1, "employees":10,
             "production":50, "inventory":50, "technology":1, "price":110,
@@ -82,7 +82,7 @@ func daily_update(day: int) -> Array[String]:
     _normalize()
     var news: Array[String] = []
     for rival in rivals:
-        var strategy := str(rival.get("strategy", "balanced"))
+        var strategy: Variant = str(rival.get("strategy", "balanced"))
         # Baseline daily corporate activity. This is intentionally distinct for
         # each Phase 14 corporation so the market evolves even without player input.
         match strategy:
@@ -128,11 +128,11 @@ func strategic_ai_update(day: int, player_state: Dictionary = {}) -> Array[Strin
     var news: Array[String] = []
     for i in range(rivals.size()):
         var r: Dictionary = rivals[i]
-        var observation := _observe(r, day, player_state)
-        var evaluation := _evaluate(r, observation)
-        var strategy := _select_strategy(r, evaluation, day)
-        var action := _execute_strategy(r, strategy, observation, day)
-        var result := _record_result(r, action, observation, evaluation)
+        var observation: Variant = _observe(r, day, player_state)
+        var evaluation: Variant = _evaluate(r, observation)
+        var strategy: Variant = _select_strategy(r, evaluation, day)
+        var action: Variant = _execute_strategy(r, strategy, observation, day)
+        var result: Variant = _record_result(r, action, observation, evaluation)
         r["last_observation"] = observation
         r["last_evaluation"] = evaluation
         r["last_strategy"] = strategy
@@ -146,11 +146,11 @@ func strategic_ai_update(day: int, player_state: Dictionary = {}) -> Array[Strin
     return news
 
 func _observe(r: Dictionary, day: int, player: Dictionary) -> Dictionary:
-    var player_cash := int(player.get("cash", 0))
-    var player_rep := int(player.get("reputation", 0))
-    var player_price := int(player.get("player_price", 110))
-    var player_district := int(player.get("selected_district", 0))
-    var target_pressure := 1.0 if player_district in r["districts"] else 0.0
+    var player_cash: Variant = int(player.get("cash", 0))
+    var player_rep: Variant = int(player.get("reputation", 0))
+    var player_price: Variant = int(player.get("player_price", 110))
+    var player_district: Variant = int(player.get("selected_district", 0))
+    var target_pressure: Variant = 1.0 if player_district in r["districts"] else 0.0
     return {
         "day":day, "player_cash":player_cash, "player_reputation":player_rep,
         "player_price":player_price, "player_district":player_district,
@@ -165,11 +165,11 @@ func _observe(r: Dictionary, day: int, player: Dictionary) -> Dictionary:
     }
 
 func _evaluate(r: Dictionary, o: Dictionary) -> Dictionary:
-    var liquidity := float(o["own_cash"]) / max(1.0, float(o["own_debt"]) + 50000.0)
-    var threat := float(o["player_threat"])
-    var growth_need := clamp(0.40 - float(o["own_market_share"]), 0.0, 0.40) / 0.40
-    var inventory_health := clamp(float(o["own_inventory"]) / 150.0, 0.0, 1.0)
-    var quality_edge := 1.0 if str(r["strength"]) == "quality" else 0.35
+    var liquidity: Variant = float(o["own_cash"]) / max(1.0, float(o["own_debt"]) + 50000.0)
+    var threat: Variant = float(o["player_threat"])
+    var growth_need: Variant = clamp(0.40 - float(o["own_market_share"]), 0.0, 0.40) / 0.40
+    var inventory_health: Variant = clamp(float(o["own_inventory"]) / 150.0, 0.0, 1.0)
+    var quality_edge: Variant = 1.0 if str(r["strength"]) == "quality" else 0.35
     return {
         "liquidity":liquidity, "threat":threat, "growth_need":growth_need,
         "inventory_health":inventory_health, "quality_edge":quality_edge,
@@ -247,7 +247,7 @@ func _execute_strategy(r: Dictionary, strategy: String, o: Dictionary, day: int)
             return "defer_capacity"
         "expand_region":
             if int(r["cash"]) >= 12000:
-                var target := (int(r["districts"].back()) + 1) % 4
+                var target: Variant = (int(r["districts"].back()) + 1) % 4
                 if target not in r["districts"]: r["districts"].append(target)
                 r["presence"] = min(3, int(r["presence"]) + 1)
                 r["businesses"] = int(r["businesses"]) + 1
@@ -279,8 +279,8 @@ func _execute_strategy(r: Dictionary, strategy: String, o: Dictionary, day: int)
             return "optimize_operations"
 
 func _record_result(r: Dictionary, action: String, o: Dictionary, e: Dictionary) -> Dictionary:
-    var delta_cash := int(r["cash"]) - int(o["own_cash"])
-    var result := {
+    var delta_cash: Variant = int(r["cash"]) - int(o["own_cash"])
+    var result: Variant = {
         "action":action, "cash_delta":delta_cash, "assets":int(r["assets"]),
         "businesses":int(r["businesses"]), "employees":int(r["employees"]),
         "technology":int(r["technology"]), "production":int(r["production"]),
@@ -319,7 +319,7 @@ func retaliation_after_acquisition(index: int) -> Dictionary:
     _normalize()
     if index < 0 or index >= rivals.size(): return {"ok":false,"message":"Unknown company."}
     var r: Dictionary = rivals[index]
-    var pressure_gain := 1 if str(r["strategy"]) != "logistics_advantage" else 0
+    var pressure_gain: Variant = 1 if str(r["strategy"]) != "logistics_advantage" else 0
     r["retaliation"] = max(int(r["retaliation"]), 6)
     r["offer_cooldown"] = max(int(r["offer_cooldown"]), 6)
     r["relationship"] = max(-100, int(r["relationship"]) - 12)
@@ -342,12 +342,12 @@ func competitive_status(index: int) -> Dictionary:
     }
 
 func _district_name(index: int) -> String:
-    var names := ["Old Market","Industrial Belt","River Port","North Growth Corridor"]
+    var names: Variant = ["Old Market","Industrial Belt","River Port","North Growth Corridor"]
     return names[index] if index >= 0 and index < names.size() else "Unknown District"
 
 func district_pressure(district_index: int) -> float:
     _normalize()
-    var pressure := 0.0
+    var pressure: Variant = 0.0
     for rival in rivals:
         if district_index in rival["districts"]:
             pressure += 0.05 * float(rival["presence"])
@@ -356,7 +356,7 @@ func district_pressure(district_index: int) -> float:
 
 func supplier_pressure(district_index: int) -> int:
     _normalize()
-    var pressure := 0
+    var pressure: Variant = 0
     for rival in rivals:
         if district_index in rival["districts"]: pressure += int(rival["supplier_pressure"])
     return pressure
@@ -409,7 +409,7 @@ func negotiate_acquisition(index: int, player_cash: int, reputation: int) -> Dic
     if index < 0 or index >= rivals.size(): return {"ok":false,"message":"Unknown company."}
     var r: Dictionary = rivals[index]
     if reputation < 35: return {"ok":false,"message":"Your company needs 35 reputation to negotiate a major acquisition."}
-    var cost := 45000 + int(r["presence"]) * 18000
+    var cost: Variant = 45000 + int(r["presence"]) * 18000
     if int(r["relationship"]) < 10: cost += 15000
     if player_cash < cost: return {"ok":false,"message":"Negotiation requires $%s available capital." % _money(cost),"cost":cost}
     r["cash"] = max(0, int(r["cash"]) - int(cost / 2))

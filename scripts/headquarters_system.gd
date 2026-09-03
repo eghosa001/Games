@@ -13,15 +13,15 @@ const AREA_SPECS := {
     "technology_center": {"name": "Technology Center", "cost": 12000, "min_stage": 2}
 }
 
-var stage_index := 0
-var stage_progress := 0
+var stage_index: Variant = 0
+var stage_progress: Variant = 0
 var owned_areas: Dictionary = {}
 var area_levels: Dictionary = {}
-var headquarters_name := "RENEW Office"
-var headquarters_region := ""
-var headquarters_value := 0
+var headquarters_name: Variant = "RENEW Office"
+var headquarters_region: Variant = ""
+var headquarters_value: Variant = 0
 var expansion_history: Array = []
-var last_upgrade_day := 0
+var last_upgrade_day: Variant = 0
 
 func _ready() -> void:
     for area_id in AREA_SPECS.keys():
@@ -35,20 +35,20 @@ func get_stage_index() -> int:
     return stage_index
 
 func stage_cost(target_index: int = -1) -> int:
-    var target := target_index if target_index >= 0 else stage_index + 1
+    var target: Variant = target_index if target_index >= 0 else stage_index + 1
     return STAGE_COSTS[clamp(target, 0, STAGE_COSTS.size() - 1)]
 
 func can_upgrade(cash: int) -> Dictionary:
     if stage_index >= STAGES.size() - 1:
         return {"ok": false, "reason": "Global Headquarters is the final stage."}
-    var target := stage_index + 1
-    var cost := stage_cost(target)
+    var target: Variant = stage_index + 1
+    var cost: Variant = stage_cost(target)
     if cash < cost:
         return {"ok": false, "reason": "HQ expansion requires $%s." % _money(cost), "cost": cost}
     return {"ok": true, "cost": cost, "target": target, "stage": STAGES[target]}
 
 func upgrade(cash: int, day: int = 0) -> Dictionary:
-    var check := can_upgrade(cash)
+    var check: Variant = can_upgrade(cash)
     if not bool(check.get("ok", false)): return check
     stage_index += 1
     stage_progress = 0
@@ -63,7 +63,7 @@ func unlock_area(area_id: String, cash: int) -> Dictionary:
     var spec: Dictionary = AREA_SPECS[area_id]
     if stage_index < int(spec["min_stage"]):
         return {"ok": false, "reason": "%s unlocks at %s." % [spec["name"], STAGES[int(spec["min_stage"])]]}
-    var cost := int(spec["cost"])
+    var cost: Variant = int(spec["cost"])
     if cash < cost: return {"ok": false, "reason": "%s requires $%s." % [spec["name"], _money(cost)]}
     owned_areas[area_id] = true
     area_levels[area_id] = 1
@@ -72,8 +72,8 @@ func unlock_area(area_id: String, cash: int) -> Dictionary:
 
 func upgrade_area(area_id: String, cash: int) -> Dictionary:
     if not has_area(area_id): return {"ok": false, "reason": "Build this area first."}
-    var level := int(area_levels.get(area_id, 1))
-    var cost := int(AREA_SPECS[area_id]["cost"]) * level
+    var level: Variant = int(area_levels.get(area_id, 1))
+    var cost: Variant = int(AREA_SPECS[area_id]["cost"]) * level
     if cash < cost: return {"ok": false, "reason": "Area upgrade requires $%s." % _money(cost)}
     area_levels[area_id] = level + 1
     headquarters_value += cost

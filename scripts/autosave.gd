@@ -4,7 +4,7 @@ extends Node
 # ending unexpectedly does not erase a long run. Manual F5/F9 save/load remains available.
 const SaveSystem := preload("res://scripts/save_system.gd")
 const AUTOSAVE_INTERVAL := 30.0
-var elapsed := 0.0
+var elapsed: Variant = 0.0
 
 func _process(delta: float) -> void:
     elapsed += delta

@@ -2,14 +2,14 @@ extends Node
 class_name RenewLiveOpsSystem
 
 const SEASON_LENGTH := 30
-var current_season := 1
-var season_start_day := 1
+var current_season: Variant = 1
+var season_start_day: Variant = 1
 var offers: Dictionary = {}
 var challenges: Dictionary = {}
-var community_goal := {"id":"community_goal","title":"World Recovery Fund","target":100000.0,"progress":0.0,"reward":{"cash":15000.0,"reputation":8}}
-var last_day := -1
+var community_goal: Variant = {"id":"community_goal","title":"World Recovery Fund","target":100000.0,"progress":0.0,"reward":{"cash":15000.0,"reputation":8}}
+var last_day: Variant = -1
 
-var seasonal_catalog := [
+var seasonal_catalog: Variant = [
     {"id":"industrial_festival","title":"Industrial Renaissance","duration":10,"reward":{"production":1.10,"reputation":5}},
     {"id":"global_trade_week","title":"Global Trade Week","duration":7,"reward":{"sales":1.15,"logistics":0.90}},
     {"id":"innovation_month","title":"Innovation Drive","duration":14,"reward":{"research":1.25,"technology":1.10}}
@@ -19,7 +19,7 @@ func _ready() -> void:
     _ensure_content(_day())
 
 func _process(_delta: float) -> void:
-    var day := _day()
+    var day: Variant = _day()
     if day == last_day: return
     last_day = day
     process_day(day)
@@ -39,11 +39,11 @@ func process_day(day: int) -> void:
 func _ensure_content(day: int) -> void:
     var world = get_node_or_null("/root/RenewWorldEventSystem")
     if world == null: return
-    var catalog_index := (current_season - 1) % seasonal_catalog.size()
+    var catalog_index: Variant = (current_season - 1) % seasonal_catalog.size()
     var season_def: Dictionary = seasonal_catalog[catalog_index]
-    var event_id := "season_%d_%s" % [current_season, season_def["id"]]
+    var event_id: Variant = "season_%d_%s" % [current_season, season_def["id"]]
     if world.events.has(event_id): return
-    var def := {"id":event_id,"category":"seasonal","duration":int(season_def["duration"]),"scope":"global","causes":["season_rotation"],"effects":season_def["reward"].duplicate(true),"choices":[{"id":"participate","label":"Participate","effects":{"reputation":2}}],"follow_up_events":[]}
+    var def: Variant = {"id":event_id,"category":"seasonal","duration":int(season_def["duration"]),"scope":"global","causes":["season_rotation"],"effects":season_def["reward"].duplicate(true),"choices":[{"id":"participate","label":"Participate","effects":{"reputation":2}}],"follow_up_events":[]}
     world.register_event(def)
     world.trigger(event_id, {"season":current_season,"liveops":true}, day)
     offers["seasonal"] = {"id":event_id,"title":season_def["title"],"expires_day":day + int(season_def["duration"])}
@@ -58,7 +58,7 @@ func _expire_content(day: int) -> void:
 
 func _advance_community_goal(day: int) -> void:
     var finance = get_node_or_null("/root/RenewFinanceSystem")
-    var contribution := 0.0
+    var contribution: Variant = 0.0
     if finance != null and finance.has_method("get_cash"): contribution = max(0.0, float(finance.get_cash())) * 0.001
     community_goal["progress"] = min(float(community_goal["target"]), float(community_goal["progress"]) + contribution)
     if float(community_goal["progress"]) >= float(community_goal["target"]):
@@ -100,5 +100,5 @@ func _track(name: String, data: Dictionary) -> void:
     if analytics != null and analytics.has_method("track"): analytics.track(name, data)
 
 func _day() -> int:
-    var scene := get_tree().current_scene if get_tree() != null else null
+    var scene: Variant = get_tree().current_scene if get_tree() != null else null
     return int(scene.get("day",1)) if scene != null else 1

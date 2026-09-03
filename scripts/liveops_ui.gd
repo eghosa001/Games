@@ -31,7 +31,7 @@ func _refresh() -> void:
         label.text = "LIVEOPS\nSystem unavailable."
         return
     var state: Dictionary = system.get_state()
-    var text := "LIVEOPS — SEASON %d\n\n" % int(state.get("season",1))
+    var text: Variant = "LIVEOPS — SEASON %d\n\n" % int(state.get("season",1))
     text += "ROTATING CONTENT\n"
     for item in state.get("offers", {}).values():
         text += "• %s — expires Day %d\n" % [str(item.get("title","Opportunity")), int(item.get("expires_day",0))]

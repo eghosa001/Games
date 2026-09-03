@@ -8,7 +8,7 @@ func _draw() -> void:
     if main == null: return
     draw_rect(Rect2(0, 0, 1280, 720), Color("0c1218"), true)
     draw_rect(Rect2(0, 0, 1280, 64), Color("17232d"), true)
-    var font := ThemeDB.fallback_font
+    var font: Variant = ThemeDB.fallback_font
     draw_string(font, Vector2(28, 41), "RENEW", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color.WHITE)
     draw_string(font, Vector2(160, 39), "DAY %d" % main.day, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("9fb3c8"))
     draw_string(font, Vector2(270, 39), "CASH $%s" % str(main.cash), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("8ee6a8"))

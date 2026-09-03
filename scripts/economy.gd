@@ -17,8 +17,8 @@ const PRICE_RESPONSE := 0.35
 const CUSTOMER_INPUT_DEMAND := {"furniture": {"timber": 1.0, "iron": 2.0, "energy": 2.5}}
 
 var resources: Dictionary = {}
-var market_multipliers := {}
-var suppliers := {}
+var market_multipliers: Variant = {}
+var suppliers: Variant = {}
 
 func _init() -> void:
     _ensure_resources()

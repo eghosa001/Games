@@ -2,8 +2,8 @@ extends CanvasLayer
 
 # Mobile-first control surface. Actions are refreshed after the signal completes.
 var parent: Node
-var visible_mobile := true
-var active_tab := 0
+var visible_mobile: Variant = true
+var active_tab: Variant = 0
 var root: Control
 var tabs: HBoxContainer
 var actions: GridContainer
@@ -12,11 +12,11 @@ var status_label: Label
 var goal_label: Label
 var feedback_panel: Panel
 var feedback_label: Label
-var feedback_timer := 0.0
-var refresh_pending := false
-var tab_names := ["RESTORE", "BUSINESS", "EMPIRE", "WORLD"]
-var observed_milestones := {}
-var last_seen_day := 1
+var feedback_timer: Variant = 0.0
+var refresh_pending: Variant = false
+var tab_names: Variant = ["RESTORE", "BUSINESS", "EMPIRE", "WORLD"]
+var observed_milestones: Variant = {}
+var last_seen_day: Variant = 1
 
 func _ready() -> void:
     parent = get_parent(); _build_ui(); _refresh()
@@ -39,23 +39,23 @@ func _process(delta: float) -> void:
 
 func _build_ui() -> void:
     root = Control.new(); root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); root.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(root)
-    var top := ColorRect.new(); top.name = "TopBar"; top.color = Color("101820"); top.set_anchors_preset(Control.PRESET_TOP_WIDE); top.position.y = 8; top.size.y = 54; top.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(top)
+    var top: Variant = ColorRect.new(); top.name = "TopBar"; top.color = Color("101820"); top.set_anchors_preset(Control.PRESET_TOP_WIDE); top.position.y = 8; top.size.y = 54; top.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(top)
     tabs = HBoxContainer.new(); tabs.position = Vector2(12, 12); tabs.size = Vector2(720, 46); tabs.add_theme_constant_override("separation", 8); tabs.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(tabs)
     for i in range(tab_names.size()):
-        var button := Button.new(); button.text = tab_names[i]; button.custom_minimum_size = Vector2(150, 44); button.focus_mode = Control.FOCUS_NONE; button.mouse_filter = Control.MOUSE_FILTER_STOP; button.pressed.connect(_set_tab.bind(i)); tabs.add_child(button)
+        var button: Variant = Button.new(); button.text = tab_names[i]; button.custom_minimum_size = Vector2(150, 44); button.focus_mode = Control.FOCUS_NONE; button.mouse_filter = Control.MOUSE_FILTER_STOP; button.pressed.connect(_set_tab.bind(i)); tabs.add_child(button)
     status_label = Label.new(); status_label.position = Vector2(760, 17); status_label.size = Vector2(500, 44); status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT; status_label.add_theme_font_size_override("font_size", 15); status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(status_label)
     goal_label = Label.new(); goal_label.position = Vector2(24, 348); goal_label.size = Vector2(900, 48); goal_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; goal_label.add_theme_font_size_override("font_size", 14); goal_label.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(goal_label)
     feedback_panel = Panel.new(); feedback_panel.position = Vector2(24, 245); feedback_panel.size = Vector2(720, 92); feedback_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE; feedback_panel.hide(); root.add_child(feedback_panel)
     feedback_label = Label.new(); feedback_label.position = Vector2(16, 10); feedback_label.size = Vector2(688, 72); feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; feedback_label.add_theme_font_size_override("font_size", 15); feedback_label.mouse_filter = Control.MOUSE_FILTER_IGNORE; feedback_panel.add_child(feedback_label)
-    var bottom := ColorRect.new(); bottom.color = Color("101820"); bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE); bottom.position.y = -150; bottom.size.y = 150; bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(bottom)
+    var bottom: Variant = ColorRect.new(); bottom.color = Color("101820"); bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE); bottom.position.y = -150; bottom.size.y = 150; bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(bottom)
     action_scroll = ScrollContainer.new(); action_scroll.set_anchors_preset(Control.PRESET_TOP_WIDE); action_scroll.position = Vector2(18, 72); action_scroll.size = Vector2(1240, 160); action_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; action_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; action_scroll.focus_mode = Control.FOCUS_NONE; action_scroll.mouse_filter = Control.MOUSE_FILTER_STOP; root.add_child(action_scroll)
     actions = GridContainer.new(); actions.columns = 3; actions.custom_minimum_size = Vector2(720, 0); actions.add_theme_constant_override("h_separation", 10); actions.add_theme_constant_override("v_separation", 8); actions.mouse_filter = Control.MOUSE_FILTER_IGNORE; action_scroll.add_child(actions)
 
 func _layout_responsive() -> void:
     if root == null or tabs == null or action_scroll == null or actions == null: return
-    var w := maxf(root.size.x, 320.0)
-    var narrow := w < 700.0
-    var tab_width := maxf(70.0, (w - 48.0) / 4.0)
+    var w: Variant = maxf(root.size.x, 320.0)
+    var narrow: Variant = w < 700.0
+    var tab_width: Variant = maxf(70.0, (w - 48.0) / 4.0)
     tabs.position = Vector2(12, 12)
     tabs.size = Vector2(w - 24.0, 46)
     for child in tabs.get_children():
@@ -68,7 +68,7 @@ func _layout_responsive() -> void:
         action_scroll.size = Vector2(w - 24.0, 150)
         actions.columns = 2
         actions.custom_minimum_size = Vector2(w - 24.0, 0)
-        var button_width := maxf(120.0, (w - 34.0) / 2.0)
+        var button_width: Variant = maxf(120.0, (w - 34.0) / 2.0)
         for child in actions.get_children():
             if child is Button: child.custom_minimum_size = Vector2(button_width, 48)
         feedback_panel.position = Vector2(12, 252)
@@ -99,11 +99,11 @@ func _clear_actions() -> void:
     for child in actions.get_children(): child.queue_free()
 
 func _button(text: String, callback: Callable) -> void:
-    var b := Button.new(); b.text = text; b.custom_minimum_size = Vector2(225, 48); b.focus_mode = Control.FOCUS_NONE; b.mouse_filter = Control.MOUSE_FILTER_STOP; b.pressed.connect(_run_action.bind(text, callback)); actions.add_child(b)
+    var b: Variant = Button.new(); b.text = text; b.custom_minimum_size = Vector2(225, 48); b.focus_mode = Control.FOCUS_NONE; b.mouse_filter = Control.MOUSE_FILTER_STOP; b.pressed.connect(_run_action.bind(text, callback)); actions.add_child(b)
 
 func _run_action(label: String, callback: Callable) -> void:
     if not callback.is_valid(): _show_feedback("%s\nAction is currently unavailable." % label); return
-    var before_cash := int(parent.cash); var before_rep := int(parent.reputation); var before_day := int(parent.day); var before_goods := int(parent.finished_goods); var before_message := String(parent.message)
+    var before_cash: Variant = int(parent.cash); var before_rep := int(parent.reputation); var before_day := int(parent.day); var before_goods := int(parent.finished_goods); var before_message := String(parent.message)
     var result = callback.call(); var message := ""
     if result is Dictionary and result.has("message"): message = String(result["message"])
     if message.is_empty(): message = _callback_message(callback, before_message)
@@ -118,11 +118,11 @@ func _run_action(label: String, callback: Callable) -> void:
     _detect_milestones()
 
 func _callback_message(callback: Callable, before_parent_message: String) -> String:
-    var parent_message := String(parent.message)
+    var parent_message: Variant = String(parent.message)
     if not parent_message.is_empty() and parent_message != before_parent_message: return parent_message
     var target = callback.get_object()
     if target != null and "message" in target:
-        var controller_message := String(target.message)
+        var controller_message: Variant = String(target.message)
         if not controller_message.is_empty(): return controller_message
     return ""
 
@@ -137,7 +137,7 @@ func _show_feedback(text: String) -> void:
 func _pulse_feedback() -> void:
     if feedback_panel == null: return
     feedback_panel.scale = Vector2(0.98, 0.98)
-    var tween := create_tween()
+    var tween: Variant = create_tween()
     tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
     tween.tween_property(feedback_panel, "scale", Vector2.ONE, 0.22)
 
@@ -145,8 +145,8 @@ func _seed_milestones() -> void:
     observed_milestones = {"acquired":bool(parent.owned), "restored":str(parent.stage) == "Operational", "opened":bool(parent.business_open), "profit":int(parent.total_profit) > 0, "regional":_regional_reached(), "empire":_empire_reached()}
 
 func _detect_milestones() -> void:
-    var current := {"acquired":bool(parent.owned), "restored":str(parent.stage) == "Operational", "opened":bool(parent.business_open), "profit":int(parent.total_profit) > 0, "regional":_regional_reached(), "empire":_empire_reached()}
-    var celebrations := {"acquired":"FIRST ASSET\nYou turned an abandoned property into something you own.", "restored":"REBUILDER\nThe warehouse is fully restored. Your first transformation is complete.", "opened":"FIRST BUSINESS\nRENEW Goods is open. Now prove the business can make money.", "profit":"FIRST PROFIT\nThe model works. Reinvest the profit and keep growing.", "regional":"GOING REGIONAL\nYour company has expanded beyond its original neighborhood.", "empire":"EMPIRE BUILDER\nMultiple assets are now working together."}
+    var current: Variant = {"acquired":bool(parent.owned), "restored":str(parent.stage) == "Operational", "opened":bool(parent.business_open), "profit":int(parent.total_profit) > 0, "regional":_regional_reached(), "empire":_empire_reached()}
+    var celebrations: Variant = {"acquired":"FIRST ASSET\nYou turned an abandoned property into something you own.", "restored":"REBUILDER\nThe warehouse is fully restored. Your first transformation is complete.", "opened":"FIRST BUSINESS\nRENEW Goods is open. Now prove the business can make money.", "profit":"FIRST PROFIT\nThe model works. Reinvest the profit and keep growing.", "regional":"GOING REGIONAL\nYour company has expanded beyond its original neighborhood.", "empire":"EMPIRE BUILDER\nMultiple assets are now working together."}
     for id in current:
         if bool(current[id]) and not bool(observed_milestones.get(id, false)):
             observed_milestones[id] = true
@@ -159,7 +159,7 @@ func _regional_reached() -> bool:
     return int(region.regions.player_presence.count(1)) > 1
 
 func _empire_reached() -> bool:
-    var count := 0
+    var count: Variant = 0
     for p in parent.expansion.properties:
         if bool(p.get("owned", false)): count += 1
     for site in parent.expansion.resource_sites:
@@ -167,17 +167,17 @@ func _empire_reached() -> bool:
     return count >= 3
 
 func _show_day_report() -> void:
-    var profit := int(parent.last_profit)
-    var result := "PROFIT" if profit >= 0 else "LOSS"
-    var sign := "+" if profit >= 0 else "-"
-    var contract_text := ""
+    var profit: Variant = int(parent.last_profit)
+    var result: Variant = "PROFIT" if profit >= 0 else "LOSS"
+    var sign: Variant = "+" if profit >= 0 else "-"
+    var contract_text: Variant = ""
     if int(parent.contract_days) > 0: contract_text = "\nContract: %d days remaining" % int(parent.contract_days)
     _show_feedback("DAY %d RESULTS\nRevenue $%s  |  %s %s$%s  |  Total profit $%s%s" % [int(parent.day) - 1, _money(int(parent.last_sales)), result, sign, _money(abs(profit)), _money(int(parent.total_profit)), contract_text])
     _pulse_feedback()
 
 func _update_goal_label() -> void:
     if goal_label == null: return
-    var goal := "GOAL: "
+    var goal: Variant = "GOAL: "
     if not bool(parent.owned): goal += "Inspect and acquire the abandoned warehouse."
     elif str(parent.stage) != "Operational": goal += "Finish restoring the warehouse."
     elif not bool(parent.business_open): goal += "Open RENEW Goods with $3,000 working capital."

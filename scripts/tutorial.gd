@@ -2,9 +2,9 @@ extends RefCounted
 class_name RenewTutorial
 
 # Phase A tutorial: guides the player through the first restoration-to-business loop.
-var step := 0
-var completed := false
-var steps := [
+var step: Variant = 0
+var completed: Variant = false
+var steps: Variant = [
     {"title":"INSPECT THE OPPORTUNITY","text":"Start by inspecting the abandoned warehouse. Good businesses begin with good information.","action":"INSPECT"},
     {"title":"ACQUIRE THE PROPERTY","text":"Buy the warehouse. This is your first piece of productive capital.","action":"ACQUIRE"},
     {"title":"RESTORE IT","text":"Invest through each restoration stage. Every upgrade increases reputation and unlocks the next decision.","action":"RESTORE"},
@@ -22,7 +22,7 @@ func current() -> Dictionary:
 func _advance(action:String, game)->bool:
     if completed: return false
     var expected:String = String(current().get("action",""))
-    var valid := false
+    var valid: Variant = false
     match expected:
         "INSPECT": valid = bool(game.inspected)
         "ACQUIRE": valid = bool(game.owned)
@@ -38,7 +38,7 @@ func _advance(action:String, game)->bool:
     return false
 
 func notify(action:String, game)->String:
-    var advanced := _advance(action, game)
+    var advanced: Variant = _advance(action, game)
     if advanced:
         return "TUTORIAL: " + String(current().get("title","Next step"))
     return String(current().get("text","Keep building."))

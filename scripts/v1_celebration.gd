@@ -6,12 +6,12 @@ var game: Node
 var banner: Panel
 var title_label: Label
 var body_label: Label
-var timer := 0.0
-var seen := {}
+var timer: Variant = 0.0
+var seen: Variant = {}
 
 func _ready() -> void:
     game = get_parent()
-    var root := Control.new()
+    var root: Variant = Control.new()
     root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     root.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(root)
@@ -55,14 +55,14 @@ func _seed() -> void:
     }
 
 func _check() -> void:
-    var states := {
+    var states: Variant = {
         "opened": bool(game.business_open),
         "expansion": _expansion_count() > 0,
         "acquisition": int(game.acquisition_count) > 0,
         "profit": int(game.total_profit) > 0,
         "takeover": _takeover_wins() > 0
     }
-    var moments := {
+    var moments: Variant = {
         "opened": ["FIRST BUSINESS", "Your restored property is now a living company. Make it profitable."],
         "expansion": ["EMPIRE EXPANSION", "Your first additional asset is working toward a larger network."],
         "acquisition": ["COMPETITOR ACQUIRED", "You turned competition into ownership. The market just changed."],
@@ -77,7 +77,7 @@ func _check() -> void:
             return
 
 func _expansion_count() -> int:
-    var count := 0
+    var count: Variant = 0
     if game == null or game.expansion == null: return count
     for p in game.expansion.properties:
         if bool(p.get("owned", false)): count += 1
@@ -93,7 +93,7 @@ func _show_banner(title: String, body: String) -> void:
     body_label.text = body
     banner.show()
     timer = 5.0
-    var tween := create_tween()
+    var tween: Variant = create_tween()
     tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
     banner.scale = Vector2(0.92, 0.92)
     banner.modulate.a = 0.0
@@ -101,5 +101,5 @@ func _show_banner(title: String, body: String) -> void:
     tween.parallel().tween_property(banner, "modulate:a", 1.0, 0.20)
 
 func _hide_banner() -> void:
-    var tween := create_tween()
+    var tween: Variant = create_tween()
     tween.tween_property(banner, "modulate:a", 0.0, 0.25)

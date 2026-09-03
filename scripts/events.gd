@@ -21,7 +21,7 @@ func roll() -> Dictionary:
 
 func begin_day(economy, state, day:int) -> Dictionary:
     _reset(economy, state)
-    var event := roll()
+    var event: Variant = roll()
     _apply(event, economy, state, day)
     return event
 
@@ -51,12 +51,12 @@ func _apply(event:Dictionary, economy, state, day:int) -> void:
         for resource in stock.keys():
             if economy.resources.has(resource):
                 economy.resources[resource]["stock"] = max(0.0, float(economy.resources[resource].get("stock", 0.0)) + float(stock[resource]))
-    var active := event.duplicate(true)
+    var active: Variant = event.duplicate(true)
     active["start_day"] = day
     active["end_day"] = day + int(event.get("duration_days", 1)) - 1
     if state != null:
         state.set_value("events", "active", active)
-        var modifiers := {"demand_multiplier":float(effects.get("demand_multiplier",1.0))}
+        var modifiers: Variant = {"demand_multiplier":float(effects.get("demand_multiplier",1.0))}
         state.set_value("events", "modifiers", modifiers)
         var history = state.get_value("events", "history", [])
         if not history is Array: history = []

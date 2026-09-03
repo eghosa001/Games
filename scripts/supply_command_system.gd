@@ -21,7 +21,7 @@ func set_chain(value) -> void:
         chain.set_economy(economy)
 
 func cycle_supplier() -> void:
-    var choice := (int(state_adapter.get_value("supply_chain", "supplier_choice", 0)) + 1) % 3
+    var choice: Variant = (int(state_adapter.get_value("supply_chain", "supplier_choice", 0)) + 1) % 3
     state_adapter.set_value("supply_chain", "supplier_choice", choice)
     state_adapter.message("Supplier tier %d selected: lower price tiers trade reliability for savings." % (choice + 1))
 
@@ -31,7 +31,7 @@ func buy_inputs() -> void:
     var cash:=int(state_adapter.get_value("economy","cash",25000))
     var transport_level:=int(state_adapter.get_value("supply_chain","transport_level",1))
     # V1 deliberately buys the resources used by the complete Timber -> Furniture chain.
-    var orders := [{"resource":"timber","amount":12.0},{"resource":"iron","amount":12.0},{"resource":"energy","amount":24.0}]
+    var orders: Variant = [{"resource":"timber","amount":12.0},{"resource":"iron","amount":12.0},{"resource":"energy","amount":24.0}]
     var result=chain.procure_bundle(orders,cash,transport_level)
     if not result["ok"]:
         state_adapter.message("Supply delivery failed: %s." % str(result.get("reason","unknown")))

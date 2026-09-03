@@ -15,11 +15,11 @@ const TYPE_JOINT := "joint_research"
 var projects: Dictionary = {}
 var facilities: Dictionary = {}
 var university_partners: Dictionary = {}
-var next_project_id := 1
-var next_facility_id := 1
+var next_project_id: Variant = 1
+var next_facility_id: Variant = 1
 var events: Array = []
 
-var project_catalog := {
+var project_catalog: Variant = {
     "process_automation": {"name":"Process Automation", "duration":4, "cost":12000.0, "skills":["engineering","operations"], "uncertainty":0.12, "discovery":"automation_process"},
     "advanced_materials": {"name":"Advanced Materials", "duration":6, "cost":22000.0, "skills":["engineering","materials"], "uncertainty":0.20, "discovery":"new_material"},
     "energy_storage": {"name":"Energy Storage", "duration":7, "cost":30000.0, "skills":["energy","engineering"], "uncertainty":0.24, "discovery":"storage_chemistry"},
@@ -28,7 +28,7 @@ var project_catalog := {
 }
 
 func register_facility(owner_id: String, name: String, capacity: int = 1, level: int = 1, cost: float = 0.0) -> Dictionary:
-    var id := "research_facility:%d" % next_facility_id
+    var id: Variant = "research_facility:%d" % next_facility_id
     next_facility_id += 1
     facilities[id] = {"id":id,"owner_id":owner_id,"name":name,"capacity":max(1,capacity),"level":max(1,level),"cost":cost,"utilization":0}
     return facilities[id].duplicate(true)
@@ -40,13 +40,13 @@ func register_university(partner_id: String, name: String, skill_bonus: Dictiona
 func start_research(project_type: String, sponsor_id: String, research_type: String = TYPE_COMPANY, skills: Array = [], duration: int = 0, cost: float = -1.0, facility_id: String = "", partners: Array = []) -> Dictionary:
     if not project_catalog.has(project_type): return {"ok":false,"error":"unknown_research_project"}
     var spec: Dictionary = project_catalog[project_type]
-    var project_id := "research:%d" % next_project_id
+    var project_id: Variant = "research:%d" % next_project_id
     next_project_id += 1
     var required_skills: Array = spec["skills"].duplicate()
     var provided: Array = skills.duplicate()
-    var skill_match := _skill_match(required_skills, provided)
-    var actual_cost := spec["cost"] if cost < 0.0 else cost
-    var actual_duration := spec["duration"] if duration <= 0 else duration
+    var skill_match: Variant = _skill_match(required_skills, provided)
+    var actual_cost: Variant = spec["cost"] if cost < 0.0 else cost
+    var actual_duration: Variant = spec["duration"] if duration <= 0 else duration
     if facility_id != "" and facilities.has(facility_id):
         var facility: Dictionary = facilities[facility_id]
         actual_duration = max(1, int(ceil(float(actual_duration) / (1.0 + 0.15 * max(0, int(facility["level"]) - 1)))))
@@ -61,18 +61,18 @@ func process_day(day: int) -> void:
     for id in projects.keys():
         var p: Dictionary = projects[id]
         if p["status"] != STATUS_ACTIVE: continue
-        var total := max(1, int(p["duration"]))
+        var total: Variant = max(1, int(p["duration"]))
         p["progress"] = clamp(float(day - int(p["start_day"])) / float(total), 0.0, 1.0)
         p["spent"] = min(float(p["cost"]), float(p["cost"]) * p["progress"])
         if day >= int(p["end_day"]): _complete_project(p)
         projects[id] = p
 
 func _complete_project(p: Dictionary) -> void:
-    var roll := randf()
-    var skill_bonus := 0.15 * float(p["skill_match"])
-    var partner_bonus := min(0.25, 0.05 * p["partners"].size())
-    var success_threshold := clamp(0.72 + skill_bonus + partner_bonus - float(p["uncertainty"]), 0.15, 0.95)
-    var discovery_chance := clamp(0.08 + 0.12 * float(p["skill_match"]) + partner_bonus, 0.05, 0.65)
+    var roll: Variant = randf()
+    var skill_bonus: Variant = 0.15 * float(p["skill_match"])
+    var partner_bonus: Variant = min(0.25, 0.05 * p["partners"].size())
+    var success_threshold: Variant = clamp(0.72 + skill_bonus + partner_bonus - float(p["uncertainty"]), 0.15, 0.95)
+    var discovery_chance: Variant = clamp(0.08 + 0.12 * float(p["skill_match"]) + partner_bonus, 0.05, 0.65)
     if roll <= success_threshold:
         p["status"] = STATUS_COMPLETED
         p["outcome"] = "successful"
@@ -105,13 +105,13 @@ func list_facilities(owner_id: String = "") -> Array:
 
 func _skill_match(required: Array, provided: Array) -> float:
     if required.is_empty(): return 1.0
-    var hits := 0
+    var hits: Variant = 0
     for skill in required:
         if provided.has(skill): hits += 1
     return float(hits) / float(required.size())
 
 func _day() -> int:
-    var scene := get_tree().current_scene if get_tree() != null else null
+    var scene: Variant = get_tree().current_scene if get_tree() != null else null
     return int(scene.get("day")) if scene != null else 1
 
 func _event(text: String) -> void:
@@ -130,12 +130,12 @@ func restore_state(state: Dictionary) -> void:
     events = state.get("events", []).duplicate(true)
 
 func _process(_delta: float) -> void:
-    var scene := get_tree().current_scene if get_tree() != null else null
+    var scene: Variant = get_tree().current_scene if get_tree() != null else null
     if scene == null: return
-    var day := int(scene.get("day"))
+    var day: Variant = int(scene.get("day"))
     if day <= 0: return
     if day != _last_day:
         _last_day = day
         process_day(day)
 
-var _last_day := -1
+var _last_day: Variant = -1

@@ -1,9 +1,9 @@
 extends Node2D
 
-var selected := 0
-var selected_resource := 0
+var selected: Variant = 0
+var selected_resource: Variant = 0
 var parent: Node
-var last_processed_day := 1
+var last_processed_day: Variant = 1
 var strategic_news: Array[String] = []
 
 func _ready() -> void:

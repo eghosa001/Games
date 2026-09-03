@@ -108,19 +108,19 @@ func restore_state(snapshot: Dictionary) -> void:
     command_count = int(snapshot.get("command_count", 0)); last_command = str(snapshot.get("last_command", "")); last_result = snapshot.get("last_result", {}).duplicate(true); var finance = _finance()
     if finance != null and snapshot.get("finance", {}) is Dictionary: finance.restore_state(snapshot["finance"])
     var production = _production(); if production != null and snapshot.get("production", {}) is Dictionary: production.restore_state(snapshot["production"])
-func _game_state() -> Node:
+func _game_state() -> Variant:
     var root = get_tree().root; if root == null: return null
     return root.get_node_or_null("RenewGameState")
-func _finance() -> Node:
+func _finance() -> Variant:
     var root = get_tree().root; if root == null: return null
     return root.get_node_or_null("RenewFinanceSystem")
-func _production() -> Node:
+func _production() -> Variant:
     var root = get_tree().root; if root == null: return null
     return root.get_node_or_null("RenewProductionSystem")
-func _economy() -> Node:
+func _economy() -> Variant:
     var root = get_tree().current_scene; if root == null: return null
     if "economy" in root: return root.economy
     return null
-func _contracts() -> Node:
+func _contracts() -> Variant:
     var root = get_tree().root; if root == null: return null
     return root.get_node_or_null("RenewContractSystem")

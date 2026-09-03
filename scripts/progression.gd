@@ -3,9 +3,9 @@ extends Node
 # Milestone layer: gives the player long-term goals and memorable moments
 # without replacing the simulation's existing economy.
 var parent
-var claimed := {}
+var claimed: Variant = {}
 
-var milestones := [
+var milestones: Variant = [
     {"id":"acquired","title":"FIRST ASSET","rep":2,"cash":0,"text":"You own something the market had written off."},
     {"id":"restored","title":"REBUILDER","rep":4,"cash":0,"text":"The warehouse is fully restored. Neglect became productive capital."},
     {"id":"opened","title":"FIRST BUSINESS","rep":3,"cash":0,"text":"RENEW Goods is operating. You have entered the market."},
@@ -25,10 +25,10 @@ func _process(_delta: float) -> void:
 
 func _check_milestones() -> void:
     for milestone in milestones:
-        var id := String(milestone["id"])
+        var id: Variant = String(milestone["id"])
         if bool(claimed.get(id, false)):
             continue
-        var reached := false
+        var reached: Variant = false
         match id:
             "acquired": reached = bool(parent.owned)
             "restored": reached = str(parent.stage) == "Operational"
@@ -39,7 +39,7 @@ func _check_milestones() -> void:
                 if region != null:
                     reached = int(region.regions.player_presence.count(1)) > 1
             "empire":
-                var owned_businesses := 0
+                var owned_businesses: Variant = 0
                 for p in parent.expansion.properties:
                     if bool(p.get("owned", false)): owned_businesses += 1
                 for site in parent.expansion.resource_sites:
@@ -49,7 +49,7 @@ func _check_milestones() -> void:
             _claim(milestone)
 
 func _claim(milestone: Dictionary) -> void:
-    var id := String(milestone["id"])
+    var id: Variant = String(milestone["id"])
     claimed[id] = true
     parent.reputation += int(milestone["rep"])
     parent.cash += int(milestone["cash"])
@@ -58,14 +58,14 @@ func _claim(milestone: Dictionary) -> void:
     _save_state()
 
 func _save_state() -> void:
-    var file := FileAccess.open("user://renew_milestones.json", FileAccess.WRITE)
+    var file: Variant = FileAccess.open("user://renew_milestones.json", FileAccess.WRITE)
     if file != null:
         file.store_string(JSON.stringify(claimed))
 
 func _load_state() -> void:
     if not FileAccess.file_exists("user://renew_milestones.json"):
         return
-    var file := FileAccess.open("user://renew_milestones.json", FileAccess.READ)
+    var file: Variant = FileAccess.open("user://renew_milestones.json", FileAccess.READ)
     if file == null:
         return
     var parsed = JSON.parse_string(file.get_as_text())

@@ -71,7 +71,7 @@ func _scan_game_state(day: int) -> void:
     var research = get_node_or_null("/root/RenewResearchSystem")
     if research != null and research.has_method("list_projects") and research.list_projects().size() > 0: _once("technology", {})
     var bankruptcy = get_node_or_null("/root/RenewBankruptcySystem")
-    if bankruptcy != null and bankruptcy.get("recovered", false): _once("bankruptcy_recovery", {})
+    if bankruptcy != null and _main_value(bankruptcy, "recovered", false): _once("bankruptcy_recovery", {})
     if day > 1: track("session_day", {"day": day})
 
 func _once(event_name: String, properties: Dictionary) -> void:

@@ -5,7 +5,7 @@ extends Node
 ## systems consume the event's modifiers during the actual day.
 const Events = preload("res://scripts/events.gd")
 var event_model = Events.new()
-var prepared_day := -1
+var prepared_day: Variant = -1
 
 func _ready() -> void:
     set_process(true)
@@ -14,7 +14,7 @@ func _process(_delta:float) -> void:
     var state = get_node_or_null("/root/RenewGameState")
     if state == null:
         return
-    var day := int(state.get_value("player", "day", 1))
+    var day: Variant = int(state.get_value("player", "day", 1))
     if day == prepared_day:
         return
     var economy = _find_economy()

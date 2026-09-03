@@ -59,8 +59,8 @@ func receive(amount: int, reason: String = "income") -> Dictionary:
     return {"ok": true, "amount": amount, "cash": cash}
 
 func settle_sales(sales: int, wages: int, overhead: int, contract_income: int = 0) -> Dictionary:
-    var period_revenue := float(max(0, sales) + max(0, contract_income))
-    var costs := float(max(0, wages) + max(0, overhead))
+    var period_revenue: Variant = float(max(0, sales) + max(0, contract_income))
+    var costs: Variant = float(max(0, wages) + max(0, overhead))
     revenue += period_revenue
     operating_expenses += costs
     cash += int(round(period_revenue - costs))
@@ -77,11 +77,11 @@ func take_loan(amount: int) -> Dictionary:
 
 func create_loan(amount: int, annual_rate: float = 0.12, term_periods: int = 20, secured: bool = false, collateral: String = "") -> Dictionary:
     if amount <= 0 or term_periods <= 0 or annual_rate < 0.0: return {"ok": false, "message": "Invalid loan terms."}
-    var id := "loan_%d" % Time.get_unix_time_from_system()
-    var instrument_type := INSTRUMENT_SECURED_LOAN if secured else INSTRUMENT_LOAN
-    var principal := float(amount)
-    var rate_per_period := annual_rate / 365.0
-    var payment := int(round(principal * rate_per_period / max(0.0001, 1.0 - pow(1.0 + rate_per_period, -term_periods)))) if rate_per_period > 0 else int(ceil(principal / term_periods))
+    var id: Variant = "loan_%d" % Time.get_unix_time_from_system()
+    var instrument_type: Variant = INSTRUMENT_SECURED_LOAN if secured else INSTRUMENT_LOAN
+    var principal: Variant = float(amount)
+    var rate_per_period: Variant = annual_rate / 365.0
+    var payment: Variant = int(round(principal * rate_per_period / max(0.0001, 1.0 - pow(1.0 + rate_per_period, -term_periods)))) if rate_per_period > 0 else int(ceil(principal / term_periods))
     financing[id] = {"id": id, "type": instrument_type, "principal": principal, "balance": principal, "annual_rate": annual_rate, "term": term_periods, "remaining_periods": term_periods, "payment": payment, "collateral": collateral}
     debt += amount
     loan_payment = payment
@@ -94,11 +94,11 @@ func refinance_loan(instrument_id: String, new_rate: float, new_term_periods: in
     if not financing.has(instrument_id): return {"ok": false, "message": "Financing instrument not found."}
     if new_rate < 0.0 or new_term_periods <= 0: return {"ok": false, "message": "Invalid refinancing terms."}
     var instrument: Dictionary = financing[instrument_id]
-    var balance := float(instrument.get("balance", 0.0))
+    var balance: Variant = float(instrument.get("balance", 0.0))
     instrument["annual_rate"] = new_rate
     instrument["term"] = new_term_periods
     instrument["remaining_periods"] = new_term_periods
-    var rate := new_rate / 365.0
+    var rate: Variant = new_rate / 365.0
     instrument["payment"] = int(round(balance * rate / max(0.0001, 1.0 - pow(1.0 + rate, -new_term_periods)))) if rate > 0 else int(ceil(balance / new_term_periods))
     financing[instrument_id] = instrument
     _record("refinance", int(balance), "loan refinanced")
@@ -106,7 +106,7 @@ func refinance_loan(instrument_id: String, new_rate: float, new_term_periods: in
 
 func issue_bond(principal: int, annual_rate: float = 0.08, term_periods: int = 30) -> Dictionary:
     if principal <= 0 or annual_rate < 0.0 or term_periods <= 0: return {"ok": false, "message": "Invalid bond terms."}
-    var id := "bond_%d" % Time.get_unix_time_from_system()
+    var id: Variant = "bond_%d" % Time.get_unix_time_from_system()
     financing[id] = {"id": id, "type": INSTRUMENT_BOND, "principal": float(principal), "balance": float(principal), "annual_rate": annual_rate, "term": term_periods, "remaining_periods": term_periods, "payment": int(round(principal * annual_rate / 365.0))}
     debt += principal
     cash += principal
@@ -141,7 +141,7 @@ func buyback_equity(amount: int) -> Dictionary:
 
 func repay(amount: int) -> Dictionary:
     if debt <= 0: return {"ok": false, "message": "No outstanding debt."}
-    var payment := min(debt, max(1, amount))
+    var payment: Variant = min(debt, max(1, amount))
     if cash < payment: return {"ok": false, "message": "Insufficient cash for repayment."}
     cash -= payment
     debt -= payment
@@ -152,13 +152,13 @@ func repay(amount: int) -> Dictionary:
     return {"ok": true, "amount": payment, "cash": cash, "debt": debt}
 
 func settle_debt_day() -> Dictionary:
-    var interest := 0
-    var payment := 0
-    var missed := false
+    var interest: Variant = 0
+    var payment: Variant = 0
+    var missed: Variant = false
     if debt > 0:
         for id in financing:
             var instrument: Dictionary = financing[id]
-            var balance := float(instrument.get("balance", 0.0))
+            var balance: Variant = float(instrument.get("balance", 0.0))
             if balance <= 0.0: continue
             interest += max(0, int(round(balance * float(instrument.get("annual_rate", 0.12)) / 365.0)))
             instrument["balance"] = balance + float(interest)
@@ -182,50 +182,50 @@ func settle_debt_day() -> Dictionary:
     return {"interest": interest, "payment": payment, "missed": missed, "cash": cash, "debt": debt, "credit_rating": credit_rating}
 
 func balance_sheet() -> Dictionary:
-    var assets := float(cash) + accounts_receivable + inventory + fixed_assets + investments
-    var liabilities := float(debt) + accounts_payable + other_liabilities
-    var equity := assets - liabilities
+    var assets: Variant = float(cash) + accounts_receivable + inventory + fixed_assets + investments
+    var liabilities: Variant = float(debt) + accounts_payable + other_liabilities
+    var equity: Variant = assets - liabilities
     return {"assets": assets, "cash": cash, "accounts_receivable": accounts_receivable, "inventory": inventory, "fixed_assets": fixed_assets, "investments": investments, "liabilities": liabilities, "debt": debt, "accounts_payable": accounts_payable, "other_liabilities": other_liabilities, "equity": equity}
 
 func income_statement() -> Dictionary:
-    var operating_profit := revenue - operating_expenses - depreciation
-    var net_profit := operating_profit - interest_expense - taxes
+    var operating_profit: Variant = revenue - operating_expenses - depreciation
+    var net_profit: Variant = operating_profit - interest_expense - taxes
     return {"revenue": revenue, "operating_expenses": operating_expenses, "depreciation": depreciation, "operating_profit": operating_profit, "interest": interest_expense, "taxes": taxes, "net_profit": net_profit}
 
 func cash_flow_statement() -> Dictionary:
-    var operating := revenue - operating_expenses - interest_expense - taxes
-    var investing := -investments
-    var financing_flow := 0.0
+    var operating: Variant = revenue - operating_expenses - interest_expense - taxes
+    var investing: Variant = -investments
+    var financing_flow: Variant = 0.0
     for entry in history:
         if str(entry.get("kind", "")).to_lower() in ["loan", "bond", "equity", "buyback", "repayment", "scheduled_payment", "refinance"]:
             financing_flow += float(entry.get("amount", 0)) * (-1.0 if str(entry.get("kind")) in ["buyback", "repayment", "scheduled_payment"] else 1.0)
     return {"operating": operating, "investing": investing, "financing": financing_flow, "net_change": operating + investing + financing_flow, "cash": cash}
 
 func debt_service() -> float:
-    var total := 0.0
+    var total: Variant = 0.0
     for id in financing: total += float(financing[id].get("payment", 0))
     return total
 
 func valuation(earnings_multiple: float = 6.0) -> float:
-    var net_profit := float(income_statement()["net_profit"])
+    var net_profit: Variant = float(income_statement()["net_profit"])
     return max(0.0, net_profit * max(1.0, earnings_multiple)) + max(0.0, float(balance_sheet()["assets"]) - float(balance_sheet()["liabilities"]))
 
 func leverage() -> float:
-    var equity := float(balance_sheet()["equity"])
+    var equity: Variant = float(balance_sheet()["equity"])
     if equity <= 0.0: return INF if debt > 0 else 0.0
     return float(debt) / equity
 
 func interest_coverage() -> float:
-    var interest := float(interest_expense)
+    var interest: Variant = float(interest_expense)
     if interest <= 0.0: return INF
     return float(income_statement()["operating_profit"]) / interest
 
 func solvency_status() -> Dictionary:
-    var bs := balance_sheet()
-    var leverage_ratio := leverage()
-    var coverage := interest_coverage()
-    var insolvent := float(bs["equity"]) < 0.0 or (debt > 0 and cash < 0)
-    var stressed := insolvent or leverage_ratio > 5.0 or coverage < 1.0
+    var bs: Variant = balance_sheet()
+    var leverage_ratio: Variant = leverage()
+    var coverage: Variant = interest_coverage()
+    var insolvent: Variant = float(bs["equity"]) < 0.0 or (debt > 0 and cash < 0)
+    var stressed: Variant = insolvent or leverage_ratio > 5.0 or coverage < 1.0
     return {"solvent": not insolvent, "stressed": stressed, "leverage": leverage_ratio, "interest_coverage": coverage, "equity": bs["equity"], "credit_rating": credit_rating}
 
 func get_credit_rating() -> String:
@@ -235,9 +235,9 @@ func get_credit_score() -> float:
     return credit_score
 
 func update_credit_rating() -> String:
-    var leverage_ratio := leverage()
-    var coverage := interest_coverage()
-    var score := 70.0
+    var leverage_ratio: Variant = leverage()
+    var coverage: Variant = interest_coverage()
+    var score: Variant = 70.0
     score -= min(35.0, max(0.0, leverage_ratio - 1.0) * 8.0)
     if coverage < 1.0: score -= 25.0
     elif coverage < 2.0: score -= 12.0
@@ -267,11 +267,11 @@ func restore_state(snapshot: Dictionary) -> void:
     financing = snapshot.get("financing", {}).duplicate(true); cash_flow_history = snapshot.get("cash_flow_history", []).duplicate(true); credit_rating = str(snapshot.get("credit_rating", "BBB")); credit_score = float(snapshot.get("credit_score", 70.0))
 
 func _reduce_financing_balance(amount: int) -> void:
-    var remaining := float(amount)
+    var remaining: Variant = float(amount)
     for id in financing:
         if remaining <= 0: break
         var instrument: Dictionary = financing[id]
-        var reduction := min(remaining, float(instrument.get("balance", 0.0)))
+        var reduction: Variant = min(remaining, float(instrument.get("balance", 0.0)))
         instrument["balance"] = max(0.0, float(instrument.get("balance", 0.0)) - reduction)
         financing[id] = instrument
         remaining -= reduction

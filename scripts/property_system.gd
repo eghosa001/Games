@@ -22,7 +22,7 @@ const PROPERTY_CATALOG := [
     {"id":"commercial_003","name":"Riverside Offices","type":"Commercial Building","condition":60,"cleaning":0,"repair":0,"painting":0,"furnishing":0,"value":160000,"capacity":32,"industry_compatibility":["Services","Finance","Retail"]}
 ]
 
-var state_adapter := DomainSystem.new()
+var state_adapter: Variant = DomainSystem.new()
 
 func _ready() -> void:
     add_child(state_adapter)
@@ -47,7 +47,7 @@ func get_property(property_id: String) -> Dictionary:
     return {}
 
 func select_property(property_id: String) -> Dictionary:
-    var catalog := list_properties()
+    var catalog: Variant = list_properties()
     for index in catalog.size():
         if str(catalog[index].get("id", "")) == property_id:
             state_adapter.set_value("properties", "selected_property", index)
@@ -56,13 +56,13 @@ func select_property(property_id: String) -> Dictionary:
     return {"ok":false,"reason":"property_not_found"}
 
 func get_selected_property() -> Dictionary:
-    var catalog := list_properties()
+    var catalog: Variant = list_properties()
     if catalog.is_empty(): return {}
-    var index := clampi(int(state_adapter.get_value("properties", "selected_property", 0)), 0, catalog.size() - 1)
+    var index: Variant = clampi(int(state_adapter.get_value("properties", "selected_property", 0)), 0, catalog.size() - 1)
     return catalog[index].duplicate(true)
 
 func inspect_property() -> void:
-    var property := get_selected_property()
+    var property: Variant = get_selected_property()
     if property.is_empty(): return
     state_adapter.set_value("properties", "inspected", true)
     state_adapter.message("Inspection complete: %s is a %s with %d%% condition." % [property.get("name", "Property"), property.get("type", "Property"), int(property.get("condition", 0))])
@@ -73,9 +73,9 @@ func acquire_property() -> void:
         state_adapter.message("Inspect the property first."); return
     if bool(state_adapter.get_value("properties", "owned", false)):
         state_adapter.message("You already own a property."); return
-    var property := get_selected_property()
-    var cash := int(state_adapter.get_value("economy", "cash", 25000))
-    var purchase_price := 5000
+    var property: Variant = get_selected_property()
+    var cash: Variant = int(state_adapter.get_value("economy", "cash", 25000))
+    var purchase_price: Variant = 5000
     if cash < purchase_price:
         state_adapter.message("Not enough cash."); return
     state_adapter.set_value("economy", "cash", cash - purchase_price)
@@ -90,26 +90,26 @@ func restore_step(step: String, property_id: String = "") -> Dictionary:
         return {"ok":false,"reason":"invalid_restoration_step"}
     if not bool(state_adapter.get_value("properties", "owned", false)):
         return {"ok":false,"reason":"property_not_owned"}
-    var id := property_id if not property_id.is_empty() else str(get_selected_property().get("id", ""))
-    var catalog := list_properties()
-    var index := _index_for_id(catalog, id)
+    var id: Variant = property_id if not property_id.is_empty() else str(get_selected_property().get("id", ""))
+    var catalog: Variant = list_properties()
+    var index: Variant = _index_for_id(catalog, id)
     if index < 0:
         return {"ok":false,"reason":"property_not_found"}
     var property: Dictionary = catalog[index]
 
     # Restoration is intentionally sequential: the next physical transformation
     # cannot begin until the previous one is complete.
-    var required_step := _next_restoration_step(property)
+    var required_step: Variant = _next_restoration_step(property)
     if required_step.is_empty():
         return {"ok":false,"reason":"restoration_complete","property":property}
     if step != required_step:
         return {"ok":false,"reason":"step_locked","required_step":required_step,"property":property}
 
-    var progress := int(property.get(step, 0))
+    var progress: Variant = int(property.get(step, 0))
     if progress >= 100:
         return {"ok":false,"reason":"step_complete","property":property}
-    var cost := int(STEP_COSTS[step])
-    var cash := int(state_adapter.get_value("economy", "cash", 25000))
+    var cost: Variant = int(STEP_COSTS[step])
+    var cash: Variant = int(state_adapter.get_value("economy", "cash", 25000))
     if cash < cost:
         return {"ok":false,"reason":"insufficient_cash","cost":cost,"cash":cash}
 
@@ -133,8 +133,8 @@ func restore_step(step: String, property_id: String = "") -> Dictionary:
 func restore_property() -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)):
         state_adapter.message("Acquire the property first."); return
-    var property := get_selected_property()
-    var step := _next_restoration_step(property)
+    var property: Variant = get_selected_property()
+    var step: Variant = _next_restoration_step(property)
     if step.is_empty():
         state_adapter.message("Restoration is complete. The property is Operational.")
         return
@@ -174,14 +174,14 @@ func _index_for_id(catalog: Array, property_id: String) -> int:
     return -1
 
 func _sync_legacy_fields() -> void:
-    var property := get_selected_property()
+    var property: Variant = get_selected_property()
     if property.is_empty():
         return
-    var average := 0
+    var average: Variant = 0
     for step in RESTORATION_STEPS:
         average += int(property.get(step, 0))
     average = int(round(float(average) / float(RESTORATION_STEPS.size())))
-    var owned := bool(state_adapter.get_value("properties", "owned", false))
-    var operational := is_operational(property)
+    var owned: Variant = bool(state_adapter.get_value("properties", "owned", false))
+    var operational: Variant = is_operational(property)
     state_adapter.set_value("properties", "restoration", average)
     state_adapter.set_value("properties", "stage", _visual_stage(property, owned) if not operational else "Operational")

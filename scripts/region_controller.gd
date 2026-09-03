@@ -3,8 +3,8 @@ extends Node2D
 const Regions = preload("res://scripts/regions.gd")
 var parent
 var regions = Regions.new()
-var message := ""
-var last_day := 0
+var message: Variant = ""
+var last_day: Variant = 0
 
 func _ready() -> void:
     parent=get_parent()

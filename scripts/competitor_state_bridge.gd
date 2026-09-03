@@ -4,11 +4,11 @@ extends Node
 ## Keeps the live competitor AI owned by GameplayCommandSystem while mirroring
 ## its persistent state into RenewGameState for saves, loads and UI consumers.
 var _competitors = null
-var _last_state_signature := ""
-var _ready_to_sync := false
+var _last_state_signature: Variant = ""
+var _ready_to_sync: Variant = false
 
 func _process(_delta: float) -> void:
-    var scene := get_tree().current_scene
+    var scene: Variant = get_tree().current_scene
     if scene == null:
         return
     if _competitors == null:
@@ -18,7 +18,7 @@ func _process(_delta: float) -> void:
             _ready_to_sync = true
     if not _ready_to_sync:
         return
-    var state := get_node_or_null("/root/RenewGameState")
+    var state: Variant = get_node_or_null("/root/RenewGameState")
     if state == null:
         return
     var saved = state.get_value("competitors", "rivals", [])
@@ -27,7 +27,7 @@ func _process(_delta: float) -> void:
         _competitors.restore_state({"rivals": saved})
         live = _competitors.rivals
     state.set_value("competitors", "rivals", live.duplicate(true))
-    var selected := clamp(int(state.get_value("competitors", "selected_rival", 0)), 0, max(0, live.size() - 1))
+    var selected: Variant = clamp(int(state.get_value("competitors", "selected_rival", 0)), 0, max(0, live.size() - 1))
     state.set_value("competitors", "selected_rival", selected)
     if not live.is_empty():
         state.set_value("competitors", "relationship", int(live[selected].get("relationship", 0)))

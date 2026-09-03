@@ -13,8 +13,8 @@ var segment_list: VBoxContainer
 var detail_panel: Panel
 var detail_label: Label
 var demand_model = DemandModel.new()
-var selected_segment := "standard"
-var refresh_clock := 0.0
+var selected_segment: Variant = "standard"
+var refresh_clock: Variant = 0.0
 
 func _ready() -> void:
     parent = get_parent()
@@ -81,9 +81,9 @@ func _build_ui() -> void:
 
 func _layout_responsive() -> void:
     if root == null or panel == null: return
-    var w := maxf(root.size.x, 320.0)
-    var h := maxf(root.size.y, 480.0)
-    var narrow := w < 900.0
+    var w: Variant = maxf(root.size.x, 320.0)
+    var h: Variant = maxf(root.size.y, 480.0)
+    var narrow: Variant = w < 900.0
     if narrow:
         panel.position = Vector2(10, maxf(330.0, h - 455.0))
         panel.size = Vector2(w - 20.0, 450.0)
@@ -101,17 +101,17 @@ func _refresh() -> void:
     var state = parent.get_node_or_null("/root/RenewGameState")
     if state == null: return
 
-    var product := "furniture"
-    var player_price := int(state.get_value("businesses", "player_price", 220))
-    var rival_price := 120
-    var reputation := int(state.get_value("player", "reputation", 0))
-    var marketing := int(state.get_value("businesses", "marketing_level", 0))
-    var quality := 75
-    var employee_productivity := 1.0
-    var district_multiplier := 1.0
-    var district_pressure := 0.0
-    var alliance_sales := 0.0
-    var deal_sales := 0.0
+    var product: Variant = "furniture"
+    var player_price: Variant = int(state.get_value("businesses", "player_price", 220))
+    var rival_price: Variant = 120
+    var reputation: Variant = int(state.get_value("player", "reputation", 0))
+    var marketing: Variant = int(state.get_value("businesses", "marketing_level", 0))
+    var quality: Variant = 75
+    var employee_productivity: Variant = 1.0
+    var district_multiplier: Variant = 1.0
+    var district_pressure: Variant = 0.0
+    var alliance_sales: Variant = 0.0
+    var deal_sales: Variant = 0.0
 
     var simulation = get_node_or_null("/root/RenewSimulationSystem")
     if simulation != null and simulation.last_result is Dictionary:
@@ -136,8 +136,8 @@ func _refresh() -> void:
         var rivals = gameplay.relationship_system.rivals if gameplay.relationship_system != null else null
         if rivals != null:
             if not rivals.rivals.is_empty(): rival_price = int(rivals.rivals[0].get("price", rival_price))
-            var selected_rival := int(state.get_value("competitors", "selected_rival", 0))
-            var selected_district := int(state.get_value("regions", "selected_district", 0))
+            var selected_rival: Variant = int(state.get_value("competitors", "selected_rival", 0))
+            var selected_district: Variant = int(state.get_value("regions", "selected_district", 0))
             district_pressure = float(rivals.district_pressure(selected_district))
             var alliance: Dictionary = rivals.alliance_bonus(selected_rival)
             var deal: Dictionary = rivals.deal_bonus(selected_rival)
@@ -154,18 +154,18 @@ func _refresh() -> void:
     )
     if not bool(demand_result.get("ok", false)): return
 
-    var total := int(demand_result.get("demand", 0))
-    var relative := float(demand_result.get("relative_price", 1.0))
+    var total: Variant = int(demand_result.get("demand", 0))
+    var relative: Variant = float(demand_result.get("relative_price", 1.0))
     summary_label.text = "%s  |  Your $%d vs rival $%d  |  Total demand %d\nTap a segment for its requirements and sales advice." % [product.capitalize(), player_price, rival_price, total]
 
     for child in segment_list.get_children(): child.queue_free()
     var segment_results: Dictionary = demand_result.get("segments", {})
     for segment in ["budget", "standard", "premium", "industrial", "government"]:
         var segment_detail: Dictionary = segment_results.get(segment, {})
-        var demand := int(segment_detail.get("final_demand", segment_detail.get("demand", 0)))
-        var base_demand := float(segment_detail.get("base_demand", max(1, demand)))
-        var ratio := clamp(float(demand) / maxf(base_demand, 1.0), 0.0, 1.0)
-        var button := Button.new()
+        var demand: Variant = int(segment_detail.get("final_demand", segment_detail.get("demand", 0)))
+        var base_demand: Variant = float(segment_detail.get("base_demand", max(1, demand)))
+        var ratio: Variant = clamp(float(demand) / maxf(base_demand, 1.0), 0.0, 1.0)
+        var button: Variant = Button.new()
         button.text = "%s   •   %d demand   %s" % [segment.capitalize(), demand, _demand_bar(ratio)]
         button.custom_minimum_size = Vector2(segment_list.size.x, 34)
         button.focus_mode = Control.FOCUS_NONE
@@ -177,7 +177,7 @@ func _refresh() -> void:
     _show_selected(segment_results, product, player_price, rival_price, quality, reputation, marketing, district_multiplier, relative)
 
 func _demand_bar(ratio: float) -> String:
-    var filled := clampi(int(round(ratio * 10.0)), 0, 10)
+    var filled: Variant = clampi(int(round(ratio * 10.0)), 0, 10)
     return "[" + "█".repeat(filled) + "░".repeat(10 - filled) + "]"
 
 func _select_segment(segment: String, product: String, player_price: int, rival_price: int, quality: int, reputation: int, marketing: int, district: float) -> void:
@@ -195,13 +195,13 @@ func _show_selected(segment_results: Dictionary, product: String, player_price: 
 func _show_detail(segment: String, result: Dictionary, product: String, player_price: int, rival_price: int, quality: int) -> void:
     var config: Dictionary = demand_model.customer_segments.get_segment_config(segment)
     var modifiers: Dictionary = result.get("modifiers", {})
-    var preference := float(modifiers.get("preference", 0.0))
-    var price_modifier := float(modifiers.get("price", 1.0))
-    var quality_modifier := float(modifiers.get("quality", 1.0))
-    var requirement := int(config.get("quality_requirement", 60))
-    var advice := _advice(segment, player_price, rival_price, quality, requirement, price_modifier, quality_modifier, preference)
+    var preference: Variant = float(modifiers.get("preference", 0.0))
+    var price_modifier: Variant = float(modifiers.get("price", 1.0))
+    var quality_modifier: Variant = float(modifiers.get("quality", 1.0))
+    var requirement: Variant = int(config.get("quality_requirement", 60))
+    var advice: Variant = _advice(segment, player_price, rival_price, quality, requirement, price_modifier, quality_modifier, preference)
     var preferred: Dictionary = config.get("preferred_products", {})
-    var preferred_text := ""
+    var preferred_text: Variant = ""
     for product_id in preferred.keys():
         if float(preferred[product_id]) > 0.0:
             if not preferred_text.is_empty(): preferred_text += ", "

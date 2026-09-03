@@ -3,8 +3,8 @@ extends Node
 # Long-term company objectives. These create a reason to keep playing after the
 # first business is profitable and turn the simulation into a visible campaign.
 var game: Node
-var claimed := {}
-var goals := [
+var claimed: Variant = {}
+var goals: Variant = [
     {"id":"restore","title":"SAVE THE WAREHOUSE","cash":500,"rep":2,"text":"Complete the first restoration."},
     {"id":"profit10","title":"TEN THOUSAND PROFIT","cash":1500,"rep":3,"text":"Reach $10,000 total operating profit."},
     {"id":"team","title":"BUILD A TEAM","cash":1000,"rep":2,"text":"Grow the core company to 5 employees."},
@@ -23,7 +23,7 @@ func _process(_delta: float) -> void:
     if game == null:
         return
     for goal in goals:
-        var id := String(goal["id"])
+        var id: Variant = String(goal["id"])
         if bool(claimed.get(id, false)):
             continue
         if _reached(id):
@@ -54,7 +54,7 @@ func _reached(id: String) -> bool:
             if region != null:
                 return int(region.regions.player_presence.count(1)) > 1
         "empire":
-            var count := 0
+            var count: Variant = 0
             for item in game.expansion.properties:
                 if bool(item.get("owned", false)): count += 1
             for item in game.expansion.resource_sites:
@@ -63,7 +63,7 @@ func _reached(id: String) -> bool:
     return false
 
 func _claim(goal: Dictionary) -> void:
-    var id := String(goal["id"])
+    var id: Variant = String(goal["id"])
     claimed[id] = true
     game.cash += int(goal["cash"])
     game.reputation += int(goal["rep"])
@@ -78,21 +78,21 @@ func current_goal() -> Dictionary:
     return {"title":"EMPIRE MASTERED","text":"Every V1 company objective is complete."}
 
 func completed_count() -> int:
-    var count := 0
+    var count: Variant = 0
     for goal in goals:
         if bool(claimed.get(String(goal["id"]), false)):
             count += 1
     return count
 
 func _save_state() -> void:
-    var file := FileAccess.open("user://renew_goals.json", FileAccess.WRITE)
+    var file: Variant = FileAccess.open("user://renew_goals.json", FileAccess.WRITE)
     if file != null:
         file.store_string(JSON.stringify(claimed))
 
 func _load_state() -> void:
     if not FileAccess.file_exists("user://renew_goals.json"):
         return
-    var file := FileAccess.open("user://renew_goals.json", FileAccess.READ)
+    var file: Variant = FileAccess.open("user://renew_goals.json", FileAccess.READ)
     if file == null:
         return
     var parsed = JSON.parse_string(file.get_as_text())

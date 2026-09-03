@@ -11,7 +11,7 @@ func sign_contract() -> void:
         state_adapter.message("Open a business before signing contracts."); return
     if int(state_adapter.get_value("contracts", "contract_days", 0)) > 0:
         state_adapter.message("An active customer contract is already running."); return
-    var reputation := int(state_adapter.get_value("player", "reputation", 0))
+    var reputation: Variant = int(state_adapter.get_value("player", "reputation", 0))
     if reputation < 10:
         state_adapter.message("Major customers need at least 10 reputation."); return
     var contracts = get_node_or_null("/root/RenewContractSystem")

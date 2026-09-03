@@ -14,9 +14,9 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
     if game == null:
         return
-    var size := get_viewport_rect().size
-    var w := size.x
-    var h := size.y
+    var size: Variant = get_viewport_rect().size
+    var w: Variant = size.x
+    var h: Variant = size.y
     draw_rect(Rect2(0, 0, w, h), Color("081116"), true)
     _draw_grid(w, h)
     _draw_header(w)
@@ -26,8 +26,8 @@ func _draw() -> void:
     _draw_network(w, h)
 
 func _draw_grid(w: float, h: float) -> void:
-    var top := 70.0
-    var bottom := h - 150.0
+    var top: Variant = 70.0
+    var bottom: Variant = h - 150.0
     for x in range(0, int(w) + 1, 80):
         draw_line(Vector2(x, top), Vector2(x, bottom), Color("17262c"), 1.0)
     for y in range(int(top), int(bottom) + 1, 64):
@@ -39,33 +39,33 @@ func _draw_header(w: float) -> void:
     draw_line(Vector2(28, 55), Vector2(w - 28, 55), Color("23353b"), 1.0)
 
 func _draw_warehouse(w: float, h: float) -> void:
-    var center := Vector2(w * 0.24, h * 0.32)
-    var b := Rect2(center - Vector2(145, 82), Vector2(290, 164))
-    var progress := clamp(float(game.restoration) / 100.0, 0.0, 1.0)
+    var center: Variant = Vector2(w * 0.24, h * 0.32)
+    var b: Variant = Rect2(center - Vector2(145, 82), Vector2(290, 164))
+    var progress: Variant = clamp(float(game.restoration) / 100.0, 0.0, 1.0)
     draw_string(ThemeDB.fallback_font, b.position + Vector2(0, -18), "OLD WAREHOUSE", HORIZONTAL_ALIGNMENT_LEFT, 290, 15, Color("c9d8d9"))
     draw_rect(b, Color("152329"), true)
     draw_rect(b, Color("3a4c52"), false, 3.0)
     draw_colored_polygon(PackedVector2Array([b.position + Vector2(-12, 0), b.position + Vector2(302, 0), b.position + Vector2(255, -40), b.position + Vector2(33, -40)]), Color("203238"))
     for i in range(5):
-        var wx := b.position.x + 25 + i * 53
-        var window_color := Color("5a7d72") if progress >= 1.0 else Color("263b41")
+        var wx: Variant = b.position.x + 25 + i * 53
+        var window_color: Variant = Color("5a7d72") if progress >= 1.0 else Color("263b41")
         draw_rect(Rect2(wx, b.position.y + 38, 32, 34), window_color, true)
     draw_rect(Rect2(b.position.x + 112, b.position.y + 92, 66, 72), Color("0c1519"), true)
     draw_string(ThemeDB.fallback_font, b.position + Vector2(0, 190), str(game.stage).to_upper(), HORIZONTAL_ALIGNMENT_LEFT, 290, 12, Color("9fb3b6"))
-    var bar := Rect2(b.position + Vector2(0, 205), Vector2(290, 9))
+    var bar: Variant = Rect2(b.position + Vector2(0, 205), Vector2(290, 9))
     draw_rect(bar, Color("17282e"), true)
     draw_rect(Rect2(bar.position, Vector2(bar.size.x * progress, bar.size.y)), Color("76a89b"), true)
     draw_string(ThemeDB.fallback_font, b.position + Vector2(0, 230), "%d%% RESTORED" % int(game.restoration), HORIZONTAL_ALIGNMENT_LEFT, 290, 10, Color("74898e"))
 
 func _draw_business(w: float, h: float) -> void:
-    var x := w * 0.52
-    var y := 112.0
-    var width := min(450.0, w - x - 28.0)
-    var card := Rect2(x, y, width, 220.0)
+    var x: Variant = w * 0.52
+    var y: Variant = 112.0
+    var width: Variant = min(450.0, w - x - 28.0)
+    var card: Variant = Rect2(x, y, width, 220.0)
     draw_rect(card, Color("111d22"), true)
     draw_rect(card, Color("30464d"), false, 2.0)
     draw_string(ThemeDB.fallback_font, Vector2(x + 20, y + 34), "RENEW GOODS", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("dce8e8"))
-    var state := "OPEN" if bool(game.business_open) else "CLOSED"
+    var state: Variant = "OPEN" if bool(game.business_open) else "CLOSED"
     draw_string(ThemeDB.fallback_font, Vector2(x + 20, y + 58), state, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("7db29f") if bool(game.business_open) else Color("7d888b"))
     _stat(x + 20, y + 90, "INVENTORY", "%d" % int(game.finished_goods))
     _stat(x + 20, y + 116, "STAFF", "%d" % int(game.employees))
@@ -86,32 +86,32 @@ func _draw_regions(w: float, h: float) -> void:
         return
     var regions = controller.regions
     var count: int = int(regions.regions.size())
-    var card_w := (w - 72.0) / 3.0
-    var card_h := 78.0
-    var start_y := 350.0
+    var card_w: Variant = (w - 72.0) / 3.0
+    var card_h: Variant = 78.0
+    var start_y: Variant = 350.0
     draw_string(ThemeDB.fallback_font, Vector2(28, 340), "REGIONAL EMPIRE", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("a9bdbe"))
     for i in range(count):
-        var col := i % 3
-        var row := i / 3
-        var x := 18.0 + col * (card_w + 18.0)
-        var y := start_y + row * (card_h + 12.0)
-        var selected := i == int(regions.selected)
-        var unlocked := bool(regions.regions[i].get("unlocked", false))
-        var presence := int(regions.player_presence[i])
-        var rivals := int(regions.rival_presence[i])
+        var col: Variant = i % 3
+        var row: Variant = i / 3
+        var x: Variant = 18.0 + col * (card_w + 18.0)
+        var y: Variant = start_y + row * (card_h + 12.0)
+        var selected: Variant = i == int(regions.selected)
+        var unlocked: Variant = bool(regions.regions[i].get("unlocked", false))
+        var presence: Variant = int(regions.player_presence[i])
+        var rivals: Variant = int(regions.rival_presence[i])
         draw_rect(Rect2(x, y, card_w, card_h), Color("17262d") if not selected else Color("1d3438"), true)
         draw_rect(Rect2(x, y, card_w, card_h), Color("587d78") if selected else Color("2b4148"), false, 2.0)
         draw_string(ThemeDB.fallback_font, Vector2(x + 10, y + 20), str(regions.regions[i]["name"]), HORIZONTAL_ALIGNMENT_LEFT, card_w - 20, 12, Color("d7e3e4"))
-        var status := "LOCKED" if not unlocked else ("OWNED" if presence > 0 else "OPEN")
+        var status: Variant = "LOCKED" if not unlocked else ("OWNED" if presence > 0 else "OPEN")
         draw_string(ThemeDB.fallback_font, Vector2(x + 10, y + 39), "T%d  %s" % [regions.regions[i]["tier"], status], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("ffad8f") if not unlocked else Color("7db29f"))
         draw_string(ThemeDB.fallback_font, Vector2(x + 10, y + 57), "MARKET %.2fx  RIVALS %d  INFRA %d" % [regions.market_levels[i], rivals, regions.infrastructure[i]], HORIZONTAL_ALIGNMENT_LEFT, card_w - 20, 10, Color("8ca1a6"))
         draw_string(ThemeDB.fallback_font, Vector2(x + 10, y + 72), str(regions.regions[i]["special"]), HORIZONTAL_ALIGNMENT_LEFT, card_w - 20, 9, Color("6e858b"))
 
 func _draw_network(w: float, h: float) -> void:
-    var y := h - 150.0
-    var a := Vector2(w * 0.14, y)
-    var b := Vector2(w * 0.50, y - 28)
-    var c := Vector2(w * 0.84, y)
+    var y: Variant = h - 150.0
+    var a: Variant = Vector2(w * 0.14, y)
+    var b: Variant = Vector2(w * 0.50, y - 28)
+    var c: Variant = Vector2(w * 0.84, y)
     draw_line(a, b, Color("2e5559"), 3.0)
     draw_line(b, c, Color("2e5559"), 3.0)
     draw_circle(a, 23, Color("172b31"))

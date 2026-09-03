@@ -6,13 +6,13 @@ const SYSTEM_VERSION := 3
 const MARKET_SHARE_HISTORY_DAYS := [1, 10, 30, 60]
 
 var rivals = null
-var last_player_price := -1
-var last_contract_id := ""
+var last_player_price: Variant = -1
+var last_contract_id: Variant = ""
 var reaction_history: Array = []
 var market_share_history: Dictionary = {}
-var current_market_share := 0.0
-var current_player_sales := 0
-var current_competitor_sales := 0
+var current_market_share: Variant = 0.0
+var current_player_sales: Variant = 0
+var current_competitor_sales: Variant = 0
 
 func set_rivals(value) -> void:
     rivals = value
@@ -23,9 +23,9 @@ func prime_player_state(player_state: Dictionary) -> void:
 func observe_and_react(player_state: Dictionary, _supply_chain = null, contract_result: Dictionary = {}) -> Array[String]:
     if rivals == null:
         return []
-    var day := int(player_state.get("day", 1))
+    var day: Variant = int(player_state.get("day", 1))
     var news: Array[String] = []
-    var player_price := int(player_state.get("player_price", 110))
+    var player_price: Variant = int(player_state.get("player_price", 110))
     if last_player_price >= 0 and player_price < last_player_price - 1:
         news.append_array(react_to_price_cut(player_price, last_player_price, day))
     last_player_price = player_price
@@ -40,9 +40,9 @@ func react_to_price_cut(player_price: int, previous_price: int, day: int) -> Arr
     var news: Array[String] = []; var cut := previous_price - player_price
     if cut < 2: return news
     for rival in rivals.rivals:
-        var strategy := str(rival.get("strategy", "")); var old_price := int(rival.get("price", 110))
+        var strategy: Variant = str(rival.get("strategy", "")); var old_price := int(rival.get("price", 110))
         if strategy == "low_price_aggressive":
-            var target := max(78, player_price - 1); rival["price"] = min(old_price, target); rival["market_share"] = min(0.60, float(rival.get("market_share", 0.0)) + 0.006); rival["retaliation"] = max(int(rival.get("retaliation", 0)), 2); news.append("%s matched your price cut and intensified its low-price campaign." % rival.get("name", "A rival"))
+            var target: Variant = max(78, player_price - 1); rival["price"] = min(old_price, target); rival["market_share"] = min(0.60, float(rival.get("market_share", 0.0)) + 0.006); rival["retaliation"] = max(int(rival.get("retaliation", 0)), 2); news.append("%s matched your price cut and intensified its low-price campaign." % rival.get("name", "A rival"))
         elif strategy == "logistics_advantage" and player_price <= old_price - 8:
             rival["price"] = max(82, old_price - 3); news.append("%s responded to your lower price with a targeted price reduction." % rival.get("name", "A rival"))
         elif strategy == "premium_high_reputation":
@@ -53,7 +53,7 @@ func react_to_resource_capture(resource: String, amount: int, day: int) -> Array
     var news: Array[String] = []
     if resource != "timber" or amount <= 0: return news
     for rival in rivals.rivals:
-        var strategy := str(rival.get("strategy", ""))
+        var strategy: Variant = str(rival.get("strategy", ""))
         if strategy == "logistics_advantage":
             if "Alternative Timber Suppliers" not in rival["suppliers"]: rival["suppliers"].append("Alternative Timber Suppliers")
             rival["supplier_pressure"] = max(0, int(rival.get("supplier_pressure", 0)) - 1); rival["inventory"] = min(300, int(rival.get("inventory", 0)) + 10); news.append("%s found alternative timber suppliers after you captured timber supply." % rival.get("name", "A rival"))
@@ -65,7 +65,7 @@ func react_to_resource_capture(resource: String, amount: int, day: int) -> Array
 func react_to_contract_win(contract: Dictionary, day: int) -> Array[String]:
     var news: Array[String] = []; var product := str(contract.get("resource_product", "consumer_goods")); var customer := str(contract.get("customer_id", "customer"))
     for rival in rivals.rivals:
-        var strategy := str(rival.get("strategy", "")); var bonus := 0
+        var strategy: Variant = str(rival.get("strategy", "")); var bonus := 0
         if strategy == "low_price_aggressive": bonus = 4; rival["price"] = max(78, int(rival.get("price", 110)) - 2)
         elif strategy == "logistics_advantage": bonus = 6; rival["inventory"] = min(300, int(rival.get("inventory", 0)) + 8)
         elif strategy == "premium_high_reputation": bonus = 9; rival["reputation"] = min(100, int(rival.get("reputation", 50)) + 1)
@@ -74,19 +74,19 @@ func react_to_contract_win(contract: Dictionary, day: int) -> Array[String]:
     _remember(day, "contract_win", {"customer": customer, "product": product}); return news
 func record_market_share(player_state: Dictionary, day: int) -> Array[String]:
     if rivals == null: return []
-    var trading_day := max(1, day - 1); var player_sales := max(0, int(player_state.get("last_units_sold", 0))); var player_price := max(1, int(player_state.get("player_price", 110))); var competitor_sales_total: int = 0; var competitor_rows: Array = []
+    var trading_day: Variant = max(1, day - 1); var player_sales := max(0, int(player_state.get("last_units_sold", 0))); var player_price := max(1, int(player_state.get("player_price", 110))); var competitor_sales_total: int = 0; var competitor_rows: Array = []
     for rival in rivals.rivals:
-        var price := max(1, int(rival.get("price", 110))); var production_capacity := max(0, int(rival.get("production", 0))); var reputation := clamp(float(rival.get("reputation", 50)) / 100.0, 0.0, 1.0); var price_factor := clamp(1.0 + (float(player_price - price) / float(player_price)) * 0.55, 0.55, 1.45); var strategy_factor := 1.0
+        var price: Variant = max(1, int(rival.get("price", 110))); var production_capacity := max(0, int(rival.get("production", 0))); var reputation := clamp(float(rival.get("reputation", 50)) / 100.0, 0.0, 1.0); var price_factor := clamp(1.0 + (float(player_price - price) / float(player_price)) * 0.55, 0.55, 1.45); var strategy_factor := 1.0
         match str(rival.get("strategy", "")):
             "low_price_aggressive": strategy_factor = 1.12
             "logistics_advantage": strategy_factor = 1.04
             "premium_high_reputation": strategy_factor = 0.88 + reputation * 0.24
-        var daily_sales := int(round(float(production_capacity) * price_factor * strategy_factor)); var inventory_cap := max(production_capacity, int(rival.get("inventory", production_capacity))); daily_sales = min(daily_sales, max(0, inventory_cap)); rival["last_sales"] = daily_sales; rival["total_sales"] = int(rival.get("total_sales", 0)) + daily_sales; competitor_sales_total += daily_sales; competitor_rows.append({"id": str(rival.get("id", "")), "name": str(rival.get("name", "Rival")), "sales": daily_sales})
+        var daily_sales: Variant = int(round(float(production_capacity) * price_factor * strategy_factor)); var inventory_cap := max(production_capacity, int(rival.get("inventory", production_capacity))); daily_sales = min(daily_sales, max(0, inventory_cap)); rival["last_sales"] = daily_sales; rival["total_sales"] = int(rival.get("total_sales", 0)) + daily_sales; competitor_sales_total += daily_sales; competitor_rows.append({"id": str(rival.get("id", "")), "name": str(rival.get("name", "Rival")), "sales": daily_sales})
     var total_market_sales: int = player_sales + competitor_sales_total
     current_player_sales = player_sales; current_competitor_sales = competitor_sales_total; current_market_share = float(player_sales) / float(max(1, total_market_sales))
     if total_market_sales > 0:
         for rival in rivals.rivals: rival["market_share"] = float(int(rival.get("last_sales", 0))) / float(total_market_sales)
-    var snapshot := {"day": trading_day,"player_sales": player_sales,"competitor_sales": competitor_sales_total,"total_market_sales": total_market_sales,"player_market_share": current_market_share,"competitors": competitor_rows.duplicate(true)}
+    var snapshot: Variant = {"day": trading_day,"player_sales": player_sales,"competitor_sales": competitor_sales_total,"total_market_sales": total_market_sales,"player_market_share": current_market_share,"competitors": competitor_rows.duplicate(true)}
     market_share_history[str(trading_day)] = snapshot
     for milestone in MARKET_SHARE_HISTORY_DAYS:
         if trading_day == milestone: market_share_history[str(milestone)] = snapshot.duplicate(true)
@@ -103,7 +103,7 @@ func get_rankings() -> Array[Dictionary]:
     ranking.sort_custom(func(a, b): return float(a["market_share"]) > float(b["market_share"])); return ranking
 func _award_progression(day: int, share: float) -> void:
     var game_state = get_node_or_null("/root/RenewGameState"); if game_state == null: return
-    var xp := int(game_state.get_value("progression", "xp", 0)); var reward := 5
+    var xp: Variant = int(game_state.get_value("progression", "xp", 0)); var reward := 5
     if day == 10: reward = 10
     elif day == 30: reward = 20
     elif day == 60: reward = 30

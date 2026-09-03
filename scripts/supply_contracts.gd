@@ -1,11 +1,11 @@
 extends RefCounted
 class_name RenewSupplyContracts
 
-var active_rival := -1
-var active_resource := ""
-var days_remaining := 0
-var discount := 0.0
-var player_resource_rights := {"materials":0,"packaging":0,"fuel":0,"food":0}
+var active_rival: Variant = -1
+var active_resource: Variant = ""
+var days_remaining: Variant = 0
+var discount: Variant = 0.0
+var player_resource_rights: Variant = {"materials":0,"packaging":0,"fuel":0,"food":0}
 
 func _normalize() -> void:
     days_remaining=max(0,days_remaining)
