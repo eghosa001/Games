@@ -5,7 +5,7 @@ var failed := 0
 func _init() -> void: call_deferred("run")
 func check(ok: bool, label: String) -> void:
     if ok: passed += 1; print("PASS: " + label)
-    else: failed += 1; push_error("FAIL: " + label)")
+    else: failed += 1; push_error("FAIL: " + label)
 func run() -> void:
     var State = load("res://scripts/game_state.gd")
     check(State != null, "GameState script loads")
