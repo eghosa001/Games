@@ -1,15 +1,12 @@
 extends Node
 
 const DemandModel = preload("res://scripts/demand_model.gd")
-const SYSTEM_VERSION := 9
+const SYSTEM_VERSION := 10
 var command_count: Variant = 0
 var last_command: Variant = ""
 var last_result: Dictionary = {}
 var demand_model = DemandModel.new()
 var production_system: Node = null
-
-func set_production_system(production: Node) -> void:
-    production_system = production
 
 func execute(command: String, args: Dictionary = {}) -> Dictionary:
     command_count += 1
@@ -53,8 +50,10 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     var districts = context.get("districts")
     var employee_system = context.get("employee_system")
     var business_system = context.get("business_system")
-    if rivals == null or economy == null or events == null or expansion == null or districts == null or employee_system == null or business_system == null:
+    var context_production = context.get("production")
+    if rivals == null or economy == null or events == null or expansion == null or districts == null or employee_system == null or business_system == null or context_production == null:
         return {"ok": false, "message": "Simulation domain dependencies are unavailable."}
+    production_system = context_production
     var selected_rival: Variant = int(state.get("selected_rival", 0))
     var selected_district: Variant = int(state.get("selected_district", 0))
     var performance: Variant = int(state.get("last_profit", 0))
