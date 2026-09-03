@@ -24,6 +24,7 @@ RenewCompetitorReactionSystem="*res://scripts/competitor_reaction_system.gd"
 RenewTechnologySystem="*res://scripts/technology_system.gd"
 RenewProgressionSystem="*res://scripts/progression_system.gd"
 RenewRegionSystem="*res://scripts/region_system.gd"
+RenewDynamicEventController="*res://scripts/dynamic_event_controller.gd"
 
 [display]
 window/size/viewport_width=1280
