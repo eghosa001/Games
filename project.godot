@@ -26,6 +26,8 @@ RenewProgressionSystem="*res://scripts/progression_system.gd"
 RenewRegionSystem="*res://scripts/region_system.gd"
 RenewDynamicEventController="*res://scripts/dynamic_event_controller.gd"
 RenewSeasonalRestorationSystem="*res://scripts/seasonal_restoration_system.gd"
+RenewHistorySystem="*res://scripts/history_system.gd"
+RenewHistoryEventBridge="*res://scripts/history_event_bridge.gd"
 
 [display]
 window/size/viewport_width=1280
