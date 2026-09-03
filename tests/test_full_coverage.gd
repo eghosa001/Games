@@ -1,6 +1,7 @@
 extends SceneTree
 
 # Discovery-driven release gate updated for the Phase 37 Main -> World/Systems/UI tree.
+# This test is intentionally read-only: it must never rewrite production scripts.
 var passed := 0
 var failed := 0
 var failures: Array[String] = []
@@ -18,57 +19,12 @@ func check(condition: bool, label: String) -> void:
         push_error("FAIL: " + label)
 
 func run() -> void:
-    _apply_release_compatibility()
     await audit_all_scripts()
     await audit_main_screen()
     print("RENEW FULL COVERAGE AUDIT: %d passed, %d failed" % [passed, failed])
     print("Scripts audited: %d | Functions audited: %d" % [script_count, function_count])
     for failure in failures: print("FAILED: " + failure)
     quit(1 if failed > 0 else 0)
-
-func _apply_release_compatibility() -> void:
-    _rewrite("res://scripts/simulation_system.gd", [
-        ["func _game_state() -> Variant:\n    var root = get_tree().root; if root == null: return null\n    return root.get_node_or_null(\"RenewGameState\")", "func _game_state() -> Variant:\n    var root = get_tree().root\n    if root == null:\n        return null\n    return root.get_node_or_null(\"RenewGameState\")"],
-        ["func _finance() -> Variant:\n    var root = get_tree().root; if root == null: return null\n    return root.get_node_or_null(\"RenewFinanceSystem\")", "func _finance() -> Variant:\n    var root = get_tree().root\n    if root == null:\n        return null\n    return root.get_node_or_null(\"RenewFinanceSystem\")"],
-        ["func _production() -> Variant:\n    var root = get_tree().root; if root == null: return null\n    return root.get_node_or_null(\"RenewProductionSystem\")", "func _production() -> Variant:\n    var root = get_tree().root\n    if root == null:\n        return null\n    return root.get_node_or_null(\"RenewProductionSystem\")"],
-        ["func _economy() -> Variant:\n    var root = get_tree().current_scene; if root == null: return null\n    if \"economy\" in root: return root.economy\n    return null", "func _economy() -> Variant:\n    var root = get_tree().current_scene\n    if root == null:\n        return null\n    if \"economy\" in root:\n        return root.economy\n    return null"],
-        ["func _contracts() -> Variant:\n    var root = get_tree().root; if root == null: return null\n    return root.get_node_or_null(\"RenewContractSystem\")", "func _contracts() -> Variant:\n    var root = get_tree().root\n    if root == null:\n        return null\n    return root.get_node_or_null(\"RenewContractSystem\")"]
-    ])
-    _rewrite("res://scripts/technology_system.gd", [
-        ["func _state() -> Variant: return get_node_or_null(\"/root/RenewGameState\")", "func _state() -> Variant:\n    var state = get_node_or_null(\"/root/RenewGameState\")\n    if state == null:\n        return null\n    return state"]
-    ])
-    _rewrite("res://scripts/seasonal_restoration_system.gd", [
-        ["func _state() -> Variant:return get_node_or_null(\"/root/RenewGameState\")", "func _state() -> Variant:\n    var state = get_node_or_null(\"/root/RenewGameState\")\n    if state == null:\n        return null\n    return state"],
-        ["func _seasonal()->Dictionary:\n    var state=_state();if state==null:return {};var value=state.get_value(\"events\",\"seasonal\",{});return value.duplicate(true) if value is Dictionary else {}", "func _seasonal()->Dictionary:\n    var state = _state()\n    if state == null:\n        return {}\n    var value = state.get_value(\"events\", \"seasonal\", {})\n    if value is Dictionary:\n        return value.duplicate(true)\n    return {}"]
-    ])
-    _rewrite("res://scripts/news_system.gd", [
-        ["func _state() -> Variant:return get_node_or_null(\"/root/RenewGameState\")", "func _state() -> Variant:\n    var state = get_node_or_null(\"/root/RenewGameState\")\n    if state == null:\n        return null\n    return state"],
-        ["func _main() -> Variant:\n    var tree:=get_tree();if tree==null:return null\n    return tree.current_scene", "func _main() -> Variant:\n    var tree = get_tree()\n    if tree == null:\n        return null\n    return tree.current_scene"]
-    ])
-    _rewrite("res://scripts/supply_chain.gd", [
-        ["var output:=int(site.get(\"output\",0))*max(1,int(site.get(\"level\",1)))", "var output: int = int(site.get(\"output\",0))*max(1,int(site.get(\"level\",1)))"],
-        ["var output: Variant = int(site.get(\"output\",0))*max(1,int(site.get(\"level\",1)))", "var output: int = int(site.get(\"output\",0))*max(1,int(site.get(\"level\",1)))"],
-        ["var need:=int(property[\"input_need\"][resource])*max(1,amount)", "var need: int = int(property[\"input_need\"][resource])*max(1,amount)"],
-        ["var need: Variant = int(property[\"input_need\"][resource])*max(1,amount)", "var need: int = int(property[\"input_need\"][resource])*max(1,amount)"],
-        ["var need:=max(1,amount)", "var need: int = max(1,amount)"],
-        ["var need: Variant = max(1,amount)", "var need: int = max(1,amount)"]
-    ])
-    _rewrite("res://scripts/analytics_system.gd", [
-        ["if bool(main.get(\"restoration\"))", "if bool(_main_value(main, \"restoration\", false))"]
-    ])
-
-func _rewrite(path: String, replacements: Array) -> void:
-    if not FileAccess.file_exists(path): return
-    var file = FileAccess.open(path, FileAccess.READ)
-    if file == null: return
-    var text = file.get_as_text(); file.close()
-    var changed := false
-    for pair in replacements:
-        if text.contains(str(pair[0])):
-            text = text.replace(str(pair[0]), str(pair[1])); changed = true
-    if changed:
-        var out = FileAccess.open(path, FileAccess.WRITE)
-        if out != null: out.store_string(text); out.close()
 
 func audit_all_scripts() -> void:
     var paths: Array[String] = []
