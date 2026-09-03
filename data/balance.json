@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "starting_cash": 25000,
+  "business_launch_cost": 3000,
+  "property_count": 9,
+  "daily_research_points": 3,
+  "autosave_interval_seconds": 30,
+  "progression": {
+    "restoration_step_xp": 10,
+    "property_operational_xp": 50,
+    "contract_signed_xp": 25,
+    "contract_completed_xp": 40,
+    "employee_hired_xp": 15,
+    "production_run_xp": 12,
+    "expansion_purchased_xp": 35
+  }
+}
