@@ -24,7 +24,9 @@ func _log(text:String)->void:
     logs=logs.duplicate(true); logs.append(text); if logs.size()>100:logs.pop_front(); _set_state("company","log_lines",logs)
 func initialize()->void:
     randomize(); relationship_system.rivals._normalize(); expansion_system.initialize(); employee_system.sync_roster()
-    if competitor_reactions != null: competitor_reactions.set_rivals(relationship_system.rivals)
+    if competitor_reactions != null:
+        competitor_reactions.set_rivals(relationship_system.rivals)
+        competitor_reactions.prime_player_state(_simulation_state())
     if _state_value("company","log_lines",[]).is_empty():_log("Opportunity discovered: an abandoned warehouse in a growing district.")
 func inspect_property()->void:property_system.inspect_property()
 func acquire_property()->void:property_system.acquire_property()
