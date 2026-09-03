@@ -28,6 +28,7 @@ func run() -> void:
     var finance = Finance.new()
     root.add_child(finance)
     var production = Production.new()
+    production.name = "RenewProductionSystem"
     root.add_child(production)
     var simulation = Simulation.new()
     root.add_child(simulation)
