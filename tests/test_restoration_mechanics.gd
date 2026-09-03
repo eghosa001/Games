@@ -18,6 +18,7 @@ func check(ok: bool, label: String) -> void:
         push_error("FAIL: " + label)
 
 func run() -> void:
+    seed(123456)
     var scene := load("res://scenes/Main.tscn")
     check(scene != null, "Main scene available")
     if scene == null:
