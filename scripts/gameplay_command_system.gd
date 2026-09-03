@@ -5,7 +5,7 @@ const EmployeeCommandSystem=preload("res://scripts/employee_command_system.gd")
 const FinanceCommandSystem=preload("res://scripts/finance_command_system.gd")
 const SupplyCommandSystem=preload("res://scripts/supply_command_system.gd")
 const ContractCommandSystem=preload("res://scripts/contract_command_system.gd")
-const RelationshipCommandSystem=preload("res://scripts/relationship_system.gd")
+const RelationshipCommandSystem=preload("res://scripts/relationship_command_system.gd")
 const ExpansionCommandSystem=preload("res://scripts/expansion_command_system.gd")
 const SaveSystem=preload("res://scripts/save_system.gd")
 var property_system=PropertySystem.new();var business_system=BusinessSystem.new();var employee_system=EmployeeCommandSystem.new();var finance_system=FinanceCommandSystem.new();var supply_system=SupplyCommandSystem.new();var contract_system=ContractCommandSystem.new();var relationship_system=RelationshipCommandSystem.new();var expansion_system=ExpansionCommandSystem.new();var technology_system=null;var competitor_reactions=null
