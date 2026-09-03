@@ -51,28 +51,28 @@ func calculate_segment_demand(segment: String, product: String, player_price: fl
     var config: Dictionary = get_segment_config(segment)
     if config.is_empty(): return {"ok": false, "segment": segment, "demand": 0}
     var preferred_products: Dictionary = config.get("preferred_products", {})
-    var product_preference := float(preferred_products.get(product, 0.0))
+    var product_preference: Variant = float(preferred_products.get(product, 0.0))
     if product_preference <= 0.0:
         return {"ok": true, "segment": segment, "product": product, "demand": 0, "raw_demand": 0.0, "modifiers": {"preference": 0.0}}
 
-    var reference_price := max(1.0, competitor_price)
-    var relative_price := max(0.01, player_price) / reference_price
-    var sensitivity := float(config.get("price_sensitivity", 1.0))
-    var price_modifier := clamp(pow(1.0 / relative_price, sensitivity), 0.20, 1.80)
+    var reference_price: Variant = max(1.0, competitor_price)
+    var relative_price: Variant = max(0.01, player_price) / reference_price
+    var sensitivity: Variant = float(config.get("price_sensitivity", 1.0))
+    var price_modifier: Variant = clamp(pow(1.0 / relative_price, sensitivity), 0.20, 1.80)
 
-    var quality_requirement := float(config.get("quality_requirement", 60))
-    var quality_modifier := 1.0
+    var quality_requirement: Variant = float(config.get("quality_requirement", 60))
+    var quality_modifier: Variant = 1.0
     if float(quality) < quality_requirement:
         quality_modifier = clamp(float(quality) / max(1.0, quality_requirement), 0.25, 1.0)
     else:
         quality_modifier = clamp(1.0 + (float(quality) - quality_requirement) * 0.008, 1.0, 1.25)
 
-    var reputation_modifier := clamp(1.0 + float(reputation) * 0.006, 0.80, 1.35)
-    var marketing_modifier := clamp(1.0 + float(marketing_level) * 0.04, 1.0, 1.25)
-    var district_modifier := clamp(district_multiplier, 0.60, 1.40)
-    var base_demand := float(config.get("demand", 0.0))
-    var raw_demand := base_demand * product_preference * price_modifier * quality_modifier * reputation_modifier * marketing_modifier * district_modifier
-    var demand := max(0, int(round(raw_demand)))
+    var reputation_modifier: Variant = clamp(1.0 + float(reputation) * 0.006, 0.80, 1.35)
+    var marketing_modifier: Variant = clamp(1.0 + float(marketing_level) * 0.04, 1.0, 1.25)
+    var district_modifier: Variant = clamp(district_multiplier, 0.60, 1.40)
+    var base_demand: Variant = float(config.get("demand", 0.0))
+    var raw_demand: Variant = base_demand * product_preference * price_modifier * quality_modifier * reputation_modifier * marketing_modifier * district_modifier
+    var demand: Variant = max(0, int(round(raw_demand)))
 
     return {
         "ok": true,
@@ -93,8 +93,8 @@ func calculate_segment_demand(segment: String, product: String, player_price: fl
 
 func calculate(product: String, player_price: float, competitor_price: float, quality: int, reputation: int = 0, marketing_level: int = 0, district_multiplier: float = 1.0) -> Dictionary:
     var by_segment: Dictionary = {}
-    var total := 0
-    var raw_total := 0.0
+    var total: Variant = 0
+    var raw_total: Variant = 0.0
     for segment in segment_ids():
         var result: Dictionary = calculate_segment_demand(segment, product, player_price, competitor_price, quality, reputation, marketing_level, district_multiplier)
         by_segment[segment] = result

@@ -59,7 +59,7 @@ func _next_step(progress)->String:
         if int(progress.get(step,0))<100:return step
     return ""
 func _all_complete(progress)->bool:return _next_step(progress).is_empty()
-func _state():return get_node_or_null("/root/RenewGameState")
+func _state() -> Node:return get_node_or_null("/root/RenewGameState")
 func _seasonal()->Dictionary:
     var state=_state();if state==null:return {};var value=state.get_value("events","seasonal",{});return value.duplicate(true) if value is Dictionary else {}
 func _set_seasonal(value:Dictionary)->void:

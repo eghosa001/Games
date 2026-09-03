@@ -2,14 +2,14 @@ extends Control
 
 var parent
 var system
-var message := ""
-var selected_type := 0
-var last_day := -1
+var message: Variant = ""
+var selected_type: Variant = 0
+var last_day: Variant = -1
 
 func _ready() -> void:
     system = get_node_or_null("/root/RenewInfrastructureSystem")
     parent = get_tree().current_scene
-    layer = 57
+    z_index = 57
     queue_redraw()
 
 func _process(_delta: float) -> void:
@@ -17,7 +17,7 @@ func _process(_delta: float) -> void:
     if system == null: system = get_node_or_null("/root/RenewInfrastructureSystem")
     if parent != null and system != null and int(parent.day) != last_day:
         if last_day >= 0:
-            var upkeep := system.maintenance_cost(int(parent.day))
+            var upkeep: Variant = system.maintenance_cost(int(parent.day))
             if upkeep > 0:
                 parent.cash -= upkeep
                 parent._log("INFRASTRUCTURE MAINTENANCE: -$%s." % String.num_int64(upkeep))
@@ -27,7 +27,7 @@ func _process(_delta: float) -> void:
 func _input(event: InputEvent) -> void:
     if not event is InputEventKey or not event.pressed or event.echo or system == null or parent == null: return
     var regions = parent.get_node_or_null("RegionController")
-    var region := 0
+    var region: Variant = 0
     if regions != null and regions.get("regions") != null: region = int(regions.regions.selected)
     match event.keycode:
         KEY_F11:
@@ -63,16 +63,16 @@ func _input(event: InputEvent) -> void:
 func _draw() -> void:
     if system == null or parent == null: return
     var regions = parent.get_node_or_null("RegionController")
-    var region := 0
-    var region_name := "Region 1"
+    var region: Variant = 0
+    var region_name: Variant = "Region 1"
     if regions != null and regions.get("regions") != null:
         region = int(regions.regions.selected)
         region_name = str(regions.regions.current().get("name","Region"))
     var list:Array = system.list_region(region)
-    var active := 0
-    var disrupted := 0
-    var capacity := 0.0
-    var maintenance := 0
+    var active: Variant = 0
+    var disrupted: Variant = 0
+    var capacity: Variant = 0.0
+    var maintenance: Variant = 0
     for asset in list:
         if str(asset.get("status")) == system.ACTIVE:
             active += 1; capacity += float(asset.get("capacity",0.0)); maintenance += int(asset.get("maintenance",0))

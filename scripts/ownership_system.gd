@@ -13,7 +13,7 @@ const VOTE_NON_VOTING := "non_voting"
 
 var entities: Dictionary = {}
 var transaction_log: Array[Dictionary] = []
-var next_transaction_id := 1
+var next_transaction_id: Variant = 1
 
 func register_entity(entity_id: String, entity_type: String = ENTITY_COMPANY, total_shares: int = 1000000, par_value: float = 1.0) -> Dictionary:
     if entity_id.is_empty():
@@ -42,22 +42,22 @@ func register_entity(entity_id: String, entity_type: String = ENTITY_COMPANY, to
     return {"ok": true, "entity": entities[entity_id].duplicate(true)}
 
 func register_entity_from_ownership(entity_id: String, holder_percentages: Dictionary, entity_type: String = ENTITY_COMPANY) -> Dictionary:
-    var result := register_entity(entity_id, entity_type)
+    var result: Variant = register_entity(entity_id, entity_type)
     if not result.ok:
         return result
-    var holder_count := holder_percentages.size()
+    var holder_count: Variant = holder_percentages.size()
     if holder_count == 0:
         return result
-    var remaining := 100.0
-    var first := true
+    var remaining: Variant = 100.0
+    var first: Variant = true
     for holder_id in holder_percentages:
-        var pct := max(0.0, float(holder_percentages[holder_id]))
+        var pct: Variant = max(0.0, float(holder_percentages[holder_id]))
         if first:
             pct = min(pct, remaining)
             first = false
         else:
             pct = min(pct, remaining)
-        var issue := issue_shares(entity_id, holder_id, int(round(pct * 10000.0)), VOTE_ORDINARY, "initialization")
+        var issue: Variant = issue_shares(entity_id, holder_id, int(round(pct * 10000.0)), VOTE_ORDINARY, "initialization")
         if not issue.ok:
             return issue
         remaining -= pct
@@ -99,10 +99,10 @@ func _record(entity_id: String, action: String, data: Dictionary = {}) -> void:
 func issue_shares(entity_id: String, holder_id: String, quantity: int, share_class: String = VOTE_ORDINARY, reason: String = "issuance") -> Dictionary:
     if not entities.has(entity_id) or holder_id.is_empty() or quantity <= 0:
         return {"ok": false, "error": "invalid_issue"}
-    var entity := entities[entity_id]
+    var entity: Variant = entities[entity_id]
     if int(entity["issued_shares"]) + quantity > int(entity["authorized_shares"]):
         return {"ok": false, "error": "authorized_shares_exceeded"}
-    var holder := _holder(entity, holder_id)
+    var holder: Variant = _holder(entity, holder_id)
     _ensure_class(holder, share_class)
     holder["classes"][share_class] += quantity
     entity["issued_shares"] += quantity
@@ -113,11 +113,11 @@ func issue_shares(entity_id: String, holder_id: String, quantity: int, share_cla
 func issue_for_percent(entity_id: String, holder_id: String, percent_of_post_issue: float, share_class: String = VOTE_ORDINARY, reason: String = "issuance") -> Dictionary:
     if percent_of_post_issue <= 0.0 or percent_of_post_issue >= 100.0:
         return {"ok": false, "error": "invalid_percentage"}
-    var entity := _entity(entity_id)
+    var entity: Variant = _entity(entity_id)
     if entity.is_empty():
         return {"ok": false, "error": "entity_not_found"}
-    var issued := int(entity["issued_shares"])
-    var quantity := int(ceil(float(issued) * percent_of_post_issue / (100.0 - percent_of_post_issue)))
+    var issued: Variant = int(entity["issued_shares"])
+    var quantity: Variant = int(ceil(float(issued) * percent_of_post_issue / (100.0 - percent_of_post_issue)))
     if quantity <= 0:
         quantity = 1
     return issue_shares(entity_id, holder_id, quantity, share_class, reason)
@@ -125,11 +125,11 @@ func issue_for_percent(entity_id: String, holder_id: String, percent_of_post_iss
 func transfer_shares(entity_id: String, from_holder: String, to_holder: String, quantity: int, share_class: String = VOTE_ORDINARY, reason: String = "transfer") -> Dictionary:
     if not entities.has(entity_id) or from_holder.is_empty() or to_holder.is_empty() or from_holder == to_holder or quantity <= 0:
         return {"ok": false, "error": "invalid_transfer"}
-    var entity := entities[entity_id]
-    var source := _holder(entity, from_holder)
+    var entity: Variant = entities[entity_id]
+    var source: Variant = _holder(entity, from_holder)
     if _shares(source, share_class) < quantity:
         return {"ok": false, "error": "insufficient_shares"}
-    var destination := _holder(entity, to_holder)
+    var destination: Variant = _holder(entity, to_holder)
     _ensure_class(source, share_class)
     _ensure_class(destination, share_class)
     source["classes"][share_class] -= quantity
@@ -141,21 +141,21 @@ func transfer_shares(entity_id: String, from_holder: String, to_holder: String, 
 func buyback(entity_id: String, holder_id: String, quantity: int, price_per_share: float = 0.0, reason: String = "buyback") -> Dictionary:
     if not entities.has(entity_id) or quantity <= 0:
         return {"ok": false, "error": "invalid_buyback"}
-    var entity := entities[entity_id]
-    var holder := _holder(entity, holder_id)
+    var entity: Variant = entities[entity_id]
+    var holder: Variant = _holder(entity, holder_id)
     if _shares(holder) < quantity:
         return {"ok": false, "error": "insufficient_shares"}
     holder["classes"][VOTE_ORDINARY] -= quantity
     entity["treasury_shares"] += quantity
     entities[entity_id] = entity
-    var cost := float(quantity) * max(0.0, price_per_share)
+    var cost: Variant = float(quantity) * max(0.0, price_per_share)
     _record(entity_id, "buyback", {"holder_id": holder_id, "quantity": quantity, "price_per_share": price_per_share, "cost": cost, "reason": reason})
     return {"ok": true, "repurchased": quantity, "cost": cost, "entity": get_entity(entity_id)}
 
 func retire_treasury_shares(entity_id: String, quantity: int, reason: String = "retirement") -> Dictionary:
     if not entities.has(entity_id) or quantity <= 0:
         return {"ok": false, "error": "invalid_retirement"}
-    var entity := entities[entity_id]
+    var entity: Variant = entities[entity_id]
     if int(entity["treasury_shares"]) < quantity:
         return {"ok": false, "error": "insufficient_treasury"}
     entity["treasury_shares"] -= quantity
@@ -166,40 +166,40 @@ func retire_treasury_shares(entity_id: String, quantity: int, reason: String = "
     return {"ok": true, "retired": quantity, "entity": get_entity(entity_id)}
 
 func get_total_votes(entity_id: String) -> float:
-    var entity := _entity(entity_id)
+    var entity: Variant = _entity(entity_id)
     if entity.is_empty(): return 0.0
-    var total := 0.0
+    var total: Variant = 0.0
     for holder_id in entity["holders"]:
         total += get_voting_power(entity_id, str(holder_id))
     return total
 
 func get_voting_power(entity_id: String, holder_id: String) -> float:
-    var entity := _entity(entity_id)
+    var entity: Variant = _entity(entity_id)
     if entity.is_empty(): return 0.0
-    var holder := entity["holders"].get(holder_id, {})
-    var votes := 0.0
+    var holder: Variant = entity["holders"].get(holder_id, {})
+    var votes: Variant = 0.0
     for share_class_name in holder.get("classes", {}):
         var class_info: Dictionary = entity["share_classes"].get(share_class_name, {})
         votes += float(holder["classes"][share_class_name]) * float(class_info.get("votes_per_share", 1.0))
     return votes
 
 func get_ownership_percent(entity_id: String, holder_id: String) -> float:
-    var entity := _entity(entity_id)
-    var issued := float(entity.get("issued_shares", 0))
+    var entity: Variant = _entity(entity_id)
+    var issued: Variant = float(entity.get("issued_shares", 0))
     if issued <= 0.0: return 0.0
-    var holder := entity.get("holders", {}).get(holder_id, {})
-    var shares := 0
+    var holder: Variant = entity.get("holders", {}).get(holder_id, {})
+    var shares: Variant = 0
     for share_class_name in holder.get("classes", {}):
         shares += int(holder["classes"][share_class_name])
     return float(shares) * 100.0 / issued
 
 func get_voting_percent(entity_id: String, holder_id: String) -> float:
-    var total := get_total_votes(entity_id)
+    var total: Variant = get_total_votes(entity_id)
     if total <= 0.0: return 0.0
     return get_voting_power(entity_id, holder_id) * 100.0 / total
 
 func holders(entity_id: String) -> Array[Dictionary]:
-    var entity := _entity(entity_id)
+    var entity: Variant = _entity(entity_id)
     var result: Array[Dictionary] = []
     for holder_id in entity.get("holders", {}):
         result.append({"holder_id": str(holder_id), "ownership": get_ownership_percent(entity_id, str(holder_id)), "voting": get_voting_percent(entity_id, str(holder_id))})
@@ -207,8 +207,8 @@ func holders(entity_id: String) -> Array[Dictionary]:
     return result
 
 func has_control(entity_id: String, holder_id: String, threshold_name: String = "ordinary") -> bool:
-    var entity := _entity(entity_id)
-    var threshold := float(entity.get("control_thresholds", {}).get(threshold_name, 0.50)) * 100.0
+    var entity: Variant = _entity(entity_id)
+    var threshold: Variant = float(entity.get("control_thresholds", {}).get(threshold_name, 0.50)) * 100.0
     return get_voting_percent(entity_id, holder_id) >= threshold
 
 func set_control_threshold(entity_id: String, name: String, fraction: float) -> Dictionary:
@@ -228,7 +228,7 @@ func appoint_board_seat(entity_id: String, holder_id: String, seat_id: String = 
     if not entities.has(entity_id) or holder_id.is_empty():
         return {"ok": false, "error": "invalid_appointment"}
     var board: Dictionary = entities[entity_id]["board"]
-    var seat_count := int(board["seat_count"])
+    var seat_count: Variant = int(board["seat_count"])
     if board["seats"].size() >= seat_count and not board["seats"].has(seat_id):
         return {"ok": false, "error": "board_full"}
     if seat_id.is_empty():
@@ -245,37 +245,37 @@ func remove_board_seat(entity_id: String, seat_id: String) -> Dictionary:
     return {"ok": true}
 
 func get_board_seats(entity_id: String, holder_id: String = "") -> int:
-    var entity := _entity(entity_id)
-    var count := 0
+    var entity: Variant = _entity(entity_id)
+    var count: Variant = 0
     for seat_id in entity.get("board", {}).get("seats", {}):
         if holder_id.is_empty() or str(entity["board"]["seats"][seat_id]) == holder_id:
             count += 1
     return count
 
 func board_control_percent(entity_id: String, holder_id: String) -> float:
-    var entity := _entity(entity_id)
-    var seats := int(entity.get("board", {}).get("seat_count", 0))
+    var entity: Variant = _entity(entity_id)
+    var seats: Variant = int(entity.get("board", {}).get("seat_count", 0))
     if seats <= 0: return 0.0
     return float(get_board_seats(entity_id, holder_id)) * 100.0 / seats
 
 func distribute_dividend(entity_id: String, amount: float, holder_filter: String = "") -> Dictionary:
     if not entities.has(entity_id) or amount <= 0.0:
         return {"ok": false, "error": "invalid_dividend"}
-    var entity := entities[entity_id]
-    var issued := float(entity["issued_shares"])
+    var entity: Variant = entities[entity_id]
+    var issued: Variant = float(entity["issued_shares"])
     if issued <= 0.0:
         return {"ok": false, "error": "no_shares"}
     var payouts: Dictionary = {}
-    var total_paid := 0.0
+    var total_paid: Variant = 0.0
     for holder_id in entity["holders"]:
         if not holder_filter.is_empty() and str(holder_id) != holder_filter:
             continue
-        var holder := entity["holders"][holder_id]
-        var shares := 0
+        var holder: Variant = entity["holders"][holder_id]
+        var shares: Variant = 0
         for share_class_name in holder.get("classes", {}):
-            var multiplier := float(entity["share_classes"].get(share_class_name, {}).get("dividend_multiplier", 1.0))
+            var multiplier: Variant = float(entity["share_classes"].get(share_class_name, {}).get("dividend_multiplier", 1.0))
             shares += int(round(float(holder["classes"][share_class_name]) * multiplier))
-        var payout := amount * float(shares) / issued
+        var payout: Variant = amount * float(shares) / issued
         payouts[holder_id] = payout
         total_paid += payout
     entity["dividend_pool"] += total_paid
@@ -290,7 +290,7 @@ func set_investor_confidence(entity_id: String, confidence: float) -> Dictionary
 
 func adjust_investor_confidence(entity_id: String, delta: float, reason: String = "") -> Dictionary:
     if not entities.has(entity_id): return {"ok": false, "error": "entity_not_found"}
-    var confidence := clamp(float(entities[entity_id]["investor_confidence"]) + delta, 0.0, 100.0)
+    var confidence: Variant = clamp(float(entities[entity_id]["investor_confidence"]) + delta, 0.0, 100.0)
     entities[entity_id]["investor_confidence"] = confidence
     _record(entity_id, "confidence", {"delta": delta, "value": confidence, "reason": reason})
     return {"ok": true, "confidence": confidence}
@@ -305,20 +305,20 @@ func set_defense(entity_id: String, level: int, poison_pill_enabled: bool = fals
 func takeover_control(entity_id: String, bidder_id: String, required_percent: float = 50.0) -> Dictionary:
     if not entities.has(entity_id): return {"ok": false, "error": "entity_not_found"}
     if required_percent <= 0.0 or required_percent > 100.0: return {"ok": false, "error": "invalid_control_target"}
-    var current := get_voting_percent(entity_id, bidder_id)
+    var current: Variant = get_voting_percent(entity_id, bidder_id)
     if current < required_percent:
         return {"ok": false, "error": "insufficient_voting_control", "current_percent": current, "required_percent": required_percent}
-    var entity := entities[entity_id]
-    var board_percent := board_control_percent(entity_id, bidder_id)
-    var board_majority := board_percent > 50.0
+    var entity: Variant = entities[entity_id]
+    var board_percent: Variant = board_control_percent(entity_id, bidder_id)
+    var board_majority: Variant = board_percent > 50.0
     _record(entity_id, "takeover_control", {"bidder": bidder_id, "voting_percent": current, "board_percent": board_percent})
     return {"ok": true, "controlled": true, "voting_percent": current, "board_percent": board_percent, "board_majority": board_majority, "entity": entity.duplicate(true)}
 
 func get_control_snapshot(entity_id: String) -> Dictionary:
-    var entity := _entity(entity_id)
+    var entity: Variant = _entity(entity_id)
     if entity.is_empty(): return {}
-    var top_holder := ""
-    var top_ownership := 0.0
+    var top_holder: Variant = ""
+    var top_ownership: Variant = 0.0
     for item in holders(entity_id):
         if float(item["ownership"]) > top_ownership:
             top_holder = str(item["holder_id"])

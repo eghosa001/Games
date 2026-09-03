@@ -2,8 +2,8 @@ extends Node
 
 const DemandModel = preload("res://scripts/demand_model.gd")
 const SYSTEM_VERSION := 8
-var command_count := 0
-var last_command := ""
+var command_count: Variant = 0
+var last_command: Variant = ""
 var last_result: Dictionary = {}
 var demand_model = DemandModel.new()
 func execute(command: String, args: Dictionary = {}) -> Dictionary:
@@ -28,25 +28,25 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     if not bool(state.get("business_open", false)): return {"ok": false, "message": "There is no operating business yet."}
     var rivals = context.get("rivals"); var economy = context.get("economy"); var events = context.get("events"); var expansion = context.get("expansion"); var districts = context.get("districts"); var employee_system = context.get("employee_system"); var business_system = context.get("business_system")
     if rivals == null or economy == null or events == null or expansion == null or districts == null or employee_system == null or business_system == null: return {"ok": false, "message": "Simulation domain dependencies are unavailable."}
-    var selected_rival := int(state.get("selected_rival", 0)); var selected_district := int(state.get("selected_district", 0)); var performance := int(state.get("last_profit", 0)); var employee_result: Dictionary = employee_system.daily_update(performance)
+    var selected_rival: Variant = int(state.get("selected_rival", 0)); var selected_district := int(state.get("selected_district", 0)); var performance := int(state.get("last_profit", 0)); var employee_result: Dictionary = employee_system.daily_update(performance)
     for warning in employee_result.get("warnings", []): _append_log(state, "STAFF: " + str(warning))
     economy.end_market_day(); business_system.produce_goods()
     var game_state = _game_state()
     if game_state != null:
         state["finished_goods"] = int(game_state.get_value("production", "finished_goods", state.get("finished_goods", 0))); state["cash"] = int(game_state.get_value("economy", "cash", state.get("cash", 0)))
-    var finished_goods := int(state.get("finished_goods", 0)); var production_config: Dictionary = {"operating_cost":75,"reputation_effect":1,"production_time":1.0,"base_price":110}
+    var finished_goods: Variant = int(state.get("finished_goods", 0)); var production_config: Dictionary = {"operating_cost":75,"reputation_effect":1,"production_time":1.0,"base_price":110}
     if "production" in business_system and business_system.production != null: production_config = business_system.production.get_product_config("consumer_goods")
     var production_run: Dictionary = {}
     if "production" in business_system and business_system.production != null and business_system.production.system != null: production_run = business_system.production.system.last_run.duplicate(true)
-    var production_operating_cost := int(production_run.get("operating_cost", 0))
+    var production_operating_cost: Variant = int(production_run.get("operating_cost", 0))
     if production_operating_cost <= 0:
-        var configured_cost := int(production_config.get("operating_cost", 75)); var produced_cycles := int(production_run.get("cycles", 0)); production_operating_cost = configured_cost * max(0, produced_cycles)
-    var production_reputation_effect := int(production_run.get("reputation_effect", production_config.get("reputation_effect", 1)))
+        var configured_cost: Variant = int(production_config.get("operating_cost", 75)); var produced_cycles := int(production_run.get("cycles", 0)); production_operating_cost = configured_cost * max(0, produced_cycles)
+    var production_reputation_effect: Variant = int(production_run.get("reputation_effect", production_config.get("reputation_effect", 1)))
     var rival_price: int = int(rivals.rivals[0]["price"]); var player_price := int(state.get("player_price", int(production_config.get("base_price", 110)))); var reputation := int(state.get("reputation", 0)); var quality := int(production_run.get("quality", 75)); var marketing_level := int(state.get("marketing_level", 0)); var contract_bonus := int(state.get("contract_bonus", 0)); var employee_productivity := float(employee_system.get_productivity_multiplier("factory_001")); var district_mult := float(districts.business_multiplier("Consumer Goods")); var pressure := float(rivals.district_pressure(selected_district)); var alliance: Dictionary = rivals.alliance_bonus(selected_rival); var deal: Dictionary = rivals.deal_bonus(selected_rival)
     var demand_result: Dictionary = demand_model.calculate("consumer_goods", float(player_price), float(rival_price), reputation, quality, marketing_level, contract_bonus, employee_productivity, district_mult, pressure, float(alliance.get("sales", 0)), float(deal.get("sales", 0)))
     if not bool(demand_result.get("ok", false)): return {"ok": false, "message": "Customer demand model is unavailable."}
-    var customer_demand := int(demand_result["demand"]); var units_sold := min(customer_demand, finished_goods); var sales: int = units_sold * player_price; finished_goods -= units_sold; var demand_modifiers: Dictionary = demand_result.get("modifiers", {}); _append_log(state, "MARKET: price $%d vs rival $%d -> demand %d; sold %d." % [player_price, rival_price, customer_demand, units_sold])
-    var contract_income := 0; var contract_penalty := 0; var contract_result: Dictionary = _execute_contract(state, finished_goods)
+    var customer_demand: Variant = int(demand_result["demand"]); var units_sold := min(customer_demand, finished_goods); var sales: int = units_sold * player_price; finished_goods -= units_sold; var demand_modifiers: Dictionary = demand_result.get("modifiers", {}); _append_log(state, "MARKET: price $%d vs rival $%d -> demand %d; sold %d." % [player_price, rival_price, customer_demand, units_sold])
+    var contract_income: Variant = 0; var contract_penalty := 0; var contract_result: Dictionary = _execute_contract(state, finished_goods)
     if bool(contract_result.get("ok", false)):
         contract_income = int(contract_result.get("revenue", 0)); contract_penalty = int(contract_result.get("penalty", 0)); finished_goods -= int(contract_result.get("delivered", 0)); _append_log(state, str(contract_result.get("log", "")))
     var wages: int = int(employee_system.get_daily_wage_total()); var capacity_level := int(state.get("capacity_level", 1)); var administrative_overhead := 650 + capacity_level * 100; var profit: int = sales + contract_income - contract_penalty - wages - administrative_overhead - production_operating_cost
@@ -54,11 +54,11 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     if profit >= 0: reputation += production_reputation_effect
     else: reputation = max(0, reputation - 1)
     state["reputation"] = reputation
-    var debt := int(state.get("debt", 0)); var loan_payment := int(state.get("loan_payment", 0))
+    var debt: Variant = int(state.get("debt", 0)); var loan_payment := int(state.get("loan_payment", 0))
     if debt > 0:
-        var interest := max(100, int(round(debt * 0.012))); state["cash"] = int(state["cash"]) - interest; _append_log(state, "BANK: $%s interest charged." % _money(interest))
+        var interest: Variant = max(100, int(round(debt * 0.012))); state["cash"] = int(state["cash"]) - interest; _append_log(state, "BANK: $%s interest charged." % _money(interest))
     if loan_payment > 0 and debt > 0:
-        var payment := min(loan_payment, debt)
+        var payment: Variant = min(loan_payment, debt)
         if int(state["cash"]) >= payment: state["cash"] -= payment; debt -= payment; state["debt"] = debt
         else: _append_log(state, "BANK: missed loan payment; credit reputation damaged."); state["reputation"] = max(0, int(state["reputation"]) - 2)
     state["day"] = int(state.get("day", 1)) + 1

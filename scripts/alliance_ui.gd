@@ -17,7 +17,7 @@ func _build() -> void:
     panel.position = Vector2(810, 430)
     panel.size = Vector2(450, 250)
     add_child(panel)
-    var title := Label.new()
+    var title: Variant = Label.new()
     title.text = "ALLIANCE COUNCIL"
     title.position = Vector2(16, 10); title.size = Vector2(400, 28)
     title.add_theme_font_size_override("font_size", 18); panel.add_child(title)
@@ -32,15 +32,15 @@ func _build() -> void:
     _button("PROMOTE DIRECTOR", Vector2(300, 182), _director)
 
 func _button(text: String, pos: Vector2, callback: Callable) -> void:
-    var button := Button.new(); button.text = text; button.position = pos; button.size = Vector2(132, 42)
+    var button: Variant = Button.new(); button.text = text; button.position = pos; button.size = Vector2(132, 42)
     button.pressed.connect(callback); panel.add_child(button)
 
 func _create_alliance() -> void:
     if alliance_system == null: return
-    var existing := alliance_system.get_member_alliance(PLAYER_ID)
+    var existing: Variant = alliance_system.get_member_alliance(PLAYER_ID)
     if not existing.is_empty(): return
-    var game := get_tree().current_scene
-    var result := alliance_system.create_alliance(PLAYER_ID, "RENEW Strategic Alliance", 5000)
+    var game: Variant = get_tree().current_scene
+    var result: Variant = alliance_system.create_alliance(PLAYER_ID, "RENEW Strategic Alliance", 5000)
     if bool(result.get("ok", false)) and game != null:
         game.cash = max(0, int(game.cash) - 5000)
         game.message = "RENEW Strategic Alliance created. You are Chairman."
@@ -48,33 +48,33 @@ func _create_alliance() -> void:
 
 func _contribute() -> void:
     if alliance_system == null: return
-    var game := get_tree().current_scene
+    var game: Variant = get_tree().current_scene
     if game == null or int(game.cash) < 1000: return
-    var result := alliance_system.contribute(PLAYER_ID, 1000)
+    var result: Variant = alliance_system.contribute(PLAYER_ID, 1000)
     if bool(result.get("ok", false)):
         game.cash -= 1000; game.message = String(result.get("message", "Contribution made."))
     _refresh()
 
 func _project() -> void:
-    var alliance := _player_alliance()
+    var alliance: Variant = _player_alliance()
     if alliance.is_empty(): return
-    var result := alliance_system.add_project(alliance["id"], "Joint Market Network", "commercial", 2500)
+    var result: Variant = alliance_system.add_project(alliance["id"], "Joint Market Network", "commercial", 2500)
     _message(result)
 
 func _infra() -> void:
-    var alliance := _player_alliance()
+    var alliance: Variant = _player_alliance()
     if alliance.is_empty(): return
-    var result := alliance_system.add_infrastructure(alliance["id"], "Alliance Logistics Hub", 1, 2000)
+    var result: Variant = alliance_system.add_infrastructure(alliance["id"], "Alliance Logistics Hub", 1, 2000)
     _message(result)
 
 func _research() -> void:
-    var alliance := _player_alliance()
+    var alliance: Variant = _player_alliance()
     if alliance.is_empty(): return
-    var result := alliance_system.fund_research(alliance["id"], "Shared Production Research", 1500)
+    var result: Variant = alliance_system.fund_research(alliance["id"], "Shared Production Research", 1500)
     _message(result)
 
 func _director() -> void:
-    var alliance := _player_alliance()
+    var alliance: Variant = _player_alliance()
     if alliance.is_empty(): return
     var members: Dictionary = alliance.get("members", {})
     for member in members.keys():
@@ -83,7 +83,7 @@ func _director() -> void:
     _message({"message": "No other member is available for Director appointment."})
 
 func _message(result: Dictionary) -> void:
-    var game := get_tree().current_scene
+    var game: Variant = get_tree().current_scene
     if game != null: game.message = String(result.get("message", "Alliance action completed."))
     _refresh()
 
@@ -92,7 +92,7 @@ func _player_alliance() -> Dictionary:
 
 func _refresh() -> void:
     if status == null: return
-    var alliance := _player_alliance()
+    var alliance: Variant = _player_alliance()
     if alliance.is_empty():
         status.text = "No alliance founded. Create one to establish a persistent organization."
         return

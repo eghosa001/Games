@@ -5,20 +5,20 @@ const SYSTEM_VERSION := 2
 const STAGES := ["source", "extraction", "transport", "processing", "manufacturing", "warehouse", "distribution", "retail"]
 const RESOURCE_BASE_COST := {"materials":38.0,"packaging":28.0,"fuel":52.0,"food":34.0}
 
-var network_stock := {"materials":0,"packaging":0,"fuel":0,"food":0}
-var stage_state := {}
+var network_stock: Variant = {"materials":0,"packaging":0,"fuel":0,"food":0}
+var stage_state: Variant = {}
 var routes: Array = []
 var shipments: Array = []
 var shortages_today: Array[String] = []
 var disruptions_today: Array[String] = []
-var shipped_today := 0
-var transport_cost_today := 0
-var delay_today := 0
-var disruption_level := 0
-var competitor_pressure := 0
-var day := 1
-var valid_resources := ["materials","packaging","fuel","food"]
-var resource_regions := {"materials":5,"packaging":0,"fuel":2,"food":3}
+var shipped_today: Variant = 0
+var transport_cost_today: Variant = 0
+var delay_today: Variant = 0
+var disruption_level: Variant = 0
+var competitor_pressure: Variant = 0
+var day: Variant = 1
+var valid_resources: Variant = ["materials","packaging","fuel","food"]
+var resource_regions: Variant = {"materials":5,"packaging":0,"fuel":2,"food":3}
 
 func _init() -> void:
     for stage in STAGES:

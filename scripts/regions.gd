@@ -7,7 +7,7 @@ class_name RenewRegions
 const MAX_MARKET_LEVEL := 2.25
 const MIN_MARKET_LEVEL := 0.75
 
-var regions := [
+var regions: Variant = [
     {"name":"Old Market Region","tier":1,"rep":0,"population":850000,"labor_supply":1.05,"wage_level":0.95,"demand":1.15,"logistics":1.10,"labor":1.00,"competition":0.85,"growth":0.02,"special":"Consumer trade hub","industry":"Consumer Goods","resource":"packaging","distance":0,"local_reputation":0.0,"market_size":1.00},
     {"name":"Industrial Belt Region","tier":2,"rep":15,"population":620000,"labor_supply":1.18,"wage_level":1.10,"demand":1.05,"logistics":0.90,"labor":1.10,"competition":1.15,"growth":0.025,"special":"Factory efficiency","industry":"Building Materials","resource":"materials","distance":1,"local_reputation":0.0,"market_size":0.82},
     {"name":"River Port Region","tier":3,"rep":30,"population":540000,"labor_supply":0.98,"wage_level":1.05,"demand":1.20,"logistics":0.72,"labor":1.05,"competition":1.05,"growth":0.035,"special":"Import/export gateway","industry":"Consumer Goods","resource":"fuel","distance":2,"local_reputation":0.0,"market_size":0.74},
@@ -15,18 +15,18 @@ var regions := [
     {"name":"Northern Growth Corridor","tier":4,"rep":50,"population":430000,"labor_supply":0.92,"wage_level":1.20,"demand":1.38,"logistics":1.00,"labor":1.20,"competition":1.30,"growth":0.055,"special":"Fast-growing market","industry":"Consumer Goods","resource":"packaging","distance":4,"local_reputation":0.0,"market_size":0.61},
     {"name":"Resource Basin","tier":5,"rep":70,"population":290000,"labor_supply":1.08,"wage_level":0.85,"demand":0.92,"logistics":1.35,"labor":0.85,"competition":0.75,"growth":0.018,"special":"Cheap raw resources","industry":"Building Materials","resource":"materials","distance":5,"local_reputation":0.0,"market_size":0.45}
 ]
-var selected := 0
-var market_levels := [1.0,1.0,1.0,1.0,1.0,1.0]
-var player_presence := [1,0,0,0,0,0]
-var rival_presence := [1,1,1,0,0,0]
-var infrastructure := [0,0,0,0,0,0]
+var selected: Variant = 0
+var market_levels: Variant = [1.0,1.0,1.0,1.0,1.0,1.0]
+var player_presence: Variant = [1,0,0,0,0,0]
+var rival_presence: Variant = [1,1,1,0,0,0]
+var infrastructure: Variant = [0,0,0,0,0,0]
 var trade_routes: Dictionary = {}
-var opportunity_rotation := 0
+var opportunity_rotation: Variant = 0
 var regional_businesses: Dictionary = {}
 var regional_prices: Dictionary = {}
 var regional_wages: Dictionary = {}
 var local_reputation: Array = [0.0,0.0,0.0,0.0,0.0,0.0]
-var last_economic_update := 0
+var last_economic_update: Variant = 0
 
 func _normalize() -> void:
     while market_levels.size() < regions.size(): market_levels.append(1.0)
@@ -107,9 +107,9 @@ func establish_trade_route(origin:int, destination:int, cash:int, reputation:int
     _normalize(); update_unlocks(reputation)
     if origin < 0 or origin >= regions.size() or destination < 0 or destination >= regions.size() or origin == destination: return {"ok":false,"message":"Choose two different regions for a trade route."}
     if player_presence[origin] <= 0 or player_presence[destination] <= 0: return {"ok":false,"message":"You need operations in both regions before connecting them."}
-    var key := "%d-%d" % [min(origin,destination),max(origin,destination)]
+    var key: Variant = "%d-%d" % [min(origin,destination),max(origin,destination)]
     if trade_routes.has(key): return {"ok":false,"message":"This trade corridor is already active."}
-    var distance := abs(origin-destination)
+    var distance: Variant = abs(origin-destination)
     var cost: int = 10000 + distance*5000 + int(regions[destination]["tier"])*2000
     if cash < cost: return {"ok":false,"message":"Trade corridor requires $%s."%_money(cost)}
     trade_routes[key] = {"level":1,"origin":origin,"destination":destination}
@@ -117,7 +117,7 @@ func establish_trade_route(origin:int, destination:int, cash:int, reputation:int
     return {"ok":true,"cost":cost,"message":"Trade corridor connected %s and %s."%[regions[origin]["name"],regions[destination]["name"]]}
 
 func trade_route_bonus(index:int) -> float:
-    var bonus := 0.0
+    var bonus: Variant = 0.0
     for key in trade_routes:
         var route:Dictionary = trade_routes[key]
         if int(route["origin"]) == index or int(route["destination"]) == index: bonus += 0.08 * int(route["level"])
@@ -127,15 +127,15 @@ func _recalculate_economy(day:int) -> void:
     _normalize()
     for i in range(regions.size()):
         var r: Dictionary = regions[i]
-        var population_growth := 1.0 + float(r["growth"])
+        var population_growth: Variant = 1.0 + float(r["growth"])
         r["population"] = max(100000, int(round(float(r["population"]) * population_growth)))
         r["market_size"] = clamp(float(r.get("market_size", 0.5)) * population_growth, 0.35, 2.5)
-        var pressure := float(r["competition"]) * (0.04 * float(rival_presence[i]))
-        var infrastructure_effect := float(infrastructure[i]) * 0.04
-        var labor_tightness := max(0.0, 1.0 - float(r["labor_supply"]) + float(player_presence[i]) * 0.04)
-        var wage := float(r["wage_level"]) * (1.0 + labor_tightness * 0.18 + pressure * 0.15 - infrastructure_effect * 0.08)
+        var pressure: Variant = float(r["competition"]) * (0.04 * float(rival_presence[i]))
+        var infrastructure_effect: Variant = float(infrastructure[i]) * 0.04
+        var labor_tightness: Variant = max(0.0, 1.0 - float(r["labor_supply"]) + float(player_presence[i]) * 0.04)
+        var wage: Variant = float(r["wage_level"]) * (1.0 + labor_tightness * 0.18 + pressure * 0.15 - infrastructure_effect * 0.08)
         regional_wages[i] = clamp(wage, 0.65, 1.80)
-        var market_shift := float(r["growth"]) + float(local_reputation[i]) * 0.0008 + trade_route_bonus(i) * 0.03 - pressure * 0.02
+        var market_shift: Variant = float(r["growth"]) + float(local_reputation[i]) * 0.0008 + trade_route_bonus(i) * 0.03 - pressure * 0.02
         market_levels[i] = clamp(float(market_levels[i]) + market_shift, MIN_MARKET_LEVEL, MAX_MARKET_LEVEL)
         r["demand"] = clamp(float(r["demand"]) * (1.0 + float(r["growth"]) * 0.35), 0.70, 2.00)
         r["logistics"] = clamp(float(r["logistics"]) * (1.0 - infrastructure_effect * 0.12 - trade_route_bonus(i) * 0.05), 0.50, 1.60)
@@ -146,15 +146,15 @@ func _recalculate_economy(day:int) -> void:
 
 func _simulate_regional_businesses(index:int, day:int) -> void:
     var list: Array = regional_businesses.get(index, [])
-    var desired := max(1, int(round(float(regions[index]["market_size"]) * (2.0 + float(regions[index]["competition"])))))
+    var desired: Variant = max(1, int(round(float(regions[index]["market_size"]) * (2.0 + float(regions[index]["competition"])))))
     desired += rival_presence[index]
     while list.size() < desired:
-        var n := list.size() + 1
+        var n: Variant = list.size() + 1
         list.append({"id":"%d_%d"%[index,n],"name":"%s Operator %d"%[regions[index]["name"],n],"industry":regions[index]["industry"],"size":1,"market_share":0.0,"health":70.0 + float((n * 7) % 25),"local_reputation":30.0,"wage_multiplier":regional_wages.get(index,1.0),"last_day":day})
-    var total_share := 0.0
+    var total_share: Variant = 0.0
     for business in list:
-        var share := max(0.02, float(business.get("market_share",0.0)))
-        var adaptation := (float(regions[index]["demand"]) - 1.0) * 0.8 - (float(regions[index]["competition"]) - 1.0) * 0.35
+        var share: Variant = max(0.02, float(business.get("market_share",0.0)))
+        var adaptation: Variant = (float(regions[index]["demand"]) - 1.0) * 0.8 - (float(regions[index]["competition"]) - 1.0) * 0.35
         business["health"] = clamp(float(business.get("health",70.0)) + adaptation, 10.0, 100.0)
         business["wage_multiplier"] = regional_wages.get(index,1.0)
         business["last_day"] = day
@@ -187,8 +187,8 @@ func daily_update(day:int) -> Array[String]:
     return news
 
 func market_multiplier(industry:String) -> float:
-    var r := current()
-    var bonus := 1.0
+    var r: Variant = current()
+    var bonus: Variant = 1.0
     if industry == r["industry"]: bonus += 0.15
     if industry == "Food Processing" and r["special"] == "Food supply abundance": bonus += 0.12
     bonus += trade_route_bonus(selected)
@@ -228,7 +228,7 @@ func register_business(index:int, business_name:String, industry:String, size:in
     _normalize()
     if index < 0 or index >= regions.size(): return {"ok":false,"error":"invalid_region"}
     var list: Array = regional_businesses.get(index, [])
-    var id := "%d_player_%d" % [index,list.size()+1]
+    var id: Variant = "%d_player_%d" % [index,list.size()+1]
     list.append({"id":id,"name":business_name,"industry":industry,"size":max(1,size),"market_share":0.02,"health":80.0,"local_reputation":reputation,"wage_multiplier":labor_cost(index),"last_day":last_economic_update})
     regional_businesses[index] = list
     player_presence[index] = 1

@@ -8,7 +8,7 @@ var area_label: Label
 var upgrade_button: Button
 var area_button: Button
 var museum_button: Button
-var selected_area := "executive_offices"
+var selected_area: Variant = "executive_offices"
 var area_ids: Array = ["executive_offices", "board_room", "research", "training", "archives", "museum", "technology_center"]
 
 func _ready() -> void:
@@ -22,9 +22,9 @@ func _build_ui() -> void:
     panel.position = Vector2(25, 110)
     panel.size = Vector2(360, 340)
     add_child(panel)
-    var box := VBoxContainer.new()
+    var box: Variant = VBoxContainer.new()
     panel.add_child(box)
-    var title := Label.new()
+    var title: Variant = Label.new()
     title.text = "HEADQUARTERS"
     title.add_theme_font_size_override("font_size", 22)
     box.add_child(title)
@@ -35,7 +35,7 @@ func _build_ui() -> void:
     upgrade_button.text = "UPGRADE HEADQUARTERS"
     upgrade_button.pressed.connect(_upgrade_hq)
     box.add_child(upgrade_button)
-    var area_title := Label.new()
+    var area_title: Variant = Label.new()
     area_title.text = "Functional Areas"
     box.add_child(area_title)
     area_label = Label.new()
@@ -45,7 +45,7 @@ func _build_ui() -> void:
     area_button.text = "BUILD / UPGRADE SELECTED AREA"
     area_button.pressed.connect(_build_area)
     box.add_child(area_button)
-    var cycle := Button.new()
+    var cycle: Variant = Button.new()
     cycle.text = "NEXT AREA"
     cycle.pressed.connect(_next_area)
     box.add_child(cycle)
@@ -77,7 +77,7 @@ func _build_area() -> void:
     _refresh()
 
 func _next_area() -> void:
-    var index := area_ids.find(selected_area)
+    var index: Variant = area_ids.find(selected_area)
     selected_area = area_ids[(index + 1) % area_ids.size()]
     _refresh()
 
@@ -93,20 +93,20 @@ func _open_museum() -> void:
 func _refresh() -> void:
     if system == null or main == null: return
     var check: Dictionary = system.can_upgrade(int(main.get("cash")))
-    var next_text := "MAX LEVEL"
+    var next_text: Variant = "MAX LEVEL"
     if bool(check.get("ok", false)): next_text = "%s ($%s)" % [check["stage"], _money(int(check["cost"]))]
     elif system.get_stage_index() < 4: next_text = "%s" % check.get("reason", "Locked")
     status_label.text = "Stage: %s\nValue invested: $%s\nCash: $%s\nNext: %s\nAreas: %d/%d" % [system.get_stage(), _money(system.headquarters_value), _money(int(main.get("cash"))), next_text, _built_count(), area_ids.size()]
     upgrade_button.disabled = system.get_stage_index() >= 4
     var spec = system.AREA_SPECS[selected_area]
-    var built := system.has_area(selected_area)
-    var level := system.area_level(selected_area)
+    var built: Variant = system.has_area(selected_area)
+    var level: Variant = system.area_level(selected_area)
     area_label.text = "%s\nRequired stage: %s\nStatus: %s\nLevel: %d\nBase cost: $%s" % [spec["name"], system.STAGES[int(spec["min_stage"])], "Operational" if built else ("Unlocked" if system.get_stage_index() >= int(spec["min_stage"]) else "Locked"), level, _money(int(spec["cost"]) * max(1, level))]
     area_button.text = "UPGRADE %s" % spec["name"].to_upper() if built else "BUILD %s" % spec["name"].to_upper()
     museum_button.disabled = system == null or not system.museum_available()
 
 func _built_count() -> int:
-    var count := 0
+    var count: Variant = 0
     for area_id in area_ids:
         if system.has_area(area_id): count += 1
     return count

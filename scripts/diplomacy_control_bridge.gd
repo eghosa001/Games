@@ -6,13 +6,13 @@ extends Node
 
 var applied: Dictionary = {}
 var defense_pacts: Dictionary = {}
-var last_day := -1
+var last_day: Variant = -1
 
 func _process(_delta: float) -> void:
-    var tree := Engine.get_main_loop()
+    var tree: Variant = Engine.get_main_loop()
     var scene = tree.get_current_scene() if tree != null else null
     if scene == null: return
-    var day := int(scene.get("day"))
+    var day: Variant = int(scene.get("day"))
     if day == last_day: return
     last_day = day
     var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
@@ -22,7 +22,7 @@ func _process(_delta: float) -> void:
 func _ownership():
     var root = get_node_or_null("/root/RenewOwnershipSystem")
     if root != null: return root
-    var tree := Engine.get_main_loop()
+    var tree: Variant = Engine.get_main_loop()
     var scene = tree.get_current_scene() if tree != null else null
     return scene.get_node_or_null("OwnershipSystem") if scene != null else null
 
@@ -33,7 +33,7 @@ func _finance():
 func _sync(diplomacy, day: int) -> void:
     var active_ids: Dictionary = {}
     for treaty in diplomacy.list_treaties("active"):
-        var id := str(treaty.get("id", ""))
+        var id: Variant = str(treaty.get("id", ""))
         active_ids[id] = true
         _apply_treaty(treaty, day)
     for id in applied.keys():
@@ -41,11 +41,11 @@ func _sync(diplomacy, day: int) -> void:
     defense_pacts.clear()
     for treaty in diplomacy.list_treaties("active"):
         if str(treaty.get("type", "")) != "defense": continue
-        var a := str(treaty.get("party_a", "")); var b := str(treaty.get("party_b", ""))
+        var a: Variant = str(treaty.get("party_a", "")); var b := str(treaty.get("party_b", ""))
         defense_pacts[_defense_key(a, b)] = {"treaty_id": str(treaty.get("id", "")), "expires": int(treaty.get("end_day", -1))}
 
 func _apply_treaty(treaty: Dictionary, day: int) -> void:
-    var id := str(treaty.get("id", ""))
+    var id: Variant = str(treaty.get("id", ""))
     if id.is_empty(): return
     if not applied.has(id): applied[id] = {}
     var state: Dictionary = applied[id]
@@ -61,22 +61,22 @@ func _apply_territory(treaty: Dictionary, state: Dictionary) -> void:
     var ownership = _ownership()
     if ownership == null: return
     var terms: Dictionary = treaty.get("terms", {})
-    var territory_id := str(terms.get("territory_id", ""))
+    var territory_id: Variant = str(terms.get("territory_id", ""))
     if territory_id.is_empty(): return
-    var entity_id := "territory:%s" % territory_id
+    var entity_id: Variant = "territory:%s" % territory_id
     if not ownership.has_entity(entity_id):
         ownership.register_entity(entity_id, ownership.ENTITY_ASSET, 1000000, 1.0)
-        var initial_owner := str(terms.get("current_owner", treaty.get("party_b", "")))
+        var initial_owner: Variant = str(terms.get("current_owner", treaty.get("party_b", "")))
         if not initial_owner.is_empty(): ownership.issue_shares(entity_id, initial_owner, 1000000, ownership.VOTE_ORDINARY, "territory treaty initialization")
-    var recipient := str(terms.get("recipient", treaty.get("party_a", "")))
-    var donor := str(terms.get("transferor", terms.get("current_owner", treaty.get("party_b", ""))))
-    var transfer_percent := clampf(float(terms.get("transfer_percent", 0.0)), 0.0, 100.0)
+    var recipient: Variant = str(terms.get("recipient", treaty.get("party_a", "")))
+    var donor: Variant = str(terms.get("transferor", terms.get("current_owner", treaty.get("party_b", ""))))
+    var transfer_percent: Variant = clampf(float(terms.get("transfer_percent", 0.0)), 0.0, 100.0)
     if transfer_percent > 0.0 and not recipient.is_empty() and not donor.is_empty() and recipient != donor:
-        var donor_pct := ownership.get_ownership_percent(entity_id, donor)
-        var quantity := int(floor(1000000.0 * min(transfer_percent, donor_pct) / 100.0))
+        var donor_pct: Variant = ownership.get_ownership_percent(entity_id, donor)
+        var quantity: Variant = int(floor(1000000.0 * min(transfer_percent, donor_pct) / 100.0))
         if quantity > 0: ownership.transfer_shares(entity_id, donor, recipient, quantity, ownership.VOTE_ORDINARY, "territory treaty:%s" % treaty.get("id", ""))
-    var control_threshold := float(terms.get("control_threshold", 50.1))
-    var asset_value := max(0.0, float(terms.get("asset_value", terms.get("territory_value", 0.0))))
+    var control_threshold: Variant = float(terms.get("control_threshold", 50.1))
+    var asset_value: Variant = max(0.0, float(terms.get("asset_value", terms.get("territory_value", 0.0))))
     state["territory_id"] = territory_id
     state["entity_id"] = entity_id
     state["recipient"] = recipient
@@ -90,20 +90,20 @@ func _apply_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
     var ownership = _ownership()
     if ownership == null: return
     var terms: Dictionary = treaty.get("terms", {})
-    var venture_name := str(terms.get("venture_name", "JV %s" % treaty.get("id", "")))
-    var venture_id := "jv:%s" % treaty.get("id", "")
+    var venture_name: Variant = str(terms.get("venture_name", "JV %s" % treaty.get("id", "")))
+    var venture_id: Variant = "jv:%s" % treaty.get("id", "")
     if not ownership.has_entity(venture_id):
-        var created := ownership.register_entity(venture_id, ownership.ENTITY_JV, 1000000, 1.0)
+        var created: Variant = ownership.register_entity(venture_id, ownership.ENTITY_JV, 1000000, 1.0)
         if bool(created.get("ok", false)):
-            var a := str(treaty.get("party_a", "")); var b := str(treaty.get("party_b", ""))
-            var a_pct := clampf(float(terms.get("party_a_percent", 50.0)), 0.0, 100.0)
-            var b_pct := clampf(float(terms.get("party_b_percent", 100.0 - a_pct)), 0.0, 100.0)
+            var a: Variant = str(treaty.get("party_a", "")); var b := str(treaty.get("party_b", ""))
+            var a_pct: Variant = clampf(float(terms.get("party_a_percent", 50.0)), 0.0, 100.0)
+            var b_pct: Variant = clampf(float(terms.get("party_b_percent", 100.0 - a_pct)), 0.0, 100.0)
             if not a.is_empty() and a_pct > 0.0: ownership.issue_shares(venture_id, a, int(round(a_pct * 10000.0)), ownership.VOTE_ORDINARY, "joint venture formation")
             if not b.is_empty() and b_pct > 0.0: ownership.issue_shares(venture_id, b, int(round(b_pct * 10000.0)), ownership.VOTE_ORDINARY, "joint venture formation")
-    var asset_value := max(0.0, float(terms.get("asset_value", terms.get("initial_capital", terms.get("joint_capital", 0.0)))))
-    var asset_id := "jv_asset:%s" % treaty.get("id", "")
+    var asset_value: Variant = max(0.0, float(terms.get("asset_value", terms.get("initial_capital", terms.get("joint_capital", 0.0)))))
+    var asset_id: Variant = "jv_asset:%s" % treaty.get("id", "")
     if asset_value > 0.0 and not ownership.has_entity(asset_id):
-        var asset_created := ownership.register_entity(asset_id, ownership.ENTITY_ASSET, 1000000, 1.0)
+        var asset_created: Variant = ownership.register_entity(asset_id, ownership.ENTITY_ASSET, 1000000, 1.0)
         if bool(asset_created.get("ok", false)):
             ownership.issue_shares(asset_id, venture_id, 1000000, ownership.VOTE_ORDINARY, "joint venture asset capitalization")
     state["venture_id"] = venture_id
