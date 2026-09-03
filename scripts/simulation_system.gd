@@ -1,9 +1,11 @@
 extends Node
 
-const SYSTEM_VERSION := 7
+const DemandModel = preload("res://scripts/demand_model.gd")
+const SYSTEM_VERSION := 8
 var command_count := 0
 var last_command := ""
 var last_result: Dictionary = {}
+var demand_model = DemandModel.new()
 
 func execute(command: String, args: Dictionary = {}) -> Dictionary:
     command_count += 1; last_command = command
@@ -29,7 +31,6 @@ func _settle_sales(args: Dictionary) -> Dictionary:
 
 func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     if not bool(state.get("business_open", false)): return {"ok": false, "message": "There is no operating business yet."}
-
     var rivals = context.get("rivals")
     var economy = context.get("economy")
     var events = context.get("events")
@@ -48,12 +49,10 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     var employee_result: Dictionary = employee_system.daily_update(performance)
     for warning in employee_result.get("warnings", []): _append_log(state, "STAFF: " + str(warning))
 
-    # 2. Resource market update. Production sees the current market state.
+    # 2. Resource market update.
     economy.end_market_day()
 
-    # 3. Production. BusinessSystem calculates employee capacity, efficiency,
-    # technology, property condition and morale, while Production owns the
-    # resource requirements and consumes actual market stock.
+    # 3. Production.
     business_system.produce_goods()
     var game_state = _game_state()
     if game_state != null:
@@ -62,7 +61,6 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
 
     var finished_goods := int(state.get("finished_goods", 0))
 
-    # Production economics are configuration data, not hard-coded in the loop.
     var production_config: Dictionary = {"operating_cost":75,"reputation_effect":1,"production_time":1.0,"base_price":110}
     if "production" in business_system and business_system.production != null:
         production_config = business_system.production.get_product_config("consumer_goods")
@@ -76,44 +74,41 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
         production_operating_cost = configured_cost * max(0, produced_cycles)
     var production_reputation_effect := int(production_run.get("reputation_effect", production_config.get("reputation_effect", 1)))
 
-    # 4. Sales: formal customer-demand model.
-    # Price is the first-order driver: cheaper than the competitor increases
-    # demand; more expensive decreases it. The remaining business factors are
-    # explicit modifiers applied to the same customer-demand calculation.
+    # 4. Sales: DemandModel owns all demand tuning. Simulation only supplies state.
     var rival_price: int = int(rivals.rivals[0]["price"])
     var player_price := int(state.get("player_price", int(production_config.get("base_price", 110))))
-    var relative_price := 1.0
-    if player_price > 0:
-        relative_price = float(rival_price) / float(player_price)
-    var price_modifier: float = clamp(1.0 + (relative_price - 1.0) * 0.90, 0.45, 1.45)
-
     var reputation := int(state.get("reputation", 0))
-    var reputation_modifier: float = clamp(1.0 + float(reputation) * 0.01, 0.80, 1.50)
-
     var quality := int(production_run.get("quality", 75))
-    var quality_modifier: float = clamp(0.75 + float(quality) * 0.005, 0.75, 1.25)
-
     var marketing_level := int(state.get("marketing_level", 0))
-    var marketing_modifier: float = clamp(1.0 + float(marketing_level) * 0.08, 1.0, 1.40)
-
     var contract_bonus := int(state.get("contract_bonus", 0))
-    var contract_modifier: float = clamp(1.0 + float(contract_bonus) * 0.01, 1.0, 1.30)
-
-    var employee_modifier: float = clamp(float(employee_system.get_productivity_multiplier("factory_001")), 0.50, 1.50)
-    var district_mult: float = clamp(float(districts.business_multiplier("Consumer Goods")), 0.50, 1.50)
-    var pressure: float = clamp(float(rivals.district_pressure(selected_district)), -0.50, 0.50)
-    var district_modifier: float = clamp(district_mult * (1.0 - pressure), 0.50, 1.50)
-
+    var employee_productivity := float(employee_system.get_productivity_multiplier("factory_001"))
+    var district_mult := float(districts.business_multiplier("Consumer Goods"))
+    var pressure := float(rivals.district_pressure(selected_district))
     var alliance: Dictionary = rivals.alliance_bonus(selected_rival)
     var deal: Dictionary = rivals.deal_bonus(selected_rival)
-    var relationship_modifier: float = clamp(1.0 + float(alliance.get("sales", 0)) * 0.40 + float(deal.get("sales", 0)) * 0.45, 0.50, 1.80)
 
-    var base_customer_demand := 55.0
-    var customer_demand_float: float = base_customer_demand * price_modifier * reputation_modifier * quality_modifier * marketing_modifier * contract_modifier * employee_modifier * district_modifier * relationship_modifier
-    var customer_demand := clamp(int(round(customer_demand_float)), 0, 100)
+    var demand_result: Dictionary = demand_model.calculate(
+        "consumer_goods",
+        float(player_price),
+        float(rival_price),
+        reputation,
+        quality,
+        marketing_level,
+        contract_bonus,
+        employee_productivity,
+        district_mult,
+        pressure,
+        float(alliance.get("sales", 0)),
+        float(deal.get("sales", 0))
+    )
+    if not bool(demand_result.get("ok", false)):
+        return {"ok": false, "message": "Customer demand model is unavailable."}
+
+    var customer_demand := int(demand_result["demand"])
     var units_sold := min(customer_demand, finished_goods)
     var sales: int = units_sold * player_price
     finished_goods -= units_sold
+    var demand_modifiers: Dictionary = demand_result.get("modifiers", {})
 
     _append_log(state, "MARKET: price $%d vs rival $%d -> demand %d; sold %d." % [player_price, rival_price, customer_demand, units_sold])
 
@@ -127,7 +122,7 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
         finished_goods -= int(contract_result.get("delivered", 0))
         _append_log(state, str(contract_result.get("log", "")))
 
-    # 6. Wages. EmployeeSystem is authoritative for every salary.
+    # 6. Wages.
     var wages := employee_system.get_daily_wage_total()
     var capacity_level := int(state.get("capacity_level", 1))
     var administrative_overhead := 650 + capacity_level * 100
@@ -137,8 +132,10 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     state["last_sales"] = sales + contract_income
     state["last_customer_demand"] = customer_demand
     state["last_units_sold"] = units_sold
-    state["last_price_modifier"] = price_modifier
-    state["last_demand_modifiers"] = {"price":price_modifier,"reputation":reputation_modifier,"quality":quality_modifier,"marketing":marketing_modifier,"contracts":contract_modifier,"employee_productivity":employee_modifier,"district":district_modifier,"relationships":relationship_modifier}
+    state["last_price_modifier"] = float(demand_modifiers.get("price", 1.0))
+    state["last_demand_modifiers"] = demand_modifiers.duplicate(true)
+    state["last_demand_raw"] = float(demand_result.get("raw_demand", customer_demand))
+    state["last_relative_price"] = float(demand_result.get("relative_price", 1.0))
     state["last_profit"] = profit
     state["total_profit"] = int(state.get("total_profit", 0)) + profit
     if profit >= 0: reputation += production_reputation_effect
@@ -180,16 +177,16 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     expansion.unlock_from_reputation(int(state["reputation"]))
     districts.update_unlocks(int(state["reputation"]))
 
-    # 11-12. History and news are recorded after all daily outcomes are known.
+    # 11-12. History and news.
     var district_name: String = str(districts.current()["name"])
     _append_log(state, "DAY %d: %d sold | demand %d | price $%s vs rival $%s | sales $%s | profit $%s | production cost $%s | district %s." % [state["day"], units_sold, customer_demand, _money(player_price), _money(rival_price), _money(sales), _money(profit), _money(production_operating_cost), district_name])
     state["message"] = "Day %d closed. %d/%d demand sold at $%s; profit $%s; production cost $%s; empire profit $%s." % [state["day"], units_sold, customer_demand, _money(player_price), _money(profit), _money(production_operating_cost), _money(int(empire["profit"]))]
 
-    # END DAY: machine wear advances only after the complete loop has resolved.
+    # END DAY.
     var production_system = _production()
     if production_system != null: production_system.advance_day()
 
-    return {"ok": true,"message": state["message"],"state": state.duplicate(true),"contract": contract_result,"wages": wages,"production_operating_cost": production_operating_cost,"production_config": production_config,"employee_update": employee_result,"customer_demand":customer_demand,"units_sold":units_sold,"player_price":player_price,"competitor_price":rival_price,"demand_modifiers":state["last_demand_modifiers"]}
+    return {"ok": true,"message": state["message"],"state": state.duplicate(true),"contract": contract_result,"wages": wages,"production_operating_cost": production_operating_cost,"production_config": production_config,"employee_update": employee_result,"customer_demand":customer_demand,"units_sold":units_sold,"player_price":player_price,"competitor_price":rival_price,"demand_modifiers":demand_modifiers,"relative_price":float(demand_result.get("relative_price",1.0)),"raw_demand":float(demand_result.get("raw_demand",customer_demand))}
 
 func _execute_contract(state: Dictionary, available_after_sales: int) -> Dictionary:
     var contracts = _contracts()
