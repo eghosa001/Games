@@ -3,7 +3,7 @@ extends Node
 ## Canonical persistent gameplay-state boundary.
 ## Each gameplay fact has exactly one authoritative domain. Systems own behavior,
 ## while RenewGameState owns the data that behavior reads and mutates.
-const STATE_VERSION := 8
+const STATE_VERSION := 9
 
 const DOMAINS := [
     "player", "company", "properties", "businesses", "branches", "employees",
@@ -16,7 +16,7 @@ const DOMAIN_KEYS := {
     "player": ["day", "reputation"],
     "company": ["message", "log_lines"],
     "properties": ["owned", "inspected", "restoration", "stage", "selected_property", "catalog"],
-    "businesses": ["business_open", "business_id", "business_name", "business_type", "business_purpose", "origin_property_id", "origin_property_name", "origin_property_type", "capacity_level", "marketing_level", "player_price"],
+    "businesses": ["business_open", "business_id", "business_name", "business_type", "business_purpose", "industry_id", "origin_property_id", "origin_property_name", "origin_property_type", "capacity_level", "marketing_level", "player_price"],
     "branches": ["selected_expansion", "expansion"],
     "employees": ["roster", "employee_system"],
     "economy": ["cash", "last_sales", "last_profit", "total_profit"],
@@ -43,7 +43,7 @@ const DEFAULT_DOMAINS := {
     "player": {"day": 1, "reputation": 0},
     "company": {"message": "Inspect the abandoned warehouse. Your empire starts here.", "log_lines": []},
     "properties": {"owned": false, "inspected": false, "restoration": 0, "stage": "Neglected", "selected_property": 0, "catalog": []},
-    "businesses": {"business_open": false, "business_id": "", "business_name": "", "business_type": "", "business_purpose": "", "origin_property_id": "", "origin_property_name": "", "origin_property_type": "", "capacity_level": 1, "marketing_level": 0, "player_price": 110},
+    "businesses": {"business_open": false, "business_id": "", "business_name": "", "business_type": "", "business_purpose": "", "industry_id": "", "origin_property_id": "", "origin_property_name": "", "origin_property_type": "", "capacity_level": 1, "marketing_level": 0, "player_price": 110},
     "branches": {"selected_expansion": 0, "expansion": {}},
     "employees": {"roster": [], "employee_system": {}},
     "economy": {"cash": 25000, "last_sales": 0, "last_profit": 0, "total_profit": 0},
@@ -137,7 +137,7 @@ func _apply_flat_to_domains(flat: Dictionary) -> void:
     _migrate_key("company", flat, "message")
     _migrate_key("company", flat, "log_lines")
     for key in ["owned", "inspected", "restoration", "stage", "selected_property", "catalog"]: _migrate_key("properties", flat, key)
-    for key in ["business_open", "business_id", "business_name", "business_type", "business_purpose", "origin_property_id", "origin_property_name", "origin_property_type", "capacity_level", "marketing_level", "player_price"]: _migrate_key("businesses", flat, key)
+    for key in ["business_open", "business_id", "business_name", "business_type", "business_purpose", "industry_id", "origin_property_id", "origin_property_name", "origin_property_type", "capacity_level", "marketing_level", "player_price"]: _migrate_key("businesses", flat, key)
     _migrate_key("branches", flat, "selected_expansion")
     _migrate_key("employees", flat, "employee_system")
     if flat.has("roster") and flat["roster"] is Array: _migrate_key("employees", flat, "roster")
