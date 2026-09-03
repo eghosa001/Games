@@ -2,13 +2,26 @@ extends SceneTree
 
 # Architecture integrity smoke test for the Phase 37 Main -> World/Systems/UI tree.
 # This test is intentionally structural and read-only. It verifies that scripts can
-# load/instantiate and that the Main scene exposes its required architecture.
+# load/instantiate, that the Main scene exposes its required architecture, and that
+# gameplay scripts do not import retired legacy gameplay contracts.
 # Behavioral correctness and feature coverage belong to the dedicated feature suites.
 var passed := 0
 var failed := 0
 var failures: Array[String] = []
 var function_count := 0
 var script_count := 0
+
+const LEGACY_IMPORTS := [
+    "res://scripts/corporate.gd",
+    "res://scripts/corporate_legacy_system.gd",
+    "res://scripts/production.gd",
+    "res://scripts/supply_chain.gd"
+]
+
+# Existing migration bridge retained temporarily while the old Main API is removed.
+const LEGACY_IMPORT_EXCEPTIONS := {
+    "res://scripts/production.gd": ["res://scripts/business_system.gd"]
+}
 
 func _init() -> void:
     call_deferred("run")
@@ -36,6 +49,7 @@ func audit_all_scripts() -> void:
         script_count += 1
         var source := FileAccess.get_file_as_string(path)
         check(not source.is_empty(), "source readable: " + path)
+        _audit_legacy_imports(path, source)
         var script = load(path)
         check(script != null, "script parses: " + path)
         for method_name in _declared_functions(source):
@@ -44,6 +58,15 @@ func audit_all_scripts() -> void:
                 var instance = script.new()
                 check(instance != null and instance.has_method(method_name), "function structurally present: %s::%s" % [path, method_name])
                 if instance is Node: instance.free()
+
+func _audit_legacy_imports(path: String, source: String) -> void:
+    if path in LEGACY_IMPORTS:
+        return
+    for legacy_path in LEGACY_IMPORTS:
+        if not source.contains(legacy_path):
+            continue
+        var exceptions: Array = LEGACY_IMPORT_EXCEPTIONS.get(legacy_path, [])
+        check(path in exceptions, "legacy gameplay import prohibited: %s -> %s" % [path, legacy_path])
 
 func audit_main_screen() -> void:
     var scene = load("res://scenes/Main.tscn")
