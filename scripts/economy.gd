@@ -95,7 +95,7 @@ func end_market_day()->void:
         var d:Dictionary=resources[key]
         var target:=max(1.0,float(d.get("target_stock",100))); var stock:=max(0.0,float(d.get("stock",0)))
         var shortage:=clamp(1.0-stock/target,-1.0,1.0); var factor:=clamp(1.0+shortage*1.15,0.55,2.50)
-        var base_price:=float(d.get("base",d.get("price",30))); var target_price:=base_price*factor
+        var base_price:=float(d.get("base",d.get("price",30))); var target_price: float = base_price*factor
         var current:=float(d.get("price",base_price)); var drift:=clamp((target_price-current)*0.35,-12.0,18.0)
         d["price"]=clamp(int(round(current+drift+randi_range(-2,3))),10,250)
         d["stock"]=max(0,int(stock)+randi_range(-12,20)); resources[key]=d
