@@ -7,7 +7,7 @@ const ProductionSystem = preload("res://scripts/production_system.gd")
 var system = ProductionSystem.new()
 
 var recipe: Dictionary:
-    get: return {"materials":1,"packaging":1,"fuel":2}
+    get: return {"timber":1,"iron":1,"energy":2}
 var output_per_cycle: int:
     get: return int(system.get_product_config("consumer_goods").get("output_per_cycle",2))
 var quality: int:
