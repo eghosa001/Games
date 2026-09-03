@@ -49,7 +49,7 @@ func secure_resource(resource:String, parent)->Dictionary:
     if int(parent.reputation)<30: return {"ok":false,"message":"Build at least 30 reputation before buying permanent resource rights."}
     parent.cash-=cost
     player_resource_rights[resource]=int(player_resource_rights[resource])+1
-    return {"ok":true,"cost":cost,"message":"Permanent %s supply rights secured. Rival pressure on this resource is reduced."%resource
+    return {"ok":true,"cost":cost,"message":"Permanent %s supply rights secured. Rival pressure on this resource is reduced."%resource}
 
 func resource_discount(resource:String)->float:
     _normalize()
