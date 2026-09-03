@@ -185,13 +185,15 @@ func get_voting_power(entity_id: String, holder_id: String) -> float:
 
 func get_ownership_percent(entity_id: String, holder_id: String) -> float:
     var entity: Variant = _entity(entity_id)
-    var issued: Variant = float(entity.get("issued_shares", 0))
-    if issued <= 0.0: return 0.0
+    var denominator: float = float(entity.get("issued_shares", 0))
+    if str(entity.get("type", ENTITY_COMPANY)) == ENTITY_JV:
+        denominator = float(entity.get("authorized_shares", denominator))
+    if denominator <= 0.0: return 0.0
     var holder: Variant = entity.get("holders", {}).get(holder_id, {})
     var shares: Variant = 0
     for share_class_name in holder.get("classes", {}):
         shares += int(holder["classes"][share_class_name])
-    return float(shares) * 100.0 / issued
+    return float(shares) * 100.0 / denominator
 
 func get_voting_percent(entity_id: String, holder_id: String) -> float:
     var total: Variant = get_total_votes(entity_id)
