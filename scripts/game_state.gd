@@ -3,7 +3,7 @@ extends Node
 ## Canonical persistent gameplay-state boundary.
 ## Each gameplay fact has exactly one authoritative domain. Systems own behavior,
 ## while RenewGameState owns the data that behavior reads and mutates.
-const STATE_VERSION := 6
+const STATE_VERSION := 7
 
 const DOMAINS := [
     "player", "company", "properties", "businesses", "branches", "employees",
@@ -15,7 +15,7 @@ const DOMAINS := [
 const DOMAIN_KEYS := {
     "player": ["day", "reputation"],
     "company": ["message", "log_lines"],
-    "properties": ["owned", "inspected", "restoration", "stage"],
+    "properties": ["owned", "inspected", "restoration", "stage", "selected_property", "catalog"],
     "businesses": ["business_open", "capacity_level", "marketing_level", "player_price"],
     "branches": ["selected_expansion", "expansion"],
     "employees": ["roster", "employee_system"],
@@ -42,7 +42,7 @@ const DOMAIN_KEYS := {
 const DEFAULT_DOMAINS := {
     "player": {"day": 1, "reputation": 0},
     "company": {"message": "Inspect the abandoned warehouse. Your empire starts here.", "log_lines": []},
-    "properties": {"owned": false, "inspected": false, "restoration": 0, "stage": "Neglected"},
+    "properties": {"owned": false, "inspected": false, "restoration": 0, "stage": "Neglected", "selected_property": 0, "catalog": []},
     "businesses": {"business_open": false, "capacity_level": 1, "marketing_level": 0, "player_price": 110},
     "branches": {"selected_expansion": 0, "expansion": {}},
     "employees": {"roster": [], "employee_system": {}},
@@ -136,11 +136,9 @@ func _apply_flat_to_domains(flat: Dictionary) -> void:
     _migrate_key("player", flat, "day")
     _migrate_key("company", flat, "message")
     _migrate_key("company", flat, "log_lines")
-    for key in ["owned", "inspected", "restoration", "stage"]: _migrate_key("properties", flat, key)
+    for key in ["owned", "inspected", "restoration", "stage", "selected_property", "catalog"]: _migrate_key("properties", flat, key)
     for key in ["business_open", "capacity_level", "marketing_level", "player_price"]: _migrate_key("businesses", flat, key)
     _migrate_key("branches", flat, "selected_expansion")
-    # Legacy employee integers are intentionally ignored. Headcount is derived
-    # from EmployeeSystem; the canonical persistent employee data is the roster.
     _migrate_key("employees", flat, "employee_system")
     if flat.has("roster") and flat["roster"] is Array: _migrate_key("employees", flat, "roster")
     for key in ["cash", "last_sales", "last_profit", "total_profit"]: _migrate_key("economy", flat, key)
