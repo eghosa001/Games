@@ -163,15 +163,22 @@ func _refresh() -> void:
     for segment in ["budget", "standard", "premium", "industrial", "government"]:
         var segment_detail: Dictionary = segment_results.get(segment, {})
         var demand := int(segment_detail.get("final_demand", segment_detail.get("demand", 0)))
+        var base_demand := float(segment_detail.get("base_demand", max(1, demand)))
+        var ratio := clamp(float(demand) / maxf(base_demand, 1.0), 0.0, 1.0)
         var button := Button.new()
-        button.text = "%s   •   %d demand" % [segment.capitalize(), demand]
+        button.text = "%s   •   %d demand   %s" % [segment.capitalize(), demand, _demand_bar(ratio)]
         button.custom_minimum_size = Vector2(segment_list.size.x, 34)
         button.focus_mode = Control.FOCUS_NONE
         button.mouse_filter = Control.MOUSE_FILTER_STOP
+        button.tooltip_text = "Demand strength: %d%%. Tap for details." % int(round(ratio * 100.0))
         button.pressed.connect(_select_segment.bind(segment, product, player_price, rival_price, quality, reputation, marketing, district_multiplier))
         segment_list.add_child(button)
 
     _show_selected(segment_results, product, player_price, rival_price, quality, reputation, marketing, district_multiplier, relative)
+
+func _demand_bar(ratio: float) -> String:
+    var filled := clampi(int(round(ratio * 10.0)), 0, 10)
+    return "[" + "█".repeat(filled) + "░".repeat(10 - filled) + "]"
 
 func _select_segment(segment: String, product: String, player_price: int, rival_price: int, quality: int, reputation: int, marketing: int, district: float) -> void:
     selected_segment = segment
