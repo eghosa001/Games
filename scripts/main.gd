@@ -8,8 +8,6 @@ const GameplayCommandSystem = preload("res://scripts/gameplay_command_system.gd"
 
 var command_system = GameplayCommandSystem.new()
 
-# Compatibility state accessors. These are read/write facades for existing UI
-# code; GameState remains the single authoritative owner of the values.
 var cash: int:
     get: return _state_value("economy", "cash", 25000)
     set(value): _set_state_value("economy", "cash", value)
@@ -41,8 +39,8 @@ var business_open: bool:
     get: return _state_value("businesses", "business_open", false)
     set(value): _set_state_value("businesses", "business_open", value)
 var employees: int:
-    get: return _state_value("employees", "employees", 3)
-    set(value): _set_state_value("employees", "employees", value)
+    get: return command_system.employee_system.get_active_employee_count() if command_system != null else 0
+    set(_value): pass
 var capacity_level: int:
     get: return _state_value("businesses", "capacity_level", 1)
     set(value): _set_state_value("businesses", "capacity_level", value)
@@ -103,42 +101,29 @@ var log_lines: Array:
         return value.duplicate(true) if value is Array else []
     set(value): _set_state_value("company", "log_lines", value.duplicate(true))
 
-func _game_state():
-    return get_node_or_null("/root/RenewGameState")
-
+func _game_state(): return get_node_or_null("/root/RenewGameState")
 func _state_value(domain: String, key: String, default_value):
     var state = _game_state()
-    if state == null:
-        return default_value
-    return state.get_value(domain, key, default_value)
-
+    return default_value if state == null else state.get_value(domain, key, default_value)
 func _set_state_value(domain: String, key: String, value) -> void:
     var state = _game_state()
-    if state != null:
-        state.set_value(domain, key, value)
+    if state != null: state.set_value(domain, key, value)
 
 func _ready() -> void:
     add_child(command_system)
     command_system.initialize()
     refresh_ui()
 
-func _process(_delta: float) -> void:
-    refresh_ui()
-
-func refresh_ui() -> void:
-    # Central UI refresh hook. Existing draw/UI code can subscribe here as the
-    # presentation layer is migrated away from Main's gameplay implementation.
-    queue_redraw()
+func _process(_delta: float) -> void: refresh_ui()
+func refresh_ui() -> void: queue_redraw()
 
 func _dispatch(command: String, args: Array = []) -> void:
-    if command_system == null:
-        return
+    if command_system == null: return
     command_system.callv(command, args)
     refresh_ui()
 
 func _input(event: InputEvent) -> void:
-    if event is not InputEventKey or not event.pressed or event.echo:
-        return
+    if event is not InputEventKey or not event.pressed or event.echo: return
     match event.keycode:
         KEY_I: _dispatch("inspect_property")
         KEY_A: _dispatch("acquire_property")
@@ -169,8 +154,6 @@ func _input(event: InputEvent) -> void:
         KEY_F5: _dispatch("save_game")
         KEY_F9: _dispatch("load_game")
 
-# Public command handlers retained as the UI-facing API. They only dispatch;
-# they do not own gameplay rules or mutate gameplay state themselves.
 func inspect_property() -> void: _dispatch("inspect_property")
 func acquire_property() -> void: _dispatch("acquire_property")
 func restore_property() -> void: _dispatch("restore_property")
