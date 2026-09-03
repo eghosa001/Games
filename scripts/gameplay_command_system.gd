@@ -11,11 +11,6 @@ const ContractCommandSystem = preload("res://scripts/contract_command_system.gd"
 const RelationshipCommandSystem = preload("res://scripts/relationship_command_system.gd")
 const ExpansionCommandSystem = preload("res://scripts/expansion_command_system.gd")
 const SaveSystem = preload("res://scripts/save_system.gd")
-const Economy = preload("res://scripts/economy.gd")
-const Rivals = preload("res://scripts/competitors.gd")
-const Events = preload("res://scripts/events.gd")
-const Expansion = preload("res://scripts/expansion.gd")
-const Districts = preload("res://scripts/districts.gd")
 
 var property_system = PropertySystem.new()
 var business_system = BusinessSystem.new()
@@ -26,16 +21,14 @@ var contract_system = ContractCommandSystem.new()
 var relationship_system = RelationshipCommandSystem.new()
 var expansion_system = ExpansionCommandSystem.new()
 
-var economy = Economy.new()
-var rivals = Rivals.new()
-var events = Events.new()
-var expansion = Expansion.new()
-var districts = Districts.new()
-
 func _ready() -> void:
     add_child(property_system); add_child(business_system); add_child(employee_system)
     add_child(finance_system); add_child(supply_system); add_child(contract_system)
     add_child(relationship_system); add_child(expansion_system)
+    # Shared runtime models remain single instances across the domains that
+    # interact with them; state itself remains in GameState.
+    business_system.economy = supply_system.economy
+    supply_system.rivals = relationship_system.rivals
 
 func _state_value(domain: String, key: String, default_value):
     var state = get_node_or_null("/root/RenewGameState")
@@ -54,7 +47,7 @@ func _log(text: String) -> void:
 
 func initialize() -> void:
     randomize()
-    rivals._normalize()
+    relationship_system.rivals._normalize()
     expansion_system.initialize()
     if _state_value("company", "log_lines", []).is_empty():
         _log("Opportunity discovered: an abandoned warehouse in a growing district.")
@@ -90,10 +83,15 @@ func advance_day() -> void:
     var simulation = get_node_or_null("/root/RenewSimulationSystem")
     if simulation == null:
         _set_state("company", "message", "SimulationSystem is unavailable."); return
-    var result: Dictionary = simulation.advance_day(_simulation_state(), {"economy":economy,"rivals":rivals,"events":events,"expansion":expansion,"districts":districts})
+    var context := {"economy": supply_system.economy, "rivals": relationship_system.rivals, "events": _events(), "expansion": expansion_system.expansion, "districts": expansion_system.districts}
+    var result: Dictionary = simulation.advance_day(_simulation_state(), context)
     if not bool(result.get("ok", false)):
         _set_state("company", "message", str(result.get("message", "Unable to advance the day."))); return
     _apply_simulation_state(result.get("state", {}))
+
+func _events():
+    if not has_meta("events_model"): set_meta("events_model", load("res://scripts/events.gd").new())
+    return get_meta("events_model")
 
 func _simulation_state() -> Dictionary:
     return {"cash":_state_value("economy","cash",25000),"reputation":_state_value("player","reputation",0),"day":_state_value("player","day",1),"debt":_state_value("finance","debt",0),"loan_payment":_state_value("finance","loan_payment",0),"business_open":_state_value("businesses","business_open",false),"employees":_state_value("employees","employees",3),"capacity_level":_state_value("businesses","capacity_level",1),"marketing_level":_state_value("businesses","marketing_level",0),"player_price":_state_value("businesses","player_price",110),"finished_goods":_state_value("production","finished_goods",0),"last_sales":_state_value("economy","last_sales",0),"last_profit":_state_value("economy","last_profit",0),"total_profit":_state_value("economy","total_profit",0),"relationship":_state_value("competitors","relationship",15),"selected_rival":_state_value("competitors","selected_rival",0),"selected_expansion":_state_value("branches","selected_expansion",0),"supplier_choice":_state_value("supply_chain","supplier_choice",0),"contract_days":_state_value("contracts","contract_days",0),"contract_bonus":_state_value("contracts","contract_bonus",0),"acquisition_count":_state_value("ownership","acquisition_count",0),"transport_level":_state_value("supply_chain","transport_level",1),"transport_capacity":_state_value("supply_chain","transport_capacity",40),"selected_district":_state_value("regions","selected_district",0),"message":_state_value("company","message",""),"log_lines":_state_value("company","log_lines",[]).duplicate(true)}
