@@ -11,7 +11,11 @@ const SaveSystem = preload("res://scripts/save_system.gd")
 var property_system=PropertySystem.new(); var business_system=BusinessSystem.new(); var employee_system=EmployeeCommandSystem.new(); var finance_system=FinanceCommandSystem.new(); var supply_system=SupplyCommandSystem.new(); var contract_system=ContractCommandSystem.new(); var relationship_system=RelationshipCommandSystem.new(); var expansion_system=ExpansionCommandSystem.new()
 func _ready()->void:
     add_child(property_system); add_child(business_system); add_child(employee_system); add_child(finance_system); add_child(supply_system); add_child(contract_system); add_child(relationship_system); add_child(expansion_system)
-    business_system.economy=supply_system.economy; business_system.employee_system=employee_system; supply_system.rivals=relationship_system.rivals
+    business_system.economy=supply_system.economy
+    business_system.employee_system=employee_system
+    business_system.supply_chain.set_economy(supply_system.economy)
+    supply_system.set_chain(business_system.supply_chain)
+    supply_system.rivals=relationship_system.rivals
 func _state_value(domain:String,key:String,default_value):
     var state=get_node_or_null("/root/RenewGameState"); return default_value if state==null else state.get_value(domain,key,default_value)
 func _set_state(domain:String,key:String,value)->void:
