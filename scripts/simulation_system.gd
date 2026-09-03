@@ -220,7 +220,6 @@ func end_day(args: Dictionary = {}) -> Dictionary:
         economy.end_market_day()
     last_result = debt_result
     return debt_result
-
 func capture_state() -> Dictionary:
     var result: Dictionary = {"system_version":SYSTEM_VERSION,"command_count":command_count,"last_command":last_command,"last_result":last_result.duplicate(true)}
     var finance = _finance()
