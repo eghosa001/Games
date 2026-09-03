@@ -52,11 +52,18 @@ func get_industry(industry_id: String) -> Dictionary:
     return INDUSTRIES.get(industry_id, {}).duplicate(true)
 func get_business_purposes() -> Array:
     return PURPOSES.get(_origin_property_type(), []).duplicate(true)
-func get_business_purpose(index: int) -> Dictionary:
+func get_business_purpose(purpose) -> Dictionary:
     var choices: Array = get_business_purposes()
-    if index < 0 or index >= choices.size():
-        return {}
-    return choices[index].duplicate(true)
+    if purpose is int:
+        var index: int = int(purpose)
+        if index < 0 or index >= choices.size():
+            return {}
+        return choices[index].duplicate(true)
+    var purpose_id: String = str(purpose)
+    for choice in choices:
+        if str(choice.get("id", "")) == purpose_id:
+            return choice.duplicate(true)
+    return {}
 func open_business() -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)) or str(state_adapter.get_value("properties", "stage", "Neglected")) != "Operational":
         state_adapter.message("Finish restoration first.")
