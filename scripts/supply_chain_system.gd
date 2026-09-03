@@ -21,14 +21,19 @@ func _technology():return get_node_or_null("/root/RenewTechnologySystem")
 func _railway_effects()->Dictionary:
     var state:=get_node_or_null("/root/RenewGameState")
     return state.get_domain("supply_chain") if state!=null else {}
-func _transport_capacity(level:int)->float:
-    var base: float = 40.0+float(max(0,level-1))*20.0;var tech=_technology()
-    return base*tech.transport_capacity_multiplier() if tech!=null else base
-func _freight_cost(resource:String,amount:float,level:int)->int:
-    var distance_factor:=1.0
-    if economy!=null and economy.resources.has(resource):distance_factor=1.0+float(str(economy.resources[resource].get("region","Unknown")).length()%4)*0.05
-    var base_cost:=amount*(2.0+float(max(0,3-level)))*distance_factor
-    var effects:=_railway_effects();return int(round(base_cost*float(effects.get("transport_cost_multiplier",1.0))))
+func _transport_capacity(level: int) -> float:
+    var base: float = 40.0 + float(max(0, level - 1)) * 20.0
+    var tech = _technology()
+    if tech != null:
+        return base * tech.transport_capacity_multiplier()
+    return base
+func _freight_cost(resource: String, amount: float, level: int) -> int:
+    var distance_factor: float = 1.0
+    if economy != null and economy.resources.has(resource):
+        distance_factor = 1.0 + float(str(economy.resources[resource].get("region", "Unknown")).length() % 4) * 0.05
+    var base_cost: float = amount * (2.0 + float(max(0, 3 - level))) * distance_factor
+    var effects = _railway_effects()
+    return int(round(base_cost * float(effects.get("transport_cost_multiplier", 1.0))))
 func procure(resource:String,amount:float,cash:int,transport_level:int=1)->Dictionary:
     if economy==null or not economy.resources.has(resource) or amount<=0:return {"ok":false,"reason":"invalid_resource"}
     var capacity:=_transport_capacity(transport_level);var effects:=_railway_effects();var delivery_multiplier:=float(effects.get("resource_delivery_multiplier",1.0));var delivered_amount:=min(WAREHOUSE_LIMIT-stock(resource),amount*delivery_multiplier)
@@ -57,7 +62,8 @@ func consume_furniture_inputs(cycles:int)->Dictionary:
     var check:=can_make_furniture(cycles);if not check["ok"]:return check
     var run_cycles:=int(check["cycles"]);for resource in FURNITURE_INPUTS:warehouse[resource]-=float(FURNITURE_INPUTS[resource])*run_cycles
     last_operation={"type":"furniture_factory_inputs","cycles":run_cycles,"consumed":{"timber":FURNITURE_INPUTS["timber"]*run_cycles,"metal":FURNITURE_INPUTS["metal"]*run_cycles,"energy":FURNITURE_INPUTS["energy"]*run_cycles}};return {"ok":true,"cycles":run_cycles,"consumed":last_operation["consumed"].duplicate(true)}
-func receive_furniture(amount:int)->void:warehouse["furniture"]=min(WAREHOUSE_LIMIT,stock("furniture")+max(0,amount))
+func receive_furniture(amount: int) -> void:
+    warehouse["furniture"] = min(WAREHOUSE_LIMIT, stock("furniture") + max(0, amount))
 func sell_furniture(amount:int,price:int)->Dictionary:
     var sold:=min(max(0,amount),int(floor(stock("furniture"))));var revenue: int = sold*max(0,price);warehouse["furniture"]-=sold;last_operation={"type":"customer_sale","amount":sold,"price":price,"revenue":revenue};return {"ok":sold>0,"sold":sold,"revenue":revenue}
 func capture_state()->Dictionary:return {"system_version":SYSTEM_VERSION,"warehouse":warehouse_snapshot(),"total_freight_cost":total_freight_cost,"last_operation":last_operation.duplicate(true)}

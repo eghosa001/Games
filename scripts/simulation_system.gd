@@ -112,8 +112,15 @@ func _append_log(state: Dictionary, text: String) -> void:
     if logs is Array: logs.append(text); if logs.size() > 100: logs.pop_front(); state["log_lines"] = logs
 func _money(value: int) -> String: return "%d" % value
 func end_day(args: Dictionary = {}) -> Dictionary:
-    var finance = _finance(); if finance == null: return {"ok": false, "message": "FinanceSystem is unavailable."}
-    var debt_result: Dictionary = finance.settle_debt_day(); var economy = _economy(); if economy != null: economy.end_market_day(); last_result = debt_result; return debt_result
+    var finance = _finance()
+    if finance == null:
+        return {"ok": false, "message": "FinanceSystem is unavailable."}
+    var debt_result: Dictionary = finance.settle_debt_day()
+    var economy = _economy()
+    if economy != null:
+        economy.end_market_day()
+    last_result = debt_result
+    return debt_result
 func capture_state() -> Dictionary:
     var result: Dictionary = {"system_version": SYSTEM_VERSION,"command_count": command_count,"last_command": last_command,"last_result": last_result.duplicate(true)}; var finance = _finance(); var production = _production()
     if finance != null: result["finance"] = finance.capture_state()

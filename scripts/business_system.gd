@@ -7,15 +7,26 @@ var state_adapter=DomainSystem.new();var economy=Economy.new();var production=Pr
 ## Phase 20: complete V1 industry definitions.
 const INDUSTRIES:={"furniture":{"id":"furniture","name":"Furniture","inputs":{"timber":1.0,"metal":0.5,"energy":2.0},"output":{"product":"furniture","units":1},"workers":3,"capacity":6,"operating_cost":70,"base_price":220,"market_demand":80},"construction_materials":{"id":"construction_materials","name":"Construction Materials","inputs":{"timber":1.0,"stone":2.0,"energy":2.5},"output":{"product":"construction_materials","units":1},"workers":4,"capacity":5,"operating_cost":95,"base_price":180,"market_demand":100},"consumer_electronics":{"id":"consumer_electronics","name":"Consumer Electronics","inputs":{"metal":1.0,"electronics_components":1.0,"energy":3.0},"output":{"product":"consumer_electronics","units":1},"workers":5,"capacity":4,"operating_cost":130,"base_price":360,"market_demand":70}}
 const PURPOSES:={"Warehouse":[{"id":"furniture_factory","name":"Furniture Factory","type":"Factory","product":"furniture","industry_id":"furniture"},{"id":"construction_materials_factory","name":"Construction Materials Plant","type":"Factory","product":"construction_materials","industry_id":"construction_materials"},{"id":"consumer_electronics_factory","name":"Consumer Electronics Factory","type":"Factory","product":"consumer_electronics","industry_id":"consumer_electronics"}],"Workshop":[{"id":"furniture_factory","name":"Furniture Factory","type":"Factory","product":"furniture","industry_id":"furniture"},{"id":"construction_materials_factory","name":"Construction Materials Plant","type":"Factory","product":"construction_materials","industry_id":"construction_materials"},{"id":"consumer_electronics_factory","name":"Consumer Electronics Factory","type":"Factory","product":"consumer_electronics","industry_id":"consumer_electronics"}],"Commercial Building":[{"id":"furniture_factory","name":"Furniture Factory","type":"Factory","product":"furniture","industry_id":"furniture"},{"id":"construction_materials_factory","name":"Construction Materials Plant","type":"Factory","product":"construction_materials","industry_id":"construction_materials"},{"id":"consumer_electronics_factory","name":"Consumer Electronics Factory","type":"Factory","product":"consumer_electronics","industry_id":"consumer_electronics"}]}
-func _ready()->void:add_child(state_adapter);add_child(supply_chain);supply_chain.set_economy(economy)
+func _ready() -> void:
+    add_child(state_adapter)
+    add_child(supply_chain)
+    supply_chain.set_economy(economy)
 func _technology() -> Node:
     return get_node_or_null("/root/RenewTechnologySystem")
-func get_industries()->Array:
-    var result:Array=[];for key in INDUSTRIES.keys():result.append(INDUSTRIES[key].duplicate(true));return result
-func get_industry(industry_id:String)->Dictionary:return INDUSTRIES.get(industry_id,{}).duplicate(true)
-func get_business_purposes()->Array:return PURPOSES.get(_origin_property_type(),[]).duplicate(true)
-func get_business_purpose(index:int)->Dictionary:
-    var choices:=get_business_purposes();if index<0 or index>=choices.size():return {};return choices[index].duplicate(true)
+func get_industries() -> Array:
+    var result: Array = []
+    for key in INDUSTRIES.keys():
+        result.append(INDUSTRIES[key].duplicate(true))
+    return result
+func get_industry(industry_id: String) -> Dictionary:
+    return INDUSTRIES.get(industry_id, {}).duplicate(true)
+func get_business_purposes() -> Array:
+    return PURPOSES.get(_origin_property_type(), []).duplicate(true)
+func get_business_purpose(index: int) -> Dictionary:
+    var choices: Array = get_business_purposes()
+    if index < 0 or index >= choices.size():
+        return {}
+    return choices[index].duplicate(true)
 func open_business() -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)) or str(state_adapter.get_value("properties", "stage", "Neglected")) != "Operational":
         state_adapter.message("Finish restoration first.")
