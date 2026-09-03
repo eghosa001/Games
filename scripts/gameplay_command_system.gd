@@ -5,7 +5,7 @@ const EmployeeCommandSystem=preload("res://scripts/employee_command_system.gd")
 const FinanceCommandSystem=preload("res://scripts/finance_command_system.gd")
 const SupplyCommandSystem=preload("res://scripts/supply_command_system.gd")
 const ContractCommandSystem=preload("res://scripts/contract_command_system.gd")
-const RelationshipCommandSystem=preload("res://scripts/relationship_command_system.gd")
+const RelationshipCommandSystem=preload("res://scripts/relationship_system.gd")
 const ExpansionCommandSystem=preload("res://scripts/expansion_command_system.gd")
 const SaveSystem=preload("res://scripts/save_system.gd")
 var property_system=PropertySystem.new();var business_system=BusinessSystem.new();var employee_system=EmployeeCommandSystem.new();var finance_system=FinanceCommandSystem.new();var supply_system=SupplyCommandSystem.new();var contract_system=ContractCommandSystem.new();var relationship_system=RelationshipCommandSystem.new();var expansion_system=ExpansionCommandSystem.new();var technology_system=null;var competitor_reactions=null
@@ -13,6 +13,8 @@ func _ready()->void:
     add_child(property_system);add_child(business_system);add_child(employee_system);add_child(finance_system);add_child(supply_system);add_child(contract_system);add_child(relationship_system);add_child(expansion_system)
     technology_system=get_node_or_null("/root/RenewTechnologySystem")
     business_system.economy=supply_system.economy;business_system.employee_system=employee_system;business_system.supply_chain.set_economy(supply_system.economy);supply_system.set_chain(business_system.supply_chain);supply_system.rivals=relationship_system.rivals
+    var simulation=get_node_or_null("/root/RenewSimulationSystem")
+    if simulation!=null and simulation.has_method("set_production_system"):simulation.set_production_system(business_system.production)
     competitor_reactions=get_node_or_null("/root/RenewCompetitorReactionSystem")
     if competitor_reactions!=null:competitor_reactions.set_rivals(relationship_system.rivals)
 func _state_value(domain:String,key:String,default_value):var state=get_node_or_null("/root/RenewGameState");return default_value if state==null else state.get_value(domain,key,default_value)
