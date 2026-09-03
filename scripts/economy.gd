@@ -11,6 +11,13 @@ const RESOURCE_CONFIG := {
     "food": {"base_price":30.0,"production_rate":28.0,"consumption_rate":24.0,"stock":220.0,"region":"River Plains"},
     "electronics": {"base_price":120.0,"production_rate":7.0,"consumption_rate":6.0,"stock":70.0,"region":"Tech Coast"}
 }
+# Legacy V1 names remain addressable for scarcity/procurement integrations.
+# They are compatibility resources, not additional GameState domains.
+const LEGACY_RESOURCE_CONFIG := {
+    "materials": {"base_price":60.0,"production_rate":18.0,"consumption_rate":14.0,"stock":120.0,"region":"Industrial Belt"},
+    "packaging": {"base_price":25.0,"production_rate":30.0,"consumption_rate":24.0,"stock":160.0,"region":"Manufacturing Belt"},
+    "fuel": {"base_price":45.0,"production_rate":22.0,"consumption_rate":18.0,"stock":180.0,"region":"Energy Basin"}
+}
 const MIN_PRICE := 10.0
 const MAX_PRICE := 500.0
 const PRICE_RESPONSE := 0.35
@@ -25,23 +32,28 @@ func _init() -> void:
 
 func _ensure_resources() -> void:
     for resource in RESOURCE_CONFIG:
-        if not resources.has(resource):
-            var c:Dictionary = RESOURCE_CONFIG[resource]
-            resources[resource] = {"base_price":c["base_price"],"current_price":c["base_price"],"price":c["base_price"],"supply":c["production_rate"],"demand":c["consumption_rate"],"production_rate":c["production_rate"],"consumption_rate":c["consumption_rate"],"stock":c["stock"],"scarcity":0.0,"region":c["region"],"target_stock":c["stock"]}
-        var d:Dictionary = resources[resource]
-        d["base_price"] = float(d.get("base_price",RESOURCE_CONFIG[resource]["base_price"]))
-        d["current_price"] = clamp(float(d.get("current_price",d.get("price",d["base_price"]))),MIN_PRICE,MAX_PRICE)
-        d["price"] = d["current_price"]
-        d["production_rate"] = float(d.get("production_rate",RESOURCE_CONFIG[resource]["production_rate"]))
-        d["consumption_rate"] = float(d.get("consumption_rate",RESOURCE_CONFIG[resource]["consumption_rate"]))
-        d["stock"] = max(0.0,float(d.get("stock",RESOURCE_CONFIG[resource]["stock"])))
-        d["supply"] = max(0.0,float(d.get("supply",d["production_rate"])))
-        d["demand"] = max(0.0,float(d.get("demand",d["consumption_rate"])))
-        d["region"] = String(d.get("region",RESOURCE_CONFIG[resource]["region"]))
-        d["target_stock"] = max(1.0,float(d.get("target_stock",RESOURCE_CONFIG[resource]["stock"])))
-        resources[resource] = d
-        market_multipliers[resource] = float(market_multipliers.get(resource,1.0))
-        suppliers[resource] = _default_suppliers(resource)
+        _ensure_resource(String(resource),RESOURCE_CONFIG[resource])
+    for resource in LEGACY_RESOURCE_CONFIG:
+        _ensure_resource(String(resource),LEGACY_RESOURCE_CONFIG[resource])
+
+func _ensure_resource(resource:String,config:Dictionary)->void:
+    if not resources.has(resource):
+        var c:Dictionary = config
+        resources[resource] = {"base_price":c["base_price"],"current_price":c["base_price"],"price":c["base_price"],"supply":c["production_rate"],"demand":c["consumption_rate"],"production_rate":c["production_rate"],"consumption_rate":c["consumption_rate"],"stock":c["stock"],"scarcity":0.0,"region":c["region"],"target_stock":c["stock"]}
+    var d:Dictionary = resources[resource]
+    d["base_price"] = float(d.get("base_price",config["base_price"]))
+    d["current_price"] = clamp(float(d.get("current_price",d.get("price",d["base_price"]))),MIN_PRICE,MAX_PRICE)
+    d["price"] = d["current_price"]
+    d["production_rate"] = float(d.get("production_rate",config["production_rate"]))
+    d["consumption_rate"] = float(d.get("consumption_rate",config["consumption_rate"]))
+    d["stock"] = max(0.0,float(d.get("stock",config["stock"])))
+    d["supply"] = max(0.0,float(d.get("supply",d["production_rate"])))
+    d["demand"] = max(0.0,float(d.get("demand",d["consumption_rate"])))
+    d["region"] = String(d.get("region",config["region"]))
+    d["target_stock"] = max(1.0,float(d.get("target_stock",config["stock"])))
+    resources[resource] = d
+    market_multipliers[resource] = float(market_multipliers.get(resource,1.0))
+    suppliers[resource] = _default_suppliers(resource)
 
 func _default_suppliers(resource:String)->Array:
     return [{"name":"Regional Producer","reliability":90,"markup":1.00,"region":String(resources.get(resource,{}).get("region","Unknown"))},{"name":"National Broker","reliability":76,"markup":1.12,"region":"National"},{"name":"Emergency Importer","reliability":60,"markup":1.30,"region":"International"}]
