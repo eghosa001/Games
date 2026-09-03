@@ -25,6 +25,7 @@ RenewCompetitorStateBridge="*res://scripts/competitor_state_bridge.gd"
 RenewCompetitorReactionSystem="*res://scripts/competitor_reaction_system.gd"
 RenewTechnologySystem="*res://scripts/technology_system.gd"
 RenewProgressionSystem="*res://scripts/progression_system.gd"
+RenewRegionSystem="*res://scripts/region_system.gd"
 
 [display]
 window/size/viewport_width=1280
