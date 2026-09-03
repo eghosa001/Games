@@ -1,7 +1,8 @@
 extends Node
 
-# RENEW safety net: periodically persist the current company so a mobile session
+# RENEW safety net: periodically persist the canonical GameState so a mobile session
 # ending unexpectedly does not erase a long run. Manual F5/F9 save/load remains available.
+const SaveSystem := preload("res://scripts/save_system.gd")
 const AUTOSAVE_INTERVAL := 30.0
 var elapsed := 0.0
 
@@ -19,10 +20,6 @@ func _notification(what: int) -> void:
             get_tree().quit()
 
 func _save_current_game() -> void:
-    var scene := get_tree().current_scene
-    if scene == null or not scene.has_method("save_game"):
-        return
-    var previous_message := String(scene.message) if "message" in scene else ""
-    scene.save_game()
-    if "message" in scene:
-        scene.message = previous_message
+    # SaveSystem owns serialization. It captures the authoritative GameState itself;
+    # autosave must not ask Main to manually collect individual systems.
+    SaveSystem.save_game({})
