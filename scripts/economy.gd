@@ -4,6 +4,9 @@ class_name RenewEconomy
 # Phase 11: Economy is the single authority for market resource supply,
 # demand and price. Factories, procurement and customers create demand here;
 # no other system invents resource prices.
+#
+# V1 authoritative resource model. Do not add gameplay resources here without
+# updating the canonical V1 resource contract and its migration rules.
 const RESOURCE_CONFIG := {
     "timber": {"base_price":50.0,"production_rate":16.0,"consumption_rate":12.0,"stock":120.0,"region":"Forest Belt"},
     "iron": {"base_price":80.0,"production_rate":12.0,"consumption_rate":10.0,"stock":100.0,"region":"Iron Ridge"},
@@ -11,10 +14,13 @@ const RESOURCE_CONFIG := {
     "food": {"base_price":30.0,"production_rate":28.0,"consumption_rate":24.0,"stock":220.0,"region":"River Plains"},
     "electronics": {"base_price":120.0,"production_rate":7.0,"consumption_rate":6.0,"stock":70.0,"region":"Tech Coast"}
 }
-const LEGACY_RESOURCE_CONFIG := {
-    "materials": {"base_price":60.0,"production_rate":18.0,"consumption_rate":14.0,"stock":120.0,"region":"Industrial Belt"},
-    "packaging": {"base_price":25.0,"production_rate":30.0,"consumption_rate":24.0,"stock":160.0,"region":"Manufacturing Belt"},
-    "fuel": {"base_price":45.0,"production_rate":22.0,"consumption_rate":18.0,"stock":180.0,"region":"Energy Basin"}
+
+# Legacy save-data migration only. These identifiers are deliberately NOT
+# created in resources, quoted, purchased, or simulated by V1 gameplay.
+const LEGACY_RESOURCE_MIGRATION := {
+    "materials":"iron",
+    "packaging":"timber",
+    "fuel":"energy"
 }
 const MIN_PRICE := 10.0
 const MAX_PRICE := 500.0
@@ -23,10 +29,12 @@ const CUSTOMER_INPUT_DEMAND := {"furniture": {"timber": 1.0, "iron": 2.0, "energ
 var resources: Dictionary = {}
 var market_multipliers: Variant = {}
 var suppliers: Variant = {}
+
 func _init() -> void: _ensure_resources()
+
 func _ensure_resources() -> void:
     for resource in RESOURCE_CONFIG: _ensure_resource(String(resource),RESOURCE_CONFIG[resource])
-    for resource in LEGACY_RESOURCE_CONFIG: _ensure_resource(String(resource),LEGACY_RESOURCE_CONFIG[resource])
+
 func _ensure_resource(resource:String,config:Dictionary)->void:
     if not resources.has(resource):
         var c:Dictionary = config
@@ -38,6 +46,23 @@ func _ensure_resource(resource:String,config:Dictionary)->void:
     d["stock"]=max(0.0,float(d.get("stock",config["stock"]))); d["supply"]=max(0.0,float(d.get("supply",d["production_rate"]))); d["demand"]=max(0.0,float(d.get("demand",d["consumption_rate"])))
     d["region"]=String(d.get("region",config["region"])); d["target_stock"]=max(1.0,float(d.get("target_stock",config["stock"]))); resources[resource]=d
     market_multipliers[resource]=float(market_multipliers.get(resource,1.0)); suppliers[resource]=_default_suppliers(resource)
+
+# Explicit compatibility entry point for loading old saves. Legacy keys are
+# translated into canonical V1 resources and never retained in the live model.
+func migrate_legacy_resources(legacy:Dictionary)->Dictionary:
+    var migrated:Dictionary={}
+    for legacy_id in LEGACY_RESOURCE_MIGRATION:
+        if not legacy.has(legacy_id): continue
+        var target:String=String(LEGACY_RESOURCE_MIGRATION[legacy_id])
+        var value=legacy[legacy_id]
+        var stock:float=0.0
+        if value is Dictionary:
+            stock=float(value.get("stock",0.0))
+        else:
+            stock=float(value)
+        if stock != 0.0: migrated[target]=float(migrated.get(target,0.0))+stock
+    return migrated
+
 func _default_suppliers(resource:String)->Array:
     return [{"name":"Regional Producer","reliability":90,"markup":1.00,"region":String(resources.get(resource,{}).get("region","Unknown"))},{"name":"National Broker","reliability":76,"markup":1.12,"region":"National"},{"name":"Emergency Importer","reliability":60,"markup":1.30,"region":"International"}]
 func resource_ids()->Array: return RESOURCE_CONFIG.keys()
@@ -121,4 +146,4 @@ func _recalculate_price(resource:String)->void:
 func end_market_day()->void:
     _ensure_resources()
     for key in resources:
-        var d:Dictionary=resources[key]; var stock:float=max(0.0,float(d.get("stock",0.0))); var production:float=max(0.0,float(d.get("production_rate",0.0))); var baseline_demand:float=max(0.0,float(d.get("consumption_rate",0.0))); var daily_supply:float=max(0.0,production+randi_range(-2,4)); var baseline_market_demand:float=estimate_demand(String(key),current_price(String(key))); d["supply"]=daily_supply; d["demand"]=max(baseline_demand,baseline_market_demand); stock=max(0.0,stock+daily_supply-d["demand"]); d["stock"]=stock; d["consumption_rate"]=baseline_demand; resources[key]=d; _recalculate_price(String(key))
+        var d:Dictionary=resources[key]; var stock:float=max(0.0,float(d.get("stock",0.0))); var production:float=max(0.0,float(d.get("production_rate",0.0))); var baseline_demand:float=max(0.0,float(d.get("consumption_rate",0.0))); var daily_supply:float=max(0.0,production+randi_range(-2,4)); var baseline_market_demand:float=estimate_demand(String(key),current_price(String(key))); d["supply"]=daily_supply; d["demand"]=max(baseline_demand,baseline_market_demand); stock=max(0.0,stock-d["demand"]+daily_supply); d["stock"]=stock; d["consumption_rate"]=baseline_demand; resources[key]=d; _recalculate_price(String(key))
