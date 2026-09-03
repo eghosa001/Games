@@ -46,8 +46,12 @@ func generate_daily(day:int)->Dictionary:
         var story:=candidate.duplicate(true);story.erase("score");story["day"]=day;story["story_id"]="news_%06d"%(archive.size()+stories.size()+1);stories.append(story);used_sections[section]=count+1
     current_issue={"system_version":SYSTEM_VERSION,"day":day,"date_label":"Day %d"%day,"stories":stories,"verified_only":true};_sync_archive_issue();return current_issue.duplicate(true)
 func get_current_issue()->Dictionary:return current_issue.duplicate(true)
-func get_archive(limit:int=30)->Array[Dictionary]:
-    var result:Array[Dictionary]=[];var start:=max(0,archive.size()-max(1,limit));for i in range(archive.size()-1,start-1,-1):result.append(archive[i].duplicate(true));return result
+func get_archive(limit: int = 30) -> Array[Dictionary]:
+    var result: Array[Dictionary] = []
+    var start: int = max(0, archive.size() - max(1, limit))
+    for i in range(archive.size() - 1, start - 1, -1):
+        result.append(archive[i].duplicate(true))
+    return result
 func get_issue(day:int)->Dictionary:
     if int(current_issue.get("day",-1))==day:return current_issue.duplicate(true)
     for issue in archive:
@@ -161,7 +165,7 @@ func _employee_by_id(employee_id: String) -> Dictionary:
     if employees == null or not employees.has_method("get_employee"):
         return {}
     return employees.get_employee(employee_id)
-func _main() -> Node:
+func _main() -> Variant:
     var tree = get_tree()
     if tree == null:
         return null

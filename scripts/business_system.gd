@@ -11,7 +11,7 @@ func _ready() -> void:
     add_child(state_adapter)
     add_child(supply_chain)
     supply_chain.set_economy(economy)
-func _technology() -> Node:
+func _technology() -> Variant:
     return get_node_or_null("/root/RenewTechnologySystem")
 func get_industries() -> Array:
     var result: Array = []
