@@ -51,9 +51,7 @@ func repay_loan()->void:finance_system.repay_loan()
 func advance_day()->void:
     var simulation=get_node_or_null("/root/RenewSimulationSystem")
     if simulation==null:_set_state("company","message","SimulationSystem is unavailable.");return
-    var performance:=int(_state_value("economy","last_profit",0)); var employee_result:Dictionary=employee_system.daily_update(performance)
-    if employee_result.get("warnings",[]).size()>0:_log(str(employee_result["warnings"][0]))
-    var context={"economy":supply_system.economy,"rivals":relationship_system.rivals,"events":_events(),"expansion":expansion_system.expansion,"districts":expansion_system.districts,"employee_system":employee_system}
+    var context={"economy":supply_system.economy,"rivals":relationship_system.rivals,"events":_events(),"expansion":expansion_system.expansion,"districts":expansion_system.districts,"employee_system":employee_system,"business_system":business_system}
     var result:Dictionary=simulation.advance_day(_simulation_state(),context)
     if not bool(result.get("ok",false)):_set_state("company","message",str(result.get("message","Unable to advance the day.")));return
     _apply_simulation_state(result.get("state",{})); employee_system.sync_roster()
