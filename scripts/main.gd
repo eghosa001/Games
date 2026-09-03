@@ -5,8 +5,10 @@ extends Node2D
 # screen/UI refresh hooks, and compatibility accessors only.
 # Gameplay mutations live in GameplayCommandSystem and persist through GameState.
 const GameplayCommandSystem = preload("res://scripts/gameplay_command_system.gd")
+const CustomerSegmentsUI = preload("res://scripts/customer_segments_ui.gd")
 
 var command_system = GameplayCommandSystem.new()
+var customer_segments_ui = CustomerSegmentsUI.new()
 
 var cash: int:
     get: return _state_value("economy", "cash", 25000)
@@ -112,6 +114,7 @@ func _set_state_value(domain: String, key: String, value) -> void:
 func _ready() -> void:
     add_child(command_system)
     command_system.initialize()
+    add_child(customer_segments_ui)
     refresh_ui()
 
 func _process(_delta: float) -> void: refresh_ui()
