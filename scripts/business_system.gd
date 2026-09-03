@@ -10,11 +10,19 @@ var production = Production.new()
 var supply_chain = SupplyChain.new()
 var employee_system = null
 
-## V1 industries: the only permanent business pipelines exposed by the game.
+## V1 industries: each has a real production recipe and warehouse output.
 const INDUSTRIES := {
     "furniture": {"id":"furniture","name":"Furniture","inputs":{"timber":1.0,"metal":0.5,"energy":2.0},"output":{"product":"furniture","units":1},"workers":3,"capacity":6,"operating_cost":70,"base_price":220,"market_demand":80},
-    "construction_materials": {"id":"construction_materials","name":"Construction Materials","inputs":{"timber":1.0,"stone":2.0,"energy":2.5},"output":{"product":"construction_materials","units":1},"workers":4,"capacity":5,"operating_cost":95,"base_price":180,"market_demand":100},
-    "consumer_electronics": {"id":"consumer_electronics","name":"Consumer Electronics","inputs":{"metal":1.0,"electronics_components":1.0,"energy":3.0},"output":{"product":"consumer_electronics","units":1},"workers":5,"capacity":4,"operating_cost":130,"base_price":360,"market_demand":70}
+    "construction_materials": {"id":"construction_materials","name":"Construction Materials","inputs":{"timber":1.0,"iron":1.0,"energy":2.5},"output":{"product":"construction_materials","units":1},"workers":4,"capacity":5,"operating_cost":95,"base_price":180,"market_demand":100},
+    "consumer_electronics": {"id":"consumer_electronics","name":"Consumer Electronics","inputs":{"iron":1.0,"electronics":1.0,"energy":3.0},"output":{"product":"consumer_electronics","units":1},"workers":5,"capacity":4,"operating_cost":130,"base_price":360,"market_demand":70}
+}
+
+## The production layer is deliberately separate from the UI purpose IDs.
+## This makes industry_id the authoritative dispatch key for production.
+const INDUSTRY_PRODUCTION := {
+    "furniture": {"purpose":"furniture_factory","inputs":{"timber":1.0,"metal":0.5,"energy":2.0},"product":"furniture","base_price":220,"operating_cost":70},
+    "construction_materials": {"purpose":"construction_materials_factory","inputs":{"timber":1.0,"iron":1.0,"energy":2.5},"product":"construction_materials","base_price":180,"operating_cost":95},
+    "consumer_electronics": {"purpose":"consumer_electronics_factory","inputs":{"iron":1.0,"electronics":1.0,"energy":3.0},"product":"consumer_electronics","base_price":360,"operating_cost":130}
 }
 
 ## Every V1 property type offers the same three industry choices.
@@ -40,6 +48,7 @@ func _ready() -> void:
     add_child(state_adapter)
     add_child(supply_chain)
     supply_chain.set_economy(economy)
+
 func _technology():
     return get_node_or_null("/root/RenewTechnologySystem")
 
@@ -48,10 +57,13 @@ func get_industries() -> Array:
     for key in INDUSTRIES.keys():
         result.append(INDUSTRIES[key].duplicate(true))
     return result
+
 func get_industry(industry_id: String) -> Dictionary:
     return INDUSTRIES.get(industry_id, {}).duplicate(true)
+
 func get_business_purposes() -> Array:
     return PURPOSES.get(_origin_property_type(), []).duplicate(true)
+
 func get_business_purpose(purpose) -> Dictionary:
     var choices: Array = get_business_purposes()
     if purpose is int:
@@ -64,6 +76,7 @@ func get_business_purpose(purpose) -> Dictionary:
         if str(choice.get("id", "")) == purpose_id:
             return choice.duplicate(true)
     return {}
+
 func open_business() -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)) or str(state_adapter.get_value("properties", "stage", "Neglected")) != "Operational":
         state_adapter.message("Finish restoration first.")
@@ -207,14 +220,30 @@ func _technology_multiplier() -> float:
         level += int(technology[key])
     return clamp(1.0 + float(level) * 0.025, 1.0, 1.35)
 
+func _industry_production_config(industry_id: String) -> Dictionary:
+    return INDUSTRY_PRODUCTION.get(industry_id, {}).duplicate(true)
+
+func _prepare_derived_inputs(inputs: Dictionary, cycles: int) -> bool:
+    # Metal is an intermediate V1 resource produced from iron + energy.
+    var metal_needed: float = float(inputs.get("metal", 0.0)) * float(cycles)
+    if metal_needed <= supply_chain.stock("metal"):
+        return true
+    var missing: float = metal_needed - supply_chain.stock("metal")
+    var metal_cycles: int = int(ceil(missing / 1.0))
+    var result: Dictionary = supply_chain.process_iron_to_metal(metal_cycles)
+    return bool(result.get("ok", false)) and supply_chain.stock("metal") >= metal_needed
+
 func produce_goods() -> void:
     if not bool(state_adapter.get_value("businesses", "business_open", false)):
         state_adapter.message("Create the business first.")
         return
-    var purpose: String = str(state_adapter.get_value("businesses", "business_purpose", ""))
-    if purpose != "furniture_factory":
-        state_adapter.message("%s is not yet connected to the furniture production pipeline." % _business_name())
+
+    var industry_id: String = str(state_adapter.get_value("businesses", "industry_id", "furniture"))
+    var config: Dictionary = _industry_production_config(industry_id)
+    if config.is_empty():
+        state_adapter.message("Unknown V1 industry: %s." % industry_id)
         return
+
     var employee_count: int = 3
     var employee_factor: float = 1.0
     var morale_multiplier: float = 1.0
@@ -222,52 +251,56 @@ func produce_goods() -> void:
         employee_count = employee_system.get_active_employee_count()
         employee_factor = employee_system.get_productivity_multiplier("factory_001")
         morale_multiplier = employee_system.get_morale_multiplier()
+
     var capacity: int = int(state_adapter.get_value("businesses", "capacity_level", 1))
     var business_efficiency: float = clamp(0.85 + float(capacity) * 0.10, 0.85, 1.50)
     var base_output: int = max(1, employee_count + capacity - 1)
     var output_factor: float = employee_factor * business_efficiency * _technology_multiplier() * _property_condition_multiplier() * morale_multiplier
     var cycles: int = max(1, int(floor(float(base_output) * output_factor)))
+    var inputs: Dictionary = config.get("inputs", {}).duplicate(true)
     var cash: int = int(state_adapter.get_value("economy", "cash", 25000))
-    var timber_need: float = float(cycles)
-    var iron_need: float = float(cycles) * 2.0
-    var energy_need: float = float(cycles) * 2.5
+
+    # Procure all market inputs that are not derived warehouse intermediates.
     var orders: Array = []
-    if supply_chain.stock("timber") < timber_need:
-        orders.append({"resource":"timber","amount":max(0.0,timber_need-supply_chain.stock("timber"))})
-    if supply_chain.stock("iron") < iron_need:
-        orders.append({"resource":"iron","amount":max(0.0,iron_need-supply_chain.stock("iron"))})
-    if supply_chain.stock("energy") < energy_need:
-        orders.append({"resource":"energy","amount":max(0.0,energy_need-supply_chain.stock("energy"))})
+    for resource in inputs:
+        var input_name: String = str(resource)
+        if input_name == "metal":
+            continue
+        var needed: float = float(inputs[resource]) * float(cycles)
+        var current_stock: float = supply_chain.stock(input_name)
+        if current_stock < needed:
+            orders.append({"resource":input_name,"amount":needed - current_stock})
+
     if not orders.is_empty():
         var transport_level: int = int(state_adapter.get_value("supply_chain", "transport_level", 1))
         var delivery: Dictionary = supply_chain.procure_bundle(orders, cash, transport_level)
         if not bool(delivery.get("ok", false)):
-            state_adapter.message("Factory stopped: supply delivery failed (%s)." % str(delivery.get("reason", "unknown")))
+            state_adapter.message("%s stopped: supply delivery failed (%s)." % [_business_name(), str(delivery.get("reason", "unknown"))])
             return
         cash -= int(delivery["cost"])
         state_adapter.set_value("economy", "cash", cash)
         state_adapter.log_message("SUPPLY: market resources delivered to %s." % _business_name())
-    var metal_have: float = supply_chain.stock("metal")
-    var metal_needed: float = float(cycles) * 0.5
-    if metal_have < metal_needed:
-        var metal_cycles: int = int(ceil((metal_needed - metal_have) / 1.0))
-        var metal_result: Dictionary = supply_chain.process_iron_to_metal(metal_cycles)
-        if not bool(metal_result.get("ok", false)):
-            state_adapter.message("Metal Factory stopped: not enough Iron/Energy.")
-            return
-    var input_result: Dictionary = supply_chain.consume_furniture_inputs(cycles)
+
+    if not _prepare_derived_inputs(inputs, cycles):
+        state_adapter.message("%s stopped: intermediate inputs are unavailable." % _business_name())
+        return
+
+    var input_result: Dictionary = supply_chain.consume_inputs(inputs, cycles)
     if not bool(input_result.get("ok", false)):
         state_adapter.message("%s stopped: warehouse inputs are too low." % _business_name())
         return
+
     var quality: int = clamp(int(round(72.0 + employee_factor * 5.0 + morale_multiplier * 4.0 + _technology_multiplier() * 3.0 + randi_range(-3, 4))), 30, 100)
     var output: int = max(1, cycles - int(floor(float(cycles) * 0.08)))
+    var product: String = str(config.get("product", industry_id))
     production.finished_goods += output
+    production.inventory[product] = int(production.inventory.get(product, 0)) + output
     production.inventory["goods"] = production.finished_goods
-    production.last_run = {"product":"furniture","stage":"manufacturing","cycles":cycles,"output":output,"quality":quality,"resources":{"timber":float(cycles),"metal":float(cycles)*0.5,"energy":float(cycles)*2.0},"resource_requirements":{"timber":1.0,"metal":0.5,"energy":2.0},"production_time":2.0,"employee_capacity":2,"base_price":220,"operating_cost":0,"reputation_effect":2}
-    supply_chain.receive_furniture(output)
+    production.last_run = {"product":product,"industry_id":industry_id,"stage":"manufacturing","cycles":cycles,"output":output,"quality":quality,"resources":input_result.get("consumed", {}),"resource_requirements":inputs,"production_time":2.0,"employee_capacity":int(config.get("workers", 3)),"base_price":int(config.get("base_price", 0)),"operating_cost":int(config.get("operating_cost", 0)),"reputation_effect":2}
+    supply_chain.receive_product(product, output)
     state_adapter.set_value("production", "finished_goods", production.finished_goods)
-    state_adapter.message("%s produced %d furniture at quality %d. Staff efficiency %.2fx." % [_business_name(), output, quality, output_factor])
-    state_adapter.log_message("FACTORY: %s (from %s) -> Warehouse -> Customer; %d furniture produced." % [_business_name(), _origin_property_name(), output])
+    state_adapter.message("%s produced %d %s at quality %d. Staff efficiency %.2fx." % [_business_name(), output, product.replace("_", " "), quality, output_factor])
+    state_adapter.log_message("FACTORY: %s (from %s) -> Warehouse -> Customer; %d %s produced." % [_business_name(), _origin_property_name(), output, product])
 
 func capture_state() -> Dictionary:
     return {"system_version":2,"businesses":state_adapter.get_value("businesses","businesses",{}).duplicate(true)}
