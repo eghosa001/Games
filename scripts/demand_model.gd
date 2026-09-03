@@ -15,10 +15,15 @@ func calculate(product:String,player_price:float,competitor_price:float,reputati
     var demand_float:=float(segment_result.get("raw_demand",0.0))*employee_modifier*relationship_modifier
     var tech=get_node_or_null("/root/RenewTechnologySystem")
     var market_multiplier:=tech.market_demand_multiplier() if tech!=null else 1.0
-    demand_float*=market_multiplier
+    var event_multiplier:=1.0
+    var state=get_node_or_null("/root/RenewGameState")
+    if state!=null:
+        var event_modifiers=state.get_value("events","modifiers",{})
+        if event_modifiers is Dictionary:event_multiplier=float(event_modifiers.get("demand_multiplier",1.0))
+    demand_float*=market_multiplier*event_multiplier
     var config:Dictionary=get_product_config(resolved_product);var demand:=clamp(int(round(demand_float)),int(config.get("min_demand",0)),int(config.get("max_demand",100)))
     var segment_details:Dictionary=segment_result.get("segments",{}).duplicate(true)
     for segment in segment_details.keys():
-        var detail:Dictionary=segment_details[segment];detail["final_demand"]=int(round(float(detail.get("demand",0))*employee_modifier*relationship_modifier*market_multiplier));segment_details[segment]=detail
+        var detail:Dictionary=segment_details[segment];detail["final_demand"]=int(round(float(detail.get("demand",0))*employee_modifier*relationship_modifier*market_multiplier*event_multiplier));segment_details[segment]=detail
     var relative_price:=1.0 if player_price<=0.0 else float(competitor_price)/player_price;var price_strength:=float(config.get("price_strength",1.15));var price_modifier:=clamp(pow(max(0.01,relative_price),price_strength),0.20,1.80)
-    return {"ok":true,"product":resolved_product,"requested_product":product,"demand":demand,"raw_demand":demand_float,"relative_price":relative_price,"segments":segment_details,"segment_count":int(segment_result.get("segment_count",0)),"modifiers":{"price":price_modifier,"employee_productivity":employee_modifier,"relationships":relationship_modifier,"district":effective_district,"market_analysis":market_multiplier,"segments":segment_details}}
+    return {"ok":true,"product":resolved_product,"requested_product":product,"demand":demand,"raw_demand":demand_float,"relative_price":relative_price,"segments":segment_details,"segment_count":int(segment_result.get("segment_count",0)),"modifiers":{"price":price_modifier,"employee_productivity":employee_modifier,"relationships":relationship_modifier,"district":effective_district,"market_analysis":market_multiplier,"dynamic_event":event_multiplier,"segments":segment_details}}
