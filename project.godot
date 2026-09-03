@@ -22,6 +22,7 @@ RenewInfrastructureUI="*res://scripts/infrastructure_ui.gd"
 RenewCollectionUI="*res://scripts/collection_ui.gd"
 RenewLiveOpsUI="*res://scripts/liveops_ui.gd"
 RenewCompetitorStateBridge="*res://scripts/competitor_state_bridge.gd"
+RenewCompetitorReactionSystem="*res://scripts/competitor_reaction_system.gd"
 
 [display]
 window/size/viewport_width=1280
