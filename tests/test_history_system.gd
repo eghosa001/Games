@@ -23,7 +23,6 @@ func run() -> void:
     var history = History.new()
     root.add_child(history)
     await process_frame
-
     check(history.has_event("founding"), "History records founding")
     history.record("restoration", 4, "Warehouse fully restored.", {"percent": 100}, "test|restoration")
     history.record("first_sale", 5, "First sale completed.", {"value": 1000}, "test|sale")
@@ -42,13 +41,11 @@ func run() -> void:
     history.record("ranking", 33, "Company entered top ten.", {}, "test|ranking")
     history.record("world_event", 34, "Global market shock.", {}, "test|world")
     history.record_employee_milestone(18, "emp_james_001", "James", "Promoted to Senior Worker")
-
     check(history.timeline.size() >= 18, "Timeline stores permanent typed events")
     check(history.has_event("employee_milestone", "James"), "Employee milestones enter corporate history")
     check(history.get_notable_events().size() > 0, "Notable history is queryable")
     check(history.get_museum_collection().size() > 0, "Museum collection is generated from history")
-
-    var snapshot = history.capture_state()
+    var snapshot: Dictionary = history.capture_state()
     var restored = History.new()
     root.add_child(restored)
     restored.restore_state(snapshot)
@@ -56,10 +53,8 @@ func run() -> void:
     check(restored.has_event("merger"), "Historic merger survives save/load")
     check(restored.has_event("employee_milestone", "James"), "Employee milestone survives save/load")
     check(restored.get_legacy_summary().get("museum_items", 0) > 0, "Legacy summary exposes museum records")
-
-    var duplicate_before := restored.timeline.size()
+    var duplicate_before: int = restored.timeline.size()
     restored.record("first_sale", 5, "First sale completed.", {}, "test|sale")
     check(restored.timeline.size() == duplicate_before, "Duplicate historical events are deduplicated")
-
     print("HISTORY SYSTEM RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
