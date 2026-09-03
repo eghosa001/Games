@@ -3,7 +3,7 @@ extends Node
 ## Canonical persistent gameplay-state boundary.
 ## Each gameplay fact has exactly one authoritative domain. Systems own behavior,
 ## while RenewGameState owns the data that behavior reads and mutates.
-const STATE_VERSION := 11
+const STATE_VERSION := 12
 
 const DOMAINS := [
     "player", "company", "properties", "businesses", "branches", "employees",
@@ -91,6 +91,7 @@ func _apply_flat_to_domains(flat: Dictionary) -> void:
     for key in ["technology", "research_points"]: _migrate_key("technology", flat, key)
     for key in ["milestones", "unlocks", "xp", "level"]: _migrate_key("progression", flat, key)
     if flat.has("districts"): _migrate_key("regions", flat, "districts")
+    if flat.has("alliances"): _migrate_key("alliances", flat, "alliances")
 func _migrate_key(domain: String, flat: Dictionary, key: String) -> void:
     if flat.has(key): var bucket: Dictionary = domains.get(domain, {}).duplicate(true); bucket[key] = flat[key]; domains[domain] = bucket
 func _domains_to_flat(snapshot: Dictionary) -> Dictionary:
