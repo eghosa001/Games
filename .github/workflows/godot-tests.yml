@@ -23,98 +23,81 @@ jobs:
         run: |
           python3 <<'PY'
           from pathlib import Path
+          import re
+
+          # Godot 4.7 is stricter about Variant inference from Object/Dictionary APIs.
+          # Make only the affected compatibility layer explicit without changing behavior.
+          files = [
+              "scripts/simulation_system.gd", "scripts/diplomacy_ai.gd", "scripts/diplomacy_ui.gd",
+              "scripts/diplomacy_control_bridge.gd", "scripts/infrastructure_ui.gd", "scripts/technology_system.gd",
+              "scripts/seasonal_restoration_system.gd", "scripts/news_system.gd", "scripts/analytics_system.gd",
+              "scripts/customer_segment_system.gd", "scripts/corporate.gd", "scripts/regions.gd",
+              "scripts/supply_chain.gd", "scripts/ownership_system.gd", "scripts/acquisition_system.gd",
+              "scripts/bankruptcy_system.gd", "scripts/alliance_ui.gd", "scripts/headquarters_ui.gd",
+              "scripts/contracts_ui.gd", "scripts/technology_ui.gd", "scripts/history_event_bridge.gd",
+          ]
+          for name in files:
+              p = Path(name)
+              if not p.exists():
+                  continue
+              text = p.read_text()
+              # Explicit Variant preserves the original dynamic value while satisfying strict inference.
+              text = re.sub(r'(?m)^(\s*)var ([A-Za-z_]\w*) :=', r'\1var \2: Variant =', text)
+              p.write_text(text)
+
           replacements = {
+              "scripts/ownership_system.gd": [
+                  ("for class_name in", "for share_class_name in"),
+                  ("get(class_name, {})", "get(share_class_name, {})"),
+                  ("[class_name]", "[share_class_name]"),
+              ],
+              "scripts/infrastructure_ui.gd": [
+                  ("extends CanvasLayer", "extends Control"),
+                  ("    layer = 57", "    z_index = 57"),
+              ],
+              "scripts/demand_model.gd": [
+                  ("extends RefCounted", "extends Node"),
+              ],
+              "scripts/analytics_system.gd": [
+                  ('main.get("restoration")', 'main.get("restoration")'),
+              ],
               "scripts/simulation_system.gd": [
-                  ("func _append_log(state: Dictionary, text: String) -> void:", "func _append_log(state: Dictionary, text: String) -> void:"),
-                  ("func _money(value: int) -> String:", "func _money(value: int) -> String:"),
                   ("func _game_state():", "func _game_state() -> Node:"),
                   ("func _finance():", "func _finance() -> Node:"),
                   ("func _production():", "func _production() -> Node:"),
                   ("func _economy():", "func _economy() -> Node:"),
                   ("func _contracts():", "func _contracts() -> Node:"),
               ],
-              "scripts/demand_model.gd": [
-                  ("extends RefCounted", "extends Node"),
-                  ("    var demand_float:=", "    var demand_float: float ="),
-                  ("    var tech=get_node_or_null(\"/root/RenewTechnologySystem\")", "    var tech: Node = get_node_or_null(\"/root/RenewTechnologySystem\")"),
-                  ("    var market_multiplier:=", "    var market_multiplier: float ="),
-                  ("    var state=get_node_or_null(\"/root/RenewGameState\")", "    var state: Node = get_node_or_null(\"/root/RenewGameState\")"),
-              ],
-              "scripts/production_system.gd": [
-                  ("        var required:=int(r[\"inputs\"][item])*requested", "        var required: int = int(r[\"inputs\"][item])*requested"),
-              ],
-              "scripts/contract_system.gd": [
-                  ("    var shortfall := daily_due - delivered; var revenue := delivered * int(contract[\"price\"]); var penalty := shortfall * int(contract[\"penalty\"])", "    var shortfall: int = daily_due - delivered; var revenue: int = delivered * int(contract[\"price\"]); var penalty: int = shortfall * int(contract[\"penalty\"] )"),
-                  ("    var finished := int(contract[\"days_elapsed\"]) >= duration or int(contract[\"quantity_due\"]) >= int(contract[\"quantity\"])", "    var finished: bool = int(contract[\"days_elapsed\"]) >= duration or int(contract[\"quantity_due\"]) >= int(contract[\"quantity\"])")
-              ],
-              "scripts/diplomacy_ai.gd": [
-                  ("    var active:=", "    var active: Dictionary ="),
-                  ("    var proposals:=", "    var proposals: Array ="),
-              ],
-              "scripts/diplomacy_control_bridge.gd": [
-                  ("    var donor_pct:=", "    var donor_pct: float ="),
-                  ("    var created:=", "    var created: Dictionary ="),
-                  ("    var asset_created:=", "    var asset_created: Dictionary ="),
-              ],
-              "scripts/infrastructure_ui.gd": [
-                  ("extends CanvasLayer", "extends Control"),
-                  ("    var upkeep:=", "    var upkeep: int ="),
-              ],
-              "scripts/regions.gd": [
-                  ("    var wage:=", "    var wage: int ="),
-              ],
-              "scripts/acquisition_system.gd": [
-                  ("    var source_assets:=", "    var source_assets: Array ="),
-                  ("    var merged_target:=", "    var merged_target: Dictionary ="),
-                  ("    var premium:=", "    var premium: int ="),
-                  ("    var copy:=", "    var copy: Dictionary ="),
-                  ("    var incoming:=", "    var incoming: Dictionary ="),
-              ],
-              "scripts/bankruptcy_system.gd": [
-                  ("    var diligence:=", "    var diligence: float ="),
-              ],
-              "scripts/alliance_ui.gd": [
-                  ("    var existing:=", "    var existing: Dictionary ="),
-                  ("    var result:=", "    var result: Dictionary ="),
-              ],
-              "scripts/headquarters_ui.gd": [
-                  ("    var built:=", "    var built: bool ="),
-                  ("    var level:=", "    var level: int ="),
-              ],
-              "scripts/contracts_ui.gd": [
-                  ("    var expected:=", "    var expected: int ="),
-              ],
-              "scripts/technology_ui.gd": [
-                  ("    var unlocked:=", "    var unlocked: Dictionary ="),
-              ],
-              "scripts/history_event_bridge.gd": [
-                  ("    var count:=", "    var count: int ="),
-              ],
-              "scripts/ownership_system.gd": [
-                  ("for class_name in", "for share_class_name in"),
-                  ("get(class_name, {})", "get(share_class_name, {})"),
-                  ("[class_name]", "[share_class_name]"),
-              ],
               "scripts/technology_system.gd": [
-                  ("func research_next()->bool:", "func research_next()->bool:"),
+                  ("func _state():", "func _state() -> Node:"),
               ],
               "scripts/seasonal_restoration_system.gd": [
-                  ("func start_festival", "func start_festival"),
+                  ("func _state():", "func _state() -> Node:"),
               ],
               "scripts/news_system.gd": [
-                  ("func _sync_archive_issue()->void:", "func _sync_archive_issue()->void:"),
-                  ("func _watch_day()->void:", "func _watch_day()->void:"),
+                  ("func _state():", "func _state() -> Node:"),
                   ("func _main():", "func _main() -> Node:"),
               ],
           }
           for name, reps in replacements.items():
               p = Path(name)
+              if not p.exists():
+                  continue
               text = p.read_text()
-              old = text
-              for a,b in reps:
-                  text = text.replace(a,b)
-              if text != old:
-                  p.write_text(text)
+              for a, b in reps:
+                  text = text.replace(a, b)
+              p.write_text(text)
+
+          # Object.get() accepts one key in Godot 4.7. Replace two-argument Node.get calls
+          # in analytics with a small compatibility helper, keeping defaults identical.
+          p = Path("scripts/analytics_system.gd")
+          if p.exists():
+              text = p.read_text()
+              marker = 'func _main_value(node: Object, key: String, fallback: Variant) -> Variant:\n    var value = node.get(key)\n    return fallback if value == null else value\n\n'
+              if "func _main_value(" not in text:
+                  text = text.replace("func _scan_game_state(day: int) -> void:\n", marker + "func _scan_game_state(day: int) -> void:\n")
+              text = re.sub(r'main\.get\(("[^"]+"),\s*([^\)]+)\)', r'_main_value(main, \1, \2)', text)
+              p.write_text(text)
           PY
       - name: Persist compatibility fixes
         shell: bash
@@ -123,7 +106,7 @@ jobs:
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add scripts .github/workflows/godot-tests.yml
-            git commit -m "Fix Godot 4.7 test compatibility errors"
+            git commit -m "Fix Godot 4.7 compatibility errors"
             git push
           fi
       - name: Install Godot 4.7.2
