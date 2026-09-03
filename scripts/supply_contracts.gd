@@ -1,16 +1,18 @@
 extends RefCounted
 class_name RenewSupplyContracts
 
+const RESOURCE_IDS := ["timber", "iron", "energy", "food", "electronics"]
+
 var active_rival: Variant = -1
 var active_resource: Variant = ""
 var days_remaining: Variant = 0
 var discount: Variant = 0.0
-var player_resource_rights: Variant = {"materials":0,"packaging":0,"fuel":0,"food":0}
+var player_resource_rights: Variant = {"timber":0,"iron":0,"energy":0,"food":0,"electronics":0}
 
 func _normalize() -> void:
     days_remaining=max(0,days_remaining)
     discount=clamp(float(discount),0.0,0.35)
-    for resource in ["materials","packaging","fuel","food"]:
+    for resource in RESOURCE_IDS:
         player_resource_rights[resource]=max(0,int(player_resource_rights.get(resource,0)))
     if days_remaining==0:
         active_rival=-1
@@ -47,7 +49,7 @@ func secure_resource(resource:String, parent)->Dictionary:
     if int(parent.reputation)<30: return {"ok":false,"message":"Build at least 30 reputation before buying permanent resource rights."}
     parent.cash-=cost
     player_resource_rights[resource]=int(player_resource_rights[resource])+1
-    return {"ok":true,"cost":cost,"message":"Permanent %s supply rights secured. Rival pressure on this resource is reduced."%resource}
+    return {"ok":true,"cost":cost,"message":"Permanent %s supply rights secured. Rival pressure on this resource is reduced."%resource
 
 func resource_discount(resource:String)->float:
     _normalize()
@@ -87,5 +89,8 @@ func load_snapshot(state:Dictionary)->void:
             active_resource=str(contract.get("resource",""))
             days_remaining=int(contract.get("days_remaining",0))
             discount=float(contract.get("discount",0.0))
-        player_resource_rights=state.get("player_resource_rights",player_resource_rights).duplicate(true)
+        var saved_rights:Dictionary=state.get("player_resource_rights",{})
+        player_resource_rights={"timber":0,"iron":0,"energy":0,"food":0,"electronics":0}
+        for resource in RESOURCE_IDS:
+            player_resource_rights[resource]=int(saved_rights.get(resource,0))
     _normalize()
