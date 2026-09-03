@@ -114,11 +114,14 @@ func react_to_contract_win(contract: Dictionary, day: int) -> Array[String]:
     _remember(day, "contract_win", {"customer": customer, "product": product})
     return news
 
-# Phase 16: calculate actual daily market share from player units sold plus
-# estimated competitor units sold, then persist milestone snapshots.
+# Phase 16: calculate daily market share from player units sold plus competitor
+# units sold, then persist milestone snapshots for rankings/news/progression.
 func record_market_share(player_state: Dictionary, day: int) -> Array[String]:
     if rivals == null:
         return []
+    # advance_day increments the state day after trading. Convert it back to the
+    # completed trading-day number so the requested Day 1/10/30/60 snapshots land correctly.
+    var trading_day := max(1, day - 1)
     var player_sales := max(0, int(player_state.get("last_units_sold", 0)))
     var player_price := max(1, int(player_state.get("player_price", 110)))
     var competitor_sales_total := 0
@@ -153,23 +156,23 @@ func record_market_share(player_state: Dictionary, day: int) -> Array[String]:
             rival["market_share"] = float(rival_sales) / float(total_market_sales)
 
     var snapshot := {
-        "day": day,
+        "day": trading_day,
         "player_sales": player_sales,
         "competitor_sales": competitor_sales_total,
         "total_market_sales": total_market_sales,
         "player_market_share": current_market_share,
         "competitors": competitor_rows.duplicate(true)
     }
-    market_share_history[str(day)] = snapshot
+    market_share_history[str(trading_day)] = snapshot
     for milestone in MARKET_SHARE_HISTORY_DAYS:
-        if day == milestone:
+        if trading_day == milestone:
             market_share_history[str(milestone)] = snapshot.duplicate(true)
 
     var news: Array[String] = []
-    if MARKET_SHARE_HISTORY_DAYS.has(day):
-        news.append("MARKET SHARE: Day %d — you sold %d of %d market units (%.1f%% share)." % [day, player_sales, total_market_sales, current_market_share * 100.0])
-        _remember(day, "market_share_milestone", snapshot)
-        _award_progression(day, current_market_share)
+    if MARKET_SHARE_HISTORY_DAYS.has(trading_day):
+        news.append("MARKET SHARE: Day %d — you sold %d of %d market units (%.1f%% share)." % [trading_day, player_sales, total_market_sales, current_market_share * 100.0])
+        _remember(trading_day, "market_share_milestone", snapshot)
+        _award_progression(trading_day, current_market_share)
     return news
 
 func get_market_share() -> float:
@@ -184,15 +187,15 @@ func get_rankings() -> Array[Dictionary]:
     if rivals != null:
         for rival in rivals.rivals:
             ranking.append({"id": str(rival.get("id", "")), "name": str(rival.get("name", "Rival")), "market_share": float(rival.get("market_share", 0.0)), "sales": int(rival.get("last_sales", 0))})
-    ranking.sort_custom(func(a, b): return float(a["market_share"]) > float(b["market_share"]))
+    ranking.sort_custom(func(a, b): return float(a["market_share"]) > float(b["market_share"])
+    )
     return ranking
 
 func _award_progression(day: int, share: float) -> void:
     var game_state = get_node_or_null("/root/RenewGameState")
     if game_state == null:
         return
-    var progression: Dictionary = game_state.get_value("progression", "xp", 0)
-    var xp := int(progression)
+    var xp := int(game_state.get_value("progression", "xp", 0))
     var reward := 5
     if day == 10: reward = 10
     elif day == 30: reward = 20
