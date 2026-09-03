@@ -2,14 +2,14 @@ extends Node
 
 # Phase 9: one real V1 supply chain. Market resources move into a warehouse,
 # iron is processed into metal, factories consume warehouse inputs, and finished
-# furniture remains in the warehouse until customers buy it.
-const SYSTEM_VERSION := 3
+# goods remain in the warehouse until customers buy them.
+const SYSTEM_VERSION := 4
 const RESOURCE_IDS := ["timber", "iron", "energy", "food", "electronics"]
 const WAREHOUSE_LIMIT := 500.0
 const FURNITURE_INPUTS := {"timber": 1.0, "metal": 0.5, "energy": 2.0}
 const METAL_RECIPE := {"iron": 2.0, "energy": 0.5, "metal": 1.0}
 var economy = null
-var warehouse: Dictionary = {"timber": 0.0, "iron": 0.0, "metal": 0.0, "energy": 0.0, "food": 0.0, "electronics": 0.0, "furniture": 0.0}
+var warehouse: Dictionary = {"timber": 0.0, "iron": 0.0, "metal": 0.0, "energy": 0.0, "food": 0.0, "electronics": 0.0, "furniture": 0.0, "construction_materials": 0.0, "consumer_electronics": 0.0}
 var total_freight_cost: int = 0
 var last_operation: Dictionary = {}
 
@@ -17,7 +17,7 @@ func _ready() -> void:
     _ensure_warehouse()
 
 func _ensure_warehouse() -> void:
-    for key in ["timber", "iron", "metal", "energy", "food", "electronics", "furniture"]:
+    for key in ["timber", "iron", "metal", "energy", "food", "electronics", "furniture", "construction_materials", "consumer_electronics"]:
         warehouse[key] = max(0.0, float(warehouse.get(key, 0.0)))
 
 func set_economy(value) -> void:
@@ -45,6 +45,7 @@ func _transport_capacity(level: int) -> float:
     if tech != null:
         return base * tech.transport_capacity_multiplier()
     return base
+
 func _freight_cost(resource: String, amount: float, level: int) -> int:
     var distance_factor: float = 1.0
     if economy != null and economy.resources.has(resource):
@@ -52,6 +53,7 @@ func _freight_cost(resource: String, amount: float, level: int) -> int:
     var base_cost: float = amount * (2.0 + float(max(0, 3 - level))) * distance_factor
     var effects = _railway_effects()
     return int(round(base_cost * float(effects.get("transport_cost_multiplier", 1.0))))
+
 func procure(resource: String, amount: float, cash: int, transport_level: int = 1) -> Dictionary:
     if economy == null or not economy.resources.has(resource) or amount <= 0:
         return {"ok": false, "reason": "invalid_resource"}
@@ -117,24 +119,38 @@ func process_iron_to_metal(cycles: int = 1) -> Dictionary:
     last_operation = {"type": "metal_processing", "cycles": possible, "iron_consumed": METAL_RECIPE["iron"] * possible, "energy_consumed": METAL_RECIPE["energy"] * possible, "metal_output": METAL_RECIPE["metal"] * possible}
     return {"ok": true, "cycles": possible, "output": METAL_RECIPE["metal"] * possible, "iron_consumed": METAL_RECIPE["iron"] * possible, "energy_consumed": METAL_RECIPE["energy"] * possible}
 
-func can_make_furniture(cycles: int = 1) -> Dictionary:
+func can_make_inputs(inputs: Dictionary, cycles: int = 1) -> Dictionary:
     var possible: int = max(0, cycles)
-    for resource in FURNITURE_INPUTS:
-        possible = min(possible, int(floor(stock(resource) / float(FURNITURE_INPUTS[resource]))))
-    return {"ok": possible > 0, "cycles": possible, "inputs": FURNITURE_INPUTS.duplicate(true)}
+    for resource in inputs:
+        possible = min(possible, int(floor(stock(String(resource)) / max(0.0001, float(inputs[resource])))))
+    return {"ok": possible > 0, "cycles": possible, "inputs": inputs.duplicate(true)}
 
-func consume_furniture_inputs(cycles: int) -> Dictionary:
-    var check: Dictionary = can_make_furniture(cycles)
+func consume_inputs(inputs: Dictionary, cycles: int) -> Dictionary:
+    var check: Dictionary = can_make_inputs(inputs, cycles)
     if not check["ok"]:
         return check
     var run_cycles: int = int(check["cycles"])
-    for resource in FURNITURE_INPUTS:
-        warehouse[resource] -= float(FURNITURE_INPUTS[resource]) * run_cycles
-    last_operation = {"type": "furniture_factory_inputs", "cycles": run_cycles, "consumed": {"timber": FURNITURE_INPUTS["timber"] * run_cycles, "metal": FURNITURE_INPUTS["metal"] * run_cycles, "energy": FURNITURE_INPUTS["energy"] * run_cycles}}
-    return {"ok": true, "cycles": run_cycles, "consumed": last_operation["consumed"].duplicate(true)}
+    var consumed: Dictionary = {}
+    for resource in inputs:
+        var amount: float = float(inputs[resource]) * run_cycles
+        warehouse[String(resource)] -= amount
+        consumed[String(resource)] = amount
+    last_operation = {"type": "industry_inputs", "cycles": run_cycles, "consumed": consumed.duplicate(true)}
+    return {"ok": true, "cycles": run_cycles, "consumed": consumed}
+
+func receive_product(product: String, amount: int) -> void:
+    _ensure_warehouse()
+    warehouse[product] = min(WAREHOUSE_LIMIT, stock(product) + max(0, amount))
+
+func can_make_furniture(cycles: int = 1) -> Dictionary:
+    return can_make_inputs(FURNITURE_INPUTS, cycles)
+
+func consume_furniture_inputs(cycles: int) -> Dictionary:
+    return consume_inputs(FURNITURE_INPUTS, cycles)
 
 func receive_furniture(amount: int) -> void:
-    warehouse["furniture"] = min(WAREHOUSE_LIMIT, stock("furniture") + max(0, amount))
+    receive_product("furniture", amount)
+
 func sell_furniture(amount: int, price: int) -> Dictionary:
     var sold: int = min(max(0, amount), int(floor(stock("furniture"))))
     var revenue: int = sold * max(0, price)
