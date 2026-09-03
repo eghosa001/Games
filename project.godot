@@ -30,6 +30,7 @@ window/stretch/aspect="expand"
 
 [debug]
 gdscript/warnings/enable=false
+gdscript/warnings/inference_on_variant=0
 
 [rendering]
 renderer/rendering_method="gl_compatibility"
