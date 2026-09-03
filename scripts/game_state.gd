@@ -1,5 +1,4 @@
 extends Node
-class_name RenewGameState
 
 ## Canonical persistent state boundary. New saves contain only schema_version and domains.
 ## Legacy flat state is accepted by restore() only to migrate older save files.
@@ -86,7 +85,7 @@ func _restore_domain_systems()->void:
     var history=root.get_node_or_null("RenewHistorySystem");if history!=null and history.has_method("restore_state") and domains["history"].get("history_system",{}) is Dictionary:history.restore_state(domains["history"]["history_system"])
     var news=root.get_node_or_null("RenewNewsSystem");if news!=null and news.has_method("restore_state") and domains["news"].get("news_system",{}) is Dictionary:news.restore_state(domains["news"]["news_system"])
     var finance=root.get_node_or_null("RenewFinanceSystem");if finance!=null and finance.has_method("restore_state") and domains["finance"].get("system",{}) is Dictionary:finance.restore_state(domains["finance"]["system"])
-    var production=root.get_node_or_null("RenewProductionSystem");if production!=null and production.has_method("restore_state") and domains["production"]["system"] is Dictionary:production.restore_state(domains["production"]["system"])
+    var production=root.get_node_or_null("RenewProductionSystem");if production!=null and production.has_method("restore_state") and domains["production"].get("system") is Dictionary:production.restore_state(domains["production"]["system"])
     var simulation=root.get_node_or_null("RenewSimulationSystem");if simulation!=null and simulation.has_method("restore_state") and domains["analytics"].get("simulation_system",{}) is Dictionary:simulation.restore_state(domains["analytics"]["simulation_system"])
     var contracts=root.get_node_or_null("RenewContractSystem");if contracts!=null and contracts.has_method("restore_state") and domains["contracts"].get("system",{}) is Dictionary:contracts.restore_state(domains["contracts"]["system"])
 func _rebuild_data()->void:data={"schema_version":SCHEMA_VERSION,"domains":domains.duplicate(true)}
