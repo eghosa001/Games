@@ -3,18 +3,20 @@ class_name RenewCompetitorReactionSystem
 
 # Phase 15: competitors react to meaningful player actions instead of behaving as
 # static NPCs. The system mutates the shared Phase 14 competitor roster.
-const SYSTEM_VERSION := 1
+const SYSTEM_VERSION := 2
 
 var rivals = null
 var last_player_price := -1
-var last_timber_rights := -1
 var last_contract_id := ""
 var reaction_history: Array = []
 
 func set_rivals(value) -> void:
     rivals = value
 
-func observe_and_react(player_state: Dictionary, supply_chain = null, contract_result: Dictionary = {}) -> Array[String]:
+func prime_player_state(player_state: Dictionary) -> void:
+    last_player_price = int(player_state.get("player_price", 110))
+
+func observe_and_react(player_state: Dictionary, _supply_chain = null, contract_result: Dictionary = {}) -> Array[String]:
     if rivals == null:
         return []
     var day := int(player_state.get("day", 1))
@@ -23,14 +25,6 @@ func observe_and_react(player_state: Dictionary, supply_chain = null, contract_r
     if last_player_price >= 0 and player_price < last_player_price - 1:
         news.append_array(react_to_price_cut(player_price, last_player_price, day))
     last_player_price = player_price
-
-    if supply_chain != null:
-        var rights := 0
-        if "contracts" in supply_chain and supply_chain.contracts != null:
-            rights = int(supply_chain.contracts.player_resource_rights.get("timber", 0))
-        if last_timber_rights >= 0 and rights > last_timber_rights:
-            news.append_array(react_to_resource_capture("timber", rights - last_timber_rights, day))
-        last_timber_rights = rights
 
     if not contract_result.is_empty() and bool(contract_result.get("finished", false)):
         var contract: Dictionary = contract_result.get("contract", {})
@@ -62,6 +56,10 @@ func react_to_price_cut(player_price: int, previous_price: int, day: int) -> Arr
             news.append("%s defended its premium position rather than joining the price war." % rival.get("name", "A rival"))
     _remember(day, "price_cut", {"from": previous_price, "to": player_price})
     return news
+
+# Called by the supply/ownership command when the player actually secures timber supply.
+func notify_resource_capture(resource: String, amount: int, day: int) -> Array[String]:
+    return react_to_resource_capture(resource, amount, day)
 
 func react_to_resource_capture(resource: String, amount: int, day: int) -> Array[String]:
     var news: Array[String] = []
@@ -128,12 +126,11 @@ func _remember(day: int, event_type: String, details: Dictionary) -> void:
         reaction_history.pop_front()
 
 func capture_state() -> Dictionary:
-    return {"system_version": SYSTEM_VERSION, "last_player_price": last_player_price, "last_timber_rights": last_timber_rights, "last_contract_id": last_contract_id, "reaction_history": reaction_history.duplicate(true)}
+    return {"system_version": SYSTEM_VERSION, "last_player_price": last_player_price, "last_contract_id": last_contract_id, "reaction_history": reaction_history.duplicate(true)}
 
 func restore_state(snapshot: Dictionary) -> void:
     if snapshot.is_empty():
         return
     last_player_price = int(snapshot.get("last_player_price", -1))
-    last_timber_rights = int(snapshot.get("last_timber_rights", -1))
     last_contract_id = str(snapshot.get("last_contract_id", ""))
     reaction_history = snapshot.get("reaction_history", []).duplicate(true)
