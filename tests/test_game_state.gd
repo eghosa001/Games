@@ -14,7 +14,7 @@ func run() -> void:
     var state = State.new(); root.add_child(state); await process_frame
     var core := {"cash":25000,"day":7,"reputation":12,"owned":true,"business_open":true,"employees":4,"roster":[{"id":"emp_001","status":"active"}],"resources":{"materials":18},"contract_days":3,"rivals":[{"name":"Test Rival","relationship":40}],"total_profit":4200}
     var snapshot: Dictionary = state.capture(core)
-    check(snapshot.get("state_version", 0) == 6, "GameState writes current version")
+    check(snapshot.get("state_version", 0) == 7, "GameState writes current version")
     check(snapshot.has("domains"), "GameState contains domain map")
     check(snapshot.has("legacy"), "GameState preserves migration-compatible flat state")
     for domain in state.DOMAINS: check(snapshot["domains"].has(domain), "Domain exists: " + str(domain))
