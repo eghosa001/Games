@@ -17,7 +17,6 @@ func _ready() -> void:
     add_child(state_adapter)
     add_child(supply_chain)
     supply_chain.set_economy(economy)
-
 func _technology():
     return get_node_or_null("/root/RenewTechnologySystem")
 
@@ -26,27 +25,15 @@ func get_industries() -> Array:
     for key in INDUSTRIES.keys():
         result.append(INDUSTRIES[key].duplicate(true))
     return result
-
 func get_industry(industry_id: String) -> Dictionary:
-    var value = INDUSTRIES.get(industry_id, null)
-    return value.duplicate(true) if value is Dictionary else {}
-
-func get_business_purposes(property_type: String = "") -> Array:
-    if PURPOSES.has(property_type):
-        return PURPOSES[property_type].duplicate(true)
-    var result: Array = []
-    for entries in PURPOSES.values():
-        for entry in entries:
-            if entry not in result:
-                result.append(entry.duplicate(true))
-    return result
-
-func get_business_purpose(purpose_id: String, property_type: String = "") -> Dictionary:
-    for purpose in get_business_purposes(property_type):
-        if str(purpose.get("id", "")) == purpose_id:
-            return purpose.duplicate(true)
-    return {}
-
+    return INDUSTRIES.get(industry_id, {}).duplicate(true)
+func get_business_purposes() -> Array:
+    return PURPOSES.get(_origin_property_type(), []).duplicate(true)
+func get_business_purpose(index: int) -> Dictionary:
+    var choices: Array = get_business_purposes()
+    if index < 0 or index >= choices.size():
+        return {}
+    return choices[index].duplicate(true)
 func open_business(property_id: String, purpose_id: String = "furniture_factory") -> Dictionary:
     var properties = state_adapter.get_value("properties", "properties", {})
     if not properties is Dictionary or not properties.has(property_id):
