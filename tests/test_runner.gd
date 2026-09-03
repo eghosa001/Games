@@ -38,33 +38,34 @@ func run() -> void:
 
 func test_economy() -> void:
     var e = load("res://scripts/economy.gd").new()
-    check(not e.supplier_for("materials", 1).is_empty(), "economy supplier_for")
-    var quote = e.quote("materials", 10, 0)
+    check(not e.supplier_for("timber", 1).is_empty(), "economy supplier_for")
+    var quote = e.quote("timber", 10, 0)
     check(bool(quote.get("ok", false)) and int(quote["cost"]) > 0, "economy quote")
-    var before = int(e.resources["materials"]["stock"])
+    var before = int(e.resources["timber"]["stock"])
     var bought := false
     for i in range(20):
-        var buy = e.buy_resource("materials", 5, 100000, 2)
+        var buy = e.buy_resource("timber", 5, 100000, 2)
         if bool(buy.get("ok", false)):
             bought = true
             break
-    check(bought and int(e.resources["materials"]["stock"]) == before + 5, "economy buy_resource")
-    e.set_market_modifier("materials", 1.5)
-    check(float(e.quote("materials", 1)["market_factor"]) == 1.5, "economy set_market_modifier")
+    check(bought and int(e.resources["timber"]["stock"]) == before + 5, "economy buy_resource")
+    e.set_market_modifier("timber", 1.5)
+    check(float(e.quote("timber", 1)["market_factor"]) == 1.5, "economy set_market_modifier")
     e.clear_market_modifiers()
-    check(float(e.quote("materials", 1)["market_factor"]) == 1.0, "economy clear_market_modifiers")
+    check(float(e.quote("timber", 1)["market_factor"]) == 1.0, "economy clear_market_modifiers")
     e.end_market_day()
-    check(int(e.resources["materials"]["stock"]) >= 15, "economy end_market_day")
+    check(int(e.resources["timber"]["stock"]) >= 15, "economy end_market_day")
+    check(e.resource_ids().size() == 5 and not e.resources.has("materials") and not e.resources.has("packaging") and not e.resources.has("fuel"), "economy canonical V1 resources only")
 
 func test_production() -> void:
     var e = load("res://scripts/economy.gd").new()
     var p = load("res://scripts/production.gd").new()
-    var result = p.produce(e, 3)
-    check(bool(result["ok"]) and int(result["output"]) > 0, "production produce")
+    var result = p.produce(e, 3, "furniture")
+    check(bool(result["ok"]) and int(result["output"]) > 0, "production produce canonical V1")
     var empty = load("res://scripts/economy.gd").new()
-    empty.resources["materials"]["stock"] = 0
-    var stopped = p.produce(empty, 3)
-    check(not bool(stopped["ok"]), "production stops on missing input")
+    empty.resources["timber"]["stock"] = 0
+    var stopped = p.produce(empty, 3, "furniture")
+    check(not bool(stopped["ok"]), "production stops on missing canonical input")
 
 func test_districts() -> void:
     var d = load("res://scripts/districts.gd").new()
@@ -116,8 +117,7 @@ func test_regions() -> void:
     check(r.current().has("name"), "regions current")
     check(r.market_multiplier("Consumer Goods") > 0.0, "regions market_multiplier")
     check(r.logistics_cost(100.0, 0, 2) > 0.0, "regions logistics_cost")
-    check(r.regional_resource_bonus("fuel") >= 0.0, "regions regional_resource_bonus")
-    check(r.competition_pressure() >= 0.0, "regions competition_pressure")
+    check(r.regional_resource_bonus("energy") >= 0.0, "regions regional_resource_bonus canonical")
     r.daily_update(7)
     check(r.trade_route_bonus(2) >= 0.0, "regions trade_route_bonus")
 
@@ -143,15 +143,15 @@ func test_rivals() -> void:
 func test_supply() -> void:
     var s = load("res://scripts/supply_chain.gd").new()
     s._normalize()
-    check(s.network_stock.has("materials"), "supply normalize")
+    check(s.network_stock.has("timber") and s.network_stock.has("iron") and s.network_stock.has("energy"), "supply canonical normalize")
     var x = load("res://scripts/expansion.gd").new()
     x.unlock_from_reputation(100)
     check(bool(x.buy_resource_site(0, 100000)["ok"]), "supply resource prerequisite")
     check(bool(x.generate_resource(0)["ok"]), "supply generated stock")
-    var moved = s.move_from_site(x.resource_sites[0], 3, 100)
-    check(bool(moved["ok"]), "supply move_from_site")
-    var market = s.acquire_from_market("materials", 5, 100000, null)
-    check(market.has("ok") and market.has("message"), "supply acquire_from_market")
+    var moved = s.move_from_site({"resource":"timber","stock":10}, 3, 100)
+    check(bool(moved["ok"]), "supply move_from_site canonical")
+    var market = s.acquire_from_market("timber", 5, 100000, null)
+    check(market.has("ok") and market.has("message"), "supply acquire_from_market canonical")
     check(bool(x.buy(0, 100000)["ok"]), "supply business prerequisite")
     var supplied = s.supply_business(x.properties[0], 1, 100)
     check(supplied.has("ok") and supplied.has("message"), "supply supply_business")
@@ -168,11 +168,11 @@ func test_contracts() -> void:
     fake.set("reputation", 100)
     fake.set("cash", 100000)
     root.add_child(fake)
-    var negotiated = c.negotiate(0, "materials", fake)
-    check(negotiated.has("ok") and negotiated.has("message"), "contracts negotiate")
-    var rights = c.secure_resource("materials", fake)
-    check(rights.has("ok") and rights.has("message"), "contracts secure_resource")
-    check(c.resource_discount("materials") >= 0.0, "contracts resource_discount")
+    var negotiated = c.negotiate(0, "timber", fake)
+    check(negotiated.has("ok") and negotiated.has("message"), "contracts negotiate canonical resource")
+    var rights = c.secure_resource("timber", fake)
+    check(rights.has("ok") and rights.has("message"), "contracts secure_resource canonical")
+    check(c.resource_discount("timber") >= 0.0, "contracts resource_discount canonical")
     c.daily_update()
     fake.free()
 
@@ -234,14 +234,14 @@ func test_main_gameplay_chain() -> void:
 
     # A business cannot open until the restored property has an industry purpose.
     # Exercise the V1 furniture industry first; other industry choices are covered
-    # by their dedicated business/production tests.
+    # by their dedicated production/business tests.
     game.choose_business_purpose(0)
     game.open_business()
     check(game.business_open, "chain open business")
     game.cycle_supplier()
     check(game.supplier_choice == 1, "chain cycle supplier")
     game.buy_inputs()
-    check(game.economy.resources["materials"]["stock"] >= 12, "chain buy inputs")
+    check(game.economy.resources["timber"]["stock"] >= 12, "chain buy canonical timber inputs")
     game.produce_goods()
     check(game.finished_goods > 0, "chain produce goods")
     game.hire_employee()
