@@ -3,7 +3,7 @@ extends Node
 ## Canonical persistent gameplay-state boundary.
 ## Each gameplay fact has exactly one authoritative domain. Systems own behavior,
 ## while RenewGameState owns the data that behavior reads and mutates.
-const STATE_VERSION := 10
+const STATE_VERSION := 11
 
 const DOMAINS := [
     "player", "company", "properties", "businesses", "branches", "employees",
@@ -35,7 +35,7 @@ const DEFAULT_DOMAINS := {
     "production": {"finished_goods": 0, "system": {}}, "supply_chain": {"supplier_choice": 0, "transport_level": 1, "transport_capacity": 40, "resource_sites": {}},
     "contracts": {"contract_days": 0, "contract_bonus": 0, "contract_system": {}, "system": {}}, "competitors": {"rivals": [], "selected_rival": 0, "relationship": 15},
     "ownership": {"acquisition_count": 0}, "finance": {"debt": 0, "loan_payment": 0, "system": {}}, "alliances": {"alliances": {}}, "diplomacy": {"diplomacy": {}},
-    "regions": {"selected_district": 0, "districts": {}}, "infrastructure": {"management_level": 0, "management_overhead": 0},
+    "regions": {"selected_district": 0, "districts": {"renew_region":{"id":"renew_region","name":"Renew Region","cities":[],"resource_locations":[]}}}, "infrastructure": {"management_level": 0, "management_overhead": 0},
     "technology": {"technology": {}, "research_points": 20}, "events": {"events": []}, "progression": {"milestones": [], "unlocks": [], "xp": 0, "level": 1},
     "history": {"history_system": {}}, "news": {"news_system": {}}, "analytics": {"simulation_system": {}}
 }
@@ -89,6 +89,8 @@ func _apply_flat_to_domains(flat: Dictionary) -> void:
     for key in ["rivals", "selected_rival", "relationship"]: _migrate_key("competitors", flat, key)
     _migrate_key("ownership", flat, "acquisition_count"); _migrate_key("finance", flat, "debt"); _migrate_key("finance", flat, "loan_payment"); _migrate_key("regions", flat, "selected_district")
     for key in ["technology", "research_points"]: _migrate_key("technology", flat, key)
+    for key in ["milestones", "unlocks", "xp", "level"]: _migrate_key("progression", flat, key)
+    if flat.has("districts"): _migrate_key("regions", flat, "districts")
 func _migrate_key(domain: String, flat: Dictionary, key: String) -> void:
     if flat.has(key): var bucket: Dictionary = domains.get(domain, {}).duplicate(true); bucket[key] = flat[key]; domains[domain] = bucket
 func _domains_to_flat(snapshot: Dictionary) -> Dictionary:
