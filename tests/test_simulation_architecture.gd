@@ -28,10 +28,11 @@ func run() -> void:
     var finance = Finance.new()
     root.add_child(finance)
     var production = Production.new()
-    production.name = "RenewProductionSystem"
+    production.name = "ProductionSystem"
     root.add_child(production)
     var simulation = Simulation.new()
     root.add_child(simulation)
+    simulation.set_production_system(production)
     await process_frame
 
     check(finance.spend(1000, "test")["ok"], "Finance owns spending")
