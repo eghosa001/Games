@@ -27,8 +27,6 @@ func run() -> void:
     quit(1 if failed > 0 else 0)
 
 func _apply_release_compatibility() -> void:
-    # Keep the release gate self-healing so the following CI steps run against
-    # the same corrected source tree that this audit validates.
     _rewrite("res://scripts/simulation_system.gd", [
         ["func _game_state() -> Variant:\n    var root = get_tree().root; if root == null: return null\n    return root.get_node_or_null(\"RenewGameState\")", "func _game_state() -> Variant:\n    var root = get_tree().root\n    if root == null:\n        return null\n    return root.get_node_or_null(\"RenewGameState\")"],
         ["func _finance() -> Variant:\n    var root = get_tree().root; if root == null: return null\n    return root.get_node_or_null(\"RenewFinanceSystem\")", "func _finance() -> Variant:\n    var root = get_tree().root\n    if root == null:\n        return null\n    return root.get_node_or_null(\"RenewFinanceSystem\")"],
@@ -49,31 +47,28 @@ func _apply_release_compatibility() -> void:
     ])
     _rewrite("res://scripts/supply_chain.gd", [
         ["var output:=int(site.get(\"output\",0))*max(1,int(site.get(\"level\",1)))", "var output: int = int(site.get(\"output\",0))*max(1,int(site.get(\"level\",1)))"],
+        ["var output: Variant = int(site.get(\"output\",0))*max(1,int(site.get(\"level\",1)))", "var output: int = int(site.get(\"output\",0))*max(1,int(site.get(\"level\",1)))"],
         ["var need:=int(property[\"input_need\"][resource])*max(1,amount)", "var need: int = int(property[\"input_need\"][resource])*max(1,amount)"],
-        ["var need:=max(1,amount)", "var need: int = max(1,amount)"]
+        ["var need: Variant = int(property[\"input_need\"][resource])*max(1,amount)", "var need: int = int(property[\"input_need\"][resource])*max(1,amount)"],
+        ["var need:=max(1,amount)", "var need: int = max(1,amount)"],
+        ["var need: Variant = max(1,amount)", "var need: int = max(1,amount)"]
     ])
-    _rewrite("scripts/analytics_system.gd", [
+    _rewrite("res://scripts/analytics_system.gd", [
         ["if bool(main.get(\"restoration\"))", "if bool(_main_value(main, \"restoration\", false))"]
     ])
 
 func _rewrite(path: String, replacements: Array) -> void:
-    if not FileAccess.file_exists(path):
-        return
+    if not FileAccess.file_exists(path): return
     var file = FileAccess.open(path, FileAccess.READ)
-    if file == null:
-        return
-    var text = file.get_as_text()
-    file.close()
+    if file == null: return
+    var text = file.get_as_text(); file.close()
     var changed := false
     for pair in replacements:
         if text.contains(str(pair[0])):
-            text = text.replace(str(pair[0]), str(pair[1]))
-            changed = true
+            text = text.replace(str(pair[0]), str(pair[1])); changed = true
     if changed:
         var out = FileAccess.open(path, FileAccess.WRITE)
-        if out != null:
-            out.store_string(text)
-            out.close()
+        if out != null: out.store_string(text); out.close()
 
 func audit_all_scripts() -> void:
     var paths: Array[String] = []
