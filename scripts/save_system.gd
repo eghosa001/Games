@@ -24,7 +24,7 @@ static func save_game(_state: Dictionary) -> bool:
         if DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(BACKUP_PATH)) != OK:
             DirAccess.remove_absolute(ProjectSettings.globalize_path(TEMP_PATH)); return false
     if FileAccess.file_exists(SAVE_PATH): DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
-    if DirAccess.rename_absolute(ProjectSettings.globalize_path(TEMP_PATH),ProjectSettings.globalize_path(SAVE_PATH)) != OK:
+    if DirAccess.rename_absolute(ProjectSettings.globalize_path(TEMP_PATH), ProjectSettings.globalize_path(SAVE_PATH)) != OK:
         DirAccess.remove_absolute(ProjectSettings.globalize_path(TEMP_PATH)); return false
     return true
 
@@ -38,11 +38,58 @@ static func load_game() -> Dictionary:
         data = migrate(data, version)
         if data.is_empty(): return {}
         version = int(data.get("schema_version", version + 1))
+    if not validate_save(data): return {}
     var game_state = _game_state()
     if game_state != null:
-        game_state.restore(data)
+        if not game_state.restore(data): return {}
         return game_state.capture()
     return data
+
+## Validate the canonical save immediately before it is accepted by the game.
+## Invalid/corrupt data is rejected rather than passed into GameState systems.
+static func validate_save(data: Dictionary) -> bool:
+    if not data.has("schema_version") or int(data["schema_version"]) != CURRENT_VERSION: return false
+    if not data.has("domains") or not (data["domains"] is Dictionary): return false
+    var domains:Dictionary = data["domains"]
+    if not _valid_dictionary_domain(domains, "player"): return false
+    if not _valid_dictionary_domain(domains, "company"): return false
+    if not _valid_dictionary_domain(domains, "resources"): return false
+    if not _valid_dictionary_domain(domains, "properties"): return false
+    if not domains.has("employees"): return false
+    if not _valid_employees(domains["employees"]): return false
+    if not _valid_player(domains["player"]): return false
+    if not _valid_company(domains["company"]): return false
+    if not _valid_economy(domains): return false
+    return true
+
+static func _valid_dictionary_domain(domains: Dictionary, key: String) -> bool:
+    return domains.has(key) and domains[key] is Dictionary
+
+static func _valid_employees(employees: Variant) -> bool:
+    if employees is Array: return true
+    if not employees is Dictionary: return false
+    var roster = employees.get("roster", null)
+    return roster is Array
+
+static func _valid_player(player: Dictionary) -> bool:
+    if not player.has("day"): return true
+    return _is_numeric(player["day"]) and int(player["day"]) >= 1
+
+static func _valid_company(company: Dictionary) -> bool:
+    if company.has("cash") and not _is_numeric(company["cash"]): return false
+    return true
+
+static func _valid_economy(domains: Dictionary) -> bool:
+    var economy:Dictionary = domains.get("economy", {})
+    if economy.is_empty(): return true
+    if economy.has("cash") and not _is_numeric(economy["cash"]): return false
+    if economy.has("last_sales") and not _is_numeric(economy["last_sales"]): return false
+    if economy.has("last_profit") and not _is_numeric(economy["last_profit"]): return false
+    if economy.has("total_profit") and not _is_numeric(economy["total_profit"]): return false
+    return true
+
+static func _is_numeric(value: Variant) -> bool:
+    return value is int or value is float
 
 static func migrate(data: Dictionary, version: int) -> Dictionary:
     match version:
@@ -74,8 +121,7 @@ static func migrate_v3_to_v4(data: Dictionary) -> Dictionary:
     if not result.has("employees"): result["employees"] = {"roster": []}
     elif result["employees"] is int or result["employees"] is float:
         result["employees"] = _migrate_legacy_employee_count(int(result["employees"]))
-    elif result["employees"] is Array:
-        result["employees"] = {"roster": result["employees"]}
+    elif result["employees"] is Array: result["employees"] = {"roster": result["employees"]}
     result["schema_version"] = 4
     return result
 
@@ -83,14 +129,7 @@ static func _migrate_legacy_employee_count(count: int) -> Dictionary:
     var roster:Array = []
     var safe_count := max(0, count)
     for i in range(1, safe_count + 1):
-        var suffix := "%03d" % i
-        roster.append({
-            "id": "legacy_employee_%s" % suffix,
-            "name": "Employee %d" % i,
-            "role": "General Worker",
-            "status": "active",
-            "legacy_migrated": true
-        })
+        roster.append({"id": "legacy_employee_%03d" % i, "name": "Employee %d" % i, "role": "General Worker", "status": "active", "legacy_migrated": true})
     return {"roster": roster}
 
 static func migrate_v4_to_v5(data: Dictionary) -> Dictionary:
@@ -124,8 +163,7 @@ static func migrate_v7_to_v8(data: Dictionary) -> Dictionary:
     return {"schema_version": 8, "domains": _to_domains(result)}
 
 static func _to_domains(data: Dictionary) -> Dictionary:
-    if data.get("domains", null) is Dictionary:
-        return data["domains"].duplicate(true)
+    if data.get("domains", null) is Dictionary: return data["domains"].duplicate(true)
     var domains:Dictionary = {}
     var known := ["player", "company", "properties", "businesses", "branches", "employees", "economy", "resources", "production", "supply_chain", "contracts", "competitors", "alliances", "regions", "technology", "events", "progression", "history", "news", "analytics"]
     for domain in known:
