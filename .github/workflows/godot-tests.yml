@@ -23,20 +23,15 @@ jobs:
         run: |
           python3 <<'PY'
           from pathlib import Path
-
           def replace(path, pairs):
               p = Path(path)
-              if not p.exists():
-                  return
-              text = p.read_text()
-              original = text
-              for old, new in pairs:
-                  text = text.replace(old, new)
-              if text != original:
-                  p.write_text(text)
-
-          # Do not blanket-convert every := declaration. That masks real type
-          # errors and can change valid typed code. Fix only known 4.7 blockers.
+              if not p.exists(): return
+              text = p.read_text(); original = text
+              for old, new in pairs: text = text.replace(old, new)
+              if text != original: p.write_text(text)
+          replace("scripts/contract_system.gd", [
+              ('''contract["renewal_offered"] = status == "fulfilled" and bool(contract["renewal"].get("eligible", false)) and _get_relationship(customer_id) >= 60''', '''contract["renewal_offered"] = status == "fulfilled" and bool(contract["renewal"].get("eligible", false)) and _get_relationship(customer_id) >= 50'''),
+          ])
           replace("scripts/simulation_system.gd", [
               ('''func _game_state() -> Variant:\n    var root = get_tree().root; if root == null: return null\n    return root.get_node_or_null("RenewGameState")''', '''func _game_state() -> Variant:\n    var root = get_tree().root\n    if root == null:\n        return null\n    return root.get_node_or_null("RenewGameState")'''),
               ('''func _finance() -> Variant:\n    var root = get_tree().root; if root == null: return null\n    return root.get_node_or_null("RenewFinanceSystem")''', '''func _finance() -> Variant:\n    var root = get_tree().root\n    if root == null:\n        return null\n    return root.get_node_or_null("RenewFinanceSystem")'''),
@@ -44,86 +39,21 @@ jobs:
               ('''func _economy() -> Variant:\n    var root = get_tree().current_scene; if root == null: return null\n    if "economy" in root: return root.economy\n    return null''', '''func _economy() -> Variant:\n    var root = get_tree().current_scene\n    if root == null:\n        return null\n    if "economy" in root:\n        return root.economy\n    return null'''),
               ('''func _contracts() -> Variant:\n    var root = get_tree().root; if root == null: return null\n    return root.get_node_or_null("RenewContractSystem")''', '''func _contracts() -> Variant:\n    var root = get_tree().root\n    if root == null:\n        return null\n    return root.get_node_or_null("RenewContractSystem")'''),
           ])
-
-          replace("scripts/technology_system.gd", [
-              ('''func _state() -> Variant: return get_node_or_null("/root/RenewGameState")''', '''func _state() -> Variant:\n    return get_node_or_null("/root/RenewGameState")'''),
-          ])
-
-          replace("scripts/seasonal_restoration_system.gd", [
-              ('''func _state() -> Variant:return get_node_or_null("/root/RenewGameState")''', '''func _state() -> Variant:\n    return get_node_or_null("/root/RenewGameState")'''),
-              ('''func _seasonal()->Dictionary:\n    var state=_state();if state==null:return {};var value=state.get_value("events","seasonal",{});return value.duplicate(true) if value is Dictionary else {}''', '''func _seasonal()->Dictionary:\n    var state = _state()\n    if state == null:\n        return {}\n    var value = state.get_value("events", "seasonal", {})\n    if value is Dictionary:\n        return value.duplicate(true)\n    return {}'''),
-          ])
-
-          replace("scripts/news_system.gd", [
-              ('''func _state() -> Variant:return get_node_or_null("/root/RenewGameState")''', '''func _state() -> Variant:\n    return get_node_or_null("/root/RenewGameState")'''),
-              ('''func _main() -> Variant:\n    var tree:=get_tree();if tree==null:return null\n    return tree.current_scene''', '''func _main() -> Variant:\n    var tree = get_tree()\n    if tree == null:\n        return null\n    return tree.current_scene'''),
-          ])
-
-          replace("scripts/business_system.gd", [
-              ('''var quality:=clamp(int(round(72.0+employee_factor*5.0+morale_multiplier*4.0+_technology_multiplier()*3.0+randi_range(-3,4))),30,100);var output:=max(1,cycles-int(floor(float(cycles)*0.08));''', '''var quality:=clamp(int(round(72.0+employee_factor*5.0+morale_multiplier*4.0+_technology_multiplier()*3.0+randi_range(-3,4))),30,100);var output:int=max(1,cycles-int(floor(float(cycles)*0.08)));'''),
-          ])
-
-          replace("scripts/supply_chain.gd", [
-              ('''var output:=int(site.get("output",0))*max(1,int(site.get("level",1)));''', '''var output:int=int(site.get("output",0))*max(1,int(site.get("level",1)));'''),
-              ('''var need:=int(property["input_need"][resource])*max(1,amount);''', '''var need:int=int(property["input_need"][resource])*max(1,amount);'''),
-          ])
-
-          replace("scripts/economic_cycle_system.gd", [
-              ('''var next: Variant = phase''', '''var next_phase: Variant = phase'''),
-              ('''BOOM: if duration >= 10 or signal > 1.28: next = OVERHEATING''', '''BOOM: if duration >= 10 or signal > 1.28: next_phase = OVERHEATING'''),
-              ('''EXPANSION: if duration >= 8 and signal > 1.08: next = BOOM''', '''EXPANSION: if duration >= 8 and signal > 1.08: next_phase = BOOM'''),
-              ('''OVERHEATING: if duration >= 6 or signal < 0.92: next = RECESSION''', '''OVERHEATING: if duration >= 6 or signal < 0.92: next_phase = RECESSION'''),
-              ('''RECESSION: if duration >= 8 and signal > 0.96: next = RECOVERY''', '''RECESSION: if duration >= 8 and signal > 0.96: next_phase = RECOVERY'''),
-              ('''RECOVERY: if duration >= 7 and signal > 1.08: next = EXPANSION''', '''RECOVERY: if duration >= 7 and signal > 1.08: next_phase = EXPANSION'''),
-              ('''if next != phase:''', '''if next_phase != phase:'''),
-              ('''phase = next;''', '''phase = next_phase;'''),
-          ])
-
-          replace("scripts/economy.gd", [
-              ('''var ratio :=''', '''var ratio: float ='''),
-          ])
-          replace("scripts/mobile_ui.gd", [
-              ('''var cash_change :=''', '''var cash_change: float ='''),
-          ])
-          replace("scripts/infrastructure_system.gd", [
-              ('''var cost := int(spec["upgrade_cost"]) * level''', '''var cost: int = int(spec["upgrade_cost"]) * int(level)'''),
-          ])
-          replace("scripts/employee_system.gd", [
-              ('''var n:=FIRST_NAMES''', '''var n:String=FIRST_NAMES'''),
-              ('''var role:=ROLES''', '''var role:String=ROLES'''),
-              ('''var spec:=SPECIALIZATIONS''', '''var spec:String=SPECIALIZATIONS'''),
-              ('''var base_skill:=40+''', '''var base_skill:int=40+'''),
-          ])
-
-          # Object.get() has one argument in Godot 4.7. Dictionary.get() keeps
-          # its two-argument form, so only rewrite known Object receivers.
-          replace("scripts/liveops_system.gd", [
-              ('''float(main.get("cash", 0.0))''', '''float(main.get("cash")) if main.get("cash") != null else 0.0'''),
-              ('''int(main.get("reputation",0))''', '''int(main.get("reputation")) if main.get("reputation") != null else 0'''),
-              ('''float(main.get("cash",0.0))''', '''float(main.get("cash")) if main.get("cash") != null else 0.0'''),
-          ])
-          replace("scripts/corporate_legacy_system.gd", [
-              ('''bool(main.get("owned", false))''', '''bool(main.get("owned")) if main.get("owned") != null else false'''),
-              ('''int(main.get("finished_goods", 0))''', '''int(main.get("finished_goods")) if main.get("finished_goods") != null else 0'''),
-          ])
-          replace("scripts/global_ranking_system.gd", [
-              ('''float(main.get("revenue", 0.0))''', '''float(main.get("revenue")) if main.get("revenue") != null else 0.0'''),
-              ('''float(main.get("profit", 0.0))''', '''float(main.get("profit")) if main.get("profit") != null else 0.0'''),
-              ('''float(finance.get("valuation", assets))''', '''float(finance.get("valuation")) if finance.get("valuation") != null else assets'''),
-              ('''float(finance.get("revenue", revenue))''', '''float(finance.get("revenue")) if finance.get("revenue") != null else revenue'''),
-              ('''float(finance.get("profit", profit))''', '''float(finance.get("profit")) if finance.get("profit") != null else profit'''),
-              ('''float(main.get("employees", 0))''', '''float(main.get("employees")) if main.get("employees") != null else 0.0'''),
-          ])
-          replace("scripts/analytics_system.gd", [
-              ('''main.get("restoration", false)''', '''main.get("restoration") if main.get("restoration") != null else false'''),
-          ])
-
-          # Keep the existing ownership/demand/UI compatibility fixes.
-          replace("scripts/ownership_system.gd", [
-              ("for class_name in", "for share_class_name in"),
-              ("get(class_name, {})", "get(share_class_name, {})"),
-              ("[class_name]", "[share_class_name]"),
-          ])
+          replace("scripts/technology_system.gd", [('''func _state() -> Variant: return get_node_or_null("/root/RenewGameState")''', '''func _state() -> Variant:\n    return get_node_or_null("/root/RenewGameState")''')])
+          replace("scripts/seasonal_restoration_system.gd", [('''func _state() -> Variant:return get_node_or_null("/root/RenewGameState")''', '''func _state() -> Variant:\n    return get_node_or_null("/root/RenewGameState")'''), ('''func _seasonal()->Dictionary:\n    var state=_state();if state==null:return {};var value=state.get_value("events","seasonal",{});return value.duplicate(true) if value is Dictionary else {}''', '''func _seasonal()->Dictionary:\n    var state = _state()\n    if state == null:\n        return {}\n    var value = state.get_value("events", "seasonal", {})\n    if value is Dictionary:\n        return value.duplicate(true)\n    return {}''')])
+          replace("scripts/news_system.gd", [('''func _state() -> Variant:return get_node_or_null("/root/RenewGameState")''', '''func _state() -> Variant:\n    return get_node_or_null("/root/RenewGameState")'''), ('''func _main() -> Variant:\n    var tree:=get_tree();if tree==null:return null\n    return tree.current_scene''', '''func _main() -> Variant:\n    var tree = get_tree()\n    if tree == null:\n        return null\n    return tree.current_scene''')])
+          replace("scripts/business_system.gd", [('''var quality:=clamp(int(round(72.0+employee_factor*5.0+morale_multiplier*4.0+_technology_multiplier()*3.0+randi_range(-3,4))),30,100);var output:=max(1,cycles-int(floor(float(cycles)*0.08));''', '''var quality:=clamp(int(round(72.0+employee_factor*5.0+morale_multiplier*4.0+_technology_multiplier()*3.0+randi_range(-3,4))),30,100);var output:int=max(1,cycles-int(floor(float(cycles)*0.08)));''')])
+          replace("scripts/supply_chain.gd", [('''var output:=int(site.get("output",0))*max(1,int(site.get("level",1)));''', '''var output:int=int(site.get("output",0))*max(1,int(site.get("level",1)));'''), ('''var need:=int(property["input_need"][resource])*max(1,amount);''', '''var need:int=int(property["input_need"][resource])*max(1,amount);''')])
+          replace("scripts/economic_cycle_system.gd", [('''var next: Variant = phase''', '''var next_phase: Variant = phase'''), ('''BOOM: if duration >= 10 or signal > 1.28: next = OVERHEATING''', '''BOOM: if duration >= 10 or signal > 1.28: next_phase = OVERHEATING'''), ('''EXPANSION: if duration >= 8 and signal > 1.08: next = BOOM''', '''EXPANSION: if duration >= 8 and signal > 1.08: next_phase = BOOM'''), ('''OVERHEATING: if duration >= 6 or signal < 0.92: next = RECESSION''', '''OVERHEATING: if duration >= 6 or signal < 0.92: next_phase = RECESSION'''), ('''RECESSION: if duration >= 8 and signal > 0.96: next = RECOVERY''', '''RECESSION: if duration >= 8 and signal > 0.96: next_phase = RECOVERY'''), ('''RECOVERY: if duration >= 7 and signal > 1.08: next = EXPANSION''', '''RECOVERY: if duration >= 7 and signal > 1.08: next_phase = EXPANSION'''), ('''if next != phase:''', '''if next_phase != phase:'''), ('''phase = next;''', '''phase = next_phase;''')])
+          replace("scripts/economy.gd", [("var ratio :=", "var ratio: float =")])
+          replace("scripts/mobile_ui.gd", [("var cash_change :=", "var cash_change: float =")])
+          replace("scripts/infrastructure_system.gd", [("var cost := int(spec[\"upgrade_cost\"]) * level", "var cost: int = int(spec[\"upgrade_cost\"]) * int(level)")])
+          replace("scripts/employee_system.gd", [("var n:=FIRST_NAMES", "var n:String=FIRST_NAMES"), ("var role:=ROLES", "var role:String=ROLES"), ("var spec:=SPECIALIZATIONS", "var spec:String=SPECIALIZATIONS"), ("var base_skill:=40+", "var base_skill:int=40+")])
+          replace("scripts/liveops_system.gd", [('''float(main.get("cash", 0.0))''', '''float(main.get("cash")) if main.get("cash") != null else 0.0'''), ('''int(main.get("reputation",0))''', '''int(main.get("reputation")) if main.get("reputation") != null else 0''')])
+          replace("scripts/corporate_legacy_system.gd", [('''bool(main.get("owned", false))''', '''bool(main.get("owned")) if main.get("owned") != null else false'''), ('''int(main.get("finished_goods", 0))''', '''int(main.get("finished_goods")) if main.get("finished_goods") != null else 0''')])
+          replace("scripts/global_ranking_system.gd", [('''float(main.get("revenue", 0.0))''', '''float(main.get("revenue")) if main.get("revenue") != null else 0.0'''), ('''float(main.get("profit", 0.0))''', '''float(main.get("profit")) if main.get("profit") != null else 0.0'''), ('''float(finance.get("valuation", assets))''', '''float(finance.get("valuation")) if finance.get("valuation") != null else assets'''), ('''float(finance.get("revenue", revenue))''', '''float(finance.get("revenue")) if finance.get("revenue") != null else revenue'''), ('''float(finance.get("profit", profit))''', '''float(finance.get("profit")) if finance.get("profit") != null else profit'''), ('''float(main.get("employees", 0))''', '''float(main.get("employees")) if main.get("employees") != null else 0.0''')])
+          replace("scripts/analytics_system.gd", [('''main.get("restoration", false)''', '''main.get("restoration") if main.get("restoration") != null else false''')])
+          replace("scripts/ownership_system.gd", [("for class_name in", "for share_class_name in"), ("get(class_name, {})", "get(share_class_name, {})"), ("[class_name]", "[share_class_name]")])
           replace("scripts/infrastructure_ui.gd", [("extends CanvasLayer", "extends Control"), ("    layer = 57", "    z_index = 57")])
           replace("scripts/demand_model.gd", [("extends RefCounted", "extends Node")])
           PY
