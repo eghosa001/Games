@@ -1,7 +1,7 @@
 extends Node
 class_name RenewPropertySystem
 
-## Phase 17: restoration is the emotional entry point; business is progression.
+## Phase 18: restoration is the emotional entry point; business is progression.
 ## Property facts live only in GameState.properties. This node owns behavior.
 
 const DomainSystem = preload("res://scripts/domain_system.gd")
@@ -81,23 +81,37 @@ func acquire_property() -> void:
     state_adapter.set_value("economy", "cash", cash - purchase_price)
     state_adapter.set_value("properties", "owned", true)
     state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + 2)
+    _sync_legacy_fields()
     state_adapter.message("Acquired %s. Now restore it into an asset." % property.get("name", "property"))
     state_adapter.log_message("ACQUIRED: %s for $%d." % [property.get("name", "property"), purchase_price])
 
 func restore_step(step: String, property_id: String = "") -> Dictionary:
-    if not RESTORATION_STEPS.has(step): return {"ok":false,"reason":"invalid_restoration_step"}
+    if not RESTORATION_STEPS.has(step):
+        return {"ok":false,"reason":"invalid_restoration_step"}
     if not bool(state_adapter.get_value("properties", "owned", false)):
         return {"ok":false,"reason":"property_not_owned"}
     var id := property_id if not property_id.is_empty() else str(get_selected_property().get("id", ""))
     var catalog := list_properties()
     var index := _index_for_id(catalog, id)
-    if index < 0: return {"ok":false,"reason":"property_not_found"}
+    if index < 0:
+        return {"ok":false,"reason":"property_not_found"}
     var property: Dictionary = catalog[index]
+
+    # Restoration is intentionally sequential: the next physical transformation
+    # cannot begin until the previous one is complete.
+    var required_step := _next_restoration_step(property)
+    if required_step.is_empty():
+        return {"ok":false,"reason":"restoration_complete","property":property}
+    if step != required_step:
+        return {"ok":false,"reason":"step_locked","required_step":required_step,"property":property}
+
     var progress := int(property.get(step, 0))
-    if progress >= 100: return {"ok":false,"reason":"step_complete","property":property}
+    if progress >= 100:
+        return {"ok":false,"reason":"step_complete","property":property}
     var cost := int(STEP_COSTS[step])
     var cash := int(state_adapter.get_value("economy", "cash", 25000))
-    if cash < cost: return {"ok":false,"reason":"insufficient_cash","cost":cost,"cash":cash}
+    if cash < cost:
+        return {"ok":false,"reason":"insufficient_cash","cost":cost,"cash":cash}
 
     progress = mini(100, progress + int(STEP_GAIN[step]))
     property[step] = progress
@@ -108,40 +122,66 @@ func restore_step(step: String, property_id: String = "") -> Dictionary:
     state_adapter.set_value("properties", "selected_property", index)
     _sync_legacy_fields()
     state_adapter.log_message("RESTORATION: %s — %s +%d%% (-$%d)." % [property.get("name", id), step.capitalize(), int(STEP_GAIN[step]), cost])
+
     if is_operational(property):
         state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + 8)
         state_adapter.message("RESTORATION COMPLETE. Your neglected property is now productive capital.")
     else:
-        state_adapter.message("%s complete: %s is visibly improving." % [step.capitalize(), property.get("name", id)])
+        state_adapter.message("%s %d%% complete: the property is visibly changing." % [step.capitalize(), progress])
     return {"ok":true,"property":property.duplicate(true),"step":step,"cost":cost}
 
 func restore_property() -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)):
         state_adapter.message("Acquire the property first."); return
     var property := get_selected_property()
-    for step in RESTORATION_STEPS:
-        if int(property.get(step, 0)) < 100:
-            restore_step(step)
-            return
-    state_adapter.message("Restoration is complete.")
+    var step := _next_restoration_step(property)
+    if step.is_empty():
+        state_adapter.message("Restoration is complete. The property is Operational.")
+        return
+    restore_step(step)
 
 func is_operational(property: Dictionary) -> bool:
     for step in RESTORATION_STEPS:
-        if int(property.get(step, 0)) < 100: return false
+        if int(property.get(step, 0)) < 100:
+            return false
     return true
+
+func _next_restoration_step(property: Dictionary) -> String:
+    for step in RESTORATION_STEPS:
+        if int(property.get(step, 0)) < 100:
+            return step
+    return ""
+
+func _visual_stage(property: Dictionary, owned: bool) -> String:
+    if not owned:
+        return "Abandoned"
+    if int(property.get("cleaning", 0)) < 100:
+        return "Abandoned"
+    if int(property.get("repair", 0)) < 100:
+        return "Cleaned"
+    if int(property.get("painting", 0)) < 100:
+        return "Repaired"
+    if int(property.get("furnishing", 0)) < 50:
+        return "Painted"
+    if int(property.get("furnishing", 0)) < 100:
+        return "Furnished"
+    return "Operational"
 
 func _index_for_id(catalog: Array, property_id: String) -> int:
     for index in catalog.size():
-        if str(catalog[index].get("id", "")) == property_id: return index
+        if str(catalog[index].get("id", "")) == property_id:
+            return index
     return -1
 
 func _sync_legacy_fields() -> void:
     var property := get_selected_property()
-    if property.is_empty(): return
+    if property.is_empty():
+        return
     var average := 0
-    for step in RESTORATION_STEPS: average += int(property.get(step, 0))
+    for step in RESTORATION_STEPS:
+        average += int(property.get(step, 0))
     average = int(round(float(average) / float(RESTORATION_STEPS.size())))
     var owned := bool(state_adapter.get_value("properties", "owned", false))
     var operational := is_operational(property)
     state_adapter.set_value("properties", "restoration", average)
-    state_adapter.set_value("properties", "stage", "Operational" if operational and owned else ("Restoring" if average > 0 else "Neglected"))
+    state_adapter.set_value("properties", "stage", _visual_stage(property, owned) if not operational else "Operational")
