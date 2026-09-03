@@ -59,6 +59,7 @@ func advance_day()->void:
     var result:Dictionary=simulation.advance_day(_simulation_state(),context)
     if not bool(result.get("ok",false)):_set_state("company","message",str(result.get("message","Unable to advance the day.")));return
     _apply_simulation_state(result.get("state",{})); employee_system.sync_roster()
+    business_system.supply_chain.warehouse["furniture"] = float(_state_value("production","finished_goods",0))
 func _events():
     if not has_meta("events_model"):set_meta("events_model",load("res://scripts/events.gd").new())
     return get_meta("events_model")
@@ -70,9 +71,12 @@ func _apply_simulation_state(state:Dictionary)->void:
         if state.has(key):_set_state(map[key][0],map[key][1],state[key])
     if state.get("log_lines",[]) is Array:_set_state("company","log_lines",state["log_lines"].duplicate(true))
 func save_game()->void:
+    _set_state("supply_chain","resource_sites",business_system.supply_chain.warehouse_snapshot())
     var state=get_node_or_null("/root/RenewGameState"); var snapshot=state.capture() if state!=null else {}; _set_state("company","message","Game saved." if SaveSystem.save_game(snapshot) else "Save failed.")
 func load_game()->void:
     var snapshot=SaveSystem.load_game(); if snapshot.is_empty():_set_state("company","message","No save file found.");return
     var state=get_node_or_null("/root/RenewGameState"); if state!=null:state.restore(snapshot)
     var roster=_state_value("employees","roster",[]); if roster is Array:employee_system.employee_system.restore_state({"employees":roster})
+    var saved_warehouse=_state_value("supply_chain","resource_sites",{})
+    if saved_warehouse is Dictionary: business_system.supply_chain.restore_state({"warehouse":saved_warehouse})
     employee_system.sync_roster(); _set_state("company","message","Game loaded.")
