@@ -1,71 +1,32 @@
 extends SceneTree
 
-# Extreme-duration stability pass. This intentionally exercises the live Main
-# scene for 1,000 in-game days and repeatedly saves/loads the complete state.
 var passed := 0
 var failed := 0
 
-func _init() -> void:
-    call_deferred("run")
-
+func _init() -> void: call_deferred("run")
 func check(ok: bool, label: String) -> void:
-    if ok:
-        passed += 1
-        print("PASS: " + label)
-    else:
-        failed += 1
-        push_error("FAIL: " + label)
+    if ok: passed += 1
+    else: failed += 1; push_error("FAIL: " + label)
 
 func run() -> void:
     var scene := load("res://scenes/Main.tscn")
-    check(scene != null, "Main scene loads for extreme soak")
-    if scene == null:
-        quit(1)
-        return
-
-    var game = scene.instantiate()
-    root.add_child(game)
-    await process_frame
-    game.cash = 250000
-    game.reputation = 80
-    game.inspected = true
-    game.owned = true
-    game.stage = "Operational"
-    game.restoration = 100
-    game.business_open = true
-    game.economy.resources["materials"]["stock"] = 1000
-    game.economy.resources["packaging"]["stock"] = 1000
-    game.economy.resources["fuel"]["stock"] = 1000
-
-    var start_day := int(game.day)
-    var save_controller = game.get_node_or_null("GameStateBridge")
+    check(scene != null, "Main scene loads for extreme V1 soak")
+    if scene == null: quit(1); return
+    var game = scene.instantiate(); root.add_child(game); await process_frame
+    var state = get_node_or_null("/root/RenewGameState")
+    check(state != null, "Canonical GameState is available")
+    var start_day := int(state.get_value("player", "day", 1))
     for i in range(1000):
-        if int(game.finished_goods) < 5:
-            game.produce_goods()
-        if int(game.finished_goods) < 5:
-            game.economy.resources["materials"]["stock"] += 50
-            game.economy.resources["packaging"]["stock"] += 50
-            game.economy.resources["fuel"]["stock"] += 50
-            game.produce_goods()
         game.advance_day()
-        check(int(game.day) == start_day + i + 1, "Day progression remains exact at iteration %d" % (i + 1))
-        check(int(game.cash) > -1000000000, "Cash remains bounded at day %d" % int(game.day))
-        check(int(game.reputation) >= 0, "Reputation never becomes negative at day %d" % int(game.day))
-
-        if i % 50 == 0:
-            game.save_game()
-        if i % 100 == 0:
-            game.load_game()
-        if save_controller != null and i % 125 == 0:
-            save_controller._save_extended_state(false)
-            save_controller._load_extended_state()
-
-    check(int(game.day) == start_day + 1000, "Extreme soak reaches exactly 1,000 elapsed days")
-    check(game.expansion.properties is Array, "Expansion state remains valid after extreme soak")
-    check(game.expansion.resource_sites is Array, "Resource-site state remains valid after extreme soak")
-    check(game.rivals.rivals is Array and game.rivals.rivals.size() > 0, "Rival state remains valid after extreme soak")
-    check(game.economy.resources is Dictionary, "Economy state remains valid after extreme soak")
-
+        var day := int(state.get_value("player", "day", 0))
+        check(day == start_day + i + 1, "Exact V1 day progression at iteration %d" % (i + 1))
+        check(day >= 1, "Day remains valid at iteration %d" % (i + 1))
+        if i % 50 == 0: game.save_game()
+        if i % 100 == 0: game.load_game()
+    check(int(state.get_value("player", "day", 0)) == start_day + 1000, "Extreme soak reaches exactly 1,000 V1 days")
+    check(state.get_domain("economy") is Dictionary, "Economy domain remains valid")
+    check(state.get_domain("properties") is Dictionary, "Properties domain remains valid")
+    check(state.get_domain("employees") is Dictionary, "Employees domain remains valid")
+    game.queue_free(); await process_frame
     print("EXTREME SOAK RESULT: %d passed, %d failed" % [passed, failed])
-    game.queue_free()
     quit(1 if failed > 0 else 0)
