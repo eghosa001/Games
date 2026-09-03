@@ -13,8 +13,6 @@ func _ready()->void:
     add_child(property_system);add_child(business_system);add_child(employee_system);add_child(finance_system);add_child(supply_system);add_child(contract_system);add_child(relationship_system);add_child(expansion_system)
     technology_system=get_node_or_null("/root/RenewTechnologySystem")
     business_system.economy=supply_system.economy;business_system.employee_system=employee_system;business_system.supply_chain.set_economy(supply_system.economy);supply_system.set_chain(business_system.supply_chain);supply_system.rivals=relationship_system.rivals
-    var simulation=get_node_or_null("/root/RenewSimulationSystem")
-    if simulation!=null and simulation.has_method("set_production_system"):simulation.set_production_system(business_system.production)
     competitor_reactions=get_node_or_null("/root/RenewCompetitorReactionSystem")
     if competitor_reactions!=null:competitor_reactions.set_rivals(relationship_system.rivals)
 func _state_value(domain:String,key:String,default_value):var state=get_node_or_null("/root/RenewGameState");return default_value if state==null else state.get_value(domain,key,default_value)
@@ -58,7 +56,7 @@ func research_technology(id:String)->void:if technology_system!=null:technology_
 func research_next_technology()->void:if technology_system!=null:technology_system.research_next()
 func advance_day()->void:
     var simulation=get_node_or_null("/root/RenewSimulationSystem");if simulation==null:_set_state("company","message","SimulationSystem is unavailable.");return
-    var context={"economy":supply_system.economy,"rivals":relationship_system.rivals,"events":_events(),"expansion":expansion_system.expansion,"districts":expansion_system.districts,"employee_system":employee_system,"business_system":business_system}
+    var context={"economy":supply_system.economy,"rivals":relationship_system.rivals,"events":_events(),"expansion":expansion_system.expansion,"districts":expansion_system.districts,"employee_system":employee_system,"business_system":business_system,"production":business_system.production}
     var result:Dictionary=simulation.advance_day(_simulation_state(),context)
     if not bool(result.get("ok",false)):_set_state("company","message",str(result.get("message","Unable to advance the day.")));return
     _apply_simulation_state(result.get("state",{}));employee_system.sync_roster()
