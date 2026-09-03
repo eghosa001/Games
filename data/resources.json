@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "resources": {
+    "timber": {"name": "Timber", "unit": "units"},
+    "iron": {"name": "Iron", "unit": "units"},
+    "stone": {"name": "Stone", "unit": "units"},
+    "energy": {"name": "Energy", "unit": "units"},
+    "food": {"name": "Food", "unit": "units"},
+    "electronics_components": {"name": "Electronics Components", "unit": "units"}
+  }
+}
