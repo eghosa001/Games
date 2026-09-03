@@ -23,7 +23,6 @@ func check(condition: bool, label: String) -> void:
         push_error("FAIL: " + label)
 
 func run() -> void:
-    seed(123456)
     await test_main_composition()
     await test_main_command_integration()
     print("\nRENEW INTEGRATION TEST RESULT: %d passed, %d failed" % [passed, failed])
@@ -44,6 +43,10 @@ func _new_game() -> Node:
         return null
     root.add_child(game)
     await process_frame
+    # Main.initialize() intentionally randomizes the live game. Re-seed only
+    # after composition is ready so this deterministic integration fixture is
+    # repeatable without changing runtime randomness.
+    seed(123456)
     return game
 
 func test_main_composition() -> void:
@@ -126,9 +129,9 @@ func test_main_command_integration() -> void:
     game.select_expansion(0)
     check(game.selected_expansion == 0, "integration select expansion command")
     game.buy_expansion()
-    check(int(game.acquisition_count) >= 1, "integration expansion acquisition command")
+    check(bool(game.expansion.properties[0].get("owned", false)), "integration expansion acquisition command")
     game.upgrade_expansion()
-    check(game.expansion.properties[0].get("level", 0) >= 2, "integration expansion upgrade command")
+    check(int(game.expansion.properties[0].get("level", 0)) >= 2, "integration expansion upgrade command")
 
     game.select_rival(0)
     check(game.selected_rival == 0, "integration select rival command")
