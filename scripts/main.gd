@@ -6,6 +6,10 @@ extends Node2D
 const GameplayCommandSystem=preload("res://scripts/gameplay_command_system.gd")
 const CustomerSegmentsUI=preload("res://scripts/customer_segments_ui.gd")
 var command_system=GameplayCommandSystem.new();var customer_segments_ui=CustomerSegmentsUI.new()
+var economy:
+    get:return command_system.supply_system.economy if command_system!=null else null
+var expansion:
+    get:return command_system.expansion_system.expansion if command_system!=null else null
 var cash:int:
     get:return _state_value("economy","cash",25000)
     set(value):_set_state_value("economy","cash",value)
@@ -182,5 +186,6 @@ func repay_loan()->void:_dispatch("repay_loan")
 func buy_expansion()->void:_dispatch("buy_expansion")
 func upgrade_expansion()->void:_dispatch("upgrade_expansion")
 func acquire_rival_asset()->void:_dispatch("acquire_rival_asset")
+func upgrade_transport()->void:_dispatch("upgrade_transport")
 func save_game()->void:_dispatch("save_game")
 func load_game()->void:_dispatch("load_game")
