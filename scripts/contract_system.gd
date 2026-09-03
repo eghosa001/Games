@@ -80,7 +80,7 @@ func renew_contract(contract_id: String, day: int) -> Dictionary:
     if source.is_empty() or str(source.get("execution_status", "")) != "fulfilled" or not bool(source.get("renewal_offered", false)): return {"ok": false, "message": "Contract is not eligible for renewal."}
     var customer_id := str(source.get("customer_id", DEFAULT_CUSTOMER)); var relationship := _get_relationship(customer_id)
     if relationship < 50: return {"ok": false, "message": "Customer relationship is not strong enough for renewal."}
-    var terms: Dictionary = source.get("renewal", {}); var new_price := max(1, int(round(float(source["price"]) * (1.0 + float(terms.get("price_adjustment", 0.0)))))
+    var terms: Dictionary = source.get("renewal", {}); var new_price := max(1, int(round(float(source["price"]) * (1.0 + float(terms.get("price_adjustment", 0.0))))))
     var schedule: Dictionary = source["delivery_schedule"].duplicate(true); schedule["start_day"] = day; schedule["duration_days"] = max(1, int(terms.get("term_days", schedule.get("duration_days", 1))))
     var result := create_customer_contract(source["parties"], str(source["resource_product"]), int(source["quantity"]), new_price, int(source["quality_requirement"]), schedule, str(source["destination"]), int(source["penalty"]), source["cancellation"], source["renewal"], source["reputation_impact"])
     if bool(result.get("ok", false)):
