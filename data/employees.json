@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "defaults": {
+    "starting_salary": 400,
+    "starting_morale": 70,
+    "starting_loyalty": 60,
+    "starting_productivity": 0.7
+  },
+  "career_levels": {
+    "1": "Worker",
+    "2": "Senior Worker",
+    "3": "Supervisor",
+    "4": "Director / Executive"
+  }
+}
