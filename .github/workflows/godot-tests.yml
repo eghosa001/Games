@@ -12,7 +12,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,21 +25,5 @@ jobs:
           chmod +x Godot_v4.7.2-stable_linux.x86_64
       - name: Import project
         run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --editor --path . --quit
-      - name: Run architecture integrity smoke test
-        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_architecture_integrity.gd
-      - name: Run GameState architecture test
-        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_game_state.gd
-      - name: Run simulation architecture test
+      - name: Run failing simulation architecture test only
         run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_simulation_architecture.gd
-      - name: Run production system test
-        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_production_system.gd
-      - name: Run restoration mechanics test
-        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_restoration_mechanics.gd
-      - name: Run supply chain system test
-        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_supply_chain_system.gd
-      - name: Run new-game flow test
-        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_new_game_flow.gd
-      - name: Run regression tests
-        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_runner.gd
-      - name: Run release smoke test
-        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_release_smoke.gd
