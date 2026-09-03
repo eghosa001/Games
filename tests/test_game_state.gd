@@ -31,7 +31,7 @@ func run() -> void:
     check(state.get_value("businesses","business_open",false), "Businesses owns operating state")
     check(state.get_value("employees","employees",null) == null, "Employee count is not duplicated in GameState")
     check(state.get_value("employees","roster",[]).size() == 1, "Employees owns roster")
-    var before := state.get_domain("economy").duplicate(true)
+    var before: Dictionary = state.get_domain("economy").duplicate(true)
     state.set_value("economy","day",99)
     check(state.get_domain("economy") == before, "Cross-domain key is rejected")
     var restored = State.new(); root.add_child(restored); await process_frame
