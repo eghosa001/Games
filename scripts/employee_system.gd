@@ -1,39 +1,34 @@
 extends Node
 class_name RenewEmployeeSystem
 
-const SYSTEM_VERSION := 1
+const SYSTEM_VERSION := 2
 const JAMES_ID := "emp_james_001"
 var employees: Array[Dictionary] = []
 var candidates: Array[Dictionary] = []
 var next_id := 2
 var history: Array[Dictionary] = []
 var _day := 1
-var _syncing_legacy := false
-var _last_legacy_count := -1
-var _last_game_day := -1
 const FIRST_NAMES := ["David", "Sarah", "Michael", "Grace", "Daniel", "Amaka", "Victor", "Esther", "Samuel", "Ada"]
 const ROLES := ["Technician", "Sales Associate", "Logistics Coordinator", "Craft Worker", "Operations Assistant"]
-const SPECIALIZATIONS := ["Restoration", "Sales", "Logistics", "Production", "Operations"]
+const SPECIALIZATIONS := ["restoration", "sales", "logistics", "manufacturing", "operations"]
 
 func _ready() -> void:
     if employees.is_empty(): _create_initial_roster()
+    else: _normalize_roster()
     refresh_candidates()
-
-func _process(_delta: float) -> void:
-    _sync_legacy_gameplay()
 
 func _create_initial_roster() -> void:
     employees.clear()
-    employees.append(_make_employee(JAMES_ID, "James", "Worker", "Restoration", 58, 6, 450, 82, 78, 76, 82, 1, "Restoration", "Property & Workshop", 1))
-    employees.append(_make_employee("emp_0002", "David", "Craft Worker", "Production", 48, 10, 420, 68, 72, 55, 70, 1, "Production", "Goods Factory", 1))
-    employees.append(_make_employee("emp_0003", "Sarah", "Sales Associate", "Sales", 52, 8, 400, 71, 74, 66, 73, 1, "Sales", "Retail & Customers", 1))
+    employees.append(_make_employee(JAMES_ID, "James", "Worker", "manufacturing", {"production": 58, "logistics": 35, "management": 25}, 6, 450, 82, 78, 0.82, 76, 1, "factory_001", 1))
+    employees.append(_make_employee("emp_0002", "David", "Craft Worker", "manufacturing", {"production": 48, "logistics": 40, "management": 22}, 10, 420, 68, 72, 0.70, 55, 1, "factory_001", 1))
+    employees.append(_make_employee("emp_0003", "Sarah", "Sales Associate", "sales", {"production": 35, "logistics": 45, "management": 30}, 8, 400, 71, 74, 0.73, 66, 1, "retail_001", 1))
     next_id = 4
     _record(JAMES_ID, "hired", {"reason": "founding roster"})
     _record("emp_0002", "hired", {"reason": "founding roster"})
     _record("emp_0003", "hired", {"reason": "founding roster"})
 
-func _make_employee(id: String, name: String, role: String, specialization: String, skill: int, experience: int, salary: int, loyalty: int, morale: int, ambition: int, productivity: int, career_level: int, assignment: String, _unused: String, hire_date: int) -> Dictionary:
-    return {"id": id, "name": name, "role": role, "skill": skill, "experience": experience, "career_level": career_level, "salary": salary, "loyalty": loyalty, "morale": morale, "ambition": ambition, "personality": _personality_for(name), "productivity": productivity, "specialization": specialization, "assignment": assignment, "hire_date": hire_date, "promotion_date": 0, "status": "active", "relationships": {}, "history": []}
+func _make_employee(id: String, name: String, role: String, specialization: String, skills: Dictionary, experience: int, salary: int, loyalty: int, morale: int, productivity: float, ambition: int, level: int, assignment: String, hire_date: int) -> Dictionary:
+    return {"id": id, "name": name, "role": role, "level": level, "skills": skills.duplicate(true), "experience": experience, "salary": salary, "loyalty": loyalty, "morale": morale, "productivity": productivity, "specialization": specialization, "status": "active", "assignment": assignment, "ambition": ambition, "personality": _personality_for(name), "hire_date": hire_date, "promotion_date": 0, "relationships": {}, "history": []}
 
 func _personality_for(name: String) -> String:
     match name:
@@ -48,13 +43,17 @@ func refresh_candidates() -> void:
         var n := FIRST_NAMES[(i + _day) % FIRST_NAMES.size()]
         var role := ROLES[(i + _day) % ROLES.size()]
         var spec := SPECIALIZATIONS[(i + _day) % SPECIALIZATIONS.size()]
-        candidates.append({"id": "candidate_%d_%d" % [_day, i], "name": n, "role": role, "skill": 40 + ((i * 9 + _day * 3) % 31), "experience": 3 + i * 4, "salary": 360 + i * 55, "loyalty": 50 + i * 4, "morale": 70, "ambition": 50 + i * 7, "personality": "Professional, motivated", "productivity": 55 + i * 5, "specialization": spec})
+        var base_skill := 40 + ((i * 9 + _day * 3) % 31)
+        candidates.append({"id": "candidate_%d_%d" % [_day, i], "name": n, "role": role, "level": 1, "skills": {"production": base_skill, "logistics": max(20, base_skill - 10), "management": max(10, base_skill - 25)}, "experience": 3 + i * 4, "salary": 360 + i * 55, "loyalty": 50 + i * 4, "morale": 70, "productivity": 0.55 + i * 0.05, "ambition": 50 + i * 7, "specialization": spec, "status": "candidate", "assignment": "Unassigned"})
 
-func active_count() -> int:
+func get_active_employee_count() -> int:
     var count := 0
     for employee in employees:
         if employee.get("status", "active") == "active": count += 1
     return count
+
+func active_count() -> int:
+    return get_active_employee_count()
 
 func total_salary() -> int:
     var total := 0
@@ -65,7 +64,7 @@ func total_salary() -> int:
 func total_productivity() -> float:
     var total := 0.0
     for employee in employees:
-        if employee.get("status", "active") == "active": total += float(employee.get("productivity", 0)) / 100.0
+        if employee.get("status", "active") == "active": total += float(employee.get("productivity", 0.0))
     return total
 
 func get_employee(employee_id: String) -> Dictionary:
@@ -81,11 +80,11 @@ func hire_candidate(candidate_id: String, day: int) -> Dictionary:
         if candidate.get("id", "") != candidate_id: continue
         var id := "emp_%04d" % next_id
         next_id += 1
-        var employee := _make_employee(id, str(candidate["name"]), str(candidate["role"]), str(candidate["specialization"]), int(candidate["skill"]), int(candidate["experience"]), int(candidate["salary"]), int(candidate["loyalty"]), int(candidate["morale"]), int(candidate["ambition"]), int(candidate["productivity"]), 1, "Unassigned", "", day)
+        var employee := _make_employee(id, str(candidate["name"]), str(candidate["role"]), str(candidate["specialization"]), candidate.get("skills", {}), int(candidate["experience"]), int(candidate["salary"]), int(candidate["loyalty"]), int(candidate["morale"]), float(candidate["productivity"]), int(candidate["ambition"]), 1, "factory_001", day)
         employees.append(employee)
         _record(id, "hired", {"candidate_id": candidate_id})
         refresh_candidates()
-        return {"ok": true, "employee": employee.duplicate(true), "cost": 1200 + active_count() * 250}
+        return {"ok": true, "employee": employee.duplicate(true), "cost": 1200 + (get_active_employee_count() - 1) * 250}
     return {"ok": false, "message": "Candidate is no longer available."}
 
 func hire_default(day: int) -> Dictionary:
@@ -106,33 +105,37 @@ func fire_employee(employee_id: String, day: int) -> Dictionary:
 func train_employee(employee_id: String, day: int, cost: int = 900) -> Dictionary:
     var employee := get_employee(employee_id)
     if employee.is_empty() or employee.get("status", "active") != "active": return {"ok": false, "message": "Employee is not active."}
-    employee["skill"] = min(100, int(employee["skill"]) + 6)
+    var skills: Dictionary = employee.get("skills", {}).duplicate(true)
+    var primary := str(employee.get("specialization", "manufacturing"))
+    var skill_key := "production" if primary == "manufacturing" or primary == "production" else ("logistics" if primary == "logistics" else ("management" if primary == "operations" else "production"))
+    skills[skill_key] = min(100, int(skills.get(skill_key, 0)) + 6)
+    employee["skills"] = skills
     employee["experience"] = int(employee["experience"]) + 2
-    employee["productivity"] = min(100, int(employee["productivity"]) + 5)
+    employee["productivity"] = min(1.0, float(employee["productivity"]) + 0.05)
     employee["morale"] = min(100, int(employee["morale"]) + 5)
     employee["loyalty"] = min(100, int(employee["loyalty"]) + 4)
-    _record(employee_id, "trained", {"day": day, "cost": cost})
+    _record(employee_id, "trained", {"day": day, "cost": cost, "skill": skill_key})
     return {"ok": true, "cost": cost, "employee": employee.duplicate(true)}
 
 func promote_employee(employee_id: String, day: int) -> Dictionary:
     var employee := get_employee(employee_id)
     if employee.is_empty() or employee.get("status", "active") != "active": return {"ok": false, "message": "Employee is not active."}
-    var level := int(employee["career_level"])
+    var level := int(employee.get("level", 1))
     if level >= 4: return {"ok": false, "message": "%s is already at the highest career level." % employee["name"]}
     if int(employee["experience"]) < level * 10 and employee_id != JAMES_ID: return {"ok": false, "message": "More experience is needed before promotion."}
     level += 1
-    employee["career_level"] = level
+    employee["level"] = level
     employee["promotion_date"] = day
     employee["salary"] = int(employee["salary"]) + 140 + level * 30
     employee["morale"] = min(100, int(employee["morale"]) + 12)
     employee["loyalty"] = min(100, int(employee["loyalty"]) + 8)
     if employee_id == JAMES_ID and level >= 4:
         employee["role"] = "COO"
-        employee["specialization"] = "Executive Operations"
-        employee["assignment"] = "Company Headquarters"
+        employee["specialization"] = "executive_operations"
+        employee["assignment"] = "hq_001"
     elif level == 2: employee["role"] = "Senior " + str(employee["role"])
     elif level == 3: employee["role"] = "Supervisor"
-    _record(employee_id, "promoted", {"day": day, "career_level": level})
+    _record(employee_id, "promoted", {"day": day, "level": level})
     return {"ok": true, "employee": employee.duplicate(true), "message": "%s promoted to %s." % [employee["name"], employee["role"]]}
 
 func assign_employee(employee_id: String, assignment: String, day: int) -> Dictionary:
@@ -162,9 +165,14 @@ func daily_update(day: int, company_performance: int = 0) -> Dictionary:
         if int(employee["morale"]) < 35:
             employee["loyalty"] = max(0, int(employee["loyalty"]) - 2)
             warnings.append("%s is becoming unhappy." % employee["name"])
-        var performance := int(employee["skill"]) + int(employee["morale"]) / 2 + int(employee["loyalty"]) / 2
-        employee["productivity"] = clamp(int(round(float(performance) / 2.0)), 20, 100)
-        if int(employee["ambition"]) >= 80 and int(employee["career_level"]) < 4 and int(employee["experience"]) % 12 == 0:
+        var skills: Dictionary = employee.get("skills", {})
+        var production_skill := int(skills.get("production", 0))
+        var logistics_skill := int(skills.get("logistics", 0))
+        var management_skill := int(skills.get("management", 0))
+        var performance := production_skill + int(employee["morale"]) / 2 + int(employee["loyalty"]) / 2
+        var skill_bonus := float(max(production_skill, max(logistics_skill, management_skill))) / 100.0
+        employee["productivity"] = clamp(float(performance) / 200.0 + skill_bonus * 0.15, 0.2, 1.0)
+        if int(employee["ambition"]) >= 80 and int(employee.get("level", 1)) < 4 and int(employee["experience"]) % 12 == 0:
             warnings.append("%s is ready for a career conversation." % employee["name"])
     refresh_candidates()
     return {"warnings": warnings, "salary": total_salary(), "productivity": total_productivity()}
@@ -202,53 +210,37 @@ func restore_state(snapshot: Dictionary) -> void:
     history = snapshot.get("history", []).duplicate(true)
     _day = int(snapshot.get("day", 1))
     if employees.is_empty(): _create_initial_roster()
+    _normalize_roster()
     _ensure_james()
     refresh_candidates()
 
 func migrate_legacy_count(count: int, day: int = 1) -> void:
-    if not employees.is_empty(): return
-    _create_initial_roster()
-    while active_count() < max(3, count): hire_default(day)
+    if employees.is_empty(): _create_initial_roster()
+    while get_active_employee_count() < max(3, count):
+        var result := hire_default(day)
+        if not result.get("ok", false): break
+
+func _normalize_roster() -> void:
+    for employee in employees:
+        if not employee.has("skills"):
+            var old_skill := int(employee.get("skill", 50))
+            employee["skills"] = {"production": old_skill, "logistics": max(0, old_skill - 10), "management": max(0, old_skill - 25)}
+        employee.erase("skill")
+        if not employee.has("level"): employee["level"] = int(employee.get("career_level", 1))
+        employee.erase("career_level")
+        if not employee.has("productivity"): employee["productivity"] = 0.75
+        elif float(employee["productivity"]) > 1.0: employee["productivity"] = float(employee["productivity"]) / 100.0
+        if not employee.has("status"): employee["status"] = "active"
+        if not employee.has("assignment"): employee["assignment"] = "Unassigned"
+        if not employee.has("specialization"): employee["specialization"] = "general"
+        if not employee.has("relationships"): employee["relationships"] = {}
+        if not employee.has("history"): employee["history"] = []
 
 func _ensure_james() -> void:
     if not get_employee(JAMES_ID).is_empty(): return
-    var james := _make_employee(JAMES_ID, "James", "Worker", "Restoration", 58, 6, 450, 82, 78, 76, 82, 1, "Restoration", "", 1)
+    var james := _make_employee(JAMES_ID, "James", "Worker", "manufacturing", {"production": 58, "logistics": 35, "management": 25}, 6, 450, 82, 78, 0.82, 76, 1, "factory_001", 1)
     employees.push_front(james)
     _record(JAMES_ID, "restored_identity", {})
-
-func _sync_legacy_gameplay() -> void:
-    if _syncing_legacy: return
-    var tree := get_tree()
-    if tree == null: return
-    var main = tree.current_scene
-    if main == null: return
-    var legacy_value = main.get("employees")
-    var game_day_value = main.get("day")
-    if legacy_value == null: return
-    var legacy_count := int(legacy_value)
-    var game_day := int(game_day_value) if game_day_value != null else _day
-    if _last_game_day < 0:
-        _last_game_day = game_day
-    elif game_day != _last_game_day:
-        daily_update(game_day, int(main.get("last_profit")))
-        _last_game_day = game_day
-    var active := active_count()
-    if _last_legacy_count < 0:
-        _last_legacy_count = legacy_count
-        _syncing_legacy = true
-        main.set("employees", active)
-        _syncing_legacy = false
-        return
-    if legacy_count > active:
-        while active_count() < legacy_count:
-            var result := hire_default(game_day)
-            if not result.get("ok", false): break
-    active = active_count()
-    if int(main.get("employees")) != active:
-        _syncing_legacy = true
-        main.set("employees", active)
-        _syncing_legacy = false
-    _last_legacy_count = active
 
 func _record(employee_id: String, event_type: String, details: Dictionary) -> void:
     var entry := {"employee_id": employee_id, "type": event_type, "details": details}
