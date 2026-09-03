@@ -1,8 +1,6 @@
 extends Node
-class_name RenewHistorySystem
 
 ## Permanent corporate memory. Gameplay systems call record_gameplay_event(); UI never writes history.
-## Phase 30: every newly recorded history event is emitted through this signal.
 signal gameplay_event_recorded(event: Dictionary)
 const SYSTEM_VERSION := 3
 const MAX_EVENTS := 5000
@@ -12,51 +10,30 @@ const TYPES := ["founding","restoration","first_sale","first_profit","employee_m
 var timeline:Array[Dictionary]=[]
 var legacy:Dictionary={"founder":"","company_name":"RENEW","founded_day":1,"notable_events":0,"properties_acquired":0,"expansions":0,"alliances":0,"acquisitions":0,"contracts":0,"crises":0,"employees_milestones":0,"museum_unlocks":[]}
 var _seen_signatures:Dictionary={}
-
 func _ready()->void:
     if timeline.is_empty(): record_gameplay_event("FOUNDING",1,"RENEW was founded.",{"legacy":true},"company_founded")
-
 func record_gameplay_event(event_name:String,day:int,title:String,details:Dictionary={},signature:String="")->Dictionary:
-    var canonical:=str(EVENT_ALIASES.get(event_name,event_name))
-    if not GAMEPLAY_EVENTS.has(canonical): return {}
-    var payload:=details.duplicate(true);payload["gameplay_event"]=canonical
-    return record(_mapped_type(canonical),day,title,payload,signature if not signature.is_empty() else "%s|%d|%s"%[canonical,day,title],canonical)
-
-## Public event-bus entry point. Supports the Phase 30 example:
-## history.record("employee_promotion", day, title, data, signature)
+    var canonical:=str(EVENT_ALIASES.get(event_name,event_name)); if not GAMEPLAY_EVENTS.has(canonical): return {}
+    var payload:=details.duplicate(true);payload["gameplay_event"]=canonical; return record(_mapped_type(canonical),day,title,payload,signature if not signature.is_empty() else "%s|%d|%s"%[canonical,day,title],canonical)
 func record(event_type:String,day:int,title:String,details:Dictionary={},signature:String="",gameplay_event:String="")->Dictionary:
-    var canonical:=str(EVENT_ALIASES.get(event_type,event_type))
-    var kind:=_mapped_type(canonical) if GAMEPLAY_EVENTS.has(canonical) else (event_type if TYPES.has(event_type) else "general")
-    var payload:=details.duplicate(true)
+    var canonical:=str(EVENT_ALIASES.get(event_type,event_type));var kind:=_mapped_type(canonical) if GAMEPLAY_EVENTS.has(canonical) else (event_type if TYPES.has(event_type) else "general");var payload:=details.duplicate(true)
     if GAMEPLAY_EVENTS.has(canonical): payload["gameplay_event"]=canonical
-    var key:=signature if not signature.is_empty() else "%s|%s|%s"%[kind,day,title]
-    if _seen_signatures.has(key): return _seen_signatures[key]
-    var event:Dictionary={"id":"hist_%06d"%(timeline.size()+1),"day":max(1,day),"type":kind,"title":title,"details":payload,"importance":_importance(kind),"recorded_at":Time.get_datetime_string_from_system(true)}
-    timeline.append(event)
+    var key:=signature if not signature.is_empty() else "%s|%s|%s"%[kind,day,title];if _seen_signatures.has(key): return _seen_signatures[key]
+    var event:Dictionary={"id":"hist_%06d"%(timeline.size()+1),"day":max(1,day),"type":kind,"title":title,"details":payload,"importance":_importance(kind),"recorded_at":Time.get_datetime_string_from_system(true)};timeline.append(event)
     if timeline.size()>MAX_EVENTS: timeline.pop_front()
-    _seen_signatures[key]=event;_update_legacy(kind)
-    gameplay_event_recorded.emit(event.duplicate(true))
-    return event
-
+    _seen_signatures[key]=event;_update_legacy(kind);gameplay_event_recorded.emit(event.duplicate(true));return event
 func record_employee_milestone(day:int,employee_id:String,employee_name:String,milestone:String,details:Dictionary={})->Dictionary:
-    var payload:=details.duplicate(true);payload["employee_id"]=employee_id;payload["employee_name"]=employee_name;payload["milestone"]=milestone
-    var event_name:="EMPLOYEE_PROMOTED" if milestone.to_lower().contains("promot") else "EMPLOYEE_HIRED"
-    return record_gameplay_event(event_name,day,"%s: %s"%[employee_name,milestone],payload,"employee|%s|%s|%s"%[employee_id,milestone,day])
-
+    var payload:=details.duplicate(true);payload["employee_id"]=employee_id;payload["employee_name"]=employee_name;payload["milestone"]=milestone;var event_name:String="EMPLOYEE_PROMOTED" if milestone.to_lower().contains("promot") else "EMPLOYEE_HIRED";return record_gameplay_event(event_name,day,"%s: %s"%[employee_name,milestone],payload,"employee|%s|%s|%s"%[employee_id,milestone,day])
 func ingest_activity_log(lines:Array,day:int)->int:
     var added:=0
     for line in lines:
-        var text:=str(line);var mapped:=_classify_log(text)
-        if mapped.is_empty():continue
-        var before:=timeline.size();record(str(mapped["type"]),day,str(mapped["title"]),{"source_log":text},str(mapped["signature"]))
-        if timeline.size()>before:added+=1
+        var text:=str(line);var mapped:=_classify_log(text);if mapped.is_empty():continue
+        var before:=timeline.size();record(str(mapped["type"]),day,str(mapped["title"]),{"source_log":text},str(mapped["signature"]));if timeline.size()>before:added+=1
     return added
-
 func get_timeline(filter_type:String="",limit:int=100)->Array[Dictionary]:
     var result:Array[Dictionary]=[];var start:=max(0,timeline.size()-max(1,limit))
     for i in range(timeline.size()-1,start-1,-1):
-        var event:=timeline[i]
-        if filter_type.is_empty() or str(event.get("type",""))==filter_type:result.append(event.duplicate(true))
+        var event:=timeline[i];if filter_type.is_empty() or str(event.get("type",""))==filter_type:result.append(event.duplicate(true))
     return result
 func get_chronological_timeline()->Array[Dictionary]:return timeline.duplicate(true)
 func get_notable_events(limit:int=20)->Array[Dictionary]:
@@ -82,10 +59,8 @@ func restore_state(snapshot:Dictionary)->void:
     if snapshot.is_empty():timeline.clear();legacy["notable_events"]=0;_seen_signatures.clear();_ready();return
     timeline=snapshot.get("timeline",[]).duplicate(true);legacy=snapshot.get("legacy",legacy).duplicate(true);_seen_signatures.clear()
     for event in timeline:_seen_signatures["%s|%s|%s"%[event.get("type","general"),event.get("day",1),event.get("title","")]]=event
-
 func _mapped_type(canonical:String)->String:
-    var mapped:Dictionary={"FOUNDING":"founding","PROPERTY_ACQUIRED":"property_acquisition","PROPERTY_RESTORED":"restoration","BUSINESS_OPENED":"founding","FIRST_PRODUCTION":"milestone","FIRST_SALE":"first_sale","FIRST_PROFIT":"first_profit","EMPLOYEE_HIRED":"employee_milestone","EMPLOYEE_PROMOTED":"employee_milestone","CONTRACT_SIGNED":"contract","CONTRACT_FULFILLED":"contract","TECHNOLOGY_RESEARCHED":"technology","ALLIANCE_FORMED":"alliance","PROJECT_COMPLETED":"infrastructure","COMPETITOR_DEFEATED":"corporate_war","MAJOR_EVENT":"world_event"}
-    return str(mapped.get(canonical,"general"))
+    var mapped:Dictionary={"FOUNDING":"founding","PROPERTY_ACQUIRED":"property_acquisition","PROPERTY_RESTORED":"restoration","BUSINESS_OPENED":"founding","FIRST_PRODUCTION":"milestone","FIRST_SALE":"first_sale","FIRST_PROFIT":"first_profit","EMPLOYEE_HIRED":"employee_milestone","EMPLOYEE_PROMOTED":"employee_milestone","CONTRACT_SIGNED":"contract","CONTRACT_FULFILLED":"contract","TECHNOLOGY_RESEARCHED":"technology","ALLIANCE_FORMED":"alliance","PROJECT_COMPLETED":"infrastructure","COMPETITOR_DEFEATED":"corporate_war","MAJOR_EVENT":"world_event"};return str(mapped.get(canonical,"general"))
 func _classify_log(text:String)->Dictionary:
     var upper:=text.to_upper()
     if upper.begins_with("ACQUIRED:"):return {"type":"property_acquisition","title":text,"signature":"log|"+text}
