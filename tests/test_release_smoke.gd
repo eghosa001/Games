@@ -1,71 +1,27 @@
 extends SceneTree
 
-# Lightweight release gate: catches missing scene/controller wiring before a
-# mobile build is handed to a tester. This intentionally avoids mutating game
-# state so it can run safely in CI.
 var passed := 0
 var failed := 0
 
-func _init() -> void:
-    call_deferred("run")
-
+func _init() -> void: call_deferred("run")
 func check(ok: bool, label: String) -> void:
-    if ok:
-        passed += 1
-        print("PASS: " + label)
-    else:
-        failed += 1
-        push_error("FAIL: " + label)
+    if ok: passed += 1
+    else: failed += 1; push_error("FAIL: " + label)
 
 func run() -> void:
-    check(FileAccess.file_exists("res://project.godot"), "Project configuration exists")
-    check(FileAccess.file_exists("res://scenes/Main.tscn"), "Main scene exists")
-    check(FileAccess.file_exists("res://README.md"), "README exists")
-    check(FileAccess.file_exists("res://Docs/V1_IMPLEMENTATION.md"), "V1 implementation document exists")
-    check(FileAccess.file_exists("res://scripts/mobile_ui_polished.gd"), "Polished mobile UI script exists")
-
+    for path in ["res://project.godot","res://scenes/Main.tscn","res://scripts/game_state.gd","res://scripts/save_system.gd","res://scripts/employee_ui.gd"]:
+        check(FileAccess.file_exists(path), "Required release file: " + path)
+    for path in ["res://data/properties.json","res://data/industries.json","res://data/resources.json","res://data/employees.json","res://data/competitors.json","res://data/technologies.json","res://data/events.json","res://data/balance.json"]:
+        check(FileAccess.file_exists(path), "Balancing data exists: " + path)
     var scene = load("res://scenes/Main.tscn")
     check(scene != null, "Main scene loads")
     if scene != null:
-        var game = scene.instantiate()
-        root.add_child(game)
-        await process_frame
-
-        for node_name in [
-            "GameBalance",
-            "RestorationStrategy",
-            "Progression",
-            "MarketDirector",
-            "EmpireGoals",
-            "WorldView",
-            "EmpireController",
-            "Corporate",
-            "WorldMissions",
-            "RegionController",
-            "BranchController",
-            "SupplyChainController",
-            "RivalSupplyController",
-            "GameStateBridge",
-            "MobileUI",
-            "StrategyHUD",
-            "V1Celebration",
-            "TutorialOverlay"
-        ]:
-            check(game.get_node_or_null(node_name) != null, "Main scene node: " + node_name)
-
-        var mobile = game.get_node_or_null("MobileUI")
-        if mobile != null:
-            check(mobile.has_method("_layout_responsive"), "Mobile responsive layout API")
-            check(String(mobile.get_script().resource_path).ends_with("mobile_ui_polished.gd"), "Polished mobile UI is wired")
-            mobile._layout_responsive()
-            check(mobile.root != null and mobile.actions != null, "Mobile UI builds its control surface")
-
-        var bridge = game.get_node_or_null("GameStateBridge")
-        if bridge != null:
-            check(bridge.has_method("_state"), "Save-state bridge API")
-
+        var game = scene.instantiate(); root.add_child(game); await process_frame
+        for path in ["World/MainRenderer","World/WorldView","World/RegionController","Systems/GameBalance","Systems/Progression","Systems/FinanceSystem","UI/MainHUD","UI/TechnologyPanel","UI/HistoryPanel","UI/NewsPanel","UI/AlliancePanel","UI/ContractPanel","UI/EmployeePanel"]:
+            check(game.get_node_or_null(path) != null, "Current architecture node: " + path)
+        check(game.has_method("advance_day"), "Main advance_day API")
+        check(game.has_method("save_game"), "Main save_game API")
+        check(game.has_method("load_game"), "Main load_game API")
         game.free()
-        await process_frame
-
     print("RELEASE SMOKE RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
