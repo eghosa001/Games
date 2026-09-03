@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "industries": {
+    "furniture": {
+      "id": "furniture",
+      "name": "Furniture",
+      "base_output": 10,
+      "inputs": {"timber": 2, "iron": 1, "energy": 3},
+      "employees": 4,
+      "base_price": 120,
+      "operating_cost": 400,
+      "market_demand": 80
+    },
+    "construction_materials": {
+      "id": "construction_materials",
+      "name": "Construction Materials",
+      "base_output": 8,
+      "inputs": {"timber": 2, "stone": 3, "energy": 3},
+      "employees": 5,
+      "base_price": 180,
+      "operating_cost": 500,
+      "market_demand": 100
+    },
+    "consumer_electronics": {
+      "id": "consumer_electronics",
+      "name": "Consumer Electronics",
+      "base_output": 6,
+      "inputs": {"iron": 1, "electronics_components": 2, "energy": 4},
+      "employees": 6,
+      "base_price": 360,
+      "operating_cost": 650,
+      "market_demand": 70
+    }
+  }
+}
