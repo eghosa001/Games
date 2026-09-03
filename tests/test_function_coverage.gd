@@ -14,7 +14,8 @@ func _init() -> void:
 
 func check(condition: bool, label: String) -> void:
     if condition: passed += 1
-    else: failed += 1; failures.append(label); push_error("FAIL: " + label)
+    else:
+        failed += 1; failures.append(label); push_error("FAIL: " + label)
 
 func run() -> void:
     var paths: Array[String] = []
@@ -26,15 +27,21 @@ func run() -> void:
         check(not source.is_empty(), "source readable: " + path)
         var script = load(path)
         check(script != null, "script parses: " + path)
-        if script == null or not script.has_method("new"): continue
+        if script == null or not script.can_instantiate():
+            continue
         var instance = script.new()
+        if instance == null:
+            check(false, "script instantiates: " + path)
+            continue
         for signature in _declared_functions(source):
             functions_checked += 1
             var method_name: String = signature.name
             check(instance.has_method(method_name), "callable: %s::%s" % [path, method_name])
+            # Only invoke zero-argument query methods. Mutating methods and
+            # scene-dependent methods are deliberately validated by presence.
             if instance.has_method(method_name) and signature.required_args == 0 and _safe_query_smoke(method_name):
                 smoke_checked += 1
-                instance.call(method_name)
+                var result = instance.call(method_name)
                 check(instance.has_method(method_name), "smoke callable: %s::%s" % [path, method_name])
         if instance is Node: instance.free()
     print("RENEW FUNCTION COVERAGE: %d passed, %d failed" % [passed, failed])
