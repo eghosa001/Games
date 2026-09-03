@@ -57,12 +57,12 @@ func execute_day(contract_id: String, available_quantity: int, average_quality: 
     var daily_due := max(0, min(int(contract["quantity"]) - int(contract["quantity_due"]), int(schedule.get("quantity_per_delivery", contract["quantity"]))))
     var delivered := min(daily_due, max(0, available_quantity)); var quality_ok := average_quality >= int(contract["quality_requirement"])
     if not quality_ok: delivered = 0
-    var shortfall := daily_due - delivered; var revenue := delivered * int(contract["price"]); var penalty := shortfall * int(contract["penalty"])
+    var shortfall: int = daily_due - delivered; var revenue: int = delivered * int(contract["price"]); var penalty: int = shortfall * int(contract["penalty"] )
     if not quality_ok and daily_due > 0: penalty += int(contract["penalty"])
     contract["days_elapsed"] = int(contract["days_elapsed"]) + 1; contract["quantity_due"] = int(contract["quantity_due"]) + daily_due; contract["quantity_delivered"] = int(contract["quantity_delivered"]) + delivered; contract["quality_delivered"] = max(int(contract["quality_delivered"]), average_quality); contract["revenue_earned"] = int(contract["revenue_earned"]) + revenue; contract["penalties_paid"] = int(contract["penalties_paid"]) + penalty
     if shortfall > 0: contract["missed_deliveries"] = int(contract["missed_deliveries"]) + 1
     contract["last_execution"] = {"day": day, "due": daily_due, "delivered": delivered, "shortfall": shortfall, "quality_ok": quality_ok, "revenue": revenue, "penalty": penalty, "scheduled": true}
-    var finished := int(contract["days_elapsed"]) >= duration or int(contract["quantity_due"]) >= int(contract["quantity"])
+    var finished: bool = int(contract["days_elapsed"]) >= duration or int(contract["quantity_due"]) >= int(contract["quantity"])
     if finished: _finish(contract)
     else: active_contracts[contract_id] = contract
     return {"ok": true, "contract": contract.duplicate(true), "delivered": delivered, "revenue": revenue, "penalty": penalty, "quality_ok": quality_ok, "shortfall": shortfall, "finished": finished, "scheduled": true}

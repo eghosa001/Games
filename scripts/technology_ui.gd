@@ -12,7 +12,7 @@ func _draw()->void:
     var y:=94.0;var tier:=0
     for item in tech.get_technologies():
         if int(item.tier)!=tier:tier=int(item.tier);y+=5;draw_string(ThemeDB.fallback_font,Vector2(895,y),"TIER %d"%tier,HORIZONTAL_ALIGNMENT_LEFT,100,12,Color(0.45,0.8,1.0,1));y+=18
-        var unlocked:=tech.is_unlocked(str(item.id));var status:="RESEARCHED" if unlocked else ("READY" if bool(tech.can_research(str(item.id)).get("ok",false)) else "LOCKED")
+        var unlocked: Dictionary =tech.is_unlocked(str(item.id));var status:="RESEARCHED" if unlocked else ("READY" if bool(tech.can_research(str(item.id)).get("ok",false)) else "LOCKED")
         var label:="%s — %s  ($%d / %d RP / %dd)"%[item.name,status,int(item.cost_money),int(item.cost_points),int(item.time_days)]
         draw_string(ThemeDB.fallback_font,Vector2(895,y),label,HORIZONTAL_ALIGNMENT_LEFT,345,11,Color(0.55,1.0,0.65,1) if unlocked else Color(0.9,0.9,0.92,1));y+=19
         if y>310:break

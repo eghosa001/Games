@@ -1,4 +1,4 @@
-extends RefCounted
+extends Node
 class_name RenewDemandModel
 const CustomerSegmentSystem=preload("res://scripts/customer_segment_system.gd")
 var customer_segments=CustomerSegmentSystem.new()
@@ -12,11 +12,11 @@ func calculate(product:String,player_price:float,competitor_price:float,reputati
     var segment_result:Dictionary=customer_segments.calculate(resolved_product,player_price,competitor_price,quality,reputation,marketing_level,effective_district)
     if not bool(segment_result.get("ok",false)):return {"ok":false,"demand":0,"modifiers":{}}
     var employee_modifier:=clamp(employee_productivity,0.45,1.55);var relationship_modifier:=clamp(1.0+alliance_sales*0.45+deal_sales*0.50,0.50,1.90)
-    var demand_float:=float(segment_result.get("raw_demand",0.0))*employee_modifier*relationship_modifier
-    var tech=get_node_or_null("/root/RenewTechnologySystem")
-    var market_multiplier:=tech.market_demand_multiplier() if tech!=null else 1.0
+    var demand_float: float =float(segment_result.get("raw_demand",0.0))*employee_modifier*relationship_modifier
+    var tech: Node = get_node_or_null("/root/RenewTechnologySystem")
+    var market_multiplier: float =tech.market_demand_multiplier() if tech!=null else 1.0
     var event_multiplier:=1.0
-    var state=get_node_or_null("/root/RenewGameState")
+    var state: Node = get_node_or_null("/root/RenewGameState")
     if state!=null:
         var event_modifiers=state.get_value("events","modifiers",{})
         if event_modifiers is Dictionary:event_multiplier=float(event_modifiers.get("demand_multiplier",1.0))

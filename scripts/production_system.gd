@@ -65,7 +65,7 @@ func can_run(recipe_id:String,cycles:int=1)->Dictionary:
     var m:Dictionary=machines[machine_id]; if float(m.get("condition",0.0))<=5.0:return {"ok":false,"reason":"maintenance_required","machine":machine_id}
     var requested:=min(cycles,int(m.get("capacity",1))+int(m.get("automation",0)))
     for item in r["inputs"]:
-        var required:=int(r["inputs"][item])*requested
+        var required: int = int(r["inputs"][item])*requested
         if stock(item)<required:return {"ok":false,"reason":"missing_input","item":item,"required":required,"available":stock(item)}
     return {"ok":true,"cycles":requested,"machine":machine_id}
 func run_recipe(recipe_id:String,cycles:int=1)->Dictionary:

@@ -178,9 +178,9 @@ func get_voting_power(entity_id: String, holder_id: String) -> float:
     if entity.is_empty(): return 0.0
     var holder := entity["holders"].get(holder_id, {})
     var votes := 0.0
-    for class_name in holder.get("classes", {}):
-        var class_info: Dictionary = entity["share_classes"].get(class_name, {})
-        votes += float(holder["classes"][class_name]) * float(class_info.get("votes_per_share", 1.0))
+    for share_class_name in holder.get("classes", {}):
+        var class_info: Dictionary = entity["share_classes"].get(share_class_name, {})
+        votes += float(holder["classes"][share_class_name]) * float(class_info.get("votes_per_share", 1.0))
     return votes
 
 func get_ownership_percent(entity_id: String, holder_id: String) -> float:
@@ -189,8 +189,8 @@ func get_ownership_percent(entity_id: String, holder_id: String) -> float:
     if issued <= 0.0: return 0.0
     var holder := entity.get("holders", {}).get(holder_id, {})
     var shares := 0
-    for class_name in holder.get("classes", {}):
-        shares += int(holder["classes"][class_name])
+    for share_class_name in holder.get("classes", {}):
+        shares += int(holder["classes"][share_class_name])
     return float(shares) * 100.0 / issued
 
 func get_voting_percent(entity_id: String, holder_id: String) -> float:
@@ -272,9 +272,9 @@ func distribute_dividend(entity_id: String, amount: float, holder_filter: String
             continue
         var holder := entity["holders"][holder_id]
         var shares := 0
-        for class_name in holder.get("classes", {}):
-            var multiplier := float(entity["share_classes"].get(class_name, {}).get("dividend_multiplier", 1.0))
-            shares += int(round(float(holder["classes"][class_name]) * multiplier))
+        for share_class_name in holder.get("classes", {}):
+            var multiplier := float(entity["share_classes"].get(share_class_name, {}).get("dividend_multiplier", 1.0))
+            shares += int(round(float(holder["classes"][share_class_name]) * multiplier))
         var payout := amount * float(shares) / issued
         payouts[holder_id] = payout
         total_paid += payout

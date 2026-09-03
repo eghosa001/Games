@@ -36,7 +36,7 @@ func _counter(history,key:String,now:int,day:int,event_name:String,title:String,
     _snapshots[key]=now
 
 func _array_counter(history,key:String,value,day:int,event_name:String,title:String)->void:
-    var count:=value.size() if value is Array else 0
+    var count: int =value.size() if value is Array else 0
     if not _snapshots.has(key):_snapshots[key]=count;return
     if count>int(_snapshots[key]):_record(history,event_name,day,title,{"count":count},key)
     _snapshots[key]=count
@@ -52,7 +52,7 @@ func _contract_events(history,state,day:int)->void:
 func _technology_events(history,state,day:int)->void:
     var tech=state.get_value("technology","technology",{})
     if not tech is Dictionary:return
-    var count:=0
+    var count: int =0
     for id in tech.keys():
         if tech[id] is Dictionary and bool(tech[id].get("researched",false)):count+=1
         elif tech[id] is bool and tech[id]:count+=1
@@ -61,7 +61,7 @@ func _technology_events(history,state,day:int)->void:
 func _alliance_events(history,state,day:int)->void:
     var alliances=state.get_value("alliances","alliances",{})
     if not alliances is Dictionary:return
-    var count:=alliances.size()
+    var count: int =alliances.size()
     _counter(history,"alliances_formed",count,day,"ALLIANCE_FORMED","Alliance formed",{"count":count})
     var completed:=0
     for id in alliances.keys():
