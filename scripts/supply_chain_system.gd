@@ -45,7 +45,6 @@ func _transport_capacity(level: int) -> float:
     if tech != null:
         return base * tech.transport_capacity_multiplier()
     return base
-
 func _freight_cost(resource: String, amount: float, level: int) -> int:
     var distance_factor: float = 1.0
     if economy != null and economy.resources.has(resource):
@@ -53,7 +52,6 @@ func _freight_cost(resource: String, amount: float, level: int) -> int:
     var base_cost: float = amount * (2.0 + float(max(0, 3 - level))) * distance_factor
     var effects = _railway_effects()
     return int(round(base_cost * float(effects.get("transport_cost_multiplier", 1.0))))
-
 func procure(resource: String, amount: float, cash: int, transport_level: int = 1) -> Dictionary:
     if economy == null or not economy.resources.has(resource) or amount <= 0:
         return {"ok": false, "reason": "invalid_resource"}
@@ -137,7 +135,6 @@ func consume_furniture_inputs(cycles: int) -> Dictionary:
 
 func receive_furniture(amount: int) -> void:
     warehouse["furniture"] = min(WAREHOUSE_LIMIT, stock("furniture") + max(0, amount))
-
 func sell_furniture(amount: int, price: int) -> Dictionary:
     var sold: int = min(max(0, amount), int(floor(stock("furniture"))))
     var revenue: int = sold * max(0, price)
