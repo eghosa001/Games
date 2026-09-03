@@ -158,7 +158,7 @@ func _details(details:Dictionary)->String:
     return "; ".join(parts) if not parts.is_empty() else "Verified gameplay event."
 func _employee_by_id(employee_id:String)->Dictionary:
     var employees=get_node_or_null("/root/RenewEmployeeSystem");if employees==null or not employees.has_method("get_employee"):return {};return employees.get_employee(employee_id)
-func _main() -> Variant:
+func _main():
     var tree = get_tree()
     if tree == null:
         return null

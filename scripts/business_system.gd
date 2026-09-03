@@ -71,15 +71,15 @@ func produce_goods()->void:
     var employee_count:=int(industry.get("workers",3));var employee_factor:=1.0;var morale_multiplier:=1.0
     if employee_system!=null:employee_count=employee_system.get_active_employee_count();employee_factor=employee_system.get_productivity_multiplier("factory_001");morale_multiplier=employee_system.get_morale_multiplier()
     if employee_count<required_workers:state_adapter.message("%s requires %d active workers; you have %d."%[_business_name(),required_workers,employee_count]);return
-    var capacity:=int(state_adapter.get_value("businesses","capacity_level",1));var business_efficiency:=clamp(0.85+float(capacity)*0.10,0.85,1.50);var base_output:=max(1,employee_count+capacity-1);var output_factor:=employee_factor*business_efficiency*_technology_multiplier()*_property_condition_multiplier()*morale_multiplier;var cycles:=max(1,int(floor(float(base_output)*output_factor)))
+    var capacity:=int(state_adapter.get_value("businesses","capacity_level",1));var business_efficiency:=clamp(0.85+float(capacity)*0.10,0.85,1.50);var base_output:=max(1,employee_count+capacity-1);var output_factor: float = employee_factor*business_efficiency*_technology_multiplier()*_property_condition_multiplier()*morale_multiplier;var cycles:=max(1,int(floor(float(base_output)*output_factor)))
     var cash:=int(state_adapter.get_value("economy","cash",25000));var orders:=[]
     for resource in industry.inputs.keys():
-        var need:=float(industry.inputs[resource])*cycles;if tech!=null:need*=1.0-tech.input_efficiency()
+        var need: float = float(industry.inputs[resource])*cycles;if tech!=null:need*=1.0-tech.input_efficiency()
         if supply_chain.stock(resource)<need:orders.append({"resource":resource,"amount":max(0.0,need-supply_chain.stock(resource))})
     if not orders.is_empty():
-        var transport_level:=int(state_adapter.get_value("supply_chain","transport_level",1));var delivery:=supply_chain.procure_bundle(orders,cash,transport_level);if not delivery["ok"]:state_adapter.message("Factory stopped: supply delivery failed (%s)."%str(delivery.get("reason","unknown")));return
+        var transport_level:=int(state_adapter.get_value("supply_chain","transport_level",1));var delivery: Dictionary = supply_chain.procure_bundle(orders,cash,transport_level);if not delivery["ok"]:state_adapter.message("Factory stopped: supply delivery failed (%s)."%str(delivery.get("reason","unknown")));return
         cash-=int(delivery["cost"]);state_adapter.set_value("economy","cash",cash);state_adapter.log_message("SUPPLY: V1 industry inputs delivered to %s."%_business_name())
-    var input_result:=supply_chain.consume_furniture_inputs(cycles)
+    var input_result: Dictionary = supply_chain.consume_furniture_inputs(cycles)
     if not input_result["ok"]:state_adapter.message("%s stopped: warehouse inputs are too low."%_business_name());return
     var quality:=clamp(int(round(72.0+employee_factor*5.0+morale_multiplier*4.0+_technology_multiplier()*3.0+randi_range(-3,4))),30,100);var output:int=max(1,cycles-int(floor(float(cycles)*0.08)));production.system.finished_goods+=output;production.system.inventory["goods"]=production.system.finished_goods
     var operating_cost:=int(round(float(industry.operating_cost)*float(cycles)*(tech.operating_cost_multiplier() if tech!=null else 1.0)));var price:=int(round(float(industry.base_price)*(tech.base_price_multiplier() if tech!=null else 1.0)))

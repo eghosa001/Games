@@ -101,4 +101,4 @@ func restore_state(state: Dictionary) -> void:
 
 func _day() -> int:
     var scene = get_tree().current_scene if get_tree() != null else null
-    return int(scene.get("day", 1)) if scene != null else 1
+    return int(scene.get("day")) if scene != null and scene.get("day") != null else 1

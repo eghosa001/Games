@@ -151,7 +151,7 @@ func estimate_demand(resource:String,market_price:float)->float:
 func market_value(resource:String,amount:float)->float: return max(0.0,amount)*current_price(resource)
 func _recalculate_price(resource:String)->void:
     if not resources.has(resource): return
-    var d:Dictionary=resources[resource]; var supply_value:=max(0.1,float(d.get("supply",0.0))); var demand_value:=max(0.0,float(d.get("demand",0.0))); var ratio:=demand_value/supply_value; var scarcity_component:=clamp(ratio,0.55,2.50); var modifier:=clamp(float(market_multipliers.get(resource,1.0)),0.55,2.50); var target_price:=clamp(float(d["base_price"])*pow(scarcity_component,0.70)*modifier,MIN_PRICE,MAX_PRICE); var current:=float(d.get("current_price",d["base_price"]))
+    var d:Dictionary=resources[resource]; var supply_value:=max(0.1,float(d.get("supply",0.0))); var demand_value:=max(0.0,float(d.get("demand",0.0))); var ratio: float = demand_value/supply_value; var scarcity_component:=clamp(ratio,0.55,2.50); var modifier:=clamp(float(market_multipliers.get(resource,1.0)),0.55,2.50); var target_price:=clamp(float(d["base_price"])*pow(scarcity_component,0.70)*modifier,MIN_PRICE,MAX_PRICE); var current:=float(d.get("current_price",d["base_price"]))
     d["current_price"]=clamp(current+(target_price-current)*PRICE_RESPONSE,MIN_PRICE,MAX_PRICE); d["price"]=d["current_price"]; d["scarcity"]=clamp(1.0-float(d.get("stock",0.0))/max(1.0,float(d.get("target_stock",100.0))),0.0,1.0); resources[resource]=d
 
 func end_market_day()->void:

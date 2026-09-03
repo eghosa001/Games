@@ -14,7 +14,7 @@ const TECHNOLOGIES := {
     "premium_manufacturing": {"name":"Premium Manufacturing","tier":3,"cost_money":7000,"cost_points":20,"time_days":4,"prerequisites":["advanced_materials"],"effects":{"production_multiplier":0.15,"base_price_multiplier":0.15}}
 }
 
-func _state() -> Variant:
+func _state():
     return get_node_or_null("/root/RenewGameState")
 func get_technologies() -> Array:
     var result:Array=[]

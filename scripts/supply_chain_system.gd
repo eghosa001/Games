@@ -56,7 +56,7 @@ func can_make_furniture(cycles:int=1)->Dictionary:
 func consume_furniture_inputs(cycles:int)->Dictionary:
     var check:=can_make_furniture(cycles);if not check["ok"]:return check
     var run_cycles:=int(check["cycles"]);for resource in FURNITURE_INPUTS:warehouse[resource]-=float(FURNITURE_INPUTS[resource])*run_cycles
-    last_operation={"type":"furniture_factory_inputs","cycles":run_cycles,"consumed":{"timber":FURNITURE_INPUTS["timber"]*run_cycles,"metal":FURNITURE_INPUTS["metal"]*run_cycles,"energy":FURNITURE_INPUTS["energy"]*run_cycles};return {"ok":true,"cycles":run_cycles,"consumed":last_operation["consumed"].duplicate(true)}
+    last_operation={"type":"furniture_factory_inputs","cycles":run_cycles,"consumed":{"timber":FURNITURE_INPUTS["timber"]*run_cycles,"metal":FURNITURE_INPUTS["metal"]*run_cycles,"energy":FURNITURE_INPUTS["energy"]*run_cycles}};return {"ok":true,"cycles":run_cycles,"consumed":last_operation["consumed"].duplicate(true)}
 func receive_furniture(amount:int)->void:warehouse["furniture"]=min(WAREHOUSE_LIMIT,stock("furniture")+max(0,amount))
 func sell_furniture(amount:int,price:int)->Dictionary:
     var sold:=min(max(0,amount),int(floor(stock("furniture"))));var revenue:=sold*max(0,price);warehouse["furniture"]-=sold;last_operation={"type":"customer_sale","amount":sold,"price":price,"revenue":revenue};return {"ok":sold>0,"sold":sold,"revenue":revenue}
