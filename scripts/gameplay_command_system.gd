@@ -81,8 +81,7 @@ func advance_day() -> void:
         _set_state("company", "message", "SimulationSystem is unavailable."); return
     var performance := int(_state_value("economy", "last_profit", 0))
     var employee_result: Dictionary = employee_system.daily_update(performance)
-    if employee_result.get("warnings", []).size() > 0:
-        _log(str(employee_result["warnings"][0]))
+    if employee_result.get("warnings", []).size() > 0: _log(str(employee_result["warnings"][0]))
     var context := {"economy": supply_system.economy, "rivals": relationship_system.rivals, "events": _events(), "expansion": expansion_system.expansion, "districts": expansion_system.districts}
     var result: Dictionary = simulation.advance_day(_simulation_state(), context)
     if not bool(result.get("ok", false)):
@@ -113,6 +112,7 @@ func load_game() -> void:
     if snapshot.is_empty(): _set_state("company", "message", "No save file found."); return
     var state = get_node_or_null("/root/RenewGameState")
     if state != null: state.restore(snapshot)
-    employee_system.employee_system.restore_state(_state_value("employees", "roster", []))
+    var roster = _state_value("employees", "roster", [])
+    if roster is Array: employee_system.employee_system.restore_state({"employees": roster})
     employee_system.sync_roster()
     _set_state("company", "message", "Game loaded.")
