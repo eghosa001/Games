@@ -87,7 +87,7 @@ func acquire_machine(machine_id: String, capacity: int = 1) -> bool:
 
 func set_automation(machine_id: String, level: int) -> bool:
     if not machines.has(machine_id) or not bool(machines[machine_id].get("owned", false)): return false
-    var value := clamp(level, 0, 5)
+    var value: int = int(clamp(level, 0, 5))
     machines[machine_id]["automation"] = value
     automation[machine_id] = value
     return true
@@ -103,7 +103,7 @@ func can_run(recipe_id: String, cycles: int = 1) -> Dictionary:
     var capacity := int(machine.get("capacity", 1)) + int(machine.get("automation", 0))
     var requested := min(cycles, capacity)
     for item in recipe["inputs"]:
-        var required := int(recipe["inputs"][item]) * requested
+        var required: int = int(recipe["inputs"][item]) * requested
         if stock(item) < required: return {"ok":false,"reason":"missing_input","item":item,"required":required,"available":stock(item)}
     return {"ok":true,"cycles":requested,"machine":machine_id}
 
@@ -143,8 +143,6 @@ func run_recipe(recipe_id: String, cycles: int = 1) -> Dictionary:
     inventory["goods"] = finished_goods
     return {"ok":true,"recipe":recipe_id,"stage":recipe["stage"],"cycles":run_cycles,"outputs":outputs,"output":total_output,"quality":run_quality,"waste_rate":effective_waste,"machine":machine_id,"condition":machine["condition"],"utilization":utilization[machine_id]}
 
-# Backward-compatible prototype command. The actual production graph is above;
-# this keeps the existing Main flow functional during the architecture migration.
 func produce(economy: RenewEconomy, cycles: int) -> Dictionary:
     if economy == null or cycles <= 0: return {"ok":false,"cycles":0,"output":0,"quality":quality}
     var possible := cycles
