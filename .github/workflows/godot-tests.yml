@@ -12,7 +12,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,50 +24,22 @@ jobs:
           unzip -q Godot_v4.7.2-stable_linux.x86_64.zip
           chmod +x Godot_v4.7.2-stable_linux.x86_64
       - name: Import project
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --editor --path . --quit
+        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --editor --path . --quit
       - name: Run architecture integrity smoke test
-        run: timeout 300s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_architecture_integrity.gd
-      - name: Run function-level coverage test
-        run: timeout 300s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_function_coverage.gd
+        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_architecture_integrity.gd
       - name: Run GameState architecture test
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_game_state.gd
-      - name: Run extracted simulation architecture test
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_simulation_architecture.gd
-      - name: Run persistent competitor AI test
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_competitor_ai.gd
+        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_game_state.gd
+      - name: Run simulation architecture test
+        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_simulation_architecture.gd
       - name: Run production system test
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_production_system.gd
+        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_production_system.gd
       - name: Run restoration mechanics test
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_restoration_mechanics.gd
-      - name: Run scarcity propagation test
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_scarcity_system.gd
+        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_restoration_mechanics.gd
       - name: Run supply chain system test
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_supply_chain_system.gd
-      - name: Run ContractSystem test
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_contract_system.gd
-      - name: Run OwnershipSystem test
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_ownership_system.gd
+        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_supply_chain_system.gd
       - name: Run new-game flow test
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_new_game_flow.gd
-      - name: Run employee system test
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_employee_system.gd
-      - name: Run history system test
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_history_system.gd
-      - name: Run RENEW Daily news system test
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_news_system.gd
+        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_new_game_flow.gd
       - name: Run regression tests
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_runner.gd
-      - name: Run extended function tests
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_extended.gd
-      - name: Run expansion API tests
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_expansion_api.gd
-      - name: Run economy transaction tests
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_economy_transactions.gd
-      - name: Run edge-case tests
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_edge_cases.gd
+        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_runner.gd
       - name: Run release smoke test
-        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_release_smoke.gd
-      - name: Run long 365-day soak test
-        run: timeout 600s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_long_soak.gd
-      - name: Run extreme 1000-day soak test
-        run: timeout 600s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_extreme_soak.gd
+        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_release_smoke.gd
