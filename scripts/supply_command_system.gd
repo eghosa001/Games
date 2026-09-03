@@ -4,6 +4,10 @@ const Economy = preload("res://scripts/economy.gd")
 const Rivals = preload("res://scripts/competitors.gd")
 const SupplyChain = preload("res://scripts/supply_chain_system.gd")
 
+const TRANSPORT_BASE_CAPACITY := 40
+const TRANSPORT_CAPACITY_PER_LEVEL := 20
+const TRANSPORT_UPGRADE_BASE_COST := 5000
+
 var state_adapter = DomainSystem.new()
 var economy = Economy.new()
 var rivals = Rivals.new()
@@ -43,6 +47,23 @@ func receive_furniture(amount: int) -> void:
 
 func sell_furniture(amount: int, price: int) -> Dictionary:
     return chain.sell_furniture(amount, price)
+
+func upgrade_transport() -> Dictionary:
+    var current_level := max(1, int(state_adapter.get_value("supply_chain", "transport_level", 1)))
+    var cost := TRANSPORT_UPGRADE_BASE_COST * current_level
+    var cash := int(state_adapter.get_value("economy", "cash", 25000))
+    if cash < cost:
+        var failure := {"ok": false, "reason": "cash", "cost": cost, "cash": cash, "level": current_level}
+        state_adapter.message("Transport upgrade costs %s." % state_adapter.money(cost))
+        return failure
+    var new_level := current_level + 1
+    var capacity := TRANSPORT_BASE_CAPACITY + (new_level - 1) * TRANSPORT_CAPACITY_PER_LEVEL
+    state_adapter.set_value("economy", "cash", cash - cost)
+    state_adapter.set_value("supply_chain", "transport_level", new_level)
+    state_adapter.set_value("supply_chain", "transport_capacity", capacity)
+    state_adapter.log_message("TRANSPORT UPGRADE: Level %d (%d capacity) for %s." % [new_level, capacity, state_adapter.money(cost)])
+    state_adapter.message("Transport upgraded to level %d (%d capacity)." % [new_level, capacity])
+    return {"ok": true, "cost": cost, "level": new_level, "capacity": capacity}
 
 func capture_state() -> Dictionary:
     return {"system_version": 1, "supplier_choice": state_adapter.get_value("supply_chain", "supplier_choice", 0), "chain": chain.capture_state()}
