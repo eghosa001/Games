@@ -25,8 +25,8 @@ jobs:
           chmod +x Godot_v4.7.2-stable_linux.x86_64
       - name: Import project
         run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --editor --path . --quit
-      - name: Run full discovery-driven coverage audit
-        run: timeout 300s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_full_coverage.gd
+      - name: Run architecture integrity smoke test
+        run: timeout 300s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_architecture_integrity.gd
       - name: Run function-level coverage test
         run: timeout 300s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_function_coverage.gd
       - name: Run GameState architecture test
