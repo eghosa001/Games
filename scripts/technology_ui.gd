@@ -1,12 +1,12 @@
-extends CanvasLayer
+extends Node2D
 
 ## Phase 21 presentation layer. Reads GameState; does not own research state.
-func _ready()->void:layer=52;queue_redraw()
+func _ready()->void:queue_redraw()
 func _process(_delta:float)->void:queue_redraw()
 func _draw()->void:
     var state=get_node_or_null("/root/RenewGameState");var tech=get_node_or_null("/root/RenewTechnologySystem")
     if state==null or tech==null:return
-    var panel=Rect2(875,24,380,300);draw_rect(panel,Color(0.04,0.05,0.08,0.94));draw_rect(Rect2(875,24,380,3),Color(0.25,0.75,0.95,1.0))
+    draw_rect(Rect2(875,24,380,300),Color(0.04,0.05,0.08,0.94));draw_rect(Rect2(875,24,380,3),Color(0.25,0.75,0.95,1.0))
     draw_string(ThemeDB.fallback_font,Vector2(895,50),"TECHNOLOGY",HORIZONTAL_ALIGNMENT_LEFT,300,20,Color.WHITE)
     draw_string(ThemeDB.fallback_font,Vector2(895,70),"RP %d   Cash $%d   |   Y: research next"%[int(state.get_value("technology","research_points",20)),int(state.get_value("economy","cash",25000))],HORIZONTAL_ALIGNMENT_LEFT,340,13,Color(0.75,0.8,0.88,1))
     var y:=94.0;var tier:=0
