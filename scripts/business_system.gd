@@ -40,7 +40,6 @@ func _ready() -> void:
     add_child(state_adapter)
     add_child(supply_chain)
     supply_chain.set_economy(economy)
-
 func _technology():
     return get_node_or_null("/root/RenewTechnologySystem")
 
@@ -49,31 +48,15 @@ func get_industries() -> Array:
     for key in INDUSTRIES.keys():
         result.append(INDUSTRIES[key].duplicate(true))
     return result
-
 func get_industry(industry_id: String) -> Dictionary:
-    var value = INDUSTRIES.get(industry_id, null)
-    if value is Dictionary:
-        return value.duplicate(true)
-    return {}
-
+    return INDUSTRIES.get(industry_id, {}).duplicate(true)
 func get_business_purposes() -> Array:
-    var property_type: String = _origin_property_type()
-    return PURPOSES.get(property_type, []).duplicate(true)
-
-# Compatibility API: UI historically passed an integer, while the command
-# layer may pass a purpose id. Keep both forms on one Variant argument.
-func get_business_purpose(selector) -> Dictionary:
+    return PURPOSES.get(_origin_property_type(), []).duplicate(true)
+func get_business_purpose(index: int) -> Dictionary:
     var choices: Array = get_business_purposes()
-    if selector is String:
-        for purpose in choices:
-            if str(purpose.get("id", "")) == str(selector):
-                return purpose.duplicate(true)
-        return {}
-    var index: int = int(selector)
     if index < 0 or index >= choices.size():
         return {}
     return choices[index].duplicate(true)
-
 func open_business() -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)) or str(state_adapter.get_value("properties", "stage", "Neglected")) != "Operational":
         state_adapter.message("Finish restoration first.")
