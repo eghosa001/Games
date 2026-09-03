@@ -1,5 +1,4 @@
 extends Node
-class_name RenewGameState
 
 ## Canonical simulation-state boundary.
 ## Domain systems own runtime behaviour; this node owns the persistent gameplay
