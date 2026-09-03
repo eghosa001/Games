@@ -1,0 +1,51 @@
+extends Node
+const DomainSystem = preload("res://scripts/domain_system.gd")
+const Expansion = preload("res://scripts/expansion.gd")
+const Districts = preload("res://scripts/districts.gd")
+
+var state_adapter = DomainSystem.new()
+var expansion = Expansion.new()
+var districts = Districts.new()
+
+func _ready() -> void:
+    add_child(state_adapter)
+
+func initialize() -> void:
+    var reputation := int(state_adapter.get_value("player", "reputation", 0))
+    expansion.unlock_from_reputation(reputation)
+    districts.update_unlocks(reputation)
+
+func select_expansion(index: int) -> void:
+    if index < 0 or index >= expansion.properties.size(): return
+    state_adapter.set_value("branches", "selected_expansion", index)
+    state_adapter.message("Selected expansion: %s." % expansion.properties[index]["name"])
+    state_adapter.log_message("EXPANSION SELECTED: %s." % expansion.properties[index]["name"])
+
+func select_district(index: int) -> void:
+    var result = districts.select(index)
+    state_adapter.message(result["message"])
+    if result["ok"]:
+        state_adapter.set_value("regions", "selected_district", index)
+        state_adapter.log_message("DISTRICT: %s selected." % districts.current()["name"])
+
+func buy_expansion() -> void:
+    var reputation := int(state_adapter.get_value("player", "reputation", 0))
+    expansion.unlock_from_reputation(reputation)
+    var selected := int(state_adapter.get_value("branches", "selected_expansion", 0))
+    var cash := int(state_adapter.get_value("economy", "cash", 25000))
+    var result = expansion.buy(selected, cash)
+    if not result["ok"]: state_adapter.message(result["message"]); return
+    state_adapter.set_value("economy", "cash", cash - int(result["cost"]))
+    state_adapter.set_value("player", "reputation", reputation + int(result["rep"]))
+    state_adapter.log_message("EXPANSION: %s (-$%s)." % [result["name"], state_adapter.money(int(result["cost"]))])
+    state_adapter.message(result["message"])
+
+func upgrade_expansion() -> void:
+    var selected := int(state_adapter.get_value("branches", "selected_expansion", 0))
+    var cash := int(state_adapter.get_value("economy", "cash", 25000))
+    var result = expansion.upgrade(selected, cash)
+    if not result["ok"]: state_adapter.message(result["message"]); return
+    state_adapter.set_value("economy", "cash", cash - int(result["cost"]))
+    state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + int(result["rep"]))
+    state_adapter.log_message("EMPIRE UPGRADE: %s." % result["name"])
+    state_adapter.message(result["message"])
