@@ -4,9 +4,6 @@ var passed := 0
 var failed := 0
 var failures: Array[String] = []
 
-func _init() -> void:
-    call_deferred("run")
-
 func check(condition: bool, label: String) -> void:
     if condition:
         passed += 1
@@ -235,6 +232,10 @@ func test_main_gameplay_chain() -> void:
         game.restore_property()
     check(game.stage == "Operational" and int(game.restoration) >= 100, "chain complete restoration")
 
+    # A business cannot open until the restored property has an industry purpose.
+    # Exercise the V1 furniture industry first; other industry choices are covered
+    # by their dedicated business/production tests.
+    game.choose_business_purpose(0)
     game.open_business()
     check(game.business_open, "chain open business")
     game.cycle_supplier()
