@@ -69,7 +69,7 @@ func run() -> void:
     check(float(production.machines["factory"]["condition"]) == 100.0, "Maintenance restores condition")
     check(condition_before_maintenance < 100.0, "Maintenance starts from degraded machine")
 
-    var snapshot := production.capture_state()
+    var snapshot: Dictionary = production.capture_state()
     var restored = Production.new()
     root.add_child(restored)
     restored.restore_state(snapshot)
