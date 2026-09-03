@@ -1,5 +1,4 @@
 extends Node
-class_name RenewGameStateBridge
 
 ## Small compatibility helper for systems that need the canonical state node.
 ## It never owns gameplay state; RenewGameState remains the single source of truth.
