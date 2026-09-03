@@ -12,7 +12,6 @@ var chain = SupplyChain.new()
 func _ready() -> void:
     add_child(state_adapter)
     add_child(chain)
-
     chain.set_economy(economy)
 
 func set_chain(value) -> void:
@@ -21,26 +20,37 @@ func set_chain(value) -> void:
         chain.set_economy(economy)
 
 func cycle_supplier() -> void:
-    var choice: Variant = (int(state_adapter.get_value("supply_chain", "supplier_choice", 0)) + 1) % 3
+    var choice: int = (int(state_adapter.get_value("supply_chain", "supplier_choice", 0)) + 1) % 3
     state_adapter.set_value("supply_chain", "supplier_choice", choice)
-    state_adapter.message("Supplier tier %d selected: lower price tiers trade reliability for savings." % (choice + 1))
 
-func buy_inputs() -> void:
-    if not bool(state_adapter.get_value("businesses", "business_open", false)):
-        state_adapter.message("Open the business first."); return
-    var cash:=int(state_adapter.get_value("economy","cash",25000))
-    var transport_level:=int(state_adapter.get_value("supply_chain","transport_level",1))
-    # V1 deliberately buys the resources used by the complete Timber -> Furniture chain.
-    var orders: Variant = [{"resource":"timber","amount":12.0},{"resource":"iron","amount":12.0},{"resource":"energy","amount":24.0}]
-    var result=chain.procure_bundle(orders,cash,transport_level)
-    if not result["ok"]:
-        state_adapter.message("Supply delivery failed: %s." % str(result.get("reason","unknown")))
-        state_adapter.log_message("SUPPLY FAILURE: %s." % str(result.get("reason","unknown"))); return
-    state_adapter.set_value("economy","cash",cash-int(result["cost"]))
-    var reaction_system=get_node_or_null("/root/RenewCompetitorReactionSystem")
-    if reaction_system != null:
-        var day:=int(state_adapter.get_value("player","day",1))
-        for reaction in reaction_system.notify_resource_capture("timber",12,day):
-            state_adapter.log_message("COMPETITOR REACTION: " + reaction)
-    state_adapter.log_message("SUPPLY ORDER: Timber 12, Iron 12, Energy 24 delivered to warehouse.")
-    state_adapter.message("Timber, Iron and Energy delivered to the warehouse. Total $%s." % state_adapter.money(int(result["cost"])))
+func procure(resource: String, amount: float, cash: int, transport_level: int = 1) -> Dictionary:
+    return chain.procure(resource, amount, cash, transport_level)
+
+func procure_bundle(orders: Array, cash: int, transport_level: int = 1) -> Dictionary:
+    return chain.procure_bundle(orders, cash, transport_level)
+
+func process_iron_to_metal(cycles: int = 1) -> Dictionary:
+    return chain.process_iron_to_metal(cycles)
+
+func can_make_furniture(cycles: int = 1) -> Dictionary:
+    return chain.can_make_furniture(cycles)
+
+func consume_furniture_inputs(cycles: int) -> Dictionary:
+    return chain.consume_furniture_inputs(cycles)
+
+func receive_furniture(amount: int) -> void:
+    chain.receive_furniture(amount)
+
+func sell_furniture(amount: int, price: int) -> Dictionary:
+    return chain.sell_furniture(amount, price)
+
+func capture_state() -> Dictionary:
+    return {"system_version": 1, "supplier_choice": state_adapter.get_value("supply_chain", "supplier_choice", 0), "chain": chain.capture_state()}
+
+func restore_state(snapshot: Dictionary) -> void:
+    if snapshot.is_empty():
+        return
+    state_adapter.set_value("supply_chain", "supplier_choice", int(snapshot.get("supplier_choice", 0)))
+    var chain_snapshot = snapshot.get("chain", {})
+    if chain_snapshot is Dictionary:
+        chain.restore_state(chain_snapshot)
