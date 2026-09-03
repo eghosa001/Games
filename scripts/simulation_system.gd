@@ -75,21 +75,37 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     return {"ok": true,"message": state["message"],"state": state.duplicate(true),"contract": contract_result,"wages": wages,"production_operating_cost": production_operating_cost,"production_config": production_config,"employee_update": employee_result,"customer_demand":customer_demand,"units_sold":units_sold,"player_price":player_price,"competitor_price":rival_price,"demand_modifiers":demand_modifiers,"relative_price":float(demand_result.get("relative_price",1.0)),"raw_demand":float(demand_result.get("raw_demand",customer_demand))}
 func _execute_contract(state: Dictionary, available_after_sales: int) -> Dictionary:
     var contracts = _contracts()
-    if contracts == null: return {}
+    if contracts == null:
+        return {}
     var active: Dictionary = contracts.active_contract()
     if active.is_empty():
-        if int(state.get("contract_days", 0)) <= 0: return {}
+        if int(state.get("contract_days", 0)) <= 0:
+            return {}
         var created: Dictionary = contracts.create_default_customer_contract(int(state.get("day", 1)), int(state.get("reputation", 0)))
-        if not bool(created.get("ok", false)): return {}
+        if not bool(created.get("ok", false)):
+            return {}
         active = created["contract"]
-    var production = _production(); var quality := 75
+    var production = _production()
+    var quality: int = 75
     if production != null:
-        var snapshot: Dictionary = production.capture_state(); var last_run: Dictionary = snapshot.get("last_run", {}); if last_run.has("quality"): quality = int(last_run["quality"])
+        var snapshot: Dictionary = production.capture_state()
+        var last_run: Dictionary = snapshot.get("last_run", {})
+        if last_run.has("quality"):
+            quality = int(last_run["quality"])
     var result: Dictionary = contracts.execute_day(str(active["id"]), max(0, available_after_sales), quality, int(state.get("day", 1)))
-    if not bool(result.get("ok", false)): return result
+    if not bool(result.get("ok", false)):
+        return result
     if bool(result.get("finished", false)):
-        var final_contract: Dictionary = result["contract"]; var status := str(final_contract.get("execution_status", "breached")); var impact: Dictionary = final_contract.get("reputation_impact", {}); var rep_key := "on_fulfilled" if status == "fulfilled" else "on_failed"; state["reputation"] = max(0, int(state.get("reputation", 0)) + int(impact.get(rep_key, 0))); state["contract_days"] = 0; state["contract_bonus"] = 0; _append_log(state, "CONTRACT %s: %s." % [final_contract["id"], status.to_upper()])
-    result["log"] = "CONTRACT: delivered %d; revenue $%s; penalty $%s." % [int(result.get("delivered", 0)), _money(int(result.get("revenue", 0))), _money(int(result.get("penalty", 0)))]; return result
+        var final_contract: Dictionary = result["contract"]
+        var status: String = str(final_contract.get("execution_status", "breached"))
+        var impact: Dictionary = final_contract.get("reputation_impact", {})
+        var rep_key: String = "on_fulfilled" if status == "fulfilled" else "on_failed"
+        state["reputation"] = max(0, int(state.get("reputation", 0)) + int(impact.get(rep_key, 0)))
+        state["contract_days"] = 0
+        state["contract_bonus"] = 0
+        _append_log(state, "CONTRACT %s: %s." % [final_contract["id"], status.to_upper()])
+    result["log"] = "CONTRACT: delivered %d; revenue $%s; penalty $%s." % [int(result.get("delivered", 0)), _money(int(result.get("revenue", 0))), _money(int(result.get("penalty", 0)))]
+    return result
 func _append_log(state: Dictionary, text: String) -> void:
     if text.is_empty(): return
     var logs = state.get("log_lines", [])
