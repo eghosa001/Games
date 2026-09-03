@@ -12,6 +12,7 @@ var chain = SupplyChain.new()
 func _ready() -> void:
     add_child(state_adapter)
     add_child(chain)
+
     chain.set_economy(economy)
 
 func set_chain(value) -> void:
@@ -36,5 +37,10 @@ func buy_inputs() -> void:
         state_adapter.message("Supply delivery failed: %s." % str(result.get("reason","unknown")))
         state_adapter.log_message("SUPPLY FAILURE: %s." % str(result.get("reason","unknown"))); return
     state_adapter.set_value("economy","cash",cash-int(result["cost"]))
+    var reaction_system=get_node_or_null("/root/RenewCompetitorReactionSystem")
+    if reaction_system != null:
+        var day:=int(state_adapter.get_value("player","day",1))
+        for reaction in reaction_system.notify_resource_capture("timber",12,day):
+            state_adapter.log_message("COMPETITOR REACTION: " + reaction)
     state_adapter.log_message("SUPPLY ORDER: Timber 12, Iron 12, Energy 24 delivered to warehouse.")
     state_adapter.message("Timber, Iron and Energy delivered to the warehouse. Total $%s." % state_adapter.money(int(result["cost"])))
