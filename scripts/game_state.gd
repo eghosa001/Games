@@ -3,7 +3,7 @@ extends Node
 ## Canonical persistent gameplay-state boundary.
 ## Each gameplay fact has exactly one authoritative domain. Systems own behavior,
 ## while RenewGameState owns the data that behavior reads and mutates.
-const STATE_VERSION := 12
+const STATE_VERSION := 13
 
 const DOMAINS := [
     "player", "company", "properties", "businesses", "branches", "employees",
@@ -18,10 +18,10 @@ const DOMAIN_KEYS := {
     "businesses": ["business_open", "business_id", "business_name", "business_type", "business_purpose", "industry_id", "origin_property_id", "origin_property_name", "origin_property_type", "capacity_level", "marketing_level", "player_price"],
     "branches": ["selected_expansion", "expansion"], "employees": ["roster", "employee_system"],
     "economy": ["cash", "last_sales", "last_profit", "total_profit"], "resources": ["resources"],
-    "production": ["finished_goods", "system"], "supply_chain": ["supplier_choice", "transport_level", "transport_capacity", "resource_sites"],
+    "production": ["finished_goods", "system"], "supply_chain": ["supplier_choice", "transport_level", "transport_capacity", "resource_sites", "transport_cost_multiplier", "resource_delivery_multiplier"],
     "contracts": ["contract_days", "contract_bonus", "contract_system", "system"], "competitors": ["rivals", "selected_rival", "relationship"],
     "ownership": ["acquisition_count"], "finance": ["debt", "loan_payment", "system"], "alliances": ["alliances"], "diplomacy": ["diplomacy"],
-    "regions": ["selected_district", "districts"], "infrastructure": ["management_level", "management_overhead"],
+    "regions": ["selected_district", "districts", "regional_reputation"], "infrastructure": ["management_level", "management_overhead"],
     "technology": ["technology", "research_points"], "events": ["events"], "progression": ["milestones", "unlocks", "xp", "level"],
     "history": ["history_system"], "news": ["news_system"], "analytics": ["simulation_system"]
 }
@@ -32,10 +32,10 @@ const DEFAULT_DOMAINS := {
     "businesses": {"business_open": false, "business_id": "", "business_name": "", "business_type": "", "business_purpose": "", "industry_id": "", "origin_property_id": "", "origin_property_name": "", "origin_property_type": "", "capacity_level": 1, "marketing_level": 0, "player_price": 110},
     "branches": {"selected_expansion": 0, "expansion": {}}, "employees": {"roster": [], "employee_system": {}},
     "economy": {"cash": 25000, "last_sales": 0, "last_profit": 0, "total_profit": 0}, "resources": {"resources": {}},
-    "production": {"finished_goods": 0, "system": {}}, "supply_chain": {"supplier_choice": 0, "transport_level": 1, "transport_capacity": 40, "resource_sites": {}},
+    "production": {"finished_goods": 0, "system": {}}, "supply_chain": {"supplier_choice": 0, "transport_level": 1, "transport_capacity": 40, "resource_sites": {}, "transport_cost_multiplier": 1.0, "resource_delivery_multiplier": 1.0},
     "contracts": {"contract_days": 0, "contract_bonus": 0, "contract_system": {}, "system": {}}, "competitors": {"rivals": [], "selected_rival": 0, "relationship": 15},
     "ownership": {"acquisition_count": 0}, "finance": {"debt": 0, "loan_payment": 0, "system": {}}, "alliances": {"alliances": {}}, "diplomacy": {"diplomacy": {}},
-    "regions": {"selected_district": 0, "districts": {"renew_region":{"id":"renew_region","name":"Renew Region","cities":[],"resource_locations":[]}}}, "infrastructure": {"management_level": 0, "management_overhead": 0},
+    "regions": {"selected_district": 0, "districts": {"renew_region":{"id":"renew_region","name":"Renew Region","cities":[],"resource_locations":[]}}, "regional_reputation": 0}, "infrastructure": {"management_level": 0, "management_overhead": 0},
     "technology": {"technology": {}, "research_points": 20}, "events": {"events": []}, "progression": {"milestones": [], "unlocks": [], "xp": 0, "level": 1},
     "history": {"history_system": {}}, "news": {"news_system": {}}, "analytics": {"simulation_system": {}}
 }
@@ -84,10 +84,10 @@ func _apply_flat_to_domains(flat: Dictionary) -> void:
     for key in ["business_open", "business_id", "business_name", "business_type", "business_purpose", "industry_id", "origin_property_id", "origin_property_name", "origin_property_type", "capacity_level", "marketing_level", "player_price"]: _migrate_key("businesses", flat, key)
     for key in ["cash", "last_sales", "last_profit", "total_profit"]: _migrate_key("economy", flat, key)
     _migrate_key("resources", flat, "resources"); _migrate_key("production", flat, "finished_goods")
-    for key in ["supplier_choice", "transport_level", "transport_capacity", "resource_sites"]: _migrate_key("supply_chain", flat, key)
+    for key in ["supplier_choice", "transport_level", "transport_capacity", "resource_sites", "transport_cost_multiplier", "resource_delivery_multiplier"]: _migrate_key("supply_chain", flat, key)
     for key in ["contract_days", "contract_bonus", "contract_system"]: _migrate_key("contracts", flat, key)
     for key in ["rivals", "selected_rival", "relationship"]: _migrate_key("competitors", flat, key)
-    _migrate_key("ownership", flat, "acquisition_count"); _migrate_key("finance", flat, "debt"); _migrate_key("finance", flat, "loan_payment"); _migrate_key("regions", flat, "selected_district")
+    _migrate_key("ownership", flat, "acquisition_count"); _migrate_key("finance", flat, "debt"); _migrate_key("finance", flat, "loan_payment"); _migrate_key("regions", flat, "selected_district"); _migrate_key("regions", flat, "regional_reputation")
     for key in ["technology", "research_points"]: _migrate_key("technology", flat, key)
     for key in ["milestones", "unlocks", "xp", "level"]: _migrate_key("progression", flat, key)
     if flat.has("districts"): _migrate_key("regions", flat, "districts")
@@ -114,5 +114,5 @@ func _restore_domain_systems() -> void:
     var finance = root.get_node_or_null("RenewFinanceSystem"); if finance != null and finance.has_method("restore_state") and domains["finance"].get("system", {}) is Dictionary: finance.restore_state(domains["finance"]["system"])
     var production = root.get_node_or_null("RenewProductionSystem"); if production != null and production.has_method("restore_state") and domains["production"].get("system", {}) is Dictionary: production.restore_state(domains["production"]["system"])
     var simulation = root.get_node_or_null("RenewSimulationSystem"); if simulation != null and simulation.has_method("restore_state") and domains["analytics"].get("simulation_system", {}) is Dictionary: simulation.restore_state(domains["analytics"]["simulation_system"])
-    var contracts = root.get_node_or_null("RenewContractSystem"); if contracts != null and contracts.has_method("restore_state") and domains["contracts"].get("system", {}) is Dictionary: contracts.restore_state(domains["contracts"]["system"])
+    var contracts = root.get_node_or_null("RenewContractSystem"); if contracts != null and contracts.has_method("restore_state") and domains["contracts"]["system"] is Dictionary: contracts.restore_state(domains["contracts"]["system"])
 func _rebuild_data() -> void: data = {"state_version": STATE_VERSION, "domains": domains.duplicate(true), "legacy": _domains_to_flat({"domains": domains})}
