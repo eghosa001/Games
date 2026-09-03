@@ -1,4 +1,4 @@
-[gd_scene load_steps=35 format=3]
+[gd_scene load_steps=36 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -33,6 +33,7 @@
 [ext_resource path="res://scripts/customer_segments_ui.gd" type="Script" id="32"]
 [ext_resource path="res://scripts/contracts_ui.gd" type="Script" id="33"]
 [ext_resource path="res://scripts/property_visual.gd" type="Script" id="34"]
+[ext_resource path="res://scripts/technology_ui.gd" type="Script" id="35"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -91,6 +92,9 @@ layer = 35
 [node name="TutorialOverlay" type="CanvasLayer" parent="."]
 script = ExtResource("13")
 layer = 30
+[node name="TechnologyUI" type="CanvasLayer" parent="."]
+script = ExtResource("35")
+layer = 52
 [node name="HistoryMuseumUI" type="CanvasLayer" parent="."]
 script = ExtResource("20")
 layer = 60
