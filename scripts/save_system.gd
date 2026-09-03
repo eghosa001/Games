@@ -24,7 +24,7 @@ static func save_game(_state: Dictionary) -> bool:
         if DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(BACKUP_PATH)) != OK:
             DirAccess.remove_absolute(ProjectSettings.globalize_path(TEMP_PATH)); return false
     if FileAccess.file_exists(SAVE_PATH): DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
-    if DirAccess.rename_absolute(ProjectSettings.globalize_path(TEMP_PATH), ProjectSettings.globalize_path(SAVE_PATH)) != OK:
+    if DirAccess.rename_absolute(ProjectSettings.globalize_path(TEMP_PATH),ProjectSettings.globalize_path(SAVE_PATH)) != OK:
         DirAccess.remove_absolute(ProjectSettings.globalize_path(TEMP_PATH)); return false
     return true
 
@@ -72,9 +72,26 @@ static func migrate_v2_to_v3(data: Dictionary) -> Dictionary:
 static func migrate_v3_to_v4(data: Dictionary) -> Dictionary:
     var result := data.duplicate(true)
     if not result.has("employees"): result["employees"] = {"roster": []}
-    elif result["employees"] is Array: result["employees"] = {"roster": result["employees"]}
+    elif result["employees"] is int or result["employees"] is float:
+        result["employees"] = _migrate_legacy_employee_count(int(result["employees"]))
+    elif result["employees"] is Array:
+        result["employees"] = {"roster": result["employees"]}
     result["schema_version"] = 4
     return result
+
+static func _migrate_legacy_employee_count(count: int) -> Dictionary:
+    var roster:Array = []
+    var safe_count := max(0, count)
+    for i in range(1, safe_count + 1):
+        var suffix := "%03d" % i
+        roster.append({
+            "id": "legacy_employee_%s" % suffix,
+            "name": "Employee %d" % i,
+            "role": "General Worker",
+            "status": "active",
+            "legacy_migrated": true
+        })
+    return {"roster": roster}
 
 static func migrate_v4_to_v5(data: Dictionary) -> Dictionary:
     var result := data.duplicate(true)
@@ -111,7 +128,8 @@ static func _to_domains(data: Dictionary) -> Dictionary:
         return data["domains"].duplicate(true)
     var domains:Dictionary = {}
     var known := ["player", "company", "properties", "businesses", "branches", "employees", "economy", "resources", "production", "supply_chain", "contracts", "competitors", "alliances", "regions", "technology", "events", "progression", "history", "news", "analytics"]
-    for domain in known: domains[domain] = data.get(domain, {}).duplicate(true) if data.get(domain, {}) is Dictionary else {}
+    for domain in known:
+        domains[domain] = data.get(domain, {}).duplicate(true) if data.get(domain, {}) is Dictionary else {}
     return domains
 
 static func _read_dictionary(path: String) -> Dictionary:
