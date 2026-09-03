@@ -32,7 +32,10 @@ func run() -> void:
     root.add_child(production)
     var simulation = Simulation.new()
     root.add_child(simulation)
-    simulation.set_production_system(production)
+    # Inject the authoritative production instance directly for this isolated
+    # simulation-system architecture test. Runtime composition supplies the
+    # same dependency through advance_day(context).
+    simulation.production_system = production
     await process_frame
 
     check(finance.spend(1000, "test")["ok"], "Finance owns spending")
