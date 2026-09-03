@@ -49,15 +49,15 @@ func sell_furniture(amount: int, price: int) -> Dictionary:
     return chain.sell_furniture(amount, price)
 
 func upgrade_transport() -> Dictionary:
-    var current_level := max(1, int(state_adapter.get_value("supply_chain", "transport_level", 1)))
-    var cost := TRANSPORT_UPGRADE_BASE_COST * current_level
-    var cash := int(state_adapter.get_value("economy", "cash", 25000))
+    var current_level: int = max(1, int(state_adapter.get_value("supply_chain", "transport_level", 1)))
+    var cost: int = TRANSPORT_UPGRADE_BASE_COST * current_level
+    var cash: int = int(state_adapter.get_value("economy", "cash", 25000))
     if cash < cost:
-        var failure := {"ok": false, "reason": "cash", "cost": cost, "cash": cash, "level": current_level}
+        var failure: Dictionary = {"ok": false, "reason": "cash", "cost": cost, "cash": cash, "level": current_level}
         state_adapter.message("Transport upgrade costs %s." % state_adapter.money(cost))
         return failure
-    var new_level := current_level + 1
-    var capacity := TRANSPORT_BASE_CAPACITY + (new_level - 1) * TRANSPORT_CAPACITY_PER_LEVEL
+    var new_level: int = current_level + 1
+    var capacity: int = TRANSPORT_BASE_CAPACITY + (new_level - 1) * TRANSPORT_CAPACITY_PER_LEVEL
     state_adapter.set_value("economy", "cash", cash - cost)
     state_adapter.set_value("supply_chain", "transport_level", new_level)
     state_adapter.set_value("supply_chain", "transport_capacity", capacity)
