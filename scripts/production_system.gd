@@ -75,9 +75,6 @@ func run_recipe(recipe_id:String,cycles:int=1)->Dictionary:
     var outputs:Dictionary={}; var total:=0
     for item in r["outputs"]:
         var planned:=int(r["outputs"][item])*run_cycles; var waste_amount:=int(floor(planned*effective_waste)); var actual:=max(0,planned-waste_amount); add_inventory(item,actual); outputs[item]=actual; total+=actual; waste[item]=int(waste.get(item,0))+waste_amount
-        # Retail outputs represent completed customer sales rather than stock
-        # waiting for another production stage. Keep the canonical finished-goods
-        # counter synchronized with those customer-ready units.
         if String(r["stage"]) == "retail":
             finished_goods += actual
     inventory["goods"]=finished_goods
@@ -96,7 +93,7 @@ func produce(economy:RenewEconomy,cycles:int,product_id:String="consumer_goods")
     var consumed:Dictionary={}; var input_cost:=0.0
     for resource in c["inputs"]:
         var amount:=float(c["inputs"][resource])*possible; var unit:=float(economy.resources[resource].get("current_price",economy.resources[resource].get("price",0.0))); input_cost+=amount*unit; economy.resources[resource]["stock"]=max(0.0,float(economy.resources[resource]["stock"])-amount); consumed[resource]=amount
-    var planned:=possible*int(c["output_per_cycle"]); var waste_amount:=int(floor(planned*float(c["waste_rate"])); var output:=max(0,planned-waste_amount); finished_goods+=output; inventory["goods"]=finished_goods; quality=clamp(int(round((quality+float(c["base_quality"])+randi_range(-3,4))/2.0)),30,100)
+    var planned:=possible*int(c["output_per_cycle"]); var waste_amount:=int(floor(planned*float(c["waste_rate"]))); var output:=max(0,planned-waste_amount); finished_goods+=output; inventory["goods"]=finished_goods; quality=clamp(int(round((quality+float(c["base_quality"])+randi_range(-3,4))/2.0)),30,100)
     var operating_cost:=possible*int(c["operating_cost"]); last_run={"product":product_id,"stage":c["stage"],"cycles":possible,"output":output,"quality":quality,"resources":consumed,"resource_requirements":c["inputs"].duplicate(true),"resource_cost":input_cost,"production_time":float(c["production_time"]),"employee_capacity":int(c["employee_capacity"]),"base_price":int(c["base_price"]),"operating_cost":operating_cost,"reputation_effect":int(c["reputation_effect"]),"waste":waste_amount}; history.append(last_run.duplicate(true)); if history.size()>MAX_HISTORY:history.pop_front()
     return {"ok":true,"product":product_id,"cycles":possible,"output":output,"quality":quality,"finished_goods":finished_goods,"waste":waste_amount,"resources":consumed,"resource_cost":input_cost,"operating_cost":operating_cost,"base_price":int(c["base_price"]),"reputation_effect":int(c["reputation_effect"])}
 func consume_goods(amount:int)->bool:
