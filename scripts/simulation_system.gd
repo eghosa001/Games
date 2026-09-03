@@ -265,7 +265,13 @@ func _production() -> Node:
     var autoload = root.get_node_or_null("RenewProductionSystem")
     if autoload != null:
         return autoload
-    return root.get_node_or_null("ProductionSystem")
+    var named = root.get_node_or_null("ProductionSystem")
+    if named != null:
+        return named
+    for child in root.get_children():
+        if child != null and child.has_method("capture_state") and child.has_method("produce") and child.has_method("advance_day"):
+            return child
+    return null
 
 func _economy() -> Node:
     var root = get_tree().current_scene
