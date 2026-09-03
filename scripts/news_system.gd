@@ -156,9 +156,12 @@ func _details(details:Dictionary)->String:
         if str(key) in ["source_log","employee_id","employee_name","gameplay_event"]:continue
         parts.append("%s: %s"%[str(key).replace("_"," ").capitalize(),str(details[key])])
     return "; ".join(parts) if not parts.is_empty() else "Verified gameplay event."
-func _employee_by_id(employee_id:String)->Dictionary:
-    var employees=get_node_or_null("/root/RenewEmployeeSystem");if employees==null or not employees.has_method("get_employee"):return {};return employees.get_employee(employee_id)
-func _main():
+func _employee_by_id(employee_id: String) -> Dictionary:
+    var employees = get_node_or_null("/root/RenewEmployeeSystem")
+    if employees == null or not employees.has_method("get_employee"):
+        return {}
+    return employees.get_employee(employee_id)
+func _main() -> Node:
     var tree = get_tree()
     if tree == null:
         return null

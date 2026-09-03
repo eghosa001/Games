@@ -44,8 +44,11 @@ func restore_step(step:String)->Dictionary:
         _log("FESTIVAL: %s restored to 100%% (-$%d)." % [step.capitalize(),cost])
     return {"ok":true,"property":PROPERTY.duplicate(true),"progress":progress.duplicate(true),"completed":bool(seasonal.get("completed",false))}
 
-func restore_next()->Dictionary:
-    var step=_next_step(_seasonal().get("progress",{}));if step.is_empty():return {"ok":false,"reason":"complete"};return restore_step(step)
+func restore_next() -> Dictionary:
+    var step = _next_step(_seasonal().get("progress", {}))
+    if step.is_empty():
+        return {"ok": false, "reason": "complete"}
+    return restore_step(step)
 
 func _complete(state,seasonal:Dictionary)->void:
     seasonal["completed"]=true;seasonal["active"]=false;seasonal["completed_day"]=int(state.get_value("player","day",1));seasonal["decoration"]=REWARD["decoration"];seasonal["achievement"]=REWARD["achievement"];seasonal["museum_item"]=REWARD["museum_item"]
@@ -59,7 +62,7 @@ func _next_step(progress)->String:
         if int(progress.get(step,0))<100:return step
     return ""
 func _all_complete(progress)->bool:return _next_step(progress).is_empty()
-func _state():
+func _state() -> Node:
     return get_node_or_null("/root/RenewGameState")
 func _seasonal()->Dictionary:
     var state = _state()

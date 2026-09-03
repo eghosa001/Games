@@ -14,7 +14,7 @@ const TECHNOLOGIES := {
     "premium_manufacturing": {"name":"Premium Manufacturing","tier":3,"cost_money":7000,"cost_points":20,"time_days":4,"prerequisites":["advanced_materials"],"effects":{"production_multiplier":0.15,"base_price_multiplier":0.15}}
 }
 
-func _state():
+func _state() -> Node:
     return get_node_or_null("/root/RenewGameState")
 func get_technologies() -> Array:
     var result:Array=[]
@@ -48,11 +48,15 @@ func research(id:String)->bool:
     state.set_value("company","message","Research complete: %s. %d day(s) passed." % [tech["name"],int(tech["time_days"])])
     var logs=state.get_value("company","log_lines",[]); if not logs is Array:logs=[]; logs=logs.duplicate(true); logs.append("TECHNOLOGY: %s researched (-$%d, -%d RP, %d days)." % [tech["name"],int(tech["cost_money"]),int(tech["cost_points"]),int(tech["time_days"])]); if logs.size()>100:logs.pop_front(); state.set_value("company","log_lines",logs)
     return true
-func research_next()->bool:
-    for tier in [1,2,3]:
+func research_next() -> bool:
+    for tier in [1, 2, 3]:
         for id in TECHNOLOGIES.keys():
-            if int(TECHNOLOGIES[id]["tier"])==tier and not is_unlocked(id) and bool(can_research(id).get("ok",false)):return research(id)
-    var state=_state(); if state!=null:state.set_value("company","message","No technology is currently researchable."); return false
+            if int(TECHNOLOGIES[id]["tier"]) == tier and not is_unlocked(id) and bool(can_research(id).get("ok", false)):
+                return research(id)
+    var state = _state()
+    if state != null:
+        state.set_value("company", "message", "No technology is currently researchable.")
+    return false
 func add_daily_research_points(amount:int=3)->void:
     var state=_state(); if state==null:return
     state.set_value("technology","research_points",int(state.get_value("technology","research_points",20))+max(0,amount))
