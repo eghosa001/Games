@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-## Visual corporate museum and legacy gallery. Opens with Y.
+## Visual corporate museum and legacy gallery. Opens with Y or the History screen.
 var panel: PanelContainer
 var summary_label: Label
 var content: VBoxContainer
@@ -20,11 +20,18 @@ func _unhandled_input(event: InputEvent) -> void:
         if event.keycode == KEY_Y:
             toggle_archive(); get_viewport().set_input_as_handled()
         elif event.keycode == KEY_ESCAPE and visible_archive:
-            toggle_archive(); get_viewport().set_input_as_handled()
+            close_screen(); get_viewport().set_input_as_handled()
 
 func toggle_archive() -> void:
-    _set_visible(not visible_archive)
-    if visible_archive: _refresh()
+    if visible_archive: close_screen()
+    else: open_screen()
+
+func open_screen() -> void:
+    _set_visible(true)
+    _refresh()
+
+func close_screen() -> void:
+    _set_visible(false)
 
 func _set_visible(value: bool) -> void:
     visible_archive = value
@@ -39,7 +46,7 @@ func _build_ui() -> void:
     var header: Variant = HBoxContainer.new(); root.add_child(header)
     var title: Variant = Label.new(); title.text = "RENEW CORPORATE MUSEUM"; title.add_theme_font_size_override("font_size", 28); header.add_child(title)
     var spacer: Variant = Control.new(); spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL; header.add_child(spacer)
-    var close: Variant = Button.new(); close.text = "Close [Esc]"; close.pressed.connect(toggle_archive); header.add_child(close)
+    var close: Variant = Button.new(); close.text = "Close [Esc]"; close.pressed.connect(close_screen); header.add_child(close)
     summary_label = Label.new(); summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; root.add_child(summary_label)
     tabs = HBoxContainer.new(); root.add_child(tabs)
     for id in TABS.keys(): _add_tab(id, TABS[id])
