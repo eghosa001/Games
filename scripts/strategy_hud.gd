@@ -51,13 +51,15 @@ func _layout_responsive() -> void:
 func _process(_delta: float) -> void:
     if game == null or label == null:
         return
-    var market = game.get_node_or_null("MarketDirector")
-    var goals = game.get_node_or_null("EmpireGoals")
+    var market = game.get_node_or_null("Systems/MarketDirector")
+    var goals = game.get_node_or_null("Systems/EmpireGoals")
     var market_text: Variant = "MARKET: stable"
-    if market != null:
+    if market != null and market.has_method("market_status"):
         market_text = "MARKET: " + market.market_status()
     var goal_text: Variant = "NEXT GOAL: build your company"
-    if goals != null:
+    if goals != null and goals.has_method("current_goal"):
         var goal: Dictionary = goals.current_goal()
-        goal_text = "GOAL %d/%d: %s — %s" % [goals.completed_count(), goals.goals.size(), String(goal.get("title", "")), String(goal.get("text", ""))]
+        var total_goals: int = goals.goals.size() if "goals" in goals else 0
+        var completed: int = goals.completed_count() if goals.has_method("completed_count") else 0
+        goal_text = "GOAL %d/%d: %s — %s" % [completed, total_goals, String(goal.get("title", "")), String(goal.get("text", ""))]
     label.text = market_text + "\n" + goal_text
