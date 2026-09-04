@@ -7,7 +7,6 @@ var system
 var state_adapter = DomainSystem.new()
 var message: Variant = ""
 var selected_type: Variant = 0
-var last_day: Variant = -1
 
 func _ready() -> void:
     system = get_node_or_null("/root/RenewInfrastructureSystem")
@@ -19,16 +18,6 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
     if parent == null: parent = get_tree().current_scene
     if system == null: system = get_node_or_null("/root/RenewInfrastructureSystem")
-    if parent != null and system != null and int(parent.day) != last_day:
-        if last_day >= 0:
-            var upkeep: Variant = system.maintenance_cost(int(parent.day))
-            if upkeep > 0:
-                var spend = state_adapter.spend(upkeep, "infrastructure maintenance")
-                if bool(spend.get("ok", false)):
-                    parent._log("INFRASTRUCTURE MAINTENANCE: -$%s." % String.num_int64(upkeep))
-                else:
-                    parent._log("INFRASTRUCTURE MAINTENANCE DEFERRED: %s" % str(spend.get("message", "insufficient funds")))
-        last_day = int(parent.day)
     queue_redraw()
 
 func _region_controller():
