@@ -98,6 +98,27 @@ func run() -> void:
     check(int(finance.get("debt")) < debt_before_repay, "Repayment command reduces canonical debt")
     check(int(finance.get("cash")) == int(state.get_value("economy", "cash", 0)), "Repayment cash mirror matches finance ledger")
 
+    # Transactional employee regression: an unaffordable action must not mutate the roster.
+    state.set_value("economy", "cash", 0)
+    var james_before: Dictionary = game.command_system.employee_system.employee_system.get_employee("emp_james_001").duplicate(true)
+    game.command_system.employee_system.train_employee("emp_james_001")
+    var james_after: Dictionary = game.command_system.employee_system.employee_system.get_employee("emp_james_001")
+    check(james_after == james_before, "Unaffordable employee training does not mutate employee state")
+
+    # Technology research must use the canonical finance ledger and mirror cash back to GameState.
+    state.set_value("economy", "cash", 25000)
+    state.set_value("technology", "research_points", 20)
+    state.set_value("technology", "technology", {})
+    var tech_system = get_root().get_node_or_null("RenewTechnologySystem")
+    check(tech_system != null, "TechnologySystem autoload exists")
+    if tech_system != null:
+        var tech_cash_before: int = int(finance.get("cash"))
+        var tech_ok: bool = tech_system.research("efficient_production")
+        check(tech_ok, "Technology research succeeds with sufficient funds")
+        check(int(finance.get("cash")) == tech_cash_before - 2500, "Technology research charges canonical finance")
+        check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Technology cash mirror matches finance ledger")
+        check(bool(state.get_value("technology", "technology", {}).get("efficient_production", false)), "Technology unlock persists in GameState")
+
     game.queue_free()
     await process_frame
 
