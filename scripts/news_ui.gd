@@ -10,21 +10,30 @@ var open: Variant = false
 func _ready() -> void:
     layer = 70
     _build()
-    panel.visible = false
+    close_screen()
 
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo:
         if event.keycode == KEY_D:
-            toggle()
+            if open: close_screen()
+            else: open_screen()
             get_viewport().set_input_as_handled()
         elif event.keycode == KEY_ESCAPE and open:
-            toggle()
+            close_screen()
             get_viewport().set_input_as_handled()
 
+func open_screen() -> void:
+    open = true
+    if is_instance_valid(panel): panel.visible = true
+    _refresh()
+
+func close_screen() -> void:
+    open = false
+    if is_instance_valid(panel): panel.visible = false
+
 func toggle() -> void:
-    open = not open
-    panel.visible = open
-    if open: _refresh()
+    if open: close_screen()
+    else: open_screen()
 
 func _news():
     return get_node_or_null("/root/RenewNewsSystem")
@@ -54,7 +63,7 @@ func _build() -> void:
     header.add_child(spacer)
     var close: Variant = Button.new()
     close.text = "Close [Esc]"
-    close.pressed.connect(toggle)
+    close.pressed.connect(close_screen)
     header.add_child(close)
     archive_label = Label.new()
     root.add_child(archive_label)
