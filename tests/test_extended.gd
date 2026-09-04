@@ -105,19 +105,33 @@ func run() -> void:
     var james_after: Dictionary = game.command_system.employee_system.employee_system.get_employee("emp_james_001")
     check(james_after == james_before, "Unaffordable employee training does not mutate employee state")
 
-    # Technology research must use the canonical finance ledger and mirror cash back to GameState.
+    # Technology research must use the canonical finance ledger and must not mutate time itself.
     state.set_value("economy", "cash", 25000)
     state.set_value("technology", "research_points", 20)
     state.set_value("technology", "technology", {})
+    state.set_value("player", "day", 10)
     var tech_system = get_root().get_node_or_null("RenewTechnologySystem")
     check(tech_system != null, "TechnologySystem autoload exists")
     if tech_system != null:
         var tech_cash_before: int = int(finance.get("cash"))
-        var tech_ok: bool = tech_system.research("efficient_production")
-        check(tech_ok, "Technology research succeeds with sufficient funds")
+        var direct_research_ok: bool = tech_system.research("efficient_production")
+        check(direct_research_ok, "Technology research succeeds with sufficient funds")
         check(int(finance.get("cash")) == tech_cash_before - 2500, "Technology research charges canonical finance")
         check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Technology cash mirror matches finance ledger")
         check(bool(state.get_value("technology", "technology", {}).get("efficient_production", false)), "Technology unlock persists in GameState")
+        check(int(state.get_value("player", "day", 0)) == 10, "Technology system does not bypass the day simulation")
+
+        # Command-layer research owns elapsed time: every research day must pass through advance_day.
+        state.set_value("technology", "technology", {})
+        state.set_value("technology", "research_points", 20)
+        state.set_value("economy", "cash", 25000)
+        state.set_value("player", "day", 10)
+        var command_research_ok: bool = game.command_system.technology_system.research("efficient_production")
+        check(command_research_ok, "Command-layer technology research starts successfully")
+        var research_days: int = int(tech_system.get_last_research_days())
+        check(research_days == 2, "Technology reports its elapsed research duration")
+        game.command_system._simulate_elapsed_days(research_days)
+        check(int(state.get_value("player", "day", 0)) == 12, "Research elapsed days run through canonical simulation")
 
     # Business transactions must also use the same finance authority.
     state.set_value("economy", "cash", 25000)
