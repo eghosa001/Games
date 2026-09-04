@@ -85,6 +85,18 @@ func run() -> void:
         check(state.get_domain("properties") is Dictionary, "Properties domain exists")
         check(state.get_domain("employees") is Dictionary, "Employees domain exists")
         check(state.get_domain("production") is Dictionary, "Production domain exists")
+        state.set_value("economy", "cash", 25000)
+        check(int(finance.get("cash")) == 25000, "Domain cash writes synchronize finance ledger")
+        state.set_value("finance", "debt", 0)
+        state.set_value("finance", "loan_payment", 0)
+
+    game.command_system.finance_system.take_loan()
+    check(int(finance.get("debt")) > 0, "Loan command updates canonical finance debt")
+    check(int(finance.get("cash")) == int(state.get_value("economy", "cash", 0)), "Loan cash mirror matches finance ledger")
+    var debt_before_repay: int = int(finance.get("debt"))
+    game.command_system.finance_system.repay_loan()
+    check(int(finance.get("debt")) < debt_before_repay, "Repayment command reduces canonical debt")
+    check(int(finance.get("cash")) == int(state.get_value("economy", "cash", 0)), "Repayment cash mirror matches finance ledger")
 
     game.queue_free()
     await process_frame
