@@ -20,15 +20,26 @@ static func save_game(_state: Dictionary) -> bool:
     temp.store_string(json)
     temp.flush()
     temp = null
-    # Backup existing save
+    # Backup existing save before replacing it. A failed backup must not be
+    # reported as a successful save because the previous recovery point would
+    # otherwise be silently lost.
     if FileAccess.file_exists(SAVE_PATH):
         if FileAccess.file_exists(BACKUP_PATH):
-            DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP_PATH))
-        DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(BACKUP_PATH))
-    # Replace with new save
+            var remove_backup_error := DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP_PATH))
+            if remove_backup_error != OK:
+                return false
+        var backup_error := DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(BACKUP_PATH))
+        if backup_error != OK:
+            return false
+    # Replace with new save. Remove the destination first because some Android
+    # filesystems do not reliably overwrite through rename.
     if FileAccess.file_exists(SAVE_PATH):
-        DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
-    DirAccess.rename_absolute(ProjectSettings.globalize_path(TEMP_PATH), ProjectSettings.globalize_path(SAVE_PATH))
+        var remove_save_error := DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
+        if remove_save_error != OK:
+            return false
+    var rename_error := DirAccess.rename_absolute(ProjectSettings.globalize_path(TEMP_PATH), ProjectSettings.globalize_path(SAVE_PATH))
+    if rename_error != OK:
+        return false
     return true
 
 static func load_game() -> Dictionary:
@@ -63,7 +74,7 @@ static func validate_save(data: Dictionary) -> bool:
         return false
     if not data.has("domains") or not (data["domains"] is Dictionary):
         return false
-    for domain in ["player", "company", "properties", "businesses", "employees", "economy", "production", "contracts", "competitors", "finance", "alliances", "diplomacy", "regions", "infrastructure", "technology", "events", "progression", "history", "news", "analytics", "acquisition", "bankruptcy"]:
+    for domain in ["player", "company", "properties", "economy", "businesses", "branches", "employees", "resources", "production", "supply_chain", "contracts", "competitors", "finance", "alliances", "diplomacy", "regions", "infrastructure", "technology", "events", "progression", "history", "news", "analytics", "acquisition", "bankruptcy"]:
         if not data["domains"].has(domain) or not (data["domains"][domain] is Dictionary):
             return false
     return true
@@ -73,8 +84,6 @@ static func _is_loadable_version(data: Dictionary) -> bool:
     return version >= 1 and version <= CURRENT_VERSION
 
 static func migrate(data: Dictionary, version: int) -> Dictionary:
-    # Copy existing migrations from your original file
-    # I'll include the V1->V8 chain as in your original but simplified.
     var result = data.duplicate(true)
     match version:
         1: result["schema_version"] = 2
@@ -88,11 +97,12 @@ static func migrate(data: Dictionary, version: int) -> Dictionary:
     return result
 
 static func _migrate_v7_to_v8(data: Dictionary) -> Dictionary:
-    # Ensure all domains exist
     var domains = data.get("domains", {})
     for domain in ["player","company","properties","businesses","branches","employees","economy","resources","production","supply_chain","contracts","competitors","alliances","regions","technology","events","progression","history","news","analytics","acquisition","bankruptcy","infrastructure","diplomacy"]:
         if not domains.has(domain):
             domains[domain] = {}
+    if domains.has("competitors") and domains["competitors"] is Dictionary and not domains["competitors"].has("reaction_system"):
+        domains["competitors"]["reaction_system"] = {}
     data["domains"] = domains
     data["schema_version"] = 8
     return data
