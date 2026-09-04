@@ -8,30 +8,30 @@ func check(ok:bool,label:String)->void:
 func _init()->void: call_deferred("run")
 func run()->void:
     var Economy=load("res://scripts/economy.gd")
-    var Production=load("res://scripts/production.gd")
+    var ProductionSystem=load("res://scripts/production_system.gd")
     check(Economy!=null,"Economy loads")
-    check(Production!=null,"Production facade loads")
-    if Economy==null or Production==null: quit(1); return
+    check(ProductionSystem!=null,"ProductionSystem loads")
+    if Economy==null or ProductionSystem==null: quit(1); return
     var economy=Economy.new()
-    var normal=int(economy.quote("materials",10,0)["cost"])
-    economy.resources["materials"]["stock"]=10
-    var scarce_state=economy.scarcity("materials")
-    var scarce=int(economy.quote("materials",10,0)["cost"])
+    var normal=int(economy.quote("timber",10,0)["cost"])
+    economy.resources["timber"]["stock"]=10
+    var scarce_state=economy.scarcity("timber")
+    var scarce=int(economy.quote("timber",10,0)["cost"])
     check(float(scarce_state["availability"])<0.2,"Low stock produces low availability")
     check(float(scarce_state["price_multiplier"])>1.5,"Scarcity creates strong price pressure")
     check(scarce>normal,"Scarcity raises input purchase cost")
     check(float(scarce_state["production_factor"])<1.0,"Scarcity reduces production factor")
 
-    var production=Production.new()
-    economy.resources["materials"]["stock"]=100
-    economy.resources["packaging"]["stock"]=140
-    economy.resources["fuel"]["stock"]=180
-    production.system.inventory={"materials":100,"packaging":100,"fuel":100,"goods":0}
+    var production=ProductionSystem.new()
+    economy.resources["food"]["stock"]=100
+    economy.resources["electronics"]["stock"]=140
+    economy.resources["energy"]["stock"]=180
+    production.inventory={"food":100,"electronics":100,"energy":100,"goods":0}
     var normal_run=production.produce(economy,10)
-    economy.resources["materials"]["stock"]=1
-    economy.resources["packaging"]["stock"]=1
-    economy.resources["fuel"]["stock"]=1
-    production.system.inventory={"materials":100,"packaging":100,"fuel":100,"goods":0}
+    economy.resources["food"]["stock"]=1
+    economy.resources["electronics"]["stock"]=1
+    economy.resources["energy"]["stock"]=1
+    production.inventory={"food":100,"electronics":100,"energy":100,"goods":0}
     var scarce_run=production.produce(economy,10)
     check(normal_run["ok"],"Normal supply permits production")
     check(int(scarce_run.get("requested_cycles",0))==10,"Scarcity test requested full production")

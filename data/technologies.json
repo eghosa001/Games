@@ -1,4 +1,95 @@
 {
   "version": 1,
-  "technologies": {}
+  "technologies": {
+    "efficient_production": {
+      "id": "efficient_production",
+      "name": "Efficient Production",
+      "tier": 1,
+      "cost_money": 2500,
+      "cost_points": 10,
+      "time_days": 2,
+      "prerequisites": [],
+      "effects": {"production_multiplier": 0.10}
+    },
+    "better_logistics": {
+      "id": "better_logistics",
+      "name": "Better Logistics",
+      "tier": 1,
+      "cost_money": 2500,
+      "cost_points": 10,
+      "time_days": 2,
+      "prerequisites": [],
+      "effects": {"transport_capacity_multiplier": 0.25}
+    },
+    "market_analysis": {
+      "id": "market_analysis",
+      "name": "Market Analysis",
+      "tier": 1,
+      "cost_money": 2500,
+      "cost_points": 10,
+      "time_days": 2,
+      "prerequisites": [],
+      "effects": {"market_demand_multiplier": 0.10}
+    },
+    "automation": {
+      "id": "automation",
+      "name": "Automation",
+      "tier": 2,
+      "cost_money": 4500,
+      "cost_points": 15,
+      "time_days": 3,
+      "prerequisites": ["efficient_production"],
+      "effects": {"production_multiplier": 0.15, "worker_reduction": 1, "maintenance_multiplier": 0.05}
+    },
+    "advanced_materials": {
+      "id": "advanced_materials",
+      "name": "Advanced Materials",
+      "tier": 2,
+      "cost_money": 4500,
+      "cost_points": 15,
+      "time_days": 3,
+      "prerequisites": ["efficient_production"],
+      "effects": {"production_multiplier": 0.08, "input_efficiency": 0.10}
+    },
+    "supply_optimization": {
+      "id": "supply_optimization",
+      "name": "Supply Optimization",
+      "tier": 2,
+      "cost_money": 4500,
+      "cost_points": 15,
+      "time_days": 3,
+      "prerequisites": ["better_logistics"],
+      "effects": {"transport_capacity_multiplier": 0.20, "operating_cost_multiplier": -0.08}
+    },
+    "smart_factory": {
+      "id": "smart_factory",
+      "name": "Smart Factory",
+      "tier": 3,
+      "cost_money": 7000,
+      "cost_points": 20,
+      "time_days": 4,
+      "prerequisites": ["automation"],
+      "effects": {"production_multiplier": 0.20, "worker_reduction": 1}
+    },
+    "advanced_logistics": {
+      "id": "advanced_logistics",
+      "name": "Advanced Logistics",
+      "tier": 3,
+      "cost_money": 7000,
+      "cost_points": 20,
+      "time_days": 4,
+      "prerequisites": ["better_logistics", "supply_optimization"],
+      "effects": {"transport_capacity_multiplier": 0.40, "operating_cost_multiplier": -0.10}
+    },
+    "premium_manufacturing": {
+      "id": "premium_manufacturing",
+      "name": "Premium Manufacturing",
+      "tier": 3,
+      "cost_money": 7000,
+      "cost_points": 20,
+      "time_days": 4,
+      "prerequisites": ["advanced_materials"],
+      "effects": {"production_multiplier": 0.15, "base_price_multiplier": 0.15}
+    }
+  }
 }

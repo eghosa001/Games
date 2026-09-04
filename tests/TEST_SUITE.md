@@ -15,7 +15,7 @@ The suite is organized by test purpose. Existing focused tests remain at `tests/
 - `test_simulation_architecture.gd`
 - `test_history_system.gd`
 - `test_news_system.gd`
-- `test_supply_chain.gd`
+- `test_supply_chain_system.gd`
 
 ## Long-running
 - `test_long_soak.gd`
@@ -23,6 +23,6 @@ The suite is organized by test purpose. Existing focused tests remain at `tests/
 
 ## Release
 - `test_release_smoke.gd`
-- `test_full_coverage.gd`
+- `test_architecture_integrity.gd`
 
 Tests that did not previously exist are tracked by name here and should be added as their corresponding system contracts are finalized; this avoids creating fake passing tests.

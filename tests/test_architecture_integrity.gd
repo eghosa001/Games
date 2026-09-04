@@ -14,8 +14,7 @@ var script_count := 0
 const LEGACY_IMPORTS := [
     "res://scripts/corporate.gd",
     "res://scripts/corporate_legacy_system.gd",
-    "res://scripts/production.gd",
-    "res://scripts/supply_chain.gd"
+    "res://scripts/production.gd"
 ]
 
 # Existing migration bridge retained temporarily while the old Main API is removed.

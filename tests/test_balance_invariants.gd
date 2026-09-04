@@ -25,7 +25,7 @@ func run() -> void:
     await process_frame
 
     check(game.economy.resources is Dictionary, "Resources are represented by a dictionary")
-    for key in ["materials", "packaging", "fuel"]:
+    for key in ["timber", "iron", "energy", "food", "electronics"]:
         check(game.economy.resources.has(key), "Required resource exists: " + key)
         if game.economy.resources.has(key):
             check(int(game.economy.resources[key]["stock"]) >= 0, "Resource stock is nonnegative: " + key)

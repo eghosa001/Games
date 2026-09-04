@@ -1,11 +1,10 @@
 {
   "version": 1,
   "resources": {
-    "timber": {"name": "Timber", "unit": "units"},
-    "iron": {"name": "Iron", "unit": "units"},
-    "stone": {"name": "Stone", "unit": "units"},
-    "energy": {"name": "Energy", "unit": "units"},
-    "food": {"name": "Food", "unit": "units"},
-    "electronics_components": {"name": "Electronics Components", "unit": "units"}
+    "timber": {"name": "Timber", "unit": "units", "base_price": 50.0, "region": "Forest Belt"},
+    "iron": {"name": "Iron", "unit": "units", "base_price": 80.0, "region": "Iron Ridge"},
+    "energy": {"name": "Energy", "unit": "units", "base_price": 35.0, "region": "Power Basin"},
+    "food": {"name": "Food", "unit": "units", "base_price": 30.0, "region": "River Plains"},
+    "electronics": {"name": "Electronics", "unit": "units", "base_price": 120.0, "region": "Tech Coast"}
   }
 }

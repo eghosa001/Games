@@ -1,4 +1,80 @@
 {
   "version": 1,
-  "events": {}
+  "events": [
+    {
+      "id": "energy_shortage",
+      "title": "Energy Shortage",
+      "text": "Energy supply falls 20%, energy prices rise and factory input costs increase.",
+      "duration_days": 1,
+      "effects": {
+        "supply": {"energy": 0.80},
+        "market": {"energy": 1.30},
+        "demand_multiplier": 1.0
+      }
+    },
+    {
+      "id": "resource_discovery",
+      "title": "Resource Discovery",
+      "text": "New deposits increase timber and iron availability and lower their prices.",
+      "duration_days": 1,
+      "effects": {
+        "supply": {"timber": 1.35, "iron": 1.25},
+        "stock": {"timber": 30.0, "iron": 20.0},
+        "market": {"timber": 0.90, "iron": 0.92},
+        "demand_multiplier": 1.0
+      }
+    },
+    {
+      "id": "supply_disruption",
+      "title": "Supply Disruption",
+      "text": "Material supply falls and procurement prices rise.",
+      "duration_days": 1,
+      "effects": {
+        "supply": {"timber": 0.75, "iron": 0.80},
+        "market": {"timber": 1.20, "iron": 1.15},
+        "demand_multiplier": 1.0
+      }
+    },
+    {
+      "id": "demand_boom",
+      "title": "Demand Boom",
+      "text": "Strong spending lifts customer demand by 35%.",
+      "duration_days": 1,
+      "effects": {
+        "demand_multiplier": 1.35,
+        "market": {"timber": 1.10}
+      }
+    },
+    {
+      "id": "recession",
+      "title": "Recession",
+      "text": "Economic activity slows and customer demand falls by 30%.",
+      "duration_days": 1,
+      "effects": {
+        "demand_multiplier": 0.70,
+        "market": {"energy": 0.90, "timber": 0.90, "iron": 0.90}
+      }
+    },
+    {
+      "id": "natural_disaster",
+      "title": "Natural Disaster",
+      "text": "Severe weather damages resource output and raises affected material prices.",
+      "duration_days": 1,
+      "effects": {
+        "supply": {"timber": 0.55, "food": 0.60},
+        "market": {"timber": 1.30, "food": 1.25},
+        "demand_multiplier": 0.90
+      }
+    },
+    {
+      "id": "technology_breakthrough",
+      "title": "Technology Breakthrough",
+      "text": "A manufacturing breakthrough lowers input prices and lifts market demand.",
+      "duration_days": 1,
+      "effects": {
+        "market": {"timber": 0.85, "iron": 0.85, "energy": 0.90},
+        "demand_multiplier": 1.05
+      }
+    }
+  ]
 }

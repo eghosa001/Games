@@ -34,9 +34,9 @@ func run() -> void:
     game.stage = "Operational"
     game.restoration = 100
     game.business_open = true
-    game.economy.resources["materials"]["stock"] = 100
-    game.economy.resources["packaging"]["stock"] = 100
-    game.economy.resources["fuel"]["stock"] = 100
+    game.economy.resources["timber"]["stock"] = 100
+    game.economy.resources["iron"]["stock"] = 100
+    game.economy.resources["energy"]["stock"] = 100
 
     var before_cash := int(game.cash)
     var before_day := int(game.day)

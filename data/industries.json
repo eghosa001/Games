@@ -4,32 +4,47 @@
     "furniture": {
       "id": "furniture",
       "name": "Furniture",
-      "base_output": 1,
+      "stage": "manufacturing",
       "inputs": {"timber": 1.0, "iron": 0.5, "energy": 2.0},
-      "employees": 3,
+      "output_item": "furniture",
+      "output_per_cycle": 1,
+      "production_time": 2.0,
+      "employee_capacity": 2,
       "base_price": 320,
       "operating_cost": 80,
-      "market_demand": 80
+      "reputation_effect": 2,
+      "base_quality": 76,
+      "waste_rate": 0.05
     },
-    "construction_materials": {
-      "id": "construction_materials",
-      "name": "Construction Materials",
-      "base_output": 2,
-      "inputs": {"timber": 1.0, "stone": 2.0, "energy": 2.5},
-      "employees": 4,
-      "base_price": 180,
-      "operating_cost": 95,
-      "market_demand": 100
+    "consumer_goods": {
+      "id": "consumer_goods",
+      "name": "Consumer Goods",
+      "stage": "manufacturing",
+      "inputs": {"food": 1.0, "electronics": 0.5, "energy": 2.0},
+      "output_item": "goods",
+      "output_per_cycle": 2,
+      "production_time": 1.0,
+      "employee_capacity": 1,
+      "base_price": 110,
+      "operating_cost": 75,
+      "reputation_effect": 1,
+      "base_quality": 72,
+      "waste_rate": 0.06
     },
-    "consumer_electronics": {
-      "id": "consumer_electronics",
-      "name": "Consumer Electronics",
-      "base_output": 1,
-      "inputs": {"iron": 1.0, "electronics_components": 1.0, "energy": 3.0},
-      "employees": 5,
-      "base_price": 460,
-      "operating_cost": 130,
-      "market_demand": 70
+    "appliance": {
+      "id": "appliance",
+      "name": "Appliance",
+      "stage": "manufacturing",
+      "inputs": {"iron": 1.0, "electronics": 1.0, "energy": 2.0},
+      "output_item": "appliance",
+      "output_per_cycle": 1,
+      "production_time": 2.5,
+      "employee_capacity": 2,
+      "base_price": 320,
+      "operating_cost": 165,
+      "reputation_effect": 3,
+      "base_quality": 80,
+      "waste_rate": 0.10
     }
   }
 }

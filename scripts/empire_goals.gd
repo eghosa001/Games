@@ -85,16 +85,13 @@ func completed_count() -> int:
     return count
 
 func _save_state() -> void:
-    var file: Variant = FileAccess.open("user://renew_goals.json", FileAccess.WRITE)
-    if file != null:
-        file.store_string(JSON.stringify(claimed))
+    var state = get_node_or_null("/root/RenewGameState")
+    if state != null:
+        state.set_value("progression", "claimed_goals", claimed)
 
 func _load_state() -> void:
-    if not FileAccess.file_exists("user://renew_goals.json"):
-        return
-    var file: Variant = FileAccess.open("user://renew_goals.json", FileAccess.READ)
-    if file == null:
-        return
-    var parsed = JSON.parse_string(file.get_as_text())
-    if parsed is Dictionary:
-        claimed = parsed
+    var state = get_node_or_null("/root/RenewGameState")
+    if state != null:
+        var saved = state.get_value("progression", "claimed_goals", {})
+        if saved is Dictionary and not saved.is_empty():
+            claimed = saved

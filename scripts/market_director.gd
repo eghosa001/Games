@@ -69,17 +69,17 @@ func _apply_event_pressure(event_type: String, expiry: int) -> void:
     economy.clear_market_modifiers()
     match event_type:
         "shortage":
-            economy.set_market_modifier("materials", 1.25)
-            economy.set_market_modifier("packaging", 1.20)
-            economy.set_market_modifier("fuel", 1.30)
+            economy.set_market_modifier("timber", 1.25)
+            economy.set_market_modifier("iron", 1.20)
+            economy.set_market_modifier("energy", 1.30)
         "boom":
-            economy.set_market_modifier("materials", 0.92)
-            economy.set_market_modifier("packaging", 0.94)
-            economy.set_market_modifier("fuel", 0.96)
+            economy.set_market_modifier("timber", 0.92)
+            economy.set_market_modifier("iron", 0.94)
+            economy.set_market_modifier("energy", 0.96)
         "war":
-            economy.set_market_modifier("packaging", 1.12)
+            economy.set_market_modifier("iron", 1.12)
         "contract":
-            economy.set_market_modifier("materials", 1.05)
+            economy.set_market_modifier("timber", 1.05)
         "asset":
             pass
 
@@ -206,39 +206,34 @@ func _respond(style: String) -> void:
     event_expiry = 0
     _save_state()
 
-func _set_response_modifier(materials: float, packaging: float, fuel: float) -> void:
+func _set_response_modifier(timber: float, iron: float, energy: float) -> void:
     var economy = _economy()
     if economy == null:
         return
     effect_expiry = int(game.day) + 1
     effect_name = "response"
-    economy.set_market_modifier("materials", materials)
-    economy.set_market_modifier("packaging", packaging)
-    economy.set_market_modifier("fuel", fuel)
+    economy.set_market_modifier("timber", timber)
+    economy.set_market_modifier("iron", iron)
+    economy.set_market_modifier("energy", energy)
 
 func snapshot() -> Dictionary:
     return {"market_cycle":market_cycle,"market_heat":market_heat,"active_event":active_event,"event_text":event_text,"event_expiry":event_expiry,"event_count":event_count,"effect_expiry":effect_expiry,"effect_name":effect_name}
 
 func _save_state() -> void:
-    var file: Variant = FileAccess.open("user://renew_market.json", FileAccess.WRITE)
-    if file != null:
-        file.store_string(JSON.stringify(snapshot()))
-        file.close()
+    var state = get_node_or_null("/root/RenewGameState")
+    if state != null:
+        state.set_value("events", "market_director", snapshot())
 
 func _load_state() -> void:
-    if not FileAccess.file_exists("user://renew_market.json"):
-        return
-    var file: Variant = FileAccess.open("user://renew_market.json", FileAccess.READ)
-    if file == null:
-        return
-    var parsed = JSON.parse_string(file.get_as_text())
-    if parsed is Dictionary:
-        market_cycle = int(parsed.get("market_cycle", 0))
-        market_heat = int(parsed.get("market_heat", 0))
-        active_event = String(parsed.get("active_event", ""))
-        event_text = String(parsed.get("event_text", ""))
-        event_expiry = int(parsed.get("event_expiry", 0))
-        event_count = int(parsed.get("event_count", 0))
-        effect_expiry = int(parsed.get("effect_expiry", 0))
-        effect_name = String(parsed.get("effect_name", ""))
-    file.close()
+    var state = get_node_or_null("/root/RenewGameState")
+    if state != null:
+        var parsed = state.get_value("events", "market_director", {})
+        if parsed is Dictionary and not parsed.is_empty():
+            market_cycle = int(parsed.get("market_cycle", 0))
+            market_heat = int(parsed.get("market_heat", 0))
+            active_event = String(parsed.get("active_event", ""))
+            event_text = String(parsed.get("event_text", ""))
+            event_expiry = int(parsed.get("event_expiry", 0))
+            event_count = int(parsed.get("event_count", 0))
+            effect_expiry = int(parsed.get("effect_expiry", 0))
+            effect_name = String(parsed.get("effect_name", ""))
