@@ -26,8 +26,11 @@ func _ready() -> void:
 func _initialize_after_parent_ready() -> void:
     if parent == null: parent = get_tree().root.get_node_or_null("Renew")
     if parent == null: return
+    if root != null:
+        var vp_size: Vector2 = get_viewport().get_visible_rect().size
+        if vp_size.x > 0: root.size = vp_size
     _refresh(); last_seen_day = int(parent.day); _seed_milestones()
-    if root != null and not root.resized.is_connected(_layout_responsive): root.resized.connect(_layout_responsive)
+    if root != null and not get_viewport().size_changed.is_connected(_layout_responsive): get_viewport().size_changed.connect(_layout_responsive)
     _layout_responsive()
 
 func _process(delta: float) -> void:
@@ -41,7 +44,7 @@ func _process(delta: float) -> void:
         if feedback_timer <= 0.0 and feedback_panel != null: feedback_panel.hide()
 
 func _build_ui() -> void:
-    root = Control.new(); root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); root.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(root)
+    root = Control.new(); root.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(root)
     var top: ColorRect = ColorRect.new(); top.name = "TopBar"; top.color = Color("101820"); top.set_anchors_preset(Control.PRESET_TOP_WIDE); top.position.y = 8; top.size.y = 54; top.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(top)
     tabs = HBoxContainer.new(); tabs.position = Vector2(12, 12); tabs.size = Vector2(720, 46); tabs.add_theme_constant_override("separation", 8); tabs.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(tabs)
     for i: int in range(tab_names.size()):
@@ -51,7 +54,7 @@ func _build_ui() -> void:
     feedback_panel = Panel.new(); feedback_panel.position = Vector2(24, 245); feedback_panel.size = Vector2(720, 92); feedback_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE; feedback_panel.hide(); root.add_child(feedback_panel)
     feedback_label = Label.new(); feedback_label.position = Vector2(16, 10); feedback_label.size = Vector2(688, 72); feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; feedback_label.add_theme_font_size_override("font_size", 15); feedback_label.mouse_filter = Control.MOUSE_FILTER_IGNORE; feedback_panel.add_child(feedback_label)
     var bottom: ColorRect = ColorRect.new(); bottom.color = Color("101820"); bottom.set_anchors_preset(Control.PRESET_BOTTOM_WIDE); bottom.position.y = -150; bottom.size.y = 150; bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(bottom)
-    action_scroll = ScrollContainer.new(); action_scroll.set_anchors_preset(Control.PRESET_TOP_WIDE); action_scroll.position = Vector2(18, 72); action_scroll.size = Vector2(1240, 160); action_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; action_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; action_scroll.focus_mode = Control.FOCUS_NONE; action_scroll.mouse_filter = Control.MOUSE_FILTER_STOP; root.add_child(action_scroll)
+    action_scroll = ScrollContainer.new(); action_scroll.set_anchors_preset(Control.PRESET_TOP_LEFT); action_scroll.position = Vector2(18, 72); action_scroll.size = Vector2(1240, 160); action_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; action_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; action_scroll.focus_mode = Control.FOCUS_NONE; action_scroll.mouse_filter = Control.MOUSE_FILTER_STOP; root.add_child(action_scroll)
     actions = GridContainer.new(); actions.columns = 3; actions.custom_minimum_size = Vector2(720, 0); actions.add_theme_constant_override("h_separation", 10); actions.add_theme_constant_override("v_separation", 8); actions.mouse_filter = Control.MOUSE_FILTER_IGNORE; action_scroll.add_child(actions)
 
 func _layout_responsive() -> void:
@@ -78,9 +81,10 @@ func _layout_responsive() -> void:
         feedback_panel.position = Vector2(24, 245); feedback_panel.size = Vector2(minf(720.0, w - 48.0), 92); feedback_label.size = Vector2(feedback_panel.size.x - 32.0, 72); goal_label.position = Vector2(24, 348); goal_label.size = Vector2(minf(900.0, w - 48.0), 48)
 
 func _set_tab(index: int) -> void:
-    active_tab = clampi(index, 0, tab_names.size() - 1); action_scroll.scroll_vertical = 0; _refresh(); _show_feedback("TAB: %s\nChoose an action below." % tab_names[active_tab])
+    var target: int = clampi(index, 0, tab_names.size() - 1)
+    active_tab = target; action_scroll.scroll_vertical = 0; _refresh(); _show_feedback("TAB: %s\nChoose an action below." % tab_names[active_tab])
 func _clear_actions() -> void:
-    for child: Node in actions.get_children(): child.queue_free()
+    for child: Node in actions.get_children(): child.free()
 func _button(text: String, callback: Callable) -> void:
     var b: Button = Button.new(); b.text = text; b.custom_minimum_size = Vector2(225, 48); b.focus_mode = Control.FOCUS_NONE; b.mouse_filter = Control.MOUSE_FILTER_STOP; b.pressed.connect(_run_action.bind(text, callback)); actions.add_child(b)
 func _run_action(label: String, callback: Callable) -> void:
@@ -96,7 +100,7 @@ func _run_action(label: String, callback: Callable) -> void:
     if goods_change != 0: changes.append("Goods %s%d" % [("+" if goods_change > 0 else ""), goods_change])
     if int(parent.day) != before_day: changes.append("Day %d" % int(parent.day))
     if changes.size() > 0: message += "\n" + "  |  ".join(changes)
-    _show_feedback(message); _pulse_feedback(); _queue_refresh(); _detect_milestones()
+    _show_feedback(message); _pulse_feedback(); _refresh(); _detect_milestones()
 func _callback_message(callback: Callable, before_parent_message: String) -> String:
     var parent_message: String = String(parent.message)
     if not parent_message.is_empty() and parent_message != before_parent_message: return parent_message
@@ -164,7 +168,7 @@ func _refresh() -> void:
         2:
             _button("NEXT RIVAL", _next_rival); _button("NEXT ASSET", _next_asset); _button("EXPANSION", parent.buy_expansion); _button("UPGRADE BUSINESS", parent.upgrade_expansion); _button("ALLIANCE", parent.make_alliance_offer); _button("IMPROVE RELATION", parent.improve_alliance); _button("SUPPLY DEAL", parent.propose_supply_deal); _button("CUSTOMER DEAL", parent.propose_customer_partnership); _button("ACQUIRE ASSET", parent.negotiate_selected_acquisition)
             var supply_controller: Node = get_node_or_null("../SupplyChainController")
-            if supply_controller != null: _button("MOVE RESOURCE", supply_controller.supply_resource_to_network); _button("SUPPLY ASSET", supply_controller.supply_selected_expansion); _button("SUPPLIER CONTRACT", supply_controller.negotiate_supplier_contract); _button("SECURE RESOURCE", supply_controller.secure_resource_rights); _button("BUY MATERIALS", supply_controller.market_buy.bind("materials")); _button("BUY PACKAGING", supply_controller.market_buy.bind("packaging"))
+            if supply_controller != null: _button("MOVE RESOURCE", supply_controller.supply_resource_to_network); _button("SUPPLY ASSET", supply_controller.supply_selected_expansion); _button("SUPPLIER CONTRACT", supply_controller.negotiate_supplier_contract); _button("SECURE RESOURCE", supply_controller.secure_resource_rights); _button("BUY IRON", supply_controller.market_buy.bind("iron")); _button("BUY TIMBER", supply_controller.market_buy.bind("timber"))
             var corporate: Node = get_node_or_null("../Corporate")
             if corporate != null: _button("CORPORATE STATUS", corporate.show_status); _button("RAISE CAPITAL", corporate.raise_capital); _button("BUY BACK SHARES", corporate.buyback_shares); _button("DIVIDEND", corporate.pay_dividend); _button("DEFENSE", corporate.strengthen_defense); _button("ALLY DEFENSE", corporate.strategic_ally_defense); _button("BOARD INFLUENCE", corporate.influence_board); _button("HOSTILE TAKEOVER", corporate.hostile_takeover)
             _button("LOAN", parent.take_loan); _button("REPAY LOAN", parent.repay_loan); _button("END DAY", parent.advance_day)

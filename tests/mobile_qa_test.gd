@@ -56,7 +56,8 @@ func _test_responsive_layout(hud: Node, ui_root: Control) -> void:
 
 func _check_control_inside(child: Control, label: String, target: Vector2i) -> void:
     if child == null: fail("%s control missing" % label); return
-    var rect: Rect2 = Rect2(child.position, child.size); var bounds: Rect2 = Rect2(Vector2.ZERO, Vector2(target)); check("%dx%d %s stays in viewport" % [target.x, target.y, label], bounds.encloses(rect))
+    var rect: Rect2 = Rect2(child.position, child.size); var bounds: Rect2 = Rect2(Vector2.ZERO, Vector2(target)); var ok: bool = bounds.encloses(rect)
+    check("%dx%d %s stays in viewport" % [target.x, target.y, label], ok)
 
 func _test_touch_surface(hud: Node) -> void:
     var tabs: HBoxContainer = hud.get("tabs") as HBoxContainer
@@ -70,7 +71,8 @@ func _test_touch_surface(hud: Node) -> void:
 func _test_world_tab(hud: Node) -> void:
     hud._set_tab(3); await process_frame
     var actions: GridContainer = hud.get("actions") as GridContainer
-    check("WORLD tab remains selectable", int(hud.get("active_tab")) == 3 and actions != null)
+    var active_after: int = int(hud.get("active_tab"))
+    check("WORLD tab remains selectable", active_after == 3 and actions != null)
     if actions == null: return
     check("WORLD tab has actionable controls", actions.get_child_count() > 0)
 
@@ -78,12 +80,14 @@ func _test_gameplay_flow(_scene: Node, hud: Node) -> void:
     hud._set_tab(0); await process_frame
     var steps: Array[String] = ["INSPECT", "ACQUIRE", "RESTORE", "OPEN BUSINESS"]
     for label: String in steps:
-        var button: Button = _find_button(hud, label); check("touch action exists: %s" % label, button != null)
+        var button: Button = _find_button(hud, label)
+        check("touch action exists: %s" % label, button != null)
         if button != null: button.pressed.emit(); await process_frame
     hud._set_tab(1); await process_frame
     var business_steps: Array[String] = ["HIRE", "BUY INPUTS", "PRODUCE", "PRICE", "END DAY"]
     for label: String in business_steps:
-        var button: Button = _find_button(hud, label); check("touch action exists: %s" % label, button != null)
+        var button: Button = _find_button(hud, label)
+        check("touch action exists: %s" % label, button != null)
         if button != null: button.pressed.emit(); await process_frame
     var state: Node = get_root().get_node_or_null("RenewGameState"); check("authoritative GameState remains alive after touch flow", state != null)
 

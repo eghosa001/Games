@@ -48,7 +48,11 @@ func _draw() -> void:
     draw_string(font, Vector2(865, 326), "Deal: %s (%d days) | Fleet L%d" % [r["deal"], r["deal_days"], main.transport_level], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("f2d27a"))
     _panel(Vector2(25, 375), Vector2(800, 315))
     draw_string(font, Vector2(45, 405), "ACTIVITY / MARKET", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("7891a5"))
-    draw_string(font, Vector2(45, 432), "Materials $%d   Packaging $%d   Fuel $%d" % [main.economy.resources["materials"]["price"], main.economy.resources["packaging"]["price"], main.economy.resources["fuel"]["price"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
+    var economy: Dictionary = main.economy.resources if main.economy != null and main.economy.resources is Dictionary else {}
+    var t_price: int = int(economy.get("timber", {}).get("price", 0)) if economy.has("timber") else 0
+    var i_price: int = int(economy.get("iron", {}).get("price", 0)) if economy.has("iron") else 0
+    var e_price: int = int(economy.get("energy", {}).get("price", 0)) if economy.has("energy") else 0
+    draw_string(font, Vector2(45, 432), "Timber $%d   Iron $%d   Energy $%d" % [t_price, i_price, e_price], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
     draw_string(font, Vector2(45, 457), "Supplier tier %d | Debt payment $%s/day" % [main.supplier_choice + 1, str(main.loan_payment)], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("b7d7ff"))
     for i: int in range(main.log_lines.size()): draw_string(font, Vector2(45, 490 + i * 27), main.log_lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aab8c3"))
     _panel(Vector2(845, 375), Vector2(410, 315))
