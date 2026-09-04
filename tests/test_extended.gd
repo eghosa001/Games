@@ -121,11 +121,20 @@ func run() -> void:
         check(bool(state.get_value("technology", "technology", {}).get("efficient_production", false)), "Technology unlock persists in GameState")
         check(int(state.get_value("player", "day", 0)) == 10, "Technology system does not bypass the day simulation")
 
-        # Command-layer research owns elapsed time: every research day must pass through advance_day.
+        # Command-layer research requires an operating business because elapsed research time
+        # is simulated through the canonical operating-day pipeline.
         state.set_value("technology", "technology", {})
         state.set_value("technology", "research_points", 20)
         state.set_value("economy", "cash", 25000)
+        state.set_value("businesses", "business_open", false)
         state.set_value("player", "day", 10)
+        var blocked_cash_before: int = int(finance.get("cash"))
+        game.command_system.research_technology("efficient_production")
+        check(not bool(state.get_value("technology", "technology", {}).get("efficient_production", false)), "Research is blocked before business launch")
+        check(int(state.get_value("player", "day", 0)) == 10, "Blocked research does not advance time")
+        check(int(finance.get("cash")) == blocked_cash_before, "Blocked research does not charge cash")
+
+        state.set_value("businesses", "business_open", true)
         game.command_system.research_technology("efficient_production")
         var research_days: int = int(tech_system.get_last_research_days())
         check(research_days == 2, "Technology reports its elapsed research duration")
@@ -184,7 +193,7 @@ func run() -> void:
     check(int(finance.get("cash")) == maintenance_before - 100, "Infrastructure maintenance charges exactly once")
     var maintenance_after_first: int = int(finance.get("cash"))
     var repeat_maintenance: Dictionary = infrastructure.process_day(1)
-    check(bool(repeat_maintenance.get("already_processed", false)), "Infrastructure day processing is idempotent")
+    check(bool(repeat_maintenance.get("already_processed", false)), "Repeated infrastructure processing does not double-charge maintenance")
     check(int(finance.get("cash")) == maintenance_after_first, "Repeated infrastructure processing does not double-charge maintenance")
     infrastructure.queue_free()
 
