@@ -163,13 +163,19 @@ func test_main_command_integration() -> void:
         reaction._remember(game.day, "integration_regression", {"ok": true})
         var before_reaction_count: int = reaction.reaction_history.size()
         check(before_reaction_count > 0, "integration competitor reaction history created")
+        var expansion_owned_before_save: bool = bool(game.expansion.properties[0].get("owned", false))
+        var expansion_level_before_save: int = int(game.expansion.properties[0].get("level", 0))
         game.cash = 123456
         game.save_game()
         game.cash = 1
+        game.expansion.properties[0]["owned"] = false
+        game.expansion.properties[0]["level"] = 1
         reaction.reaction_history.clear()
         game.load_game()
         check(game.cash == 123456, "integration save/load command boundary")
         check(reaction.reaction_history.size() == before_reaction_count, "integration competitor reaction history restored")
+        check(bool(game.expansion.properties[0].get("owned", false)) == expansion_owned_before_save, "integration expansion ownership restored")
+        check(int(game.expansion.properties[0].get("level", 0)) == expansion_level_before_save, "integration expansion level restored")
     else:
         check(false, "integration competitor reaction system available")
 
