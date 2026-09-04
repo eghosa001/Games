@@ -1,13 +1,16 @@
 extends Node2D
 
 const Branches = preload("res://scripts/branches.gd")
+const DomainSystem = preload("res://scripts/domain_system.gd")
 var parent
 var branches=Branches.new()
+var state_adapter=DomainSystem.new()
 var last_day:=0
 var message:=""
 
 func _ready()->void:
     parent=get_tree().root.get_node_or_null("Renew")
+    add_child(state_adapter)
     last_day=parent.day
     queue_redraw()
 
@@ -17,8 +20,8 @@ func _process(_delta:float)->void:
         var region_controller=parent.get_node_or_null("RegionController")
         if region_controller!=null:
             var result=branches.operate_day(region_controller.regions)
-            parent.cash+=int(result["profit"])
-            if int(result["businesses"])>0:
+            var received=state_adapter.receive(int(result["profit"]),"regional branch operating result")
+            if bool(received.get("ok",false)) and int(result["businesses"])>0:
                 parent._log("BRANCHES: %d regional businesses generated $%s."%[result["businesses"],_money(int(result["profit"]))])
         last_day=parent.day
     queue_redraw()
@@ -46,10 +49,17 @@ func launch_selected()->void:
     if region<0 or region>=region_controller.regions.player_presence.size() or region_controller.regions.player_presence[region]<=0:
         message="Establish a regional presence before opening this branch."
         return
+    var before=branches.branches.duplicate(true)
     var result=branches.launch(branches.selected,parent.cash)
     message=result["message"]
-    if result["ok"]:
-        parent.cash-=int(result["cost"]); parent.reputation+=4; parent._log("BRANCH OPENED: %s (-$%s)."%[b["name"],_money(int(result["cost"]))])
+    if not result["ok"]: return
+    var spend=state_adapter.spend(int(result["cost"]),"regional branch launch")
+    if not bool(spend.get("ok",false)):
+        branches.branches=before
+        message=str(spend.get("message","Branch launch payment failed."))
+        return
+    parent.reputation+=4
+    parent._log("BRANCH OPENED: %s (-$%s)."%[b["name"],_money(int(result["cost"]))])
 
 func stock_selected()->void:
     var b=branches.current()
@@ -64,23 +74,41 @@ func stock_selected()->void:
         message="Branch region is invalid."
         return
     var cost:=int(round(region_controller.regions.logistics_cost(amount*45.0,origin,destination)))
-    if parent.cash<cost: message="Shipment requires $%s freight."%_money(cost); return
-    parent.cash-=cost; parent.finished_goods-=amount
-    branches.stock(branches.selected,amount)
+    var spend=state_adapter.spend(cost,"branch stock shipment")
+    if not bool(spend.get("ok",false)): message=str(spend.get("message","Shipment requires sufficient cash.")); return
+    parent.finished_goods-=amount
+    var stocked=branches.stock(branches.selected,amount)
+    if not bool(stocked.get("ok",false)):
+        parent.finished_goods+=amount
+        state_adapter.receive(cost,"branch stock shipment refund")
+        message=str(stocked.get("message","Branch stocking failed."))
+        return
     parent._log("BRANCH SUPPLY: %d goods delivered to %s for $%s."%[amount,b["name"],_money(cost)])
     message="Branch stocked with %d goods."%amount
 
 func hire_selected()->void:
+    var before=branches.branches.duplicate(true)
     var result=branches.hire(branches.selected,parent.cash)
     message=result["message"]
-    if result["ok"]:
-        parent.cash-=int(result["cost"]); parent.reputation+=1
+    if not result["ok"]: return
+    var spend=state_adapter.spend(int(result["cost"]),"regional branch hiring")
+    if not bool(spend.get("ok",false)):
+        branches.branches=before
+        message=str(spend.get("message","Branch hiring payment failed."))
+        return
+    parent.reputation+=1
 
 func upgrade_selected()->void:
+    var before=branches.branches.duplicate(true)
     var result=branches.upgrade(branches.selected,parent.cash)
     message=result["message"]
-    if result["ok"]:
-        parent.cash-=int(result["cost"]); parent.reputation+=2
+    if not result["ok"]: return
+    var spend=state_adapter.spend(int(result["cost"]),"regional branch upgrade")
+    if not bool(spend.get("ok",false)):
+        branches.branches=before
+        message=str(spend.get("message","Branch upgrade payment failed."))
+        return
+    parent.reputation+=2
 
 func price_selected()->void:
     var result=branches.change_price(branches.selected,10)
