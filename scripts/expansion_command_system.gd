@@ -33,10 +33,18 @@ func buy_expansion() -> void:
     expansion.unlock_from_reputation(reputation)
     var selected: Variant = int(state_adapter.get_value("branches", "selected_expansion", 0))
     var cash: Variant = int(state_adapter.get_value("economy", "cash", 25000))
+    var properties_before: Array = expansion.properties.duplicate(true)
+    var restored_before: int = int(expansion.restored_count)
+    var expansion_rep_before: int = int(expansion.reputation)
     var result = expansion.buy(selected, cash)
     if not result["ok"]: state_adapter.message(result["message"]); return
     var spend:=state_adapter.spend(int(result["cost"]),"expansion purchase")
-    if not bool(spend.get("ok",false)): state_adapter.message(str(spend.get("message","Insufficient cash."))); return
+    if not bool(spend.get("ok",false)):
+        expansion.properties = properties_before
+        expansion.restored_count = restored_before
+        expansion.reputation = expansion_rep_before
+        state_adapter.message(str(spend.get("message","Insufficient cash.")))
+        return
     state_adapter.set_value("player", "reputation", reputation + int(result.get("rep", 0)))
     state_adapter.log_message("EXPANSION: %s (-$%s)." % [result.get("name", "Asset"), state_adapter.money(int(result["cost"]))])
     state_adapter.message(result["message"])
@@ -44,10 +52,18 @@ func buy_expansion() -> void:
 func upgrade_expansion() -> void:
     var selected: Variant = int(state_adapter.get_value("branches", "selected_expansion", 0))
     var cash: Variant = int(state_adapter.get_value("economy", "cash", 25000))
+    var properties_before: Array = expansion.properties.duplicate(true)
+    var management_before: int = int(expansion.management_level)
+    var expansion_rep_before: int = int(expansion.reputation)
     var result = expansion.upgrade(selected, cash)
     if not result["ok"]: state_adapter.message(result["message"]); return
     var spend:=state_adapter.spend(int(result["cost"]),"expansion upgrade")
-    if not bool(spend.get("ok",false)): state_adapter.message(str(spend.get("message","Insufficient cash."))); return
+    if not bool(spend.get("ok",false)):
+        expansion.properties = properties_before
+        expansion.management_level = management_before
+        expansion.reputation = expansion_rep_before
+        state_adapter.message(str(spend.get("message","Insufficient cash.")))
+        return
     state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + int(result.get("rep", 0)))
     state_adapter.log_message("EMPIRE UPGRADE: %s." % result.get("name", "Asset"))
     state_adapter.message(result["message"])
