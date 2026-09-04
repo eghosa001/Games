@@ -240,8 +240,10 @@ func _layout_responsive() -> void:
         bottom_bar.size = Vector2(w, 150.0)
     var narrow: Variant = w < 700.0
     var tab_width: Variant = maxf(44.0, (w - 24.0 - 21.0) / 4.0)
+    tabs.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
     tabs.position = Vector2(12, 10)
     tabs.size = Vector2(w - 24.0, 44.0)
+    tabs.custom_minimum_size = Vector2.ZERO
     for child in tabs.get_children():
         if child is Button:
             child.custom_minimum_size = Vector2(tab_width, 42)
@@ -252,8 +254,10 @@ func _layout_responsive() -> void:
         status_label.position = Vector2(10, 2)
         status_label.size = Vector2(w - 40.0, 24)
         status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+        action_scroll.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
         action_scroll.position = Vector2(10, 92)
         action_scroll.size = Vector2(w - 20.0, 150)
+        action_scroll.custom_minimum_size = Vector2.ZERO
         actions.columns = 2
         actions.custom_minimum_size = Vector2(w - 20.0, 0)
         var button_width: Variant = maxf(120.0, (w - 20.0 - 9.0) / 2.0)
@@ -286,3 +290,6 @@ func _layout_responsive() -> void:
         goal_label.position = Vector2(18, 344)
         goal_label.size = Vector2(minf(920.0, w - 36.0), 48)
     _apply_tab_state()
+    if narrow:
+        tabs.set_deferred("size", Vector2(w - 24.0, 44.0))
+        action_scroll.set_deferred("size", Vector2(w - 20.0, 150.0))
