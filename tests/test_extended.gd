@@ -126,12 +126,11 @@ func run() -> void:
         state.set_value("technology", "research_points", 20)
         state.set_value("economy", "cash", 25000)
         state.set_value("player", "day", 10)
-        var command_research_ok: bool = game.command_system.technology_system.research("efficient_production")
-        check(command_research_ok, "Command-layer technology research starts successfully")
+        game.command_system.research_technology("efficient_production")
         var research_days: int = int(tech_system.get_last_research_days())
         check(research_days == 2, "Technology reports its elapsed research duration")
-        game.command_system._simulate_elapsed_days(research_days)
-        check(int(state.get_value("player", "day", 0)) == 12, "Research elapsed days run through canonical simulation")
+        check(int(state.get_value("player", "day", 0)) == 12, "Research command runs elapsed days through canonical simulation")
+        check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Research elapsed-day simulation keeps finance and GameState synchronized")
 
     # Business transactions must also use the same finance authority.
     state.set_value("economy", "cash", 25000)
