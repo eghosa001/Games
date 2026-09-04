@@ -35,7 +35,8 @@ func buy_expansion() -> void:
     var cash: Variant = int(state_adapter.get_value("economy", "cash", 25000))
     var result = expansion.buy(selected, cash)
     if not result["ok"]: state_adapter.message(result["message"]); return
-    state_adapter.set_value("economy", "cash", cash - int(result["cost"]))
+    var spend:=state_adapter.spend(int(result["cost"]),"expansion purchase")
+    if not bool(spend.get("ok",false)): state_adapter.message(str(spend.get("message","Insufficient cash."))); return
     state_adapter.set_value("player", "reputation", reputation + int(result.get("rep", 0)))
     state_adapter.log_message("EXPANSION: %s (-$%s)." % [result.get("name", "Asset"), state_adapter.money(int(result["cost"]))])
     state_adapter.message(result["message"])
@@ -45,7 +46,8 @@ func upgrade_expansion() -> void:
     var cash: Variant = int(state_adapter.get_value("economy", "cash", 25000))
     var result = expansion.upgrade(selected, cash)
     if not result["ok"]: state_adapter.message(result["message"]); return
-    state_adapter.set_value("economy", "cash", cash - int(result["cost"]))
+    var spend:=state_adapter.spend(int(result["cost"]),"expansion upgrade")
+    if not bool(spend.get("ok",false)): state_adapter.message(str(spend.get("message","Insufficient cash."))); return
     state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + int(result.get("rep", 0)))
     state_adapter.log_message("EMPIRE UPGRADE: %s." % result.get("name", "Asset"))
     state_adapter.message(result["message"])
