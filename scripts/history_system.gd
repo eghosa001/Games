@@ -43,14 +43,14 @@ func get_notable_events(limit:int=20)->Array[Dictionary]:
 	return result
 func get_museum_collection()->Array[Dictionary]:
 	var result:Array[Dictionary]=[]
-	for event in timeline:
+	for event:Dictionary in timeline:
 		if int(event.get("importance",1))>=3:result.append({"id":event.get("id",""),"day":event.get("day",1),"era":_era(int(event.get("day",1))),"title":event.get("title",""),"type":event.get("typ[...]
 	return result
 func get_legacy_summary()->Dictionary:
 	var result:=legacy.duplicate(true);result["timeline_length"]=timeline.size();result["museum_items"]=get_museum_collection().size();result["years_recorded"]=max(1,int(ceil(float(_latest_day())/[...]
 func has_event(event_type:String,title_contains:String="")->bool:
 	var canonical:=str(EVENT_ALIASES.get(event_type,event_type))
-	for event in timeline:
+	for event:Dictionary in timeline:
 		if str(event.get("details",{}).get("gameplay_event",event.get("type","")))!=canonical:continue
 		if title_contains.is_empty() or str(event.get("title","")).to_lower().contains(title_contains.to_lower()):return true
 	return false
