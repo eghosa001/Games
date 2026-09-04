@@ -33,7 +33,7 @@ static func save_game(_state: Dictionary) -> bool:
 
 static func load_game() -> Dictionary:
     var data = _read_dictionary(SAVE_PATH)
-    if data.is_empty():
+    if data.is_empty() or not _is_loadable_version(data):
         data = _read_dictionary(BACKUP_PATH)
     if data.is_empty():
         return {}
@@ -63,7 +63,14 @@ static func validate_save(data: Dictionary) -> bool:
         return false
     if not data.has("domains") or not (data["domains"] is Dictionary):
         return false
+    for domain in ["player", "company", "properties", "businesses", "employees", "economy", "production", "contracts", "competitors", "finance", "alliances", "diplomacy", "regions", "infrastructure", "technology", "events", "progression", "history", "news", "analytics", "acquisition", "bankruptcy"]:
+        if not data["domains"].has(domain) or not (data["domains"][domain] is Dictionary):
+            return false
     return true
+
+static func _is_loadable_version(data: Dictionary) -> bool:
+    var version := int(data.get("schema_version", 0))
+    return version >= 1 and version <= CURRENT_VERSION
 
 static func migrate(data: Dictionary, version: int) -> Dictionary:
     # Copy existing migrations from your original file

@@ -346,5 +346,8 @@ func save_state() -> Dictionary:
 
 func load_state(state: Dictionary) -> void:
     entities = state.get("entities", {}).duplicate(true)
-    transaction_log = state.get("transaction_log", []).duplicate(true)
+    transaction_log.clear()
+    for entry in state.get("transaction_log", []):
+        if entry is Dictionary:
+            transaction_log.append(entry.duplicate(true))
     next_transaction_id = int(state.get("next_transaction_id", transaction_log.size() + 1))

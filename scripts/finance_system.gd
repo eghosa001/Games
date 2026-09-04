@@ -261,10 +261,16 @@ func restore_state(snapshot: Dictionary) -> void:
     if snapshot.is_empty(): return
     cash = int(snapshot.get("cash", cash)); debt = int(snapshot.get("debt", debt)); loan_payment = int(snapshot.get("loan_payment", loan_payment))
     last_sales = int(snapshot.get("last_sales", 0)); last_profit = int(snapshot.get("last_profit", 0)); total_profit = int(snapshot.get("total_profit", 0))
-    history = snapshot.get("history", []).duplicate(true)
+    history.clear()
+    for entry in snapshot.get("history", []):
+        if entry is Dictionary: history.append(entry.duplicate(true))
     revenue = float(snapshot.get("revenue", 0.0)); operating_expenses = float(snapshot.get("operating_expenses", 0.0)); depreciation = float(snapshot.get("depreciation", 0.0)); interest_expense = float(snapshot.get("interest_expense", 0.0)); taxes = float(snapshot.get("taxes", 0.0))
     accounts_receivable = float(snapshot.get("accounts_receivable", 0.0)); inventory = float(snapshot.get("inventory", 0.0)); fixed_assets = float(snapshot.get("fixed_assets", 0.0)); investments = float(snapshot.get("investments", 0.0)); accounts_payable = float(snapshot.get("accounts_payable", 0.0)); other_liabilities = float(snapshot.get("other_liabilities", 0.0)); retained_earnings = float(snapshot.get("retained_earnings", 0.0)); equity_contributed = float(snapshot.get("equity_contributed", 0.0))
-    financing = snapshot.get("financing", {}).duplicate(true); cash_flow_history = snapshot.get("cash_flow_history", []).duplicate(true); credit_rating = str(snapshot.get("credit_rating", "BBB")); credit_score = float(snapshot.get("credit_score", 70.0))
+    financing = snapshot.get("financing", {}).duplicate(true)
+    cash_flow_history.clear()
+    for entry in snapshot.get("cash_flow_history", []):
+        if entry is Dictionary: cash_flow_history.append(entry.duplicate(true))
+    credit_rating = str(snapshot.get("credit_rating", "BBB")); credit_score = float(snapshot.get("credit_score", 70.0))
 
 func _reduce_financing_balance(amount: int) -> void:
     var remaining: Variant = float(amount)

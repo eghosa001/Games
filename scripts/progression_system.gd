@@ -59,7 +59,15 @@ func award_xp(amount:int,reason:String)->Dictionary:
     if amount<=0:return {"ok":false,"xp":get_xp(),"level":get_level()}
     var state=_state();if state==null:return {"ok":false,"reason":"game_state_unavailable"}
     var before_level:=get_level();var xp:=get_xp()+amount;state.set_value("progression","xp",xp);var new_level:=_level_for_xp(xp);state.set_value("progression","level",new_level)
-    if new_level>before_level: _record_unlocks(before_level,new_level);state.log_message("PROGRESSION: Company reached Level %d (+%d XP from %s)."%[new_level,amount,reason]);state.message("Company Level %d reached. Your empire is growing."%new_level)
+    if new_level>before_level:
+        _record_unlocks(before_level,new_level)
+        var logs = state.get_value("company", "log_lines", [])
+        if logs is Array:
+            logs = logs.duplicate(true)
+            logs.append("PROGRESSION: Company reached Level %d (+%d XP from %s)." % [new_level, amount, reason])
+            if logs.size() > 100: logs.pop_front()
+            state.set_value("company", "log_lines", logs)
+        state.set_value("company", "message", "Company Level %d reached. Your empire is growing." % new_level)
     return {"ok":true,"xp":xp,"level":new_level,"level_up":new_level>before_level,"reason":reason}
 func award_action(action:String,multiplier:float=1.0)->Dictionary: return award_xp(int(round(float(XP_REWARDS.get(action,0))*max(0.0,multiplier))),action)
 func award_profit(profit:int)->Dictionary:

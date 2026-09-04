@@ -239,7 +239,7 @@ func _layout_responsive() -> void:
         bottom_bar.position = Vector2(0, maxf(0.0, h - 150.0))
         bottom_bar.size = Vector2(w, 150.0)
     var narrow: Variant = w < 700.0
-    var tab_width: Variant = maxf(60.0, (w - 48.0) / 4.0)
+    var tab_width: Variant = maxf(44.0, (w - 24.0 - 21.0) / 4.0)
     tabs.position = Vector2(12, 10)
     tabs.size = Vector2(w - 24.0, 44.0)
     for child in tabs.get_children():
@@ -256,7 +256,7 @@ func _layout_responsive() -> void:
         action_scroll.size = Vector2(w - 20.0, 150)
         actions.columns = 2
         actions.custom_minimum_size = Vector2(w - 20.0, 0)
-        var button_width: Variant = maxf(100.0, (w - 29.0) / 2.0)
+        var button_width: Variant = maxf(120.0, (w - 20.0 - 9.0) / 2.0)
         for child in actions.get_children():
             if child is Button:
                 child.custom_minimum_size = Vector2(button_width, 48)

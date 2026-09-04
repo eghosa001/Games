@@ -16,8 +16,8 @@ func check(ok: bool, label: String) -> void:
 
 func run() -> void:
     var History = load("res://scripts/history_system.gd")
-    check(History != null, "HistorySystem script loads")
-    if History == null:
+    check(History != null and History.can_instantiate(), "HistorySystem script loads")
+    if History == null or not History.can_instantiate():
         quit(1)
         return
     var history = History.new()

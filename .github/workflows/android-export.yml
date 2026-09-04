@@ -45,11 +45,7 @@ jobs:
         run: |
           mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
           wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz
-          unzip -q Godot_v${GODOT_VERSION}-stable_export_templates.tpz -d "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
-          if [ -d "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/templates" ]; then
-            mv "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/templates"/* "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
-            rmdir "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/templates"
-          fi
+          unzip -q -j Godot_v${GODOT_VERSION}-stable_export_templates.tpz 'templates/*' -d "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
           printf '%s\n' "${GODOT_VERSION}.stable" > "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/version.txt"
       - name: Import project
         run: timeout 120s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --editor --path . --quit

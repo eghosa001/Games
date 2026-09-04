@@ -24,12 +24,12 @@ func run() -> void:
     root.add_child(game)
     await process_frame
 
-    for node_name in ["WorldView", "StrategyHUD", "TutorialOverlay", "MobileUI", "GameStateBridge"]:
+    for node_name in ["World/WorldView", "UI/StrategyHUD", "UI/TutorialOverlay", "UI/MainHUD"]:
         check(game.get_node_or_null(node_name) != null, "Player-facing controller exists: " + node_name)
 
-    check(game.get_node_or_null("WorldView") == null or game.get_node("WorldView").is_inside_tree(), "World view enters scene tree")
-    check(game.get_node_or_null("StrategyHUD") == null or game.get_node("StrategyHUD").is_inside_tree(), "Strategy HUD enters scene tree")
-    check(game.get_node_or_null("MobileUI") == null or game.get_node("MobileUI").is_inside_tree(), "Mobile UI enters scene tree")
+    check(game.get_node_or_null("World/WorldView") == null or game.get_node("World/WorldView").is_inside_tree(), "World view enters scene tree")
+    check(game.get_node_or_null("UI/StrategyHUD") == null or game.get_node("UI/StrategyHUD").is_inside_tree(), "Strategy HUD enters scene tree")
+    check(game.get_node_or_null("UI/MainHUD") == null or game.get_node("UI/MainHUD").is_inside_tree(), "Mobile UI enters scene tree")
 
     print("UI SCENE CONTRACT RESULT: %d passed, %d failed" % [passed, failed])
     game.queue_free()

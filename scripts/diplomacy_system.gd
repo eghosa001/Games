@@ -143,7 +143,9 @@ func capture_state() -> Dictionary:
 
 func restore_state(state: Dictionary) -> void:
     treaties = state.get("treaties", {}).duplicate(true)
-    events = state.get("events", []).duplicate(true)
+    events.clear()
+    for event in state.get("events", []):
+        if event is Dictionary: events.append(event.duplicate(true))
     party_trust = state.get("party_trust", {}).duplicate(true)
     next_treaty_id = int(state.get("next_treaty_id", 1))
 

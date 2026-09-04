@@ -59,7 +59,10 @@ func get_issue(day:int)->Dictionary:
     return {}
 func capture_state()->Dictionary:return {"system_version":SYSTEM_VERSION,"archive":archive.duplicate(true),"current_issue":current_issue.duplicate(true),"last_day":_last_day}
 func restore_state(snapshot:Dictionary)->void:
-    archive=snapshot.get("archive",[]).duplicate(true);current_issue=snapshot.get("current_issue",{}).duplicate(true);_last_day=int(snapshot.get("last_day",-1));_seen_sources.clear()
+    archive.clear()
+    for issue in snapshot.get("archive",[]):
+        if issue is Dictionary: archive.append(issue.duplicate(true))
+    current_issue=snapshot.get("current_issue",{}).duplicate(true);_last_day=int(snapshot.get("last_day",-1));_seen_sources.clear()
     for issue in archive:
         for story in issue.get("stories",[]):
             var source:=str(story.get("source_key",""));if not source.is_empty():_seen_sources[source]=true

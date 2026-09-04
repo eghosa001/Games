@@ -209,7 +209,17 @@ func capture_state()->Dictionary:
     return {"system_version":SYSTEM_VERSION,"employees":employees.duplicate(true),"candidates":candidates.duplicate(true),"next_id":next_id,"history":history.duplicate(true),"day":_day}
 func restore_state(snapshot:Dictionary)->void:
     if snapshot.is_empty(): _create_initial_roster(); refresh_candidates(); return
-    employees=snapshot.get("employees",[]).duplicate(true); candidates=snapshot.get("candidates",[]).duplicate(true); next_id=int(snapshot.get("next_id",employees.size()+1)); history=snapshot.get("history",[]).duplicate(true); _day=int(snapshot.get("day",1))
+    employees.clear()
+    for employee in snapshot.get("employees",[]):
+        if employee is Dictionary: employees.append(employee.duplicate(true))
+    candidates.clear()
+    for candidate in snapshot.get("candidates",[]):
+        if candidate is Dictionary: candidates.append(candidate.duplicate(true))
+    next_id=int(snapshot.get("next_id",employees.size()+1))
+    history.clear()
+    for entry in snapshot.get("history",[]):
+        if entry is Dictionary: history.append(entry.duplicate(true))
+    _day=int(snapshot.get("day",1))
     if employees.is_empty(): _create_initial_roster()
     _normalize_roster(); _ensure_james(); refresh_candidates()
 func migrate_legacy_count(count:int,day:int=1)->void:
