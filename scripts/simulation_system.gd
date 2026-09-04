@@ -263,15 +263,14 @@ func _money(value: int) -> String:
     return str(value)
 
 func end_day(args: Dictionary = {}) -> Dictionary:
-    var finance = _finance()
-    if not finance:
-        return {"ok": false, "message": "FinanceSystem unavailable."}
-    var debt_result = finance.settle_debt_day()
-    var economy = _economy()
-    if economy:
-        economy.end_market_day()
-    last_result = debt_result
-    return debt_result
+    # Legacy compatibility endpoint. The canonical day lifecycle is
+    # advance_day(state, context), invoked by GameplayCommandSystem.
+    # This endpoint must never settle debt or mutate the market independently,
+    # otherwise callers can charge a second day's interest/payment.
+    return {
+        "ok": false,
+        "message": "Legacy end_day is disabled. Use the canonical advance_day flow."
+    }
 
 func capture_state() -> Dictionary:
     var result = {
