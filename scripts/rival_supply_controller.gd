@@ -12,7 +12,7 @@ var resource_control: Variant = {
 }
 
 func _ready() -> void:
-    parent = get_parent()
+    parent = get_tree().root.get_node_or_null("Renew")
     last_day = parent.day
     queue_redraw()
 

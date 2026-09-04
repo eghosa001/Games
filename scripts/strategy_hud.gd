@@ -8,7 +8,7 @@ var panel: Panel
 var label: Label
 
 func _ready() -> void:
-    game = get_parent()
+    game = get_tree().root.get_node_or_null("Renew")
     root = Control.new()
     root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     root.mouse_filter = Control.MOUSE_FILTER_IGNORE

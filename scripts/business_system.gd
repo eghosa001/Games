@@ -271,6 +271,16 @@ func produce_goods() -> void:
         if current_stock < needed:
             orders.append({"resource":input_name,"amount":needed - current_stock})
 
+    var metal_needed: float = float(inputs.get("metal", 0.0)) * float(cycles)
+    if metal_needed > supply_chain.stock("metal"):
+        var metal_cycles: int = int(ceil(metal_needed - supply_chain.stock("metal")))
+        var iron_needed: float = float(metal_cycles) * 2.0
+        var energy_needed: float = float(metal_cycles) * 0.5
+        if supply_chain.stock("iron") < iron_needed:
+            orders.append({"resource": "iron", "amount": iron_needed - supply_chain.stock("iron")})
+        if supply_chain.stock("energy") < energy_needed:
+            orders.append({"resource": "energy", "amount": energy_needed - supply_chain.stock("energy")})
+
     if not orders.is_empty():
         var transport_level: int = int(state_adapter.get_value("supply_chain", "transport_level", 1))
         var delivery: Dictionary = supply_chain.procure_bundle(orders, cash, transport_level)

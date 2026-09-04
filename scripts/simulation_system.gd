@@ -10,6 +10,7 @@ var command_count: int = 0
 var last_command: String = ""
 var last_result: Dictionary = {}
 var demand_model = DemandModel.new()
+var production_system: Node = null
 
 func execute(command: String, args: Dictionary = {}) -> Dictionary:
     command_count += 1
@@ -152,8 +153,8 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     # 11. Dynamic events
     if int(state["day"]) % 2 == 0:
         var event = events.roll()
-        state["cash"] += int(event["cash"])
-        state["reputation"] += int(event["rep"])
+        state["cash"] += int(event.get("cash", 0))
+        state["reputation"] += int(event.get("rep", 0))
         _append_log(state, "EVENT: %s — %s" % [event["title"], event["text"]])
     
     # 12. Empire expansion
@@ -288,6 +289,8 @@ func _finance() -> Node:
     return root.get_node_or_null("FinanceSystem")
 
 func _production() -> Node:
+    if production_system != null:
+        return production_system
     var root = get_tree().root
     if not root: return null
     var autoload = root.get_node_or_null("RenewProductionSystem")

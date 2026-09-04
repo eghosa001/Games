@@ -10,7 +10,7 @@ var timer: Variant = 0.0
 var seen: Variant = {}
 
 func _ready() -> void:
-    game = get_parent()
+    game = get_tree().root.get_node_or_null("Renew")
     var root: Variant = Control.new()
     root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     root.mouse_filter = Control.MOUSE_FILTER_IGNORE

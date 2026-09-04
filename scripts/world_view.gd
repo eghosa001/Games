@@ -4,7 +4,7 @@ extends Node2D
 var game: Node
 
 func _ready() -> void:
-    game = get_parent()
+    game = get_tree().root.get_node_or_null("Renew")
     queue_redraw()
 
 func _process(_delta: float) -> void:

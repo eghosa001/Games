@@ -33,6 +33,21 @@ func procure(resource: String, amount: float, cash: int, transport_level: int = 
 func procure_bundle(orders: Array, cash: int, transport_level: int = 1) -> Dictionary:
     return chain.procure_bundle(orders, cash, transport_level)
 
+func buy_inputs() -> void:
+    var cash: int = int(state_adapter.get_value("economy", "cash", 25000))
+    var transport_level: int = int(state_adapter.get_value("supply_chain", "transport_level", 1))
+    var result: Dictionary = chain.procure_bundle([
+        {"resource": "timber", "amount": 10.0},
+        {"resource": "iron", "amount": 10.0},
+        {"resource": "energy", "amount": 20.0}
+    ], cash, transport_level)
+    if not bool(result.get("ok", false)):
+        state_adapter.message("Input delivery failed (%s)." % str(result.get("reason", "unknown")))
+        return
+    state_adapter.set_value("economy", "cash", cash - int(result.get("cost", 0)))
+    state_adapter.message("Inputs delivered to the warehouse.")
+    state_adapter.log_message("INPUTS: timber, iron and energy delivered (-$%d)." % int(result.get("cost", 0)))
+
 func process_iron_to_metal(cycles: int = 1) -> Dictionary:
     return chain.process_iron_to_metal(cycles)
 

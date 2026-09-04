@@ -17,7 +17,7 @@ var selected_segment: Variant = "standard"
 var refresh_clock: Variant = 0.0
 
 func _ready() -> void:
-    parent = get_parent()
+    parent = get_tree().root.get_node_or_null("Renew")
     _build_ui()
     _refresh()
 

@@ -7,7 +7,7 @@ var last_processed_day: Variant = 1
 var strategic_news: Array[String] = []
 
 func _ready() -> void:
-    parent = get_parent()
+    parent = get_tree().root.get_node_or_null("Renew")
     if parent != null: last_processed_day = parent.day
     queue_redraw()
 

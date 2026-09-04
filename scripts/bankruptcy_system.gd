@@ -529,7 +529,7 @@ func _sync_game_cash(finance: Node) -> void:
     game.loan_payment = int(finance.loan_payment)
 
 func _game() -> Node:
-    return get_parent()
+    return get_tree().root.get_node_or_null("Renew")
 
 func _finance() -> Node:
     return get_node_or_null("/root/RenewFinanceSystem") if get_node_or_null("/root/RenewFinanceSystem") != null else get_node_or_null("../FinanceSystem")

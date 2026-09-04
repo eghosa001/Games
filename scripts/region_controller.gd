@@ -7,7 +7,7 @@ var message: Variant = ""
 var last_day: Variant = 0
 
 func _ready() -> void:
-    parent=get_parent()
+    parent=get_tree().root.get_node_or_null("Renew")
     regions.update_unlocks(parent.reputation)
     regions._normalize()
     last_day=parent.day

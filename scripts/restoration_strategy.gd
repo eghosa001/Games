@@ -11,7 +11,7 @@ var plans: Variant = {
 }
 
 func _ready() -> void:
-    game = get_parent()
+    game = get_tree().root.get_node_or_null("Renew")
     call_deferred("_apply", selected)
 
 func choose_budget() -> void:
@@ -29,7 +29,7 @@ func current_plan() -> Dictionary:
 
 func _apply(plan_name: String) -> void:
     if game == null:
-        game = get_parent()
+        game = get_tree().root.get_node_or_null("Renew")
     if game == null or not plans.has(plan_name):
         return
     if bool(game.owned) and int(game.restoration) > 0:

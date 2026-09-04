@@ -19,7 +19,7 @@ var observed_milestones: Variant = {}
 var last_seen_day: Variant = 1
 
 func _ready() -> void:
-    parent = get_parent(); _build_ui(); _refresh()
+    parent = get_tree().root.get_node_or_null("Renew"); _build_ui(); _refresh()
     last_seen_day = int(parent.day)
     _seed_milestones()
     root.resized.connect(_layout_responsive)

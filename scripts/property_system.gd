@@ -8,7 +8,7 @@ const DomainSystem = preload("res://scripts/domain_system.gd")
 const PROPERTY_TYPES := ["Warehouse", "Workshop", "Commercial Building"]
 const RESTORATION_STEPS := ["cleaning", "repair", "painting", "furnishing"]
 const STEP_COSTS := {"cleaning": 500, "repair": 1500, "painting": 900, "furnishing": 1200}
-const STEP_GAIN := {"cleaning": 25, "repair": 30, "painting": 25, "furnishing": 20}
+const STEP_GAIN := {"cleaning": 100, "repair": 100, "painting": 100, "furnishing": 100}
 
 const PROPERTY_CATALOG := [
     {"id":"warehouse_001","name":"Riverside Warehouse","type":"Warehouse","condition":35,"cleaning":0,"repair":0,"painting":0,"furnishing":0,"value":65000,"capacity":80,"industry_compatibility":["Logistics","Manufacturing","Wholesale"]},
@@ -154,9 +154,9 @@ func _next_restoration_step(property: Dictionary) -> String:
 
 func _visual_stage(property: Dictionary, owned: bool) -> String:
     if not owned:
-        return "Abandoned"
+        return "Neglected"
     if int(property.get("cleaning", 0)) < 100:
-        return "Abandoned"
+        return "Neglected"
     if int(property.get("repair", 0)) < 100:
         return "Cleaned"
     if int(property.get("painting", 0)) < 100:

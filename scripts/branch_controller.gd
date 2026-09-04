@@ -7,7 +7,7 @@ var last_day:=0
 var message:=""
 
 func _ready()->void:
-    parent=get_parent()
+    parent=get_tree().root.get_node_or_null("Renew")
     last_day=parent.day
     queue_redraw()
 

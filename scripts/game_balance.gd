@@ -3,7 +3,7 @@ extends Node
 # Early-game balance pass. Keeps the first restoration arc completable without
 # requiring a loan before the player has a functioning business.
 func _ready() -> void:
-    var game = get_parent()
+    var game = get_tree().root.get_node_or_null("Renew")
     if game == null:
         return
     game.cash = max(int(game.cash), 40000)

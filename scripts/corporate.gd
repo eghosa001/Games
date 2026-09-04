@@ -41,12 +41,12 @@ var board_trust: int:
     get: return int(round(float(_company().get("investor_confidence", 50.0))))
 
 func _ready() -> void:
-    parent = get_parent()
-    ownership = get_node_or_null("../OwnershipSystem")
+    parent = get_tree().root.get_node_or_null("Renew")
+    ownership = get_tree().root.get_node_or_null("Renew/Systems/OwnershipSystem")
     if ownership == null:
         ownership = OwnershipSystem.new()
         ownership.name = "OwnershipSystem"
-        get_parent().add_child(ownership)
+        get_tree().root.get_node("Renew/Systems").add_child.call_deferred(ownership)
     if parent != null: last_processed_day = parent.day
     _ensure_company()
     _load_persistent_state()

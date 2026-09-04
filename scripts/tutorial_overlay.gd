@@ -15,7 +15,7 @@ var dismissed: Variant = false
 var last_step: Variant = -1
 
 func _ready() -> void:
-    game = get_parent()
+    game = get_tree().root.get_node_or_null("Renew")
     _build()
     _refresh()
     overlay_root.resized.connect(_layout_responsive)

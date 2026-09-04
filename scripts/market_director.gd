@@ -21,7 +21,7 @@ var events: Variant = [
 ]
 
 func _ready() -> void:
-    game = get_parent()
+    game = get_tree().root.get_node_or_null("Renew")
     _load_state()
     last_day = int(game.day) if game != null else 1
 

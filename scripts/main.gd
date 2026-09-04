@@ -6,6 +6,25 @@ extends Node2D
 const GameplayCommandSystem = preload("res://scripts/gameplay_command_system.gd")
 
 var command_system: GameplayCommandSystem
+var stages: Array = [
+    ["Neglected", 0, 0],
+    ["Cleaned", 25, 500],
+    ["Repaired", 50, 1500],
+    ["Painted", 75, 900],
+    ["Operational", 100, 1200]
+]
+
+var economy:
+    get: return command_system.supply_system.economy if command_system else null
+
+var expansion:
+    get: return command_system.expansion_system.expansion if command_system else null
+
+var rivals:
+    get: return command_system.relationship_system.rivals if command_system else null
+
+var districts:
+    get: return command_system.expansion_system.districts if command_system else null
 
 func _game_state():
     return get_node_or_null("/root/RenewGameState")
@@ -17,6 +36,27 @@ func _read(domain: String, key: String, default_value = null):
 func _write(domain: String, key: String, value) -> void:
     var state = _game_state()
     if state: state.set_value(domain, key, value)
+
+func _money(value: int) -> String:
+    return String.num_int64(value)
+
+func _log(text: String) -> void:
+    var logs = _read("company", "log_lines", [])
+    if not logs is Array:
+        logs = []
+    logs = logs.duplicate(true)
+    logs.append(text)
+    if logs.size() > 100:
+        logs.pop_front()
+    _write("company", "log_lines", logs)
+
+func _next_cost() -> int:
+    if stage == "Operational":
+        return 0
+    for index in range(stages.size()):
+        if stages[index][0] == stage and index + 1 < stages.size():
+            return int(stages[index + 1][2])
+    return 0
 
 # ---- All properties with both getter and setter ----
 var cash: int:
@@ -160,6 +200,7 @@ func restore_property() -> void: command_system.restore_property()
 func open_business() -> void: command_system.open_business()
 func choose_business_purpose(index: int) -> void: command_system.choose_business_purpose(index)
 func create_business() -> void: command_system.create_business()
+func get_business_purposes() -> Array: return command_system.business_system.get_business_purposes()
 func buy_inputs() -> void: command_system.buy_inputs()
 func produce_goods() -> void: command_system.produce_goods()
 func hire_employee() -> void: command_system.hire_employee()
@@ -180,6 +221,7 @@ func propose_customer_partnership() -> void: command_system.propose_customer_par
 func negotiate_selected_acquisition() -> void: command_system.negotiate_selected_acquisition()
 func reject_selected_acquisition() -> void: command_system.reject_selected_acquisition()
 func buy_expansion() -> void: command_system.buy_expansion()
+func upgrade_transport() -> Dictionary: return command_system.upgrade_transport()
 func upgrade_expansion() -> void: command_system.upgrade_expansion()
 func acquire_rival_asset() -> void: command_system.acquire_rival_asset()
 func advance_day() -> void: command_system.advance_day()

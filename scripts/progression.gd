@@ -15,7 +15,7 @@ var milestones: Variant = [
 ]
 
 func _ready() -> void:
-    parent = get_parent()
+    parent = get_tree().root.get_node_or_null("Renew")
     _load_state()
 
 func _process(_delta: float) -> void:

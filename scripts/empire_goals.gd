@@ -16,7 +16,7 @@ var goals: Variant = [
 ]
 
 func _ready() -> void:
-    game = get_parent()
+    game = get_tree().root.get_node_or_null("Renew")
     _load_state()
 
 func _process(_delta: float) -> void:

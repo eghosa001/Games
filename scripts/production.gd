@@ -14,6 +14,15 @@ var quality: int:
     get: return int(system.quality)
 var finished_goods: int:
     get: return int(system.finished_goods)
+    set(value): system.finished_goods = value
+
+var inventory: Dictionary:
+    get: return system.inventory
+    set(value): system.inventory = value
+
+var last_run: Dictionary:
+    get: return system.last_run
+    set(value): system.last_run = value
 
 func get_product_config(product_id:String="consumer_goods")->Dictionary: return system.get_product_config(product_id)
 func product_ids()->Array: return system.product_ids()

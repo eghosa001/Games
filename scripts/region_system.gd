@@ -13,9 +13,9 @@ func _state():
     return state_adapter
 func _ensure_region_state() -> void:
     var state = _state(); if state == null: return
-    var districts = state.get_value("regions", "districts", {}); if not districts is Dictionary: districts = {}
+    var districts = state.get_value("regions", "districts", {}).duplicate(true); if not districts is Dictionary: districts = {}
     if not districts.has(REGION_ID): districts[REGION_ID] = {"id":REGION_ID,"name":REGION_NAME,"cities":CITIES.duplicate(true),"resource_locations":RESOURCE_LOCATIONS.duplicate(true)}; state.set_value("regions", "districts", districts)
-    var sites = state.get_value("supply_chain", "resource_sites", {}); if not sites is Dictionary: sites = {}
+    var sites = state.get_value("supply_chain", "resource_sites", {}).duplicate(true); if not sites is Dictionary: sites = {}
     for location in RESOURCE_LOCATIONS:
         if not sites.has(location["id"]): sites[location["id"]] = {"id":location["id"],"name":location["name"],"resource":location["resource"],"city_id":location["city_id"],"capacity":location["capacity"],"active":true}
     state.set_value("supply_chain", "resource_sites", sites)
