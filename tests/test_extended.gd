@@ -140,6 +140,24 @@ func run() -> void:
     check(int(finance.get("cash")) == business_cash_before_marketing - 1800, "Marketing charges canonical finance")
     check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Business transactions remain synchronized")
 
+    # Acquisition regression: insufficient funds must not alter the target, while a funded purchase must charge finance exactly once.
+    var acquisition = load("res://scripts/acquisition_system.gd").new()
+    game.add_child(acquisition)
+    await process_frame
+    acquisition.register_target("target_regression", "Regression Target", [{"id":"asset_1","value":12000}], 0.0, 0, [], 0.0, 0.0)
+    state.set_value("economy", "cash", 1000)
+    var acquisition_before: Dictionary = acquisition.get_target("target_regression")
+    var failed_acquisition: Dictionary = acquisition.acquire_company("player", "target_regression", 5000)
+    check(not bool(failed_acquisition.get("ok", false)), "Unaffordable acquisition is rejected")
+    check(acquisition.get_target("target_regression") == acquisition_before, "Unaffordable acquisition leaves target unchanged")
+    check(int(state.get_value("economy", "cash", 0)) == 1000, "Unaffordable acquisition leaves cash unchanged")
+    state.set_value("economy", "cash", 10000)
+    var funded_before: int = int(finance.get("cash"))
+    var funded_acquisition: Dictionary = acquisition.acquire_company("player", "target_regression", 5000)
+    check(bool(funded_acquisition.get("ok", false)), "Funded acquisition succeeds")
+    check(int(finance.get("cash")) == funded_before - 5000, "Acquisition charges canonical finance once")
+    check(str(acquisition.get_target("target_regression").get("status", "")) == "acquired", "Funded acquisition changes target status after payment")
+
     game.queue_free()
     await process_frame
 
