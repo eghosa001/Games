@@ -27,5 +27,14 @@ jobs:
         run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --editor --path . --quit
       - name: Run targeted simulation architecture test
         run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_simulation_architecture.gd
+      - name: Run visual and audio quality audit
+        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_v1_visual_audio_quality.gd
       - name: Run regression tests
         run: timeout 600s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_runner.gd
+      - name: Upload visual audit frame
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: renew-v1-visual-audit
+          path: artifacts/v1_visual_quality.png
+          if-no-files-found: ignore
