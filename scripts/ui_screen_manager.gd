@@ -3,7 +3,7 @@ class_name RenewUIScreenManager
 
 # Central UI presentation guard for RENEW.
 # Primary/modal screens are mutually exclusive. Screen scripts still own their
-# content and interactions; this node owns only presentation visibility.
+# content and interactions; this node owns presentation visibility.
 
 const SCREEN_NAMES := [
     "ContractPanel",
@@ -71,6 +71,12 @@ func _process(_delta: float) -> void:
         return
     _enforce_single_screen()
 
+func _unhandled_input(event: InputEvent) -> void:
+    if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+        if _active_screen != null:
+            hide_all_screens()
+            get_viewport().set_input_as_handled()
+
 func _is_node_visible(node: Node) -> bool:
     if node == null or not is_instance_valid(node):
         return false
@@ -91,6 +97,14 @@ func _has_visible_canvas_item(node: Node) -> bool:
             return true
     return false
 
+func _call_screen_hook(node: Node, value: bool) -> void:
+    if node == null or not is_instance_valid(node):
+        return
+    if value and node.has_method("open_screen"):
+        node.open_screen()
+    elif not value and node.has_method("close_screen"):
+        node.close_screen()
+
 func _set_node_visible(node: Node, value: bool) -> void:
     if node == null or not is_instance_valid(node):
         return
@@ -102,6 +116,7 @@ func _set_node_visible(node: Node, value: bool) -> void:
         node.visible = value
     else:
         _set_rendered_visible(node, value)
+    _call_screen_hook(node, value)
 
 func _set_rendered_visible(node: Node, value: bool) -> void:
     if node == null or not is_instance_valid(node):
