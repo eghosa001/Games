@@ -35,6 +35,10 @@ func _run() -> void:
     for screen_name in expected_screens:
         check("screen node resolves: %s" % screen_name, _find_screen(scene, screen_name) != null)
 
+    # Customer Segments is a scene-owned managed screen. There must be exactly
+    # one instance; main.gd previously created a second runtime copy.
+    check("exactly one CustomerSegmentsUI instance exists", _count_named_nodes(scene, "CustomerSegmentsUI") == 1)
+
     # Screen routing is the contract: exactly one managed screen is rendered
     # after every explicit open.
     for screen_name in ["CustomerSegmentsUI", "ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel", "RenewDiplomacyUI"]:
@@ -80,6 +84,12 @@ func _find_screen(scene: Node, screen_name: String) -> Node:
         if child != null:
             return child
     return get_root().get_node_or_null("Renew/" + screen_name)
+
+func _count_named_nodes(node: Node, target_name: String) -> int:
+    var count := 1 if node.name == target_name else 0
+    for child in node.get_children():
+        count += _count_named_nodes(child, target_name)
+    return count
 
 func _visible_screen_count(manager: Node) -> int:
     var count := 0
