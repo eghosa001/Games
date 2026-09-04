@@ -4,7 +4,7 @@ func _process(_delta: float) -> void:
     queue_redraw()
 
 func _draw() -> void:
-    var main = get_parent()
+    var main: Node = get_parent().get_parent()
     if main == null: return
     draw_rect(Rect2(0, 0, 1280, 720), Color("0c1218"), true)
     draw_rect(Rect2(0, 0, 1280, 64), Color("17232d"), true)
@@ -34,8 +34,9 @@ func _draw() -> void:
     draw_string(font, Vector2(455, 303), "Contract: %d days | $%s/day" % [main.contract_days, str(main.contract_bonus)], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("f2d27a"))
     draw_string(font, Vector2(455, 326), "Last P&L: $%s" % str(main.last_profit), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
     _panel(Vector2(845, 82), Vector2(410, 270))
-    var r = main.rivals.rivals[main.selected_rival]
-    var d = main.districts.current()
+    if main.rivals == null or main.districts == null: return
+    var r: Dictionary = main.rivals.rivals[main.selected_rival]
+    var d: Dictionary = main.districts.current()
     draw_string(font, Vector2(865, 112), "REGION & COMPETITION", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("7891a5"))
     draw_string(font, Vector2(865, 143), "[%d] %s" % [main.selected_rival + 1, r["name"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 21, Color.WHITE)
     draw_string(font, Vector2(865, 171), "Price $%d | Relationship %d" % [r["price"], r["relationship"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("f2d27a"))
@@ -49,7 +50,7 @@ func _draw() -> void:
     draw_string(font, Vector2(45, 405), "ACTIVITY / MARKET", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("7891a5"))
     draw_string(font, Vector2(45, 432), "Materials $%d   Packaging $%d   Fuel $%d" % [main.economy.resources["materials"]["price"], main.economy.resources["packaging"]["price"], main.economy.resources["fuel"]["price"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
     draw_string(font, Vector2(45, 457), "Supplier tier %d | Debt payment $%s/day" % [main.supplier_choice + 1, str(main.loan_payment)], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("b7d7ff"))
-    for i in range(main.log_lines.size()): draw_string(font, Vector2(45, 490 + i * 27), main.log_lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aab8c3"))
+    for i: int in range(main.log_lines.size()): draw_string(font, Vector2(45, 490 + i * 27), main.log_lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aab8c3"))
     _panel(Vector2(845, 375), Vector2(410, 315))
     draw_string(font, Vector2(865, 405), "CEO STATUS", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("7891a5"))
     draw_string(font, Vector2(865, 438), str(main.message), HORIZONTAL_ALIGNMENT_LEFT, 365, 15, Color.WHITE)
@@ -59,9 +60,9 @@ func _draw() -> void:
     draw_string(font, Vector2(865, 610), "Deals: L alliance | C alliance offer", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("f2d27a"))
     draw_string(font, Vector2(865, 636), "RENEW: rebuild the world you eventually control.", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aab8c3"))
 
-func _next_cost(main) -> int:
+func _next_cost(main: Node) -> int:
     if main.stage == "Operational": return 0
-    for i in range(main.stages.size()):
+    for i: int in range(main.stages.size()):
         if main.stages[i][0] == main.stage and i + 1 < main.stages.size(): return int(main.stages[i + 1][2])
     return 0
 
