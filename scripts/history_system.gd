@@ -5,7 +5,7 @@ signal gameplay_event_recorded(event: Dictionary)
 const SYSTEM_VERSION := 3
 const MAX_EVENTS := 5000
 const GAMEPLAY_EVENTS := ["FOUNDING","PROPERTY_ACQUIRED","PROPERTY_RESTORED","BUSINESS_OPENED","FIRST_PRODUCTION","FIRST_SALE","FIRST_PROFIT","EMPLOYEE_HIRED","EMPLOYEE_PROMOTED","CONTRACT_SIGNED","CONTRACT_FULFILLED","TECHNOLOGY_RESEARCHED","ALLIANCE_FORMED","PROJECT_COMPLETED","COMPETITOR_DEFEATED","MAJOR_EVENT"]
-const EVENT_ALIASES := {"employee_promotion":"EMPLOYEE_PROMOTED","employee_hired":"EMPLOYEE_HIRED","property_acquired":"PROPERTY_ACQUIRED","property_restored":"PROPERTY_RESTORED","business_opened":"BUSINESS_OPENED","first_production":"FIRST_PRODUCTION","first_sale":"FIRST_SALE","first_profit":"FIRST_PROFIT","contract_signed":"CONTRACT_SIGNED","contract_fulfilled":"CONTRACT_FULFILLED","technology_researched":"TECHNOLOGY_RESEARCHED","alliance_formed":"ALLIANCE_FORMED","project_completed":"PROJECT_COMPLETED","competitor_defeated":"COMPETITOR_DEFEATED","major_event":"MAJOR_EVENT","founding":"FOUNDING"}
+const EVENT_ALIASES := {"employee_milestone":"EMPLOYEE_PROMOTED","employee_promotion":"EMPLOYEE_PROMOTED","employee_hired":"EMPLOYEE_HIRED","property_acquired":"PROPERTY_ACQUIRED","property_restored":"PROPERTY_RESTORED","business_opened":"BUSINESS_OPENED","first_production":"FIRST_PRODUCTION","first_sale":"FIRST_SALE","first_profit":"FIRST_PROFIT","contract_signed":"CONTRACT_SIGNED","contract_fulfilled":"CONTRACT_FULFILLED","technology_researched":"TECHNOLOGY_RESEARCHED","alliance_formed":"ALLIANCE_FORMED","project_completed":"PROJECT_COMPLETED","competitor_defeated":"COMPETITOR_DEFEATED","major_event":"MAJOR_EVENT","founding":"FOUNDING"}
 const TYPES := ["founding","restoration","first_sale","first_profit","employee_milestone","contract","property_acquisition","expansion","resource_acquisition","alliance","acquisition","merger","crisis","bankruptcy","technology","infrastructure","ranking","world_event","investment","corporate_war","milestone","general"]
 var timeline:Array[Dictionary]=[]
 var legacy:Dictionary={"founder":"","company_name":"RENEW","founded_day":1,"notable_events":0,"properties_acquired":0,"expansions":0,"alliances":0,"acquisitions":0,"contracts":0,"crises":0,"employees_milestones":0,"museum_unlocks":[]}
@@ -19,7 +19,7 @@ func record(event_type:String,day:int,title:String,details:Dictionary={},signatu
     var canonical:=str(EVENT_ALIASES.get(event_type,event_type));var kind:=_mapped_type(canonical) if GAMEPLAY_EVENTS.has(canonical) else (event_type if TYPES.has(event_type) else "general");var payload:=details.duplicate(true)
     if GAMEPLAY_EVENTS.has(canonical): payload["gameplay_event"]=canonical
     var key:=signature if not signature.is_empty() else "%s|%s|%s"%[kind,day,title];if _seen_signatures.has(key): return _seen_signatures[key]
-    var event:Dictionary={"id":"hist_%06d"%(timeline.size()+1),"day":max(1,day),"type":kind,"title":title,"details":payload,"importance":_importance(kind),"recorded_at":Time.get_datetime_string_from_system(true)};timeline.append(event)
+    var event:Dictionary={"id":"hist_%06d"%(timeline.size()+1),"day":max(1,day),"type":kind,"title":title,"details":payload,"signature":key,"importance":_importance(kind),"recorded_at":Time.get_datetime_string_from_system(true)};timeline.append(event)
     if timeline.size()>MAX_EVENTS: timeline.pop_front()
     _seen_signatures[key]=event;_update_legacy(kind);gameplay_event_recorded.emit(event.duplicate(true));return event
 func record_employee_milestone(day:int,employee_id:String,employee_name:String,milestone:String,details:Dictionary={})->Dictionary:
@@ -58,7 +58,9 @@ func capture_state()->Dictionary:return {"system_version":SYSTEM_VERSION,"timeli
 func restore_state(snapshot:Dictionary)->void:
     if snapshot.is_empty():timeline.clear();legacy["notable_events"]=0;_seen_signatures.clear();_ready();return
     timeline=snapshot.get("timeline",[]).duplicate(true);legacy=snapshot.get("legacy",legacy).duplicate(true);_seen_signatures.clear()
-    for event in timeline:_seen_signatures["%s|%s|%s"%[event.get("type","general"),event.get("day",1),event.get("title","")]]=event
+    for event in timeline:
+        var key:String=str(event.get("signature","%s|%s|%s"%[event.get("type","general"),event.get("day",1),event.get("title","")]))
+        _seen_signatures[key]=event
 func _mapped_type(canonical:String)->String:
     var mapped:Dictionary={"FOUNDING":"founding","PROPERTY_ACQUIRED":"property_acquisition","PROPERTY_RESTORED":"restoration","BUSINESS_OPENED":"founding","FIRST_PRODUCTION":"milestone","FIRST_SALE":"first_sale","FIRST_PROFIT":"first_profit","EMPLOYEE_HIRED":"employee_milestone","EMPLOYEE_PROMOTED":"employee_milestone","CONTRACT_SIGNED":"contract","CONTRACT_FULFILLED":"contract","TECHNOLOGY_RESEARCHED":"technology","ALLIANCE_FORMED":"alliance","PROJECT_COMPLETED":"infrastructure","COMPETITOR_DEFEATED":"corporate_war","MAJOR_EVENT":"world_event"};return str(mapped.get(canonical,"general"))
 func _classify_log(text:String)->Dictionary:

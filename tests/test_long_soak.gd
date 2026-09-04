@@ -19,7 +19,7 @@ func soak_days(days: int) -> void:
     check(scene != null, "V1 long soak main scene loads")
     if scene == null: return
     var game = scene.instantiate(); root.add_child(game); await process_frame
-    var state = get_node_or_null("/root/RenewGameState")
+    var state = get_root().get_node_or_null("RenewGameState")
     check(state != null, "Canonical GameState is available")
     var start_day := int(state.get_value("player", "day", 1)) if state != null else 1
     # advance_day is intentionally gated until a business is operating.
@@ -47,7 +47,7 @@ func soak_save_load(rounds: int) -> void:
     check(scene != null, "V1 save/load soak scene loads")
     if scene == null: return
     var game = scene.instantiate(); root.add_child(game); await process_frame
-    var state = get_node_or_null("/root/RenewGameState")
+    var state = get_root().get_node_or_null("RenewGameState")
     for i in range(rounds):
         state.set_value("player", "day", 20 + i)
         state.set_value("economy", "cash", 50000 + i)

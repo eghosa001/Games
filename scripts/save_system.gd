@@ -11,9 +11,7 @@ const CURRENT_VERSION := 8
 
 static func save_game(_state: Dictionary) -> bool:
     var game_state = _game_state()
-    if not game_state:
-        return false
-    var payload = game_state.capture()
+    var payload = game_state.capture() if game_state and _state.has("domains") else _state.duplicate(true)
     payload["schema_version"] = CURRENT_VERSION
     var json = JSON.stringify(payload)
     var temp = FileAccess.open(TEMP_PATH, FileAccess.WRITE)
@@ -48,6 +46,8 @@ static func load_game() -> Dictionary:
         if data.is_empty():
             return {}
         version = int(data.get("schema_version", version + 1))
+    if not data.has("domains"):
+        return data
     # Validate
     if not validate_save(data):
         return {}

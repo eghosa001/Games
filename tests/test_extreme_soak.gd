@@ -13,7 +13,7 @@ func run() -> void:
     check(scene != null, "Main scene loads for extreme V1 soak")
     if scene == null: quit(1); return
     var game = scene.instantiate(); root.add_child(game); await process_frame
-    var state = get_node_or_null("/root/RenewGameState")
+    var state = get_root().get_node_or_null("RenewGameState")
     check(state != null, "Canonical GameState is available")
     var start_day := int(state.get_value("player", "day", 1))
     # advance_day requires an operating business; use a deterministic funded

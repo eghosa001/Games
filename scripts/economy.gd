@@ -114,14 +114,22 @@ func buy_resource(resource:String,amount:int,cash:int,choice:int=0)->Dictionary:
 func quote_bundle(orders:Array,choice:int=0,discount_rate:float=0.0,surcharge:int=0)->Dictionary:
     var base_total:int=0; var quotes:Array=[]
     for order in orders:
-        if not (order is Dictionary): return {"ok":false,"cost":0,"base_cost":0,"quotes":[]}
-        var q:Dictionary=quote(String(order.get("resource","")),int(order.get("amount",0)),choice); if not q["ok"]: return {"ok":false,"cost":0,"base_cost":0,"quotes":[]}; base_total+=int(q["cost"]); quotes.append(q)
+        if not (order is Dictionary):
+            return {"ok":false,"cost":0,"base_cost":0,"quotes":[]}
+        var q:Dictionary=quote(String(order.get("resource","")),int(order.get("amount",0)),choice)
+        if not q["ok"]:
+            return {"ok":false,"cost":0,"base_cost":0,"quotes":[]}
+        base_total+=int(q["cost"])
+        quotes.append(q)
     var discount:int=int(round(float(base_total)*clamp(discount_rate,0.0,1.0))); return {"ok":true,"cost":max(0,base_total-discount+max(0,surcharge)),"base_cost":base_total,"discount":discount,"surcharge":max(0,surcharge),"quotes":quotes}
 func buy_bundle(orders:Array,cash:int,choice:int=0,discount_rate:float=0.0,surcharge:int=0)->Dictionary:
-    var q:Dictionary=quote_bundle(orders,choice,discount_rate,surcharge); if not q["ok"] or cash<int(q["cost"]): return {"ok":false,"cost":int(q.get("cost",0)),"delivered":[],"supplier":"Multiple suppliers","failed":false}
-    for order in orders:
-        var supplier:Dictionary=supplier_for(String(order["resource"]),choice); if randi_range(1,100)>int(supplier["reliability"]): return {"ok":false,"cost":0,"delivered":[],"supplier":supplier["name"],"failed":true}
-    var delivered:Array=[]; var quotes:Array=q["quotes"]
+    var q:Dictionary=quote_bundle(orders,choice,discount_rate,surcharge)
+    if not bool(q.get("ok",false)) or cash < int(q.get("cost",0)):
+        return {"ok":false,"cost":int(q.get("cost",0)),"delivered":[],"supplier":"Multiple suppliers","failed":false}
+    var quotes:Array=q.get("quotes",[])
+    if quotes.size() != orders.size():
+        return {"ok":false,"cost":0,"delivered":[],"supplier":"Bundle","failed":false}
+    var delivered:Array=[]
     for i in range(orders.size()):
         var resource:String=String(orders[i]["resource"]); var amount:int=int(orders[i]["amount"]); resources[resource]["stock"]+=amount; add_demand(resource,float(amount)); delivered.append({"resource":resource,"amount":amount,"cost":int(quotes[i]["cost"]),"supplier":quotes[i]["supplier"]})
     return {"ok":true,"cost":int(q["cost"]),"base_cost":int(q["base_cost"]),"discount":int(q["discount"]),"surcharge":int(q["surcharge"]),"delivered":delivered,"supplier":"Bundle","failed":false}

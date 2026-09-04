@@ -73,10 +73,10 @@ func run() -> void:
         check(missions.has_method("_spawn"), "World mission spawn API")
         check(missions.has_method("choose_a") and missions.has_method("choose_b"), "World mission choice API")
 
-    var state = get_node_or_null("/root/RenewGameState")
+    var state = get_root().get_node_or_null("RenewGameState")
     check(state != null, "Canonical GameState autoload exists")
-    var finance = get_node_or_null("/root/RenewFinanceSystem")
-    var simulation = get_node_or_null("/root/RenewSimulationSystem")
+    var finance = get_root().get_node_or_null("RenewFinanceSystem")
+    var simulation = get_root().get_node_or_null("RenewSimulationSystem")
     check(finance != null, "FinanceSystem autoload exists")
     check(simulation != null, "SimulationSystem autoload exists")
 
