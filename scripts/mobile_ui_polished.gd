@@ -4,7 +4,12 @@ extends "res://scripts/mobile_ui.gd"
 # replaces only the control surface so simulation APIs remain untouched.
 var top_bar: ColorRect
 var bottom_bar: ColorRect
+var status_panel: Panel
 var button_theme: Theme
+var tab_normal_style: StyleBoxFlat
+var tab_active_style: StyleBoxFlat
+var tab_hover_style: StyleBoxFlat
+var panel_style: StyleBoxFlat
 
 func _build_ui() -> void:
     root = Control.new()
@@ -22,17 +27,17 @@ func _build_ui() -> void:
 
     var brand: Variant = Label.new()
     brand.text = "RENEW"
-    brand.position = Vector2(18, 10)
-    brand.size = Vector2(120, 36)
+    brand.position = Vector2(18, 7)
+    brand.size = Vector2(120, 34)
     brand.add_theme_font_size_override("font_size", 22)
-    brand.add_theme_color_override("font_color", Color("dce8e8"))
+    brand.add_theme_color_override("font_color", Color("e6f1ef"))
     brand.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(brand)
 
     var subtitle: Variant = Label.new()
-    subtitle.text = "REBUILD • OPERATE • EXPAND"
+    subtitle.text = "REBUILD  •  OPERATE  •  EXPAND"
     subtitle.position = Vector2(18, 37)
-    subtitle.size = Vector2(240, 22)
+    subtitle.size = Vector2(240, 20)
     subtitle.add_theme_font_size_override("font_size", 9)
     subtitle.add_theme_color_override("font_color", Color("789096"))
     subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -53,14 +58,20 @@ func _build_ui() -> void:
         button.pressed.connect(_set_tab.bind(i))
         tabs.add_child(button)
 
+    status_panel = Panel.new()
+    status_panel.name = "StatusPill"
+    status_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    root.add_child(status_panel)
+
     status_label = Label.new()
-    status_label.position = Vector2(990, 14)
-    status_label.size = Vector2(270, 34)
+    status_label.position = Vector2(12, 5)
+    status_label.size = Vector2(246, 24)
     status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-    status_label.add_theme_font_size_override("font_size", 13)
-    status_label.add_theme_color_override("font_color", Color("c7d8d9"))
+    status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    status_label.add_theme_font_size_override("font_size", 12)
+    status_label.add_theme_color_override("font_color", Color("cfe0df"))
     status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    root.add_child(status_label)
+    status_panel.add_child(status_label)
 
     action_scroll = ScrollContainer.new()
     action_scroll.position = Vector2(18, 76)
@@ -80,6 +91,7 @@ func _build_ui() -> void:
     action_scroll.add_child(actions)
 
     feedback_panel = Panel.new()
+    feedback_panel.name = "FeedbackCard"
     feedback_panel.position = Vector2(18, 238)
     feedback_panel.size = Vector2(760, 92)
     feedback_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -87,9 +99,10 @@ func _build_ui() -> void:
     root.add_child(feedback_panel)
 
     feedback_label = Label.new()
-    feedback_label.position = Vector2(16, 10)
-    feedback_label.size = Vector2(728, 72)
+    feedback_label.position = Vector2(18, 10)
+    feedback_label.size = Vector2(724, 72)
     feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    feedback_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
     feedback_label.add_theme_font_size_override("font_size", 14)
     feedback_label.add_theme_color_override("font_color", Color("dce8e8"))
     feedback_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -100,7 +113,7 @@ func _build_ui() -> void:
     goal_label.size = Vector2(920, 48)
     goal_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     goal_label.add_theme_font_size_override("font_size", 13)
-    goal_label.add_theme_color_override("font_color", Color("a9c2bd"))
+    goal_label.add_theme_color_override("font_color", Color("b7cec9"))
     goal_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(goal_label)
 
@@ -112,6 +125,10 @@ func _build_ui() -> void:
     root.add_child(bottom_bar)
 
     button_theme = _make_button_theme()
+    panel_style = _make_panel_style()
+    feedback_panel.add_theme_stylebox_override("panel", panel_style)
+    status_panel.add_theme_stylebox_override("panel", _make_status_style())
+    _apply_tab_state()
 
 func _make_button_theme() -> Theme:
     var theme: Variant = Theme.new()
@@ -123,9 +140,15 @@ func _make_button_theme() -> Theme:
     normal.set_corner_radius_all(8)
     normal.content_margin_left = 10.0
     normal.content_margin_right = 10.0
+    normal.content_margin_top = 7.0
+    normal.content_margin_bottom = 7.0
+    normal.shadow_color = Color(0, 0, 0, 0.18)
+    normal.shadow_size = 3
     var hover: Variant = normal.duplicate()
-    hover.bg_color = Color("274047")
+    hover.bg_color = Color("244047")
     hover.border_color = Color("6d9d91")
+    hover.shadow_color = Color(0.18, 0.55, 0.48, 0.16)
+    hover.shadow_size = 5
     var pressed: Variant = hover.duplicate()
     pressed.bg_color = Color("315b5c")
     var disabled: Variant = normal.duplicate()
@@ -140,6 +163,60 @@ func _make_button_theme() -> Theme:
     theme.set_color("font_pressed_color", "Button", Color("ffffff"))
     theme.set_color("font_disabled_color", "Button", Color("66787d"))
     return theme
+
+func _make_panel_style() -> StyleBoxFlat:
+    var style := StyleBoxFlat.new()
+    style.bg_color = Color("142229")
+    style.border_color = Color("29414a")
+    style.set_border_width_all(1)
+    style.set_corner_radius_all(10)
+    style.shadow_color = Color(0, 0, 0, 0.24)
+    style.shadow_size = 6
+    style.content_margin_left = 10.0
+    style.content_margin_right = 10.0
+    return style
+
+func _make_status_style() -> StyleBoxFlat:
+    var style := StyleBoxFlat.new()
+    style.bg_color = Color("15262b")
+    style.border_color = Color("31534f")
+    style.set_border_width_all(1)
+    style.set_corner_radius_all(14)
+    return style
+
+func _make_tab_style(active: bool) -> StyleBoxFlat:
+    var style := StyleBoxFlat.new()
+    style.bg_color = Color("183037") if active else Color("142129")
+    style.border_color = Color("78b8a7") if active else Color("2a4048")
+    style.set_border_width_all(1)
+    style.set_corner_radius_all(9)
+    style.content_margin_top = 5.0
+    style.content_margin_bottom = 5.0
+    style.shadow_color = Color(0.10, 0.45, 0.38, 0.18) if active else Color(0, 0, 0, 0.12)
+    style.shadow_size = 4 if active else 2
+    return style
+
+func _apply_tab_state() -> void:
+    if tabs == null:
+        return
+    tab_normal_style = _make_tab_style(false)
+    tab_active_style = _make_tab_style(true)
+    tab_hover_style = _make_tab_style(false)
+    tab_hover_style.bg_color = Color("20383f")
+    tab_hover_style.border_color = Color("557d78")
+    for i in range(tabs.get_child_count()):
+        var child := tabs.get_child(i)
+        if child is Button:
+            child.theme = button_theme
+            child.add_theme_stylebox_override("normal", tab_active_style if i == active_tab else tab_normal_style)
+            child.add_theme_stylebox_override("hover", tab_hover_style)
+            child.add_theme_stylebox_override("pressed", tab_active_style)
+            child.add_theme_color_override("font_color", Color("f1f8f6") if i == active_tab else Color("9bb0b1"))
+            child.add_theme_color_override("font_hover_color", Color("ffffff"))
+
+func _set_tab(index: int) -> void:
+    super._set_tab(index)
+    _apply_tab_state()
 
 func _button(text: String, callback: Callable) -> void:
     var b: Variant = Button.new()
@@ -169,10 +246,11 @@ func _layout_responsive() -> void:
     for child in tabs.get_children():
         if child is Button:
             child.custom_minimum_size = Vector2(tab_width, 42)
-            child.theme = button_theme
     if narrow:
-        status_label.position = Vector2(12, 58)
-        status_label.size = Vector2(w - 24.0, 28)
+        status_panel.position = Vector2(10, 58)
+        status_panel.size = Vector2(w - 20.0, 28.0)
+        status_label.position = Vector2(10, 2)
+        status_label.size = Vector2(w - 40.0, 24)
         status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
         action_scroll.position = Vector2(10, 92)
         action_scroll.size = Vector2(w - 20.0, 150)
@@ -184,12 +262,15 @@ func _layout_responsive() -> void:
                 child.custom_minimum_size = Vector2(button_width, 48)
         feedback_panel.position = Vector2(10, 250)
         feedback_panel.size = Vector2(w - 20.0, 88)
-        feedback_label.size = Vector2(w - 52.0, 68)
+        feedback_label.position = Vector2(16, 8)
+        feedback_label.size = Vector2(w - 52.0, 72)
         goal_label.position = Vector2(10, 346)
         goal_label.size = Vector2(w - 20.0, 62)
     else:
-        status_label.position = Vector2(maxf(730.0, w - 420.0), 15)
-        status_label.size = Vector2(minf(400.0, w - status_label.position.x - 12.0), 34)
+        status_panel.position = Vector2(maxf(730.0, w - 420.0), 14)
+        status_panel.size = Vector2(minf(270.0, w - status_panel.position.x - 12.0), 30.0)
+        status_label.position = Vector2(10, 3)
+        status_label.size = Vector2(status_panel.size.x - 20.0, 24)
         status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
         action_scroll.position = Vector2(18, 76)
         action_scroll.size = Vector2(w - 36.0, 150)
@@ -200,6 +281,8 @@ func _layout_responsive() -> void:
                 child.custom_minimum_size = Vector2(225, 48)
         feedback_panel.position = Vector2(18, 238)
         feedback_panel.size = Vector2(minf(760.0, w - 36.0), 92)
-        feedback_label.size = Vector2(feedback_panel.size.x - 32.0, 72)
+        feedback_label.position = Vector2(18, 10)
+        feedback_label.size = Vector2(feedback_panel.size.x - 36.0, 72)
         goal_label.position = Vector2(18, 344)
         goal_label.size = Vector2(minf(920.0, w - 36.0), 48)
+    _apply_tab_state()
