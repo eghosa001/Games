@@ -1,11 +1,12 @@
 extends Node
 class_name RenewUIScreenManager
 
-# Keeps mutually-exclusive game panels from stacking over the world.
-# Individual panels continue to own their own input/build logic; this manager
-# enforces the presentation rule that at most one primary screen is open.
+# Central UI presentation guard for RENEW.
+# Primary/modal screens must never render on top of one another. Existing UI
+# scripts remain responsible for their own content and buttons; this manager
+# only enforces visibility boundaries between screens.
 
-const PRIMARY_SCREEN_NAMES := [
+const SCREEN_NAMES := [
     "ContractPanel",
     "HeadquartersPanel",
     "TechnologyPanel",
@@ -14,8 +15,14 @@ const PRIMARY_SCREEN_NAMES := [
     "EmployeePanel",
     "CollectionPanel",
     "LiveOpsPanel",
+    "HistoryPanel",
+    "NewsPanel",
 ]
-const ROOT_SCREEN_NAMES := ["RenewDiplomacyUI"]
+
+const ROOT_SCREEN_NAMES := [
+    "RenewDiplomacyUI",
+    "CustomerSegmentsUI",
+]
 
 var _previous_visible: Dictionary = {}
 var _active_screen: Node = null
@@ -33,13 +40,15 @@ func _ui_root() -> Node:
 func _root_screen_nodes() -> Array[Node]:
     var result: Array[Node] = []
     for screen_name in ROOT_SCREEN_NAMES:
-        var node := get_tree().root.get_node_or_null(screen_name)
+        var node := get_tree().root.get_node_or_null("Renew/" + screen_name)
+        if node == null:
+            node = get_tree().root.get_node_or_null(screen_name)
         if node != null:
             result.append(node)
     return result
 
 func _initialize() -> void:
-    if _ui_root() == null:
+    if get_tree().root.get_node_or_null("Renew") == null:
         call_deferred("_initialize")
         return
     for node in _screen_nodes():
@@ -56,40 +65,46 @@ func _screen_nodes() -> Array[Node]:
     var result: Array[Node] = []
     var ui := _ui_root()
     if ui != null:
-        for screen_name in PRIMARY_SCREEN_NAMES:
+        for screen_name in SCREEN_NAMES:
             var node := ui.get_node_or_null(screen_name)
             if node != null:
                 result.append(node)
     result.append_array(_root_screen_nodes())
     return result
 
-# Screen scripts intentionally hide their inner Panel/PanelContainer rather than
-# their CanvasLayer/Node2D host. We therefore inspect the rendered descendants.
 func _is_node_visible(node: Node) -> bool:
-    for child in node.get_children():
-        if child is CanvasItem and child.is_visible_in_tree():
-            return true
-        if _has_visible_canvas_item(child):
-            return true
-    return false
+    # CanvasLayer is a host, so inspect its rendered descendants. This avoids
+    # disabling the host scripts while still detecting their actual panels.
+    if node is CanvasLayer:
+        for child in node.get_children():
+            if _has_visible_canvas_item(child):
+                return true
+        return false
+
+    # Node2D/Control panels can render directly from _draw(), so their own
+    # visible flag must be checked as well as their descendants.
+    if node is CanvasItem and node.visible and node.is_visible_in_tree():
+        return true
+    return _has_visible_canvas_item(node)
 
 func _has_visible_canvas_item(node: Node) -> bool:
     for child in node.get_children():
-        if child is CanvasItem and child.is_visible_in_tree():
+        if child is CanvasItem and child.visible and child.is_visible_in_tree():
             return true
         if _has_visible_canvas_item(child):
             return true
     return false
 
 func _set_node_visible(node: Node, value: bool) -> void:
-    # Keep CanvasLayer hosts enabled so existing scripts can still open their
-    # panels by changing panel.visible. Only the actual rendered UI descendants
-    # are toggled.
-    for child in node.get_children():
-        if child is CanvasItem:
-            child.visible = value
-        else:
+    if node is CanvasLayer:
+        # Do not hide the CanvasLayer host; existing scripts may need it to
+        # receive input. Hide only the rendered UI descendants.
+        for child in node.get_children():
             _set_canvas_descendants_visible(child, value)
+    elif node is CanvasItem:
+        node.visible = value
+    else:
+        _set_canvas_descendants_visible(node, value)
 
 func _set_canvas_descendants_visible(node: Node, value: bool) -> void:
     for child in node.get_children():
@@ -114,7 +129,6 @@ func _enforce_single_screen() -> void:
     if newly_opened != null:
         _active_screen = newly_opened
 
-    # Recover gracefully if a panel was opened before this manager initialized.
     if _active_screen == null:
         for node in nodes:
             if _is_node_visible(node):
@@ -124,7 +138,6 @@ func _enforce_single_screen() -> void:
     if _active_screen == null:
         return
 
-    # If the active screen was closed, allow another visible screen to become active.
     if not _is_node_visible(_active_screen):
         _active_screen = null
         for node in nodes:
@@ -135,7 +148,6 @@ func _enforce_single_screen() -> void:
     if _active_screen == null:
         return
 
-    # One and only one primary screen may be visible.
     for node in nodes:
         if node != _active_screen and _is_node_visible(node):
             _set_node_visible(node, false)
@@ -147,8 +159,10 @@ func show_screen(screen_name: String) -> void:
     if ui != null:
         target = ui.get_node_or_null(screen_name)
     if target == null:
+        target = get_tree().root.get_node_or_null("Renew/" + screen_name)
+    if target == null:
         target = get_tree().root.get_node_or_null(screen_name)
-    if target == null or not (PRIMARY_SCREEN_NAMES.has(screen_name) or ROOT_SCREEN_NAMES.has(screen_name)):
+    if target == null or not (SCREEN_NAMES.has(screen_name) or ROOT_SCREEN_NAMES.has(screen_name)):
         push_warning("Unknown primary RENEW screen: %s" % screen_name)
         return
 
