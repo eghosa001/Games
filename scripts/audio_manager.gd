@@ -12,6 +12,7 @@ var _sfx_cursor := 0
 var _last_message := ""
 var _last_day := 1
 var _last_restoration := 0
+var _last_business_open := false
 var _music_phase := 0.0
 var _music_bar := 0.0
 
@@ -86,6 +87,10 @@ func _watch_game_state() -> void:
         if restoration > _last_restoration:
             play_restoration()
         _last_restoration = restoration
+    var business_open := bool(state.get_value("businesses", "business_open", false))
+    if business_open and not _last_business_open:
+        play_construction()
+    _last_business_open = business_open
 
 func _is_failure(text: String) -> bool:
     return text.contains("failed") or text.contains("unable") or text.contains("not enough") or text.contains("cannot") or text.contains("can't") or text.contains("no save") or text.contains("save failed") or text.contains("insufficient")
