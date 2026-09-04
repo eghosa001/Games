@@ -158,6 +158,23 @@ func run() -> void:
     check(int(finance.get("cash")) == funded_before - 5000, "Acquisition charges canonical finance once")
     check(str(acquisition.get_target("target_regression").get("status", "")) == "acquired", "Funded acquisition changes target status after payment")
 
+    # Infrastructure maintenance is a system/day-cycle expense, not a UI side effect.
+    var infrastructure = load("res://scripts/infrastructure_system.gd").new()
+    game.add_child(infrastructure)
+    await process_frame
+    infrastructure.assets["infra_regression"] = {"id":"infra_regression","type":"road","name":"Regression Road","region":0,"owner_id":"founder","status":"active","level":1,"capacity":80.0,"utilization":0.5,"maintenance":100,"created_day":0}
+    infrastructure.last_day = 0
+    state.set_value("economy", "cash", 1000)
+    var maintenance_before: int = int(finance.get("cash"))
+    var maintenance_result: Dictionary = infrastructure.process_day(1)
+    check(bool(maintenance_result.get("maintenance_spend", {}).get("ok", false)), "Infrastructure maintenance is paid through finance")
+    check(int(finance.get("cash")) == maintenance_before - 100, "Infrastructure maintenance charges exactly once")
+    var maintenance_after_first: int = int(finance.get("cash"))
+    var repeat_maintenance: Dictionary = infrastructure.process_day(1)
+    check(bool(repeat_maintenance.get("already_processed", false)), "Infrastructure day processing is idempotent")
+    check(int(finance.get("cash")) == maintenance_after_first, "Repeated infrastructure processing does not double-charge maintenance")
+    infrastructure.queue_free()
+
     game.queue_free()
     await process_frame
 
