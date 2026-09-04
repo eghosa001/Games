@@ -12,10 +12,12 @@ const TECHNOLOGIES := {
     "supply_optimization": {"name":"Supply Optimization","tier":2,"cost_money":4500,"cost_points":15,"time_days":3,"prerequisites":["better_logistics"],"effects":{"transport_capacity_multiplier":0.20,"operating_cost_multiplier":-0.08}},
     "smart_factory": {"name":"Smart Factory","tier":3,"cost_money":7000,"cost_points":20,"time_days":4,"prerequisites":["automation"],"effects":{"production_multiplier":0.20,"worker_reduction":1}},
     "advanced_logistics": {"name":"Advanced Logistics","tier":3,"cost_money":7000,"cost_points":20,"time_days":4,"prerequisites":["better_logistics","supply_optimization"],"effects":{"transport_capacity_multiplier":0.40,"operating_cost_multiplier":-0.10}},
-    "premium_manufacturing": {"name":"Premium Manufacturing","tier":3,"cost_money":7000,"cost_points":20,"prerequisites":["advanced_materials"],"effects":{"production_multiplier":0.15,"base_price_multiplier":0.15}}
+    "premium_manufacturing": {"name":"Premium Manufacturing","tier":3,"cost_money":7000,"cost_points":20,"time_days":4,"prerequisites":["advanced_materials"],"effects":{"production_multiplier":0.15,"base_price_multiplier":0.15}}
 }
 
 var state_adapter = DomainSystem.new()
+var last_research_days: int = 0
+
 func _ready() -> void:
     add_child(state_adapter)
 func _state() -> Node:
@@ -42,6 +44,7 @@ func can_research(id:String)->Dictionary:
     if points<int(tech["cost_points"]):return {"ok":false,"reason":"research_points","required":int(tech["cost_points"]),"available":points}
     return {"ok":true}
 func research(id:String)->bool:
+    last_research_days = 0
     var check:=can_research(id); var state=_state(); if state==null:return false
     if not bool(check.get("ok",false)):
         state.set_value("company","message",_research_error(id,check)); return false
@@ -51,10 +54,12 @@ func research(id:String)->bool:
         state.set_value("company","message",str(spend.get("message","Technology research requires sufficient cash."))); return false
     state.set_value("technology","research_points",points-int(tech["cost_points"]))
     var unlocked:Dictionary=state.get_value("technology","technology",{}); unlocked=unlocked.duplicate(true); unlocked[id]=true; state.set_value("technology","technology",unlocked)
-    var day:=int(state.get_value("player","day",1))+int(tech["time_days"]); state.set_value("player","day",day)
-    state.set_value("company","message","Research complete: %s. %d day(s) passed." % [tech["name"],int(tech["time_days"])])
-    var logs=state.get_value("company","log_lines",[]); if not logs is Array:logs=[]; logs=logs.duplicate(true); logs.append("TECHNOLOGY: %s researched (-$%d, -%d RP, %d days)." % [tech["name"],int(tech["cost_money"]),int(tech["cost_points"]),int(tech["time_days"])]); if logs.size()>100:logs.pop_front(); state.set_value("company","log_lines",logs)
+    last_research_days = int(tech["time_days"])
+    state.set_value("company","message","Research complete: %s. %d day(s) will be simulated." % [tech["name"],last_research_days])
+    var logs=state.get_value("company","log_lines",[]); if not logs is Array:logs=[]; logs=logs.duplicate(true); logs.append("TECHNOLOGY: %s researched (-$%d, -%d RP, %d days)." % [tech["name"],int(tech["cost_money"]),int(tech["cost_points"]),last_research_days]); if logs.size()>100:logs.pop_front(); state.set_value("company","log_lines",logs)
     return true
+func get_last_research_days()->int:
+    return last_research_days
 func research_next() -> bool:
     for tier in [1, 2, 3]:
         for id in TECHNOLOGIES.keys():
