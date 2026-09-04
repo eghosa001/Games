@@ -157,10 +157,10 @@ func test_main_command_integration() -> void:
     # Competitor reactions are part of the canonical persistent state. Prove the
     # reaction system's history survives the real Main -> SaveSystem -> GameState
     # path rather than relying on an out-of-band save payload.
-    var reaction = get_node_or_null("/root/RenewCompetitorReactionSystem")
+    var reaction = root.get_node_or_null("RenewCompetitorReactionSystem")
     if reaction != null:
         reaction._remember(game.day, "integration_regression", {"ok": true})
-        var before_reaction_count := reaction.reaction_history.size()
+        var before_reaction_count: int = reaction.reaction_history.size()
         check(before_reaction_count > 0, "integration competitor reaction history created")
         game.cash = 123456
         game.save_game()
