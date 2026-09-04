@@ -46,9 +46,6 @@ func _new_game() -> Node:
         return null
     root.add_child(game)
     await process_frame
-    # Main.initialize() intentionally randomizes the live game. Re-seed only
-    # after composition is ready so this deterministic integration fixture is
-    # repeatable without changing runtime randomness.
     seed(123456)
     return game
 
@@ -63,6 +60,7 @@ func test_main_composition() -> void:
     check(game.has_method("upgrade_transport"), "integration Main transport command")
     check(game.has_method("save_game"), "integration Main save command")
     check(game.has_method("load_game"), "integration Main load command")
+    check(game.has_method("cancel_active_contract"), "integration Main contract cancellation command")
     check(game.command_system != null, "integration command system attached")
     check(game.economy != null, "integration economy wired")
     check(game.expansion != null, "integration expansion wired")
@@ -78,9 +76,6 @@ func test_main_command_integration() -> void:
     if game == null:
         return
 
-    # Controlled fixture setup is allowed at the integration layer. This is not
-    # an end-to-end test; player-facing starting-economy behavior is covered by
-    # test_new_game_flow.gd without injecting cash.
     game.cash = 500000
     game.reputation = 100
 
@@ -120,7 +115,16 @@ func test_main_command_integration() -> void:
 
     game.sign_contract()
     check(game.contract_days > 0, "integration contract command")
+    var contracts = root.get_node_or_null("RenewContractSystem")
+    check(contracts != null and not contracts.active_contract().is_empty(), "integration sign creates real active contract")
+    var finance = root.get_node_or_null("RenewFinanceSystem")
+    var cash_before_cancel := int(game.cash)
+    game.cancel_active_contract("integration cancellation")
+    check(contracts.active_contract().is_empty(), "integration contract cancellation removes active contract")
+    check(game.cash == cash_before_cancel - 900, "integration contract cancellation charges fee")
 
+    game.sign_contract()
+    check(not contracts.active_contract().is_empty(), "integration second contract can be signed after cancellation")
     while game.finished_goods < 5:
         game.produce_goods()
     var old_day = game.day
@@ -154,9 +158,6 @@ func test_main_command_integration() -> void:
     check(game.transport_level >= 2, "integration transport upgrade command")
     check(game.transport_capacity >= 60, "integration transport capacity updated")
 
-    # Competitor reactions are part of the canonical persistent state. Prove the
-    # reaction system's history survives the real Main -> SaveSystem -> GameState
-    # path rather than relying on an out-of-band save payload.
     var reaction = root.get_node_or_null("RenewCompetitorReactionSystem")
     if reaction != null:
         reaction._remember(game.day, "integration_regression", {"ok": true})
