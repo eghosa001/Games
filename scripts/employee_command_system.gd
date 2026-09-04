@@ -19,15 +19,18 @@ func hire_employee()->void:
     var result=employee_system.hire_default(day)
     if not bool(result.get("ok",false)): state_adapter.message(str(result.get("message","Unable to hire employee."))); return
     var actual_cost:=int(result.get("cost",preview_cost))
-    if cash<actual_cost: employee_system.fire_employee(str(result["employee"]["id"]),day); state_adapter.message("Hiring cost changed and available cash is insufficient."); return
-    state_adapter.set_value("economy","cash",cash-actual_cost); sync_roster(); state_adapter.set_value("player","reputation",int(state_adapter.get_value("player","reputation",0))+1)
+    var spend:=state_adapter.spend(actual_cost,"employee hiring")
+    if not bool(spend.get("ok",false)):
+        employee_system.fire_employee(str(result["employee"]["id"]),day); state_adapter.message("Hiring cost changed and available cash is insufficient."); return
+    sync_roster(); state_adapter.set_value("player","reputation",int(state_adapter.get_value("player","reputation",0))+1)
     state_adapter.log_message("HIRING: employee %d joined (-$%s)."%[employee_system.get_active_employee_count(),state_adapter.money(actual_cost)]); state_adapter.message("Employee hired. More capacity, higher daily wages.")
 func train_employee(employee_id:String)->void:
-    var day:=int(state_adapter.get_value("player","day",1)); var cost:=900; var cash:=int(state_adapter.get_value("economy","cash",25000))
-    if cash<cost: state_adapter.message("Training requires $%s."%state_adapter.money(cost)); return
+    var day:=int(state_adapter.get_value("player","day",1)); var cost:=900
     var result=employee_system.train_employee(employee_id,day,cost)
     if not bool(result.get("ok",false)): state_adapter.message(str(result.get("message","Training failed."))); return
-    state_adapter.set_value("economy","cash",cash-cost); sync_roster(); state_adapter.message("Employee training completed.")
+    var spend:=state_adapter.spend(cost,"employee training")
+    if not bool(spend.get("ok",false)): state_adapter.message(str(spend.get("message","Training requires sufficient cash."))); return
+    sync_roster(); state_adapter.message("Employee training completed.")
 func promote_employee(employee_id:String)->void:
     var result=employee_system.promote_employee(employee_id,int(state_adapter.get_value("player","day",1)))
     if not bool(result.get("ok",false)): state_adapter.message(str(result.get("message","Promotion failed."))); return
