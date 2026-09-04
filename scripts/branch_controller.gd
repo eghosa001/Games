@@ -17,7 +17,7 @@ func _ready()->void:
 func _process(_delta:float)->void:
     if parent==null: return
     if parent.day!=last_day:
-        var region_controller=parent.get_node_or_null("RegionController")
+        var region_controller=parent.get_node_or_null("World/RegionController")
         if region_controller!=null:
             var result=branches.operate_day(region_controller.regions)
             var received=state_adapter.receive(int(result["profit"]),"regional branch operating result")
@@ -43,7 +43,7 @@ func select_branch(index:int)->void:
 
 func launch_selected()->void:
     var b=branches.current()
-    var region_controller=parent.get_node_or_null("RegionController")
+    var region_controller=parent.get_node_or_null("World/RegionController")
     if region_controller==null: return
     var region=int(b["region"])
     if region<0 or region>=region_controller.regions.player_presence.size() or region_controller.regions.player_presence[region]<=0:
@@ -64,7 +64,7 @@ func launch_selected()->void:
 func stock_selected()->void:
     var b=branches.current()
     if not bool(b["owned"]): message="Launch the branch first."; return
-    var region_controller=parent.get_node_or_null("RegionController")
+    var region_controller=parent.get_node_or_null("World/RegionController")
     if region_controller==null: return
     var amount:=min(10,parent.finished_goods)
     if amount<=0: message="Produce core goods before stocking a branch."; return
