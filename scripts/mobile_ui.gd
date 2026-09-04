@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 # Primary mobile control surface. Main/gameplay commands are the authoritative
-# action boundary; optional scene controllers are never called blindly.
+# action boundary; screen presentation is delegated to RenewUIScreenManager.
 var parent: Node
 var active_tab: int = 0
 var root: Control
@@ -70,8 +70,20 @@ func _set_tab(index: int) -> void:
 func _button(text: String, callback: Callable) -> void:
     if not callback.is_valid(): return
     var b := Button.new(); b.text = text; b.custom_minimum_size = Vector2(225, 48); b.focus_mode = Control.FOCUS_NONE; b.mouse_filter = Control.MOUSE_FILTER_STOP; b.pressed.connect(_run_action.bind(text, callback)); actions.add_child(b)
+
 func _button_if_method(text: String, node: Node, method_name: String) -> void:
     if node != null and node.has_method(method_name): _button(text, Callable(node, method_name))
+
+func _screen_button(text: String, screen_name: String) -> void:
+    _button(text, Callable(self, "_open_screen").bind(screen_name))
+
+func _open_screen(screen_name: String) -> void:
+    var manager := get_node_or_null("/root/RenewUIScreenManager")
+    if manager != null and manager.has_method("show_screen"):
+        manager.show_screen(screen_name)
+        _show_feedback("OPENED: %s" % screen_name.replace("Panel", "").replace("UI", ""))
+    else:
+        _show_feedback("Screen manager is unavailable.")
 
 func _run_action(label: String, callback: Callable) -> void:
     if parent == null or not callback.is_valid(): _show_feedback("%s\nAction is unavailable." % label); return
@@ -87,28 +99,31 @@ func _run_action(label: String, callback: Callable) -> void:
     if not changes.is_empty(): message += "\n" + "  |  ".join(changes)
     _show_feedback(message); _refresh(); _detect_milestones()
 
-func _set_rendered_visible(node: Node, value: bool) -> void:
-    if node is CanvasLayer:
-        for child in node.get_children(): _set_rendered_visible(child, value)
-    elif node is CanvasItem:
+func _set_world_visible(node: Node, value: bool) -> void:
+    if node == null: return
+    if node is CanvasItem:
         node.visible = value
     else:
-        for child in node.get_children(): _set_rendered_visible(child, value)
+        for child in node.get_children(): _set_world_visible(child, value)
 
 func _update_panel_visibility() -> void:
-    var ui := get_parent(); var renew := get_tree().root.get_node_or_null("Renew"); var panel_map := {"HeadquartersPanel":0,"HistoryPanel":2,"TechnologyPanel":2,"AlliancePanel":2,"ContractPanel":1,"MarketPanel":1,"CustomerPanel":1,"CollectionPanel":3,"LiveOpsPanel":3,"NewsPanel":3,"EmployeePanel":1}
-    if ui != null:
-        for child in ui.get_children():
-            if panel_map.has(child.name): _set_rendered_visible(child, int(panel_map[child.name]) == active_tab)
-    var diplomacy := get_tree().root.get_node_or_null("RenewDiplomacyUI")
-    if diplomacy is CanvasItem: diplomacy.visible = active_tab == 2
+    var manager := get_node_or_null("/root/RenewUIScreenManager")
+    if manager != null and manager.has_method("hide_all_screens"):
+        manager.hide_all_screens()
+        match active_tab:
+            1: manager.show_screen("CustomerSegmentsUI")
+            2: manager.show_screen("AlliancePanel")
+            3: manager.show_screen("CollectionPanel")
+
+    var renew := get_tree().root.get_node_or_null("Renew")
     if renew != null:
-        var customer := renew.get_node_or_null("CustomerSegmentsUI"); if customer is CanvasItem: customer.visible = active_tab == 1
         var world := renew.get_node_or_null("World")
         if world != null:
-            var world_view := world.get_node_or_null("WorldView"); if world_view is CanvasItem: world_view.visible = active_tab == 3
-            var property_visual := world.get_node_or_null("PropertyVisual"); if property_visual is CanvasItem: property_visual.visible = active_tab == 0
-            var renderer := world.get_node_or_null("MainRenderer"); if renderer is CanvasItem: renderer.hide()
+            _set_world_visible(world.get_node_or_null("WorldView"), active_tab == 3)
+            _set_world_visible(world.get_node_or_null("PropertyVisual"), active_tab == 0)
+            # MainRenderer is a legacy world overlay and would duplicate the
+            # current presentation, so keep it disabled while the modern UI is active.
+            _set_world_visible(world.get_node_or_null("MainRenderer"), false)
 
 func _clear_actions() -> void:
     for child in actions.get_children(): child.queue_free()
@@ -119,14 +134,18 @@ func _refresh() -> void:
     match active_tab:
         0:
             _button("INSPECT", parent.inspect_property); _button("ACQUIRE", parent.acquire_property); _button("RESTORE", parent.restore_property); _button("OPEN BUSINESS", parent.open_business); _button("END DAY", parent.advance_day)
+            _screen_button("HEADQUARTERS", "HeadquartersPanel")
         1:
             _button("BUY INPUTS", parent.buy_inputs); _button("PRODUCE", parent.produce_goods); _button("HIRE", parent.hire_employee); _button("UPGRADE", parent.upgrade_business); _button("MARKETING", parent.marketing_campaign); _button("PRICE", parent.change_price); _button("SUPPLIER", parent.cycle_supplier); _button("CONTRACT", parent.sign_contract); _button("END DAY", parent.advance_day)
+            _screen_button("CUSTOMERS", "CustomerSegmentsUI"); _screen_button("CONTRACTS", "ContractPanel"); _screen_button("EMPLOYEES", "EmployeePanel"); _screen_button("HEADQUARTERS", "HeadquartersPanel")
         2:
             _button("NEXT RIVAL", _next_rival); _button("NEXT ASSET", _next_asset); _button("EXPANSION", parent.buy_expansion); _button("UPGRADE ASSET", parent.upgrade_expansion); _button("ALLIANCE", parent.make_alliance_offer); _button("IMPROVE RELATION", parent.improve_alliance); _button("SUPPLY DEAL", parent.propose_supply_deal); _button("CUSTOMER DEAL", parent.propose_customer_partnership); _button("ACQUIRE ASSET", parent.negotiate_selected_acquisition); _button("UPGRADE TRANSPORT", parent.upgrade_transport); _button("LOAN", parent.take_loan); _button("REPAY LOAN", parent.repay_loan)
+            _screen_button("ALLIANCE COUNCIL", "AlliancePanel"); _screen_button("TECHNOLOGY", "TechnologyPanel"); _screen_button("DIPLOMACY", "RenewDiplomacyUI"); _screen_button("HEADQUARTERS", "HeadquartersPanel")
             var corporate := get_node_or_null("../../World/Corporate"); _button_if_method("CORPORATE STATUS", corporate, "show_status"); _button_if_method("RAISE CAPITAL", corporate, "raise_capital"); _button_if_method("BUY BACK SHARES", corporate, "buyback_shares"); _button_if_method("DIVIDEND", corporate, "pay_dividend"); _button_if_method("DEFENSE", corporate, "strengthen_defense"); _button_if_method("ALLY DEFENSE", corporate, "strategic_ally_defense"); _button_if_method("BOARD INFLUENCE", corporate, "influence_board"); _button_if_method("HOSTILE TAKEOVER", corporate, "hostile_takeover"); _button("END DAY", parent.advance_day)
         3:
             var region := get_node_or_null("../../World/RegionController"); _button_if_method("ESTABLISH REGION", region, "establish_region"); _button_if_method("INFRASTRUCTURE", region, "upgrade_infrastructure"); _button_if_method("TRADE CORRIDOR", region, "establish_trade_route"); _button_if_method("DISPATCH GOODS", region, "dispatch_goods")
             var missions := get_node_or_null("../../World/WorldMissions"); _button_if_method("TAKE OPPORTUNITY", missions, "choose_a"); _button_if_method("DECLINE OPPORTUNITY", missions, "choose_b"); _button("DISTRICT", _next_district); _button("SAVE GAME", parent.save_game); _button("LOAD GAME", parent.load_game); _button("END DAY", parent.advance_day)
+            _screen_button("COLLECTION", "CollectionPanel"); _screen_button("LIVE OPS", "LiveOpsPanel"); _screen_button("HISTORY", "HistoryPanel"); _screen_button("NEWS", "NewsPanel")
 
 func _next_rival() -> void:
     if parent.rivals != null and not parent.rivals.rivals.is_empty(): parent.select_rival((int(parent.selected_rival)+1) % parent.rivals.rivals.size())
