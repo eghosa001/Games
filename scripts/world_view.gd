@@ -80,7 +80,8 @@ func _stat(x: float, y: float, label: String, value: String) -> void:
     draw_string(ThemeDB.fallback_font, Vector2(x + 125, y), value, HORIZONTAL_ALIGNMENT_LEFT, 90, 12, Color("c2d1d2"))
 
 func _draw_regions(w: float, h: float) -> void:
-    var controller = game.get_node_or_null("RegionController")
+    # RegionController is a world-owned system, not a direct child of Renew.
+    var controller = game.get_node_or_null("World/RegionController")
     if controller == null:
         return
     var regions = controller.regions
