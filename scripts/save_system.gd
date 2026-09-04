@@ -7,6 +7,7 @@ class_name RenewSaveSystem
 const SAVE_PATH := "user://renew_save.json"
 const BACKUP_PATH := "user://renew_save.backup.json"
 const TEMP_PATH := "user://renew_save.tmp.json"
+const BACKUP_TEMP_PATH := "user://renew_save.backup.tmp.json"
 const CURRENT_VERSION := 8
 
 static func save_game(_state: Dictionary) -> bool:
@@ -22,21 +23,35 @@ static func save_game(_state: Dictionary) -> bool:
     temp.store_string(json)
     temp.flush()
     temp = null
-    if FileAccess.file_exists(SAVE_PATH):
-        if FileAccess.file_exists(BACKUP_PATH):
-            var remove_backup_error := DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP_PATH))
-            if remove_backup_error != OK:
+
+    # Prepare the old primary as a temporary backup first. Never delete the
+    # last known-good backup before the new primary is safely installed.
+    var had_primary := FileAccess.file_exists(SAVE_PATH)
+    if had_primary:
+        if FileAccess.file_exists(BACKUP_TEMP_PATH):
+            var stale_backup_temp_error := DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP_TEMP_PATH))
+            if stale_backup_temp_error != OK:
                 return false
-        var backup_error := DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(BACKUP_PATH))
-        if backup_error != OK:
+        var backup_temp_error := DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(BACKUP_TEMP_PATH))
+        if backup_temp_error != OK:
             return false
-    if FileAccess.file_exists(SAVE_PATH):
+
+    if had_primary:
         var remove_save_error := DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
         if remove_save_error != OK:
             return false
     var rename_error := DirAccess.rename_absolute(ProjectSettings.globalize_path(TEMP_PATH), ProjectSettings.globalize_path(SAVE_PATH))
     if rename_error != OK:
         return false
+
+    if had_primary:
+        if FileAccess.file_exists(BACKUP_PATH):
+            var remove_backup_error := DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP_PATH))
+            if remove_backup_error != OK:
+                return false
+        var install_backup_error := DirAccess.rename_absolute(ProjectSettings.globalize_path(BACKUP_TEMP_PATH), ProjectSettings.globalize_path(BACKUP_PATH))
+        if install_backup_error != OK:
+            return false
     return true
 
 static func load_game() -> Dictionary:
