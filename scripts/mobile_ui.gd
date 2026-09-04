@@ -26,10 +26,7 @@ func _initialize() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
     if parent == null: return
     root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    _layout_responsive()
-    _refresh()
-    last_seen_day = int(parent.day)
-    _seed_milestones()
+    _layout_responsive(); _refresh(); last_seen_day = int(parent.day); _seed_milestones()
     if not get_viewport().size_changed.is_connected(_layout_responsive): get_viewport().size_changed.connect(_layout_responsive)
     _update_panel_visibility()
 
@@ -37,8 +34,7 @@ func _process(delta: float) -> void:
     if parent == null: return
     status_label.text = "$%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day)]
     _update_goal_label(); _detect_milestones()
-    if int(parent.day) != last_seen_day:
-        last_seen_day = int(parent.day); _show_day_report()
+    if int(parent.day) != last_seen_day: last_seen_day = int(parent.day); _show_day_report()
     if feedback_timer > 0.0:
         feedback_timer -= delta
         if feedback_timer <= 0.0: feedback_panel.hide()
@@ -64,13 +60,9 @@ func _layout_responsive() -> void:
         var b := child as Button
         if b != null: b.custom_minimum_size = Vector2(maxf(70.0, (w - 48.0) / 4.0), 44)
     if narrow:
-        status_label.position = Vector2(12, 60); status_label.size = Vector2(w - 24.0, 30); status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-        action_scroll.position = Vector2(12, 94); action_scroll.size = Vector2(w - 24.0, 150); actions.columns = 2
-        feedback_panel.position = Vector2(12, 252); feedback_panel.size = Vector2(w - 24.0, 96); feedback_label.size = Vector2(w - 56.0, 76); goal_label.position = Vector2(12, 354); goal_label.size = Vector2(w - 24.0, 58)
+        status_label.position = Vector2(12, 60); status_label.size = Vector2(w - 24.0, 30); status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT; action_scroll.position = Vector2(12, 94); action_scroll.size = Vector2(w - 24.0, 150); actions.columns = 2; feedback_panel.position = Vector2(12, 252); feedback_panel.size = Vector2(w - 24.0, 96); feedback_label.size = Vector2(w - 56.0, 76); goal_label.position = Vector2(12, 354); goal_label.size = Vector2(w - 24.0, 58)
     else:
-        status_label.position = Vector2(maxf(730.0, w - 520.0), 17); status_label.size = Vector2(minf(500.0, w - 742.0), 44); status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-        action_scroll.position = Vector2(18, 72); action_scroll.size = Vector2(w - 36.0, 160); actions.columns = 3
-        feedback_panel.position = Vector2(24, 245); feedback_panel.size = Vector2(minf(720.0, w - 48.0), 92); feedback_label.size = Vector2(feedback_panel.size.x - 32.0, 72); goal_label.position = Vector2(24, 348); goal_label.size = Vector2(minf(900.0, w - 48.0), 48)
+        status_label.position = Vector2(maxf(730.0, w - 520.0), 17); status_label.size = Vector2(minf(500.0, w - 742.0), 44); status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT; action_scroll.position = Vector2(18, 72); action_scroll.size = Vector2(w - 36.0, 160); actions.columns = 3; feedback_panel.position = Vector2(24, 245); feedback_panel.size = Vector2(minf(720.0, w - 48.0), 92); feedback_label.size = Vector2(feedback_panel.size.x - 32.0, 72); goal_label.position = Vector2(24, 348); goal_label.size = Vector2(minf(900.0, w - 48.0), 48)
 
 func _set_tab(index: int) -> void:
     active_tab = clampi(index, 0, tab_names.size() - 1); action_scroll.scroll_vertical = 0; _refresh(); _show_feedback("TAB: %s\nChoose an action below." % tab_names[active_tab]); _update_panel_visibility()
@@ -78,14 +70,12 @@ func _set_tab(index: int) -> void:
 func _button(text: String, callback: Callable) -> void:
     if not callback.is_valid(): return
     var b := Button.new(); b.text = text; b.custom_minimum_size = Vector2(225, 48); b.focus_mode = Control.FOCUS_NONE; b.mouse_filter = Control.MOUSE_FILTER_STOP; b.pressed.connect(_run_action.bind(text, callback)); actions.add_child(b)
-
 func _button_if_method(text: String, node: Node, method_name: String) -> void:
     if node != null and node.has_method(method_name): _button(text, Callable(node, method_name))
 
 func _run_action(label: String, callback: Callable) -> void:
     if parent == null or not callback.is_valid(): _show_feedback("%s\nAction is unavailable." % label); return
-    var before_cash := int(parent.cash); var before_rep := int(parent.reputation); var before_day := int(parent.day); var before_goods := int(parent.finished_goods); var before_message := String(parent.message)
-    var result: Variant = callback.call(); var message := ""
+    var before_cash := int(parent.cash); var before_rep := int(parent.reputation); var before_day := int(parent.day); var before_goods := int(parent.finished_goods); var before_message := String(parent.message); var result: Variant = callback.call(); var message := ""
     if result is Dictionary and result.has("message"): message = String(result["message"])
     if message.is_empty() and String(parent.message) != before_message: message = String(parent.message)
     if message.is_empty(): message = "%s completed." % label
@@ -106,21 +96,19 @@ func _set_rendered_visible(node: Node, value: bool) -> void:
         for child in node.get_children(): _set_rendered_visible(child, value)
 
 func _update_panel_visibility() -> void:
-    var ui := get_parent(); var renew := get_tree().root.get_node_or_null("Renew")
-    var panel_map := {"HeadquartersPanel":0,"HistoryPanel":2,"TechnologyPanel":2,"AlliancePanel":2,"ContractPanel":1,"MarketPanel":1,"CustomerPanel":1,"CollectionPanel":3,"LiveOpsPanel":3,"NewsPanel":3,"EmployeePanel":1}
+    var ui := get_parent(); var renew := get_tree().root.get_node_or_null("Renew"); var panel_map := {"HeadquartersPanel":0,"HistoryPanel":2,"TechnologyPanel":2,"AlliancePanel":2,"ContractPanel":1,"MarketPanel":1,"CustomerPanel":1,"CollectionPanel":3,"LiveOpsPanel":3,"NewsPanel":3,"EmployeePanel":1}
     if ui != null:
         for child in ui.get_children():
             if panel_map.has(child.name): _set_rendered_visible(child, int(panel_map[child.name]) == active_tab)
     var diplomacy := get_tree().root.get_node_or_null("RenewDiplomacyUI")
     if diplomacy is CanvasItem: diplomacy.visible = active_tab == 2
     if renew != null:
-        var customer := renew.get_node_or_null("CustomerSegmentsUI")
-        if customer is CanvasItem: customer.visible = active_tab == 1
+        var customer := renew.get_node_or_null("CustomerSegmentsUI"); if customer is CanvasItem: customer.visible = active_tab == 1
         var world := renew.get_node_or_null("World")
         if world != null:
-            var renderer := world.get_node_or_null("MainRenderer"); if renderer is CanvasItem: renderer.hide()
             var world_view := world.get_node_or_null("WorldView"); if world_view is CanvasItem: world_view.visible = active_tab == 3
             var property_visual := world.get_node_or_null("PropertyVisual"); if property_visual is CanvasItem: property_visual.visible = active_tab == 0
+            var renderer := world.get_node_or_null("MainRenderer"); if renderer is CanvasItem: renderer.hide()
 
 func _clear_actions() -> void:
     for child in actions.get_children(): child.queue_free()
@@ -135,13 +123,10 @@ func _refresh() -> void:
             _button("BUY INPUTS", parent.buy_inputs); _button("PRODUCE", parent.produce_goods); _button("HIRE", parent.hire_employee); _button("UPGRADE", parent.upgrade_business); _button("MARKETING", parent.marketing_campaign); _button("PRICE", parent.change_price); _button("SUPPLIER", parent.cycle_supplier); _button("CONTRACT", parent.sign_contract); _button("END DAY", parent.advance_day)
         2:
             _button("NEXT RIVAL", _next_rival); _button("NEXT ASSET", _next_asset); _button("EXPANSION", parent.buy_expansion); _button("UPGRADE ASSET", parent.upgrade_expansion); _button("ALLIANCE", parent.make_alliance_offer); _button("IMPROVE RELATION", parent.improve_alliance); _button("SUPPLY DEAL", parent.propose_supply_deal); _button("CUSTOMER DEAL", parent.propose_customer_partnership); _button("ACQUIRE ASSET", parent.negotiate_selected_acquisition); _button("UPGRADE TRANSPORT", parent.upgrade_transport); _button("LOAN", parent.take_loan); _button("REPAY LOAN", parent.repay_loan)
-            var corporate := get_node_or_null("../Corporate")
-            _button_if_method("CORPORATE STATUS", corporate, "show_status"); _button_if_method("RAISE CAPITAL", corporate, "raise_capital"); _button_if_method("BUY BACK SHARES", corporate, "buyback_shares"); _button_if_method("DIVIDEND", corporate, "pay_dividend"); _button_if_method("DEFENSE", corporate, "strengthen_defense"); _button_if_method("ALLY DEFENSE", corporate, "strategic_ally_defense"); _button_if_method("BOARD INFLUENCE", corporate, "influence_board"); _button_if_method("HOSTILE TAKEOVER", corporate, "hostile_takeover"); _button("END DAY", parent.advance_day)
+            var corporate := get_node_or_null("../../World/Corporate"); _button_if_method("CORPORATE STATUS", corporate, "show_status"); _button_if_method("RAISE CAPITAL", corporate, "raise_capital"); _button_if_method("BUY BACK SHARES", corporate, "buyback_shares"); _button_if_method("DIVIDEND", corporate, "pay_dividend"); _button_if_method("DEFENSE", corporate, "strengthen_defense"); _button_if_method("ALLY DEFENSE", corporate, "strategic_ally_defense"); _button_if_method("BOARD INFLUENCE", corporate, "influence_board"); _button_if_method("HOSTILE TAKEOVER", corporate, "hostile_takeover"); _button("END DAY", parent.advance_day)
         3:
-            var region := get_node_or_null("../RegionController")
-            _button_if_method("ESTABLISH REGION", region, "establish_region"); _button_if_method("INFRASTRUCTURE", region, "upgrade_infrastructure"); _button_if_method("TRADE CORRIDOR", region, "establish_trade_route"); _button_if_method("DISPATCH GOODS", region, "dispatch_goods")
-            var missions := get_node_or_null("../WorldMissions")
-            _button_if_method("TAKE OPPORTUNITY", missions, "choose_a"); _button_if_method("DECLINE OPPORTUNITY", missions, "choose_b"); _button("DISTRICT", _next_district); _button("SAVE GAME", parent.save_game); _button("LOAD GAME", parent.load_game); _button("END DAY", parent.advance_day)
+            var region := get_node_or_null("../../World/RegionController"); _button_if_method("ESTABLISH REGION", region, "establish_region"); _button_if_method("INFRASTRUCTURE", region, "upgrade_infrastructure"); _button_if_method("TRADE CORRIDOR", region, "establish_trade_route"); _button_if_method("DISPATCH GOODS", region, "dispatch_goods")
+            var missions := get_node_or_null("../../World/WorldMissions"); _button_if_method("TAKE OPPORTUNITY", missions, "choose_a"); _button_if_method("DECLINE OPPORTUNITY", missions, "choose_b"); _button("DISTRICT", _next_district); _button("SAVE GAME", parent.save_game); _button("LOAD GAME", parent.load_game); _button("END DAY", parent.advance_day)
 
 func _next_rival() -> void:
     if parent.rivals != null and not parent.rivals.rivals.is_empty(): parent.select_rival((int(parent.selected_rival)+1) % parent.rivals.rivals.size())
