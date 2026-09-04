@@ -15,6 +15,35 @@ func initialize() -> void:
     expansion.unlock_from_reputation(reputation)
     districts.update_unlocks(reputation)
 
+func capture_state() -> Dictionary:
+    return {
+        "system_version": 1,
+        "properties": expansion.properties.duplicate(true),
+        "resource_sites": expansion.resource_sites.duplicate(true),
+        "day": expansion.day,
+        "cash": expansion.cash,
+        "reputation": expansion.reputation,
+        "population": expansion.population,
+        "restored_count": expansion.restored_count,
+        "management_level": expansion.management_level,
+        "management_overhead": expansion.management_overhead,
+        "selected_index": expansion.selected_index
+    }
+
+func restore_state(snapshot: Dictionary) -> void:
+    if snapshot.is_empty(): return
+    if snapshot.get("properties") is Array: expansion.properties = snapshot["properties"].duplicate(true)
+    if snapshot.get("resource_sites") is Array: expansion.resource_sites = snapshot["resource_sites"].duplicate(true)
+    expansion.day = int(snapshot.get("day", expansion.day))
+    expansion.cash = int(snapshot.get("cash", expansion.cash))
+    expansion.reputation = int(snapshot.get("reputation", expansion.reputation))
+    expansion.population = int(snapshot.get("population", expansion.population))
+    expansion.restored_count = int(snapshot.get("restored_count", expansion.restored_count))
+    expansion.management_level = int(snapshot.get("management_level", expansion.management_level))
+    expansion.management_overhead = int(snapshot.get("management_overhead", expansion.management_overhead))
+    expansion.selected_index = int(snapshot.get("selected_index", expansion.selected_index))
+    expansion._normalize_all()
+
 func select_expansion(index: int) -> void:
     if index < 0 or index >= expansion.properties.size(): return
     state_adapter.set_value("branches", "selected_expansion", index)
