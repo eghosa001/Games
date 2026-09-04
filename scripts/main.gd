@@ -182,8 +182,6 @@ func _ready():
     command_system = GameplayCommandSystem.new()
     add_child(command_system)
     command_system.initialize()
-    var customer_ui = preload("res://scripts/customer_segments_ui.gd").new()
-    add_child(customer_ui)
     refresh_ui()
 
 func _process(_delta):
