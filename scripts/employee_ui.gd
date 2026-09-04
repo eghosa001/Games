@@ -1,8 +1,8 @@
 extends CanvasLayer
 class_name RenewEmployeeUI
 
-# Phase 38: employee presentation reads canonical GameState and delegates all
-# mutations to the EmployeeCommandSystem through GameplayCommandSystem.
+# Employee presentation reads canonical GameState and delegates mutations to
+# EmployeeCommandSystem through GameplayCommandSystem, including training costs.
 var panel: Panel
 var employee_list: VBoxContainer
 var detail_label: Label
@@ -77,9 +77,11 @@ func _add_action(parent: GridContainer, text: String, action: String) -> void:
 func _refresh() -> void:
     if panel == null:
         return
-    var roster: Variant = _roster()
+    var roster: Array = _roster()
     if selected_id.is_empty() and not roster.is_empty():
         selected_id = str(roster[0].get("id", ""))
+    if not selected_id.is_empty() and _find_employee(roster, selected_id).is_empty():
+        selected_id = str(roster[0].get("id", "")) if not roster.is_empty() else ""
     _rebuild_list(roster)
     _update_details(roster)
 
@@ -96,12 +98,14 @@ func _rebuild_list(roster: Array) -> void:
         button.pressed.connect(_select.bind(str(employee.get("id", ""))))
         employee_list.add_child(button)
 
+func _find_employee(roster: Array, employee_id: String) -> Dictionary:
+    for employee in roster:
+        if str(employee.get("id", "")) == employee_id:
+            return employee
+    return {}
+
 func _update_details(roster: Array) -> void:
-    var employee: Variant = {}
-    for candidate in roster:
-        if str(candidate.get("id", "")) == selected_id:
-            employee = candidate
-            break
+    var employee: Dictionary = _find_employee(roster, selected_id)
     if employee.is_empty():
         detail_label.text = "No employee selected."
         return
@@ -119,7 +123,7 @@ func _action(action: String) -> void:
     if command == null:
         return
     match action:
-        "train": command.employee_system.train_employee(selected_id, int(_state_value("player", "day", 1)), 900)
+        "train": command.train_employee(selected_id)
         "promote": command.promote_employee(selected_id)
         "assign": command.assign_employee(selected_id, "factory_001")
         "transfer": command.assign_employee(selected_id, "regional_001")
