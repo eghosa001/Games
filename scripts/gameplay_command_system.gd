@@ -55,10 +55,16 @@ func take_loan()->void:finance_system.take_loan()
 func repay_loan()->void:finance_system.repay_loan()
 func research_technology(id:String)->void:
     if technology_system==null:return
+    if not bool(_state_value("businesses","business_open",false)):
+        _set_state("company","message","Open an operating business before researching technology.")
+        return
     if not technology_system.research(id):return
     _simulate_elapsed_days(int(technology_system.get_last_research_days()))
 func research_next_technology()->void:
     if technology_system==null:return
+    if not bool(_state_value("businesses","business_open",false)):
+        _set_state("company","message","Open an operating business before researching technology.")
+        return
     if not technology_system.research_next():return
     _simulate_elapsed_days(int(technology_system.get_last_research_days()))
 func _simulate_elapsed_days(days:int)->bool:
