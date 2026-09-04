@@ -4,6 +4,7 @@ class_name RenewInfrastructureSystem
 ## Physical infrastructure layer: construction, capacity, maintenance, ownership,
 ## utilization, location, upgrades and disruptions for regional assets.
 
+const DomainSystem = preload("res://scripts/domain_system.gd")
 const ROAD := "road"
 const RAILWAY := "railway"
 const PORT := "port"
@@ -22,6 +23,7 @@ var assets: Dictionary = {}
 var next_id: Variant = 1
 var events: Array = []
 var last_day: Variant = 0
+var state_adapter = DomainSystem.new()
 
 var base_specs: Variant = {
     ROAD: {"name":"Road Network","cost":18000,"capacity":80.0,"maintenance":180,"build_days":2,"upgrade_cost":14000,"upgrade_capacity":45.0},
@@ -33,6 +35,9 @@ var base_specs: Variant = {
     INDUSTRIAL_ZONE: {"name":"Industrial Zone","cost":85000,"capacity":300.0,"maintenance":900,"build_days":6,"upgrade_cost":62000,"upgrade_capacity":150.0},
     TECHNOLOGY_PARK: {"name":"Technology Park","cost":125000,"capacity":220.0,"maintenance":1050,"build_days":8,"upgrade_cost":95000,"upgrade_capacity":110.0}
 }
+
+func _ready() -> void:
+    add_child(state_adapter)
 
 func _process(_delta: float) -> void:
     var tree: Variant = Engine.get_main_loop()
@@ -93,6 +98,8 @@ func repair(asset_id: String, owner_id: String, cash: int, day: int) -> Dictiona
     return {"ok":true,"cost":cost,"message":"%s repaired and operational." % asset["name"]}
 
 func process_day(day: int) -> Dictionary:
+    if day <= int(last_day):
+        return {"maintenance":0,"completed":0,"recovered":0,"disrupted":0,"already_processed":true}
     var maintenance_due: Variant = 0; var completed := 0; var recovered := 0; var disrupted := 0
     for id in assets.keys():
         var asset: Dictionary = assets[id]
@@ -108,12 +115,19 @@ func process_day(day: int) -> Dictionary:
             asset["utilization"] = utilization
             if day > int(asset.get("created_day",day)) and day % 23 == (int(str(id).replace("infra_","")) % 23):
                 asset["status"] = DISRUPTED; asset["disruption_until"] = day + 2; asset["disruption_reason"] = "regional infrastructure incident"; disrupted += 1
-                _event(day, "%s suffered a regional infrastructure incident." % asset["name"])
+                _event(day, "%s suffered a regional infrastructure incident." % [asset["name"]])
             else:
                 maintenance_due += int(round(float(asset.get("maintenance",0)) * (0.75 + utilization * 0.50)))
         assets[id] = asset
     last_day = day
-    return {"maintenance":maintenance_due,"completed":completed,"recovered":recovered,"disrupted":disrupted}
+    var maintenance_spend := {"ok":true,"amount":0}
+    if int(maintenance_due) > 0:
+        maintenance_spend = state_adapter.spend(int(maintenance_due), "infrastructure maintenance")
+        if bool(maintenance_spend.get("ok", false)):
+            _event(day, "Infrastructure maintenance paid: $%s." % _money(int(maintenance_due)))
+        else:
+            _event(day, "Infrastructure maintenance deferred: %s." % str(maintenance_spend.get("message", "insufficient funds")))
+    return {"maintenance":maintenance_due,"maintenance_spend":maintenance_spend,"completed":completed,"recovered":recovered,"disrupted":disrupted}
 
 func maintenance_cost(_day: int = -1) -> int:
     var total: Variant = 0
