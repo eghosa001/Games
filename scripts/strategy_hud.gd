@@ -34,15 +34,11 @@ func _layout_responsive() -> void:
     var w: Variant = maxf(root.size.x, 320.0)
     var h: Variant = maxf(root.size.y, 480.0)
     if w < 700.0:
-        # MobileUI reserves the lower strip for navigation/actions. This slot
-        # sits between the goal area and that strip without covering buttons.
         panel.position = Vector2(12, minf(418.0, h - 150.0))
         panel.size = Vector2(w - 24.0, 86.0)
         label.size = Vector2(panel.size.x - 28.0, panel.size.y - 20.0)
         label.add_theme_font_size_override("font_size", 11)
     else:
-        # Keep the dashboard in the lower-right activity area rather than
-        # covering the restoration, business, or action panels.
         panel.position = Vector2(maxf(845.0, w - 435.0), minf(594.0, h - 100.0))
         panel.size = Vector2(minf(410.0, w - panel.position.x - 18.0), 82.0)
         label.size = Vector2(panel.size.x - 28.0, 62.0)
@@ -59,7 +55,7 @@ func _process(_delta: float) -> void:
     var goal_text: Variant = "NEXT GOAL: build your company"
     if goals != null and goals.has_method("current_goal"):
         var goal: Dictionary = goals.current_goal()
-        var total_goals: int = goals.goals.size() if "goals" in goals else 0
+        var total_goals: int = goals.goals.size()
         var completed: int = goals.completed_count() if goals.has_method("completed_count") else 0
         goal_text = "GOAL %d/%d: %s — %s" % [completed, total_goals, String(goal.get("title", "")), String(goal.get("text", ""))]
     label.text = market_text + "\n" + goal_text
