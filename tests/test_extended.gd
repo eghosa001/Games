@@ -119,6 +119,27 @@ func run() -> void:
         check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Technology cash mirror matches finance ledger")
         check(bool(state.get_value("technology", "technology", {}).get("efficient_production", false)), "Technology unlock persists in GameState")
 
+    # Business transactions must also use the same finance authority.
+    state.set_value("economy", "cash", 25000)
+    state.set_value("properties", "owned", true)
+    state.set_value("properties", "stage", "Operational")
+    state.set_value("properties", "catalog", [{"id":"property_test","name":"Test Property","type":"Warehouse"}])
+    state.set_value("properties", "selected_property", 0)
+    state.set_value("businesses", "business_open", false)
+    state.set_value("businesses", "business_purpose", "")
+    var business = game.command_system.business_system
+    business.choose_business_purpose(0)
+    check(bool(state.get_value("businesses", "business_open", false)), "Business launch succeeds")
+    check(int(finance.get("cash")) == 22500, "Business launch charges canonical finance")
+    check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Business launch cash mirror matches finance")
+    var business_cash_before_upgrade := int(finance.get("cash"))
+    business.upgrade_business()
+    check(int(finance.get("cash")) == business_cash_before_upgrade - 4500, "Business upgrade charges canonical finance")
+    var business_cash_before_marketing := int(finance.get("cash"))
+    business.marketing_campaign()
+    check(int(finance.get("cash")) == business_cash_before_marketing - 1800, "Marketing charges canonical finance")
+    check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Business transactions remain synchronized")
+
     game.queue_free()
     await process_frame
 
