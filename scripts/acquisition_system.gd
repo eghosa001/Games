@@ -4,6 +4,7 @@ extends Node
 ## Acquisitions are asset/control transactions, not simple cash transfers.
 ## Mergers resolve the operating and corporate state of both organizations.
 
+const DomainSystem = preload("res://scripts/domain_system.gd")
 const TYPE_ASSET_PURCHASE := "asset_purchase"
 const TYPE_NEGOTIATED_SALE := "negotiated_sale"
 const TYPE_AUCTION := "auction"
@@ -15,6 +16,10 @@ var acquisitions: Array = []
 var mergers: Array = []
 var targets: Dictionary = {}
 var next_id: Variant = 1
+var state_adapter: Variant = DomainSystem.new()
+
+func _ready() -> void:
+    add_child(state_adapter)
 
 func register_target(target_id: String, target_name: String = "", assets: Array = [], debt: float = 0.0, employees: int = 0, contracts: Array = [], liabilities: float = 0.0, reputation: float = 0.0, hidden_risks: Array = [], extra_state: Dictionary = {}) -> Dictionary:
     if target_id.is_empty(): return {"ok": false, "error": "target_id_required"}
@@ -39,6 +44,9 @@ func acquire_asset(acquirer_id: String, target_id: String, asset_index: int, pri
     var target: Variant = targets.get(target_id, {})
     if target.is_empty() or asset_index < 0 or asset_index >= target.get("assets", []).size() or price < 0.0: return {"ok": false, "error": "invalid_asset_purchase"}
     if cash_available < price: return {"ok": false, "error": "insufficient_cash"}
+    if price > 0.0:
+        var spend := state_adapter.spend(int(ceil(price)), "asset acquisition")
+        if not bool(spend.get("ok", false)): return {"ok": false, "error": "insufficient_cash", "cash": int(state_adapter.get_value("economy", "cash", 0))}
     var asset = target["assets"][asset_index]
     target["assets"].remove_at(asset_index)
     targets[target_id] = target
@@ -51,6 +59,9 @@ func acquire_company(acquirer_id: String, target_id: String, price: float, metho
     if not [TYPE_NEGOTIATED_SALE, TYPE_AUCTION, TYPE_HOSTILE, TYPE_SHARE_ACCUMULATION].has(method): return {"ok": false, "error": "invalid_acquisition_method"}
     var diligence: Variant = due_diligence(target_id)
     var transferred: Variant = {"assets": target.get("assets", []).duplicate(true), "debt_assumed": float(target.get("debt", 0.0)) if assume_debt else 0.0, "liabilities_assumed": float(target.get("liabilities", 0.0)) if assume_liabilities else 0.0, "employees_transferred": int(target.get("employees", 0)) if retain_employees else 0, "contracts_transferred": target.get("contracts", []).duplicate(true) if transfer_contracts else [], "reputation_transfer": float(target.get("reputation", 0.0)) * reputation_transfer, "hidden_risks": target.get("hidden_risks", []).duplicate(true)}
+    if price > 0.0:
+        var spend := state_adapter.spend(int(ceil(price)), "company acquisition: %s" % target_id)
+        if not bool(spend.get("ok", false)): return {"ok": false, "error": "insufficient_cash", "cash": int(state_adapter.get_value("economy", "cash", 0)), "required": int(ceil(price))}
     var result: Variant = _record_transaction(method, acquirer_id, target_id, price, transferred)
     if bool(result.get("ok", false)):
         target["status"] = "acquired"
@@ -83,11 +94,15 @@ func accumulate_shares(acquirer_id: String, target_id: String, shares: float, pr
     if target.is_empty() or shares <= 0.0 or price < 0.0: return {"ok": false, "error": "invalid_share_accumulation"}
     var owners: Dictionary = target.get("owners", {})
     var current: Variant = float(owners.get(acquirer_id, 0.0))
-    owners[acquirer_id] = min(100.0, current + shares)
+    var new_percent: Variant = min(100.0, current + shares)
+    if price > 0.0:
+        var spend := state_adapter.spend(int(ceil(price)), "share accumulation: %s" % target_id)
+        if not bool(spend.get("ok", false)): return {"ok": false, "error": "insufficient_cash", "cash": int(state_adapter.get_value("economy", "cash", 0)), "required": int(ceil(price))}
+    owners[acquirer_id] = new_percent
+    if new_percent >= 50.1: target["status"] = "controlled"
     target["owners"] = owners
-    if owners[acquirer_id] >= 50.1: target["status"] = "controlled"
     targets[target_id] = target
-    return _record_transaction(TYPE_SHARE_ACCUMULATION, acquirer_id, target_id, price, {"shares_percent": shares, "new_control_percent": owners[acquirer_id], "assets": [], "debt_assumed": 0.0, "liabilities_assumed": 0.0, "employees_transferred": 0, "contracts_transferred": [], "reputation_transfer": 0.0, "hidden_risks": []})
+    return _record_transaction(TYPE_SHARE_ACCUMULATION, acquirer_id, target_id, price, {"shares_percent": shares, "new_control_percent": new_percent, "assets": [], "debt_assumed": 0.0, "liabilities_assumed": 0.0, "employees_transferred": 0, "contracts_transferred": [], "reputation_transfer": 0.0, "hidden_risks": []})
 
 ## Comprehensive merger. The target is absorbed into the surviving company while
 ## preserving an auditable resolution of ownership, value, debt and operations.
@@ -99,11 +114,15 @@ func merge_entities(acquirer_id: String, target_id: String, price: float, share_
 
     var diligence: Variant = due_diligence(target_id)
     var valuation_data: Variant = _resolve_valuation(target, price, terms)
-    var ownership_result: Variant = _resolve_merger_ownership(acquirer_id, target_id, target, share_exchange, terms)
-    if not bool(ownership_result.get("ok", false)): return ownership_result
-
+    # Finance is settled before ownership mutation. This prevents a failed
+    # affordability check from leaving the ownership ledger partially changed.
     var finance_result: Variant = _resolve_merger_finance(target, price, terms)
     if not bool(finance_result.get("ok", false)): return finance_result
+    var ownership_result: Variant = _resolve_merger_ownership(acquirer_id, target_id, target, share_exchange, terms)
+    if not bool(ownership_result.get("ok", false)):
+        _rollback_merger_finance(finance_result)
+        return ownership_result
+
     var employee_result: Variant = _resolve_merger_employees(target, terms)
     var management_result: Variant = _resolve_management(target, terms)
     var property_result: Variant = _combine_collection("properties", target, terms)
@@ -200,7 +219,10 @@ func _resolve_merger_ownership(acquirer_id: String, target_id: String, target: D
                 var ordinary: Variant = int(classes.get(ownership.VOTE_ORDINARY, 0))
                 if ordinary > 0:
                     var amount: Variant = int(round(float(ordinary) * pct / 100.0))
-                    if amount > 0: ownership.transfer_shares(target_entity, owner, surviving_entity, amount, ownership.VOTE_ORDINARY, "merger_absorption")
+                    if amount > 0:
+                        var transfer_result: Dictionary = ownership.transfer_shares(target_entity, owner, surviving_entity, amount, ownership.VOTE_ORDINARY, "merger_absorption")
+                        if not bool(transfer_result.get("ok", false)):
+                            return {"ok": false, "error": "ownership_share_transfer_failed", "owner": owner, "amount": amount, "details": transfer_result}
         return {"ok": true, "surviving_entity": surviving_entity, "target_entity": target_entity, "share_exchange_percent": transferred_percent, "control_survives": true}
     return {"ok": true, "surviving_entity": surviving_entity, "target_entity": target_entity, "share_exchange_percent": transferred_percent, "control_survives": true, "ledger": "ownership system unavailable; merger resolution recorded"}
 
@@ -210,8 +232,9 @@ func _resolve_merger_finance(target: Dictionary, price: float, terms: Dictionary
     var debt_assumed: Variant = float(target.get("debt", 0.0)) if bool(terms.get("assume_debt", true)) else 0.0
     var liabilities_assumed: Variant = float(target.get("liabilities", 0.0)) if bool(terms.get("assume_liabilities", true)) else 0.0
     var consideration: Variant = int(max(0.0, price))
-    if consideration > 0 and not finance.can_afford(consideration): return {"ok": false, "error": "insufficient_cash_for_merger", "required": consideration, "cash": finance.available_cash()}
-    if consideration > 0: finance.spend(consideration, "merger consideration")
+    if consideration > 0:
+        var spend_result: Dictionary = state_adapter.spend(consideration, "merger consideration")
+        if not bool(spend_result.get("ok", false)): return {"ok": false, "error": "insufficient_cash_for_merger", "required": consideration, "cash": finance.available_cash()}
     if debt_assumed > 0.0: finance.debt += int(round(debt_assumed))
     if liabilities_assumed > 0.0: finance.other_liabilities += liabilities_assumed
     var asset_value: Variant = 0.0
@@ -220,13 +243,26 @@ func _resolve_merger_finance(target: Dictionary, price: float, terms: Dictionary
     finance.fixed_assets += asset_value
     return {"ok": true, "cash_consideration": consideration, "debt_assumed": debt_assumed, "liabilities_assumed": liabilities_assumed, "assets_added": asset_value, "cash_after": finance.available_cash(), "debt_after": finance.debt}
 
+func _rollback_merger_finance(finance_result: Dictionary) -> void:
+    var finance = get_node_or_null("/root/RenewFinanceSystem")
+    if finance == null: return
+    var consideration := int(finance_result.get("cash_consideration", 0))
+    var debt_assumed := int(round(float(finance_result.get("debt_assumed", 0.0))))
+    var liabilities_assumed := float(finance_result.get("liabilities_assumed", 0.0))
+    var assets_added := float(finance_result.get("assets_added", 0.0))
+    if consideration > 0:
+        finance.receive(consideration, "merger rollback refund")
+    finance.debt = max(0, finance.debt - debt_assumed)
+    finance.other_liabilities = max(0.0, finance.other_liabilities - liabilities_assumed)
+    finance.fixed_assets = max(0.0, finance.fixed_assets - assets_added)
+
 func _resolve_merger_employees(target: Dictionary, terms: Dictionary) -> Dictionary:
     var employee_system = get_node_or_null("/root/RenewEmployeeSystem")
     var source: Array = target.get("employee_roster", [])
     var count: Variant = int(target.get("employees", source.size()))
     if employee_system == null: return {"retained": count, "source_roster": source.duplicate(true), "policy": str(terms.get("employee_policy", "retain"))}
     var policy: Variant = str(terms.get("employee_policy", "retain"))
-    var retained: Variant = count if policy != "downsize" else int(round(float(count) * float(terms.get("retention_percent", 80.0)) / 100.0))
+    var retained: Variant = count if policy != "downsize" else int(round(float(count) * float(terms.get("retention_percent", 80.0)) / 100.0)
     var added: Variant = 0
     if not source.is_empty() and employee_system.get("employees") is Array:
         for employee in source:
