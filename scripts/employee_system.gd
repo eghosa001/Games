@@ -3,10 +3,10 @@ class_name RenewEmployeeSystem
 
 const SYSTEM_VERSION := 3
 const JAMES_ID := "emp_james_001"
-var employees: Array[Dictionary] = []
-var candidates: Array[Dictionary] = []
-var next_id: Variant = 2
-var history: Array[Dictionary] = []
+var employees: Array = []
+var candidates: Array = []
+var next_id: int = 1
+var history: Array = []
 var _day: Variant = 1
 const FIRST_NAMES := ["David", "Sarah", "Michael", "Grace", "Daniel", "Amaka", "Victor", "Esther", "Samuel", "Ada"]
 const ROLES := ["Technician", "Sales Associate", "Logistics Coordinator", "Craft Worker", "Operations Assistant"]

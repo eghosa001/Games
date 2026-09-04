@@ -27,7 +27,7 @@ const RECIPES := {
 
 const DEFAULT_MACHINES := {"extractor":{"owned":true,"condition":100.0,"capacity":2,"maintenance_due":0,"automation":0},"harvester":{"owned":true,"condition":100.0,"capacity":2,"maintenance_due":0,"automation":0},"processor":{"owned":false,"condition":100.0,"capacity":2,"maintenance_due":0,"automation":0},"factory":{"owned":false,"condition":100.0,"capacity":2,"maintenance_due":0,"automation":0},"fleet":{"owned":false,"condition":100.0,"capacity":3,"maintenance_due":0,"automation":0},"store":{"owned":false,"condition":100.0,"capacity":4,"maintenance_due":0,"automation":0}}
 
-var inventory:Dictionary={}; var finished_goods:int=0; var quality:int=60; var machines:Dictionary=DEFAULT_MACHINES.duplicate(true); var technologies:Dictionary={"extraction":1,"steel_processing":0,"lumber_processing":0,"furniture_manufacturing":0,"appliance_manufacturing":0,"logistics":0,"retail":0}; var utilization:Dictionary={}; var waste:Dictionary={}; var automation:Dictionary={}; var history:Array[Dictionary]=[]; var last_run:Dictionary={}
+var inventory:Dictionary={}; var finished_goods:int=0; var quality:int=60; var machines:Dictionary=DEFAULT_MACHINES.duplicate(true); var technologies:Dictionary={"extraction":1,"steel_processing":0,"lumber_processing":0,"furniture_manufacturing":0,"appliance_manufacturing":0,"logistics":0,"retail":0}; var utilization:Dictionary={}; var waste:Dictionary={}; var automation:Dictionary={}; var history:Array=[]; var last_run:Dictionary={}
 
 func _ready()->void: _ensure_inventory(); _ensure_machine_state()
 func get_product_config(product_id:String="consumer_goods")->Dictionary: return PRODUCT_CONFIG.get(product_id,{}).duplicate(true)

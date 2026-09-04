@@ -7,7 +7,7 @@ const MAX_EVENTS := 5000
 const GAMEPLAY_EVENTS := ["FOUNDING","PROPERTY_ACQUIRED","PROPERTY_RESTORED","BUSINESS_OPENED","FIRST_PRODUCTION","FIRST_SALE","FIRST_PROFIT","EMPLOYEE_HIRED","EMPLOYEE_PROMOTED","CONTRACT_SIGNED","CONTRACT_FULFILLED","TECHNOLOGY_RESEARCHED","ALLIANCE_FORMED","PROJECT_COMPLETED","COMPETITOR_DEFEATED","MAJOR_EVENT"]
 const EVENT_ALIASES := {"employee_milestone":"EMPLOYEE_PROMOTED","employee_promotion":"EMPLOYEE_PROMOTED","employee_hired":"EMPLOYEE_HIRED","property_acquired":"PROPERTY_ACQUIRED","property_restored":"PROPERTY_RESTORED","business_opened":"BUSINESS_OPENED","first_production":"FIRST_PRODUCTION","first_sale":"FIRST_SALE","first_profit":"FIRST_PROFIT","contract_signed":"CONTRACT_SIGNED","contract_fulfilled":"CONTRACT_FULFILLED","technology_researched":"TECHNOLOGY_RESEARCHED","alliance_formed":"ALLIANCE_FORMED","project_completed":"PROJECT_COMPLETED","competitor_defeated":"COMPETITOR_DEFEATED","major_event":"MAJOR_EVENT","founding":"FOUNDING"}
 const TYPES := ["founding","restoration","first_sale","first_profit","employee_milestone","contract","property_acquisition","expansion","resource_acquisition","alliance","acquisition","merger","crisis","bankruptcy","technology","infrastructure","ranking","world_event","investment","corporate_war","milestone","general"]
-var timeline:Array[Dictionary]=[]
+var timeline:Array=[]
 var legacy:Dictionary={"founder":"","company_name":"RENEW","founded_day":1,"notable_events":0,"properties_acquired":0,"expansions":0,"alliances":0,"acquisitions":0,"contracts":0,"crises":0,"employees_milestones":0,"museum_unlocks":[]}
 var _seen_signatures:Dictionary={}
 func _ready()->void:

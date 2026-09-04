@@ -8,7 +8,7 @@ const MAX_ITEMS := 300
 var collections: Dictionary = {}
 var seen: Dictionary = {}
 var active_bonuses: Dictionary = {}
-var events: Array[Dictionary] = []
+var events: Array = []
 var last_day: Variant = -1
 
 const TYPE_BONUSES := {

@@ -14,7 +14,7 @@ const ROLE_MEMBER := "member"
 var alliances: Dictionary = {}
 var member_alliance: Dictionary = {}
 var next_alliance_id: Variant = 1
-var events: Array[Dictionary] = []
+var events: Array = []
 
 func create_alliance(founder_id: String, name: String, treasury: int = 0) -> Dictionary:
     if founder_id.is_empty() or name.strip_edges().is_empty(): return {"ok": false, "message": "Founder and alliance name are required."}

@@ -17,8 +17,8 @@ func _run() -> void:
     var packed: PackedScene = load("res://scenes/Main.tscn") as PackedScene
     if packed == null: fail("Main.tscn could not be loaded"); _finish(); return
     var scene: Node = packed.instantiate()
-    current_scene = scene
     root.add_child(scene)
+    current_scene = scene
     await process_frame
     await process_frame
     var hud: Node = scene.get_node_or_null("UI/MainHUD")
@@ -26,10 +26,10 @@ func _run() -> void:
     var ui_root: Control = hud.get("root") as Control
     if ui_root == null: fail("Mobile HUD root Control is unavailable")
     else:
-        _test_responsive_layout(hud, ui_root)
-        _test_touch_surface(hud)
-        _test_world_tab(hud)
-    _test_gameplay_flow(scene, hud)
+        await _test_responsive_layout(hud, ui_root)
+        await _test_touch_surface(hud)
+        await _test_world_tab(hud)
+    await _test_gameplay_flow(scene, hud)
     _test_save_load()
     await _test_runtime_stability()
     _finish()

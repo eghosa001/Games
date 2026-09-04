@@ -25,7 +25,7 @@ const TREATY_TYPES := [TRADE, SUPPLY, RESEARCH, DEFENSE, NON_AGGRESSION, INVESTM
 
 var treaties: Dictionary = {}
 var next_treaty_id: Variant = 1
-var events: Array[Dictionary] = []
+var events: Array = []
 var party_trust: Dictionary = {}
 
 func propose_treaty(party_a: String, party_b: String, treaty_type: String, terms: Dictionary = {}, duration_days: int = 30) -> Dictionary:

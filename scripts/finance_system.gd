@@ -18,7 +18,7 @@ var loan_payment: int = 0
 var last_sales: int = 0
 var last_profit: int = 0
 var total_profit: int = 0
-var history: Array[Dictionary] = []
+var history: Array = []
 
 # Accrual/accounting state.
 var revenue: float = 0.0
@@ -35,7 +35,7 @@ var other_liabilities: float = 0.0
 var retained_earnings: float = 0.0
 var equity_contributed: float = 0.0
 var financing: Dictionary = {}
-var cash_flow_history: Array[Dictionary] = []
+var cash_flow_history: Array = []
 var credit_rating: String = "BBB"
 var credit_score: float = 70.0
 

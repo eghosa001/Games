@@ -239,12 +239,13 @@ func _layout_responsive() -> void:
         bottom_bar.position = Vector2(0, maxf(0.0, h - 150.0))
         bottom_bar.size = Vector2(w, 150.0)
     var narrow: Variant = w < 700.0
-    var tab_width: Variant = maxf(70.0, (w - 48.0) / 4.0)
+    var tab_width: Variant = maxf(60.0, (w - 48.0) / 4.0)
     tabs.position = Vector2(12, 10)
     tabs.size = Vector2(w - 24.0, 44.0)
     for child in tabs.get_children():
         if child is Button:
             child.custom_minimum_size = Vector2(tab_width, 42)
+            child.add_theme_font_size_override("font_size", 11 if narrow else 14)
     if narrow:
         status_panel.position = Vector2(10, 58)
         status_panel.size = Vector2(w - 20.0, 28.0)
@@ -255,7 +256,7 @@ func _layout_responsive() -> void:
         action_scroll.size = Vector2(w - 20.0, 150)
         actions.columns = 2
         actions.custom_minimum_size = Vector2(w - 20.0, 0)
-        var button_width: Variant = maxf(120.0, (w - 29.0) / 2.0)
+        var button_width: Variant = maxf(100.0, (w - 29.0) / 2.0)
         for child in actions.get_children():
             if child is Button:
                 child.custom_minimum_size = Vector2(button_width, 48)
@@ -274,7 +275,7 @@ func _layout_responsive() -> void:
         action_scroll.position = Vector2(18, 76)
         action_scroll.size = Vector2(w - 36.0, 150)
         actions.columns = 3
-        actions.custom_minimum_size = Vector2(maxf(720.0, w - 36.0), 0)
+        actions.custom_minimum_size = Vector2(w - 36.0, 0)
         for child in actions.get_children():
             if child is Button:
                 child.custom_minimum_size = Vector2(225, 48)

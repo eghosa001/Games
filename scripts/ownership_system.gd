@@ -12,7 +12,7 @@ const VOTE_ORDINARY := "ordinary"
 const VOTE_NON_VOTING := "non_voting"
 
 var entities: Dictionary = {}
-var transaction_log: Array[Dictionary] = []
+var transaction_log: Array = []
 var next_transaction_id: Variant = 1
 
 func register_entity(entity_id: String, entity_type: String = ENTITY_COMPANY, total_shares: int = 1000000, par_value: float = 1.0) -> Dictionary:

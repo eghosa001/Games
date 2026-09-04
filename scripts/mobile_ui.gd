@@ -84,7 +84,7 @@ func _set_tab(index: int) -> void:
     var target: int = clampi(index, 0, tab_names.size() - 1)
     active_tab = target; action_scroll.scroll_vertical = 0; _refresh(); _show_feedback("TAB: %s\nChoose an action below." % tab_names[active_tab])
 func _clear_actions() -> void:
-    for child: Node in actions.get_children(): child.free()
+    for child: Node in actions.get_children(): actions.remove_child(child); child.queue_free()
 func _button(text: String, callback: Callable) -> void:
     var b: Button = Button.new(); b.text = text; b.custom_minimum_size = Vector2(225, 48); b.focus_mode = Control.FOCUS_NONE; b.mouse_filter = Control.MOUSE_FILTER_STOP; b.pressed.connect(_run_action.bind(text, callback)); actions.add_child(b)
 func _run_action(label: String, callback: Callable) -> void:

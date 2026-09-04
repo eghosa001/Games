@@ -46,6 +46,7 @@ gdscript/warnings/inference_on_variant=0
 [rendering]
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
 
 [input]
 action_restore={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":82)]}

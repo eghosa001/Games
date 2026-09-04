@@ -11,8 +11,8 @@ const TYPE_HOSTILE := "hostile_acquisition"
 const TYPE_SHARE_ACCUMULATION := "shareholder_accumulation"
 const TYPE_MERGER := "merger"
 
-var acquisitions: Array[Dictionary] = []
-var mergers: Array[Dictionary] = []
+var acquisitions: Array = []
+var mergers: Array = []
 var targets: Dictionary = {}
 var next_id: Variant = 1
 

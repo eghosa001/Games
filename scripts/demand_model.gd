@@ -15,10 +15,12 @@ func calculate(product:String,player_price:float,competitor_price:float,reputati
     var employee_modifier:float=clampf(employee_productivity,0.45,1.55)
     var relationship_modifier:float=clampf(1.0+alliance_sales*0.45+deal_sales*0.50,0.50,1.90)
     var demand_float:float=float(segment_result.get("raw_demand",0.0))*employee_modifier*relationship_modifier
-    var tech:Node=get_node_or_null("/root/RenewTechnologySystem")
+    var tree=get_tree() if is_inside_tree() else (Engine.get_main_loop() as SceneTree)
+    var tech_root=tree.root if tree!=null else null
+    var tech:Node=tech_root.get_node_or_null("RenewTechnologySystem") if tech_root!=null else null
     var market_multiplier:float=tech.market_demand_multiplier() if tech!=null else 1.0
     var event_multiplier:float=1.0
-    var state:Node=get_node_or_null("/root/RenewGameState")
+    var state:Node=tech_root.get_node_or_null("RenewGameState") if tech_root!=null else null
     if state!=null:
         var event_modifiers:Variant=state.get_value("events","modifiers",{})
         if event_modifiers is Dictionary:event_multiplier=float((event_modifiers as Dictionary).get("demand_multiplier",1.0))
