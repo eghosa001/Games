@@ -23,7 +23,17 @@ var _initializing := true
 func _ready() -> void:
     call_deferred("_initialize")
 
+func _ui_root() -> Node:
+    var game_root := get_tree().root.get_node_or_null("Renew")
+    if game_root == null:
+        return null
+    return game_root.get_node_or_null("UI")
+
 func _initialize() -> void:
+    var ui := _ui_root()
+    if ui == null:
+        call_deferred("_initialize")
+        return
     for node in _screen_nodes():
         _previous_visible[node.name] = _is_node_visible(node)
     _initializing = false
@@ -36,8 +46,11 @@ func _process(_delta: float) -> void:
 
 func _screen_nodes() -> Array[Node]:
     var result: Array[Node] = []
+    var ui := _ui_root()
+    if ui == null:
+        return result
     for screen_name in PRIMARY_SCREEN_NAMES:
-        var node := get_parent().get_node_or_null(screen_name)
+        var node := ui.get_node_or_null(screen_name)
         if node != null:
             result.append(node)
     return result
@@ -99,9 +112,13 @@ func _enforce_single_screen() -> void:
             _previous_visible[node.name] = false
 
 func show_screen(screen_name: String) -> void:
-    var target := get_parent().get_node_or_null(screen_name)
-    if target == null or not PRIMARY_SCREEN_NAMES.has(screen_name):
+    var ui := _ui_root()
+    if ui == null or not PRIMARY_SCREEN_NAMES.has(screen_name):
         push_warning("Unknown primary RENEW screen: %s" % screen_name)
+        return
+    var target := ui.get_node_or_null(screen_name)
+    if target == null:
+        push_warning("Missing primary RENEW screen: %s" % screen_name)
         return
 
     _active_screen = target
