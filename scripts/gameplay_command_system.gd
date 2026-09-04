@@ -79,11 +79,14 @@ func _apply_simulation_state(state:Dictionary)->void:
         if state.has(key):_set_state(map[key][0],map[key][1],state[key])
     if state.get("log_lines",[]) is Array:_set_state("company","log_lines",state["log_lines"].duplicate(true))
 func save_game()->void:
-    _set_state("supply_chain","resource_sites",business_system.supply_chain.warehouse_snapshot());var state=get_node_or_null("/root/RenewGameState");var snapshot=state.capture() if state!=null else {};if competitor_reactions!=null:snapshot["competitor_reactions"]=competitor_reactions.capture_state();_set_state("company","message","Game saved." if SaveSystem.save_game(snapshot) else "Save failed.")
+    _set_state("supply_chain","resource_sites",business_system.supply_chain.warehouse_snapshot())
+    var state=get_node_or_null("/root/RenewGameState")
+    var snapshot=state.capture() if state!=null else {}
+    _set_state("company","message","Game saved." if SaveSystem.save_game(snapshot) else "Save failed.")
 func load_game()->void:
     var snapshot=SaveSystem.load_game();if snapshot.is_empty():_set_state("company","message","No save file found.");return
     var state=get_node_or_null("/root/RenewGameState");if state!=null:state.restore(snapshot)
     var roster=_state_value("employees","roster",[]);if roster is Array:employee_system.employee_system.restore_state({"employees":roster})
     var saved_warehouse=_state_value("supply_chain","resource_sites",{});if saved_warehouse is Dictionary:business_system.supply_chain.restore_state({"warehouse":saved_warehouse})
-    if competitor_reactions!=null:competitor_reactions.set_rivals(relationship_system.rivals);var reaction_snapshot=snapshot.get("competitor_reactions",{});if reaction_snapshot is Dictionary:competitor_reactions.restore_state(reaction_snapshot)
+    if competitor_reactions!=null:competitor_reactions.set_rivals(relationship_system.rivals)
     employee_system.sync_roster();_set_state("company","message","Game loaded.")
