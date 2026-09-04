@@ -93,31 +93,23 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     if not rivals or not economy or not events or not expansion or not districts or not employee_system or not business_system or not finance:
         return {"ok": false, "message": "Simulation dependencies unavailable."}
 
-    # Finance is the authoritative cash/debt ledger. Legacy state mirrors are
-    # synchronized at the boundary so older domain systems can still operate.
     _sync_finance_mirror(state)
 
-    # 1. Employee daily update (includes wage calculation)
     var performance = int(state.get("last_profit", 0))
     var employee_result = employee_system.daily_update(performance)
     for warning in employee_result.get("warnings", []):
         _append_log(state, "STAFF: " + str(warning))
 
-    # 2. Market day update
     economy.end_market_day()
 
-    # 3. Production
     business_system.produce_goods()
     var finished_goods = int(state.get("finished_goods", 0))
     var game_state = _game_state()
     if game_state:
         state["finished_goods"] = int(game_state.get_value("production", "finished_goods", state.get("finished_goods", 0)))
         state["cash"] = int(game_state.get_value("economy", "cash", state.get("cash", 0)))
-        # Production may still use a legacy cash path; bring its resulting
-        # balance back into the authoritative finance ledger before settlement.
         finance.cash = int(state.get("cash", finance.cash))
 
-    # 4. Demand and sales
     var player_price = int(state.get("player_price", 110))
     var rival_price = int(rivals.rivals[0]["price"]) if rivals.rivals.size() > 0 else 120
     var reputation = int(state.get("reputation", 0))
@@ -140,25 +132,20 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     state["finished_goods"] = max(0, finished_goods)
     state["last_units_sold"] = units_sold
 
-    # 5. Contract execution
     var contract_result = _execute_contract(state, finished_goods)
     var contract_income = int(contract_result.get("revenue", 0))
     var contract_penalty = int(contract_result.get("penalty", 0))
     if contract_result.get("ok", false):
         state["finished_goods"] = max(0, int(state["finished_goods"]) - int(contract_result.get("delivered", 0)))
 
-    # 6. Wages and overhead
     var wages = int(employee_system.get_daily_wage_total())
     var capacity_level = int(state.get("capacity_level", 1))
     var administrative_overhead = 650 + capacity_level * 100
 
-    # 7. Operating settlement through the canonical finance ledger.
-    # Contract penalties are operating costs, so they are included in the
-    # same transaction rather than mutating the state cash field directly.
+    # The FinanceSystem owns the operating cash movement. Penalties are
+    # operating costs and therefore belong in the same settlement.
     var settlement = finance.settle_sales(sales, wages, administrative_overhead + contract_penalty, contract_income)
-    var profit = int(settlement.get("profit", 0)) - contract_penalty
-    # settle_sales already deducted the supplied penalty from cash; profit is
-    # reconstructed here only for the gameplay-facing summary/reputation.
+    var profit = int(settlement.get("profit", 0))
     state["last_sales"] = sales + contract_income
     state["last_profit"] = profit
     state["total_profit"] = int(state.get("total_profit", 0)) + profit
@@ -169,7 +156,6 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
         reputation = max(0, reputation - 1)
     state["reputation"] = reputation
 
-    # 8. Daily financing interest and scheduled payment through FinanceSystem.
     var debt_result = finance.settle_debt_day()
     _sync_state_from_finance(state)
     if bool(debt_result.get("missed", false)):
@@ -178,10 +164,8 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     elif int(debt_result.get("interest", 0)) > 0:
         _append_log(state, "BANK: $%s interest charged." % _money(int(debt_result["interest"])))
 
-    # 9. Advance day counter
     state["day"] = int(state.get("day", 1)) + 1
 
-    # 10. Competitor AI
     for news in rivals.daily_update(int(state["day"])):
         _append_log(state, "RIVAL: " + news)
     var ai_player_state = state.duplicate(true)
@@ -190,7 +174,6 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     for news in rivals.strategic_ai_update(int(state["day"]), ai_player_state):
         _append_log(state, "CORPORATE AI: " + news)
 
-    # 11. Dynamic events. All cash changes go through FinanceSystem.
     if int(state["day"]) % 2 == 0:
         var event = events.roll()
         var event_cash = int(event.get("cash", 0))
@@ -199,7 +182,6 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
         state["reputation"] += int(event.get("rep", 0))
         _append_log(state, "EVENT: %s — %s" % [event["title"], event["text"]])
 
-    # 12. Empire expansion. Normalize its net daily result through FinanceSystem.
     var empire = expansion.operate_day()
     var empire_profit = int(empire.get("profit", 0))
     if empire_profit != 0 and not _apply_cash_delta(state, empire_profit, "empire daily operating result"):
@@ -212,7 +194,6 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
 
     state["message"] = "Day %d closed. %d/%d demand sold at $%s; profit $%s; empire profit $%s." % [int(state["day"]), units_sold, customer_demand, _money(player_price), _money(profit), _money(empire_profit)]
 
-    # 13. Production system advance
     var production_system = _production()
     if production_system:
         production_system.advance_day()
@@ -323,8 +304,14 @@ func _finance() -> Node:
 func _game_state() -> Node:
     return get_node_or_null("/root/RenewGameState")
 
-func _economy() -> Node:
-    return get_node_or_null("/root/RenewSimulationSystem")
+func _economy():
+    var scene = get_tree().current_scene
+    if scene == null:
+        return null
+    var command_system = scene.get_node_or_null("GameplayCommandSystem")
+    if command_system != null and command_system.supply_system != null:
+        return command_system.supply_system.economy
+    return null
 
 func _production() -> Node:
     var root = get_tree().root
