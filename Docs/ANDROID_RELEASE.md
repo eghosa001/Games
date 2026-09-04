@@ -16,6 +16,35 @@ The repository now contains a reproducible Android export preset and an Android 
 
 The debug APK is intended for device QA. A signed store/release build still requires a release keystore and final store signing configuration; secrets must never be committed to the repository.
 
+## Build a debug APK locally
+
+Requirements:
+- Godot `4.7.2` executable at the repository root
+- Android SDK with platform `android-35` and build tools installed
+- Godot `4.7.2` export templates installed at `~/.local/share/godot/export_templates/4.7.2.stable`
+
+Set the SDK path and export:
+
+```sh
+export ANDROID_HOME=/path/to/android-sdk
+export ANDROID_SDK_ROOT="$ANDROID_HOME"
+./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --export-debug "Android" build/RENEW-debug.apk
+```
+
+Verify the result:
+
+```sh
+test -s build/RENEW-debug.apk
+sha256sum build/RENEW-debug.apk
+$ANDROID_HOME/build-tools/35.0.1/apksigner verify --verbose build/RENEW-debug.apk
+```
+
+The portable preset intentionally leaves debug keystore fields empty. Godot supplies the debug signing configuration; release keystores belong outside the repository.
+
+## Build through GitHub Actions
+
+Push changes affecting `project.godot`, `export_presets.cfg`, `Assets/`, `scenes/`, or `scripts/` to `main`, or start **RENEW Android Export** manually with `workflow_dispatch`. The workflow installs the Android SDK and matching Godot templates, exports `build/RENEW-debug.apk`, and uploads it as the `RENEW-Android-debug` artifact.
+
 ## Physical-device matrix
 
 ### Low-end Android
