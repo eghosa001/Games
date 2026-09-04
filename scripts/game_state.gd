@@ -25,7 +25,8 @@ func _ensure_defaults() -> void:
         var defaults = DEFAULT_DOMAINS.get(domain, {})
         for key in defaults:
             if not d.has(key):
-                d[key] = defaults[key]
+                var default_value = defaults[key]
+                d[key] = default_value.duplicate(true) if default_value is Dictionary or default_value is Array else default_value
         domains[domain] = d
 
 func get_domain(domain: String) -> Dictionary:
@@ -46,10 +47,7 @@ func set_value(domain: String, key: String, value) -> void:
 
 func capture() -> Dictionary:
     _capture_domain_systems()
-    return {
-        "schema_version": SCHEMA_VERSION,
-        "domains": domains.duplicate(true)
-    }
+    return {"schema_version": SCHEMA_VERSION,"domains": domains.duplicate(true)}
 
 func restore(snapshot: Dictionary) -> bool:
     if snapshot.is_empty() or not snapshot.has("schema_version"):
@@ -67,74 +65,52 @@ func restore(snapshot: Dictionary) -> bool:
 func _capture_domain_systems() -> void:
     var root = get_tree().root
     var history = root.get_node_or_null("RenewHistorySystem")
-    if history and history.has_method("capture_state"):
-        domains["history"]["history_system"] = history.capture_state()
+    if history and history.has_method("capture_state"): domains["history"]["history_system"] = history.capture_state()
     var news = root.get_node_or_null("RenewNewsSystem")
-    if news and news.has_method("capture_state"):
-        domains["news"]["news_system"] = news.capture_state()
+    if news and news.has_method("capture_state"): domains["news"]["news_system"] = news.capture_state()
     var finance = root.get_node_or_null("RenewFinanceSystem")
-    if finance and finance.has_method("capture_state"):
-        domains["finance"]["system"] = finance.capture_state()
+    if finance and finance.has_method("capture_state"): domains["finance"]["system"] = finance.capture_state()
     var production = root.get_node_or_null("RenewProductionSystem")
-    if production and production.has_method("capture_state"):
-        domains["production"]["system"] = production.capture_state()
+    if production and production.has_method("capture_state"): domains["production"]["system"] = production.capture_state()
     var simulation = root.get_node_or_null("RenewSimulationSystem")
-    if simulation and simulation.has_method("capture_state"):
-        domains["analytics"]["simulation_system"] = simulation.capture_state()
+    if simulation and simulation.has_method("capture_state"): domains["analytics"]["simulation_system"] = simulation.capture_state()
     var contracts = root.get_node_or_null("RenewContractSystem")
-    if contracts and contracts.has_method("capture_state"):
-        domains["contracts"]["system"] = contracts.capture_state()
+    if contracts and contracts.has_method("capture_state"): domains["contracts"]["system"] = contracts.capture_state()
     var acquisition = root.get_node_or_null("RenewAcquisitionSystem")
-    if acquisition and acquisition.has_method("capture_state"):
-        domains["acquisition"]["system"] = acquisition.capture_state()
+    if acquisition and acquisition.has_method("capture_state"): domains["acquisition"]["system"] = acquisition.capture_state()
     var bankruptcy = root.get_node_or_null("RenewBankruptcySystem")
-    if bankruptcy and bankruptcy.has_method("capture_state"):
-        domains["bankruptcy"]["system"] = bankruptcy.capture_state()
+    if bankruptcy and bankruptcy.has_method("capture_state"): domains["bankruptcy"]["system"] = bankruptcy.capture_state()
     var infra = root.get_node_or_null("RenewInfrastructureSystem")
-    if infra and infra.has_method("capture_state"):
-        domains["infrastructure"]["system"] = infra.capture_state()
+    if infra and infra.has_method("capture_state"): domains["infrastructure"]["system"] = infra.capture_state()
     var diplomacy = root.get_node_or_null("RenewDiplomacySystem")
-    if diplomacy and diplomacy.has_method("capture_state"):
-        domains["diplomacy"]["system"] = diplomacy.capture_state()
+    if diplomacy and diplomacy.has_method("capture_state"): domains["diplomacy"]["system"] = diplomacy.capture_state()
     var competitor_reactions = root.get_node_or_null("RenewCompetitorReactionSystem")
-    if competitor_reactions and competitor_reactions.has_method("capture_state"):
-        domains["competitors"]["reaction_system"] = competitor_reactions.capture_state()
+    if competitor_reactions and competitor_reactions.has_method("capture_state"): domains["competitors"]["reaction_system"] = competitor_reactions.capture_state()
 
 func _restore_domain_systems() -> void:
     var root = get_tree().root
     var history = root.get_node_or_null("RenewHistorySystem")
-    if history and history.has_method("restore_state") and domains["history"].has("history_system"):
-        history.restore_state(domains["history"]["history_system"])
+    if history and history.has_method("restore_state") and domains["history"].has("history_system"): history.restore_state(domains["history"]["history_system"])
     var news = root.get_node_or_null("RenewNewsSystem")
-    if news and news.has_method("restore_state") and domains["news"].has("news_system"):
-        news.restore_state(domains["news"]["news_system"])
+    if news and news.has_method("restore_state") and domains["news"].has("news_system"): news.restore_state(domains["news"]["news_system"])
     var finance = root.get_node_or_null("RenewFinanceSystem")
-    if finance and finance.has_method("restore_state") and domains["finance"].has("system"):
-        finance.restore_state(domains["finance"]["system"])
+    if finance and finance.has_method("restore_state") and domains["finance"].has("system"): finance.restore_state(domains["finance"]["system"])
     var production = root.get_node_or_null("RenewProductionSystem")
-    if production and production.has_method("restore_state") and domains["production"].has("system"):
-        production.restore_state(domains["production"]["system"])
+    if production and production.has_method("restore_state") and domains["production"].has("system"): production.restore_state(domains["production"]["system"])
     var simulation = root.get_node_or_null("RenewSimulationSystem")
-    if simulation and simulation.has_method("restore_state") and domains["analytics"].has("simulation_system"):
-        simulation.restore_state(domains["analytics"]["simulation_system"])
+    if simulation and simulation.has_method("restore_state") and domains["analytics"].has("simulation_system"): simulation.restore_state(domains["analytics"]["simulation_system"])
     var contracts = root.get_node_or_null("RenewContractSystem")
-    if contracts and contracts.has_method("restore_state") and domains["contracts"].has("system"):
-        contracts.restore_state(domains["contracts"]["system"])
+    if contracts and contracts.has_method("restore_state") and domains["contracts"].has("system"): contracts.restore_state(domains["contracts"]["system"])
     var acquisition = root.get_node_or_null("RenewAcquisitionSystem")
-    if acquisition and acquisition.has_method("restore_state") and domains["acquisition"].has("system"):
-        acquisition.restore_state(domains["acquisition"]["system"])
+    if acquisition and acquisition.has_method("restore_state") and domains["acquisition"].has("system"): acquisition.restore_state(domains["acquisition"]["system"])
     var bankruptcy = root.get_node_or_null("RenewBankruptcySystem")
-    if bankruptcy and bankruptcy.has_method("restore_state") and domains["bankruptcy"].has("system"):
-        bankruptcy.restore_state(domains["bankruptcy"]["system"])
+    if bankruptcy and bankruptcy.has_method("restore_state") and domains["bankruptcy"].has("system"): bankruptcy.restore_state(domains["bankruptcy"]["system"])
     var infra = root.get_node_or_null("RenewInfrastructureSystem")
-    if infra and infra.has_method("restore_state") and domains["infrastructure"].has("system"):
-        infra.restore_state(domains["infrastructure"]["system"])
+    if infra and infra.has_method("restore_state") and domains["infrastructure"].has("system"): infra.restore_state(domains["infrastructure"]["system"])
     var diplomacy = root.get_node_or_null("RenewDiplomacySystem")
-    if diplomacy and diplomacy.has_method("restore_state") and domains["diplomacy"].has("system"):
-        diplomacy.restore_state(domains["diplomacy"]["system"])
+    if diplomacy and diplomacy.has_method("restore_state") and domains["diplomacy"].has("system"): diplomacy.restore_state(domains["diplomacy"]["system"])
     var competitor_reactions = root.get_node_or_null("RenewCompetitorReactionSystem")
-    if competitor_reactions and competitor_reactions.has_method("restore_state") and domains["competitors"].has("reaction_system"):
-        competitor_reactions.restore_state(domains["competitors"]["reaction_system"])
+    if competitor_reactions and competitor_reactions.has_method("restore_state") and domains["competitors"].has("reaction_system"): competitor_reactions.restore_state(domains["competitors"]["reaction_system"])
 
 func clear() -> void:
     domains.clear()
