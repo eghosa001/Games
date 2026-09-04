@@ -1,13 +1,16 @@
 extends Node2D
 
 const Regions = preload("res://scripts/regions.gd")
+const DomainSystem = preload("res://scripts/domain_system.gd")
 var parent
 var regions = Regions.new()
+var state_adapter = DomainSystem.new()
 var message: Variant = ""
 var last_day: Variant = 0
 
 func _ready() -> void:
     parent=get_tree().root.get_node_or_null("Renew")
+    add_child(state_adapter)
     regions.update_unlocks(parent.reputation)
     regions._normalize()
     last_day=parent.day
@@ -42,26 +45,50 @@ func select_region(index:int)->void:
     if result["ok"]: parent._log("REGION: "+message)
 
 func establish_region()->void:
+    var before_presence=regions.player_presence.duplicate(true)
+    var before_reputation=regions.local_reputation.duplicate(true)
     var result=regions.establish(regions.selected,parent.cash,parent.reputation)
     message=result["message"]
     if not result["ok"]: return
-    parent.cash-=int(result["cost"]); parent.reputation+=3
+    var spend=state_adapter.spend(int(result["cost"]),"regional operation establishment")
+    if not bool(spend.get("ok",false)):
+        regions.player_presence=before_presence
+        regions.local_reputation=before_reputation
+        message=str(spend.get("message","Regional establishment payment failed."))
+        return
+    parent.reputation+=3
     parent._log("REGIONAL EXPANSION: "+message+" (-$%s)."%_money(int(result["cost"])))
 
 func upgrade_infrastructure()->void:
+    var before_infrastructure=regions.infrastructure.duplicate(true)
+    var before_reputation=regions.local_reputation.duplicate(true)
     var result=regions.build_infrastructure(regions.selected,parent.cash,parent.reputation)
     message=result["message"]
     if not result["ok"]: return
-    parent.cash-=int(result["cost"]); parent.reputation+=2
+    var spend=state_adapter.spend(int(result["cost"]),"regional infrastructure upgrade")
+    if not bool(spend.get("ok",false)):
+        regions.infrastructure=before_infrastructure
+        regions.local_reputation=before_reputation
+        message=str(spend.get("message","Infrastructure payment failed."))
+        return
+    parent.reputation+=2
     parent._log("REGIONAL INFRASTRUCTURE: "+message+" (-$%s)."%_money(int(result["cost"])))
 
 func establish_trade_route()->void:
     var origin:int=0; var destination:int=regions.selected
     if destination==origin: message="Select an established region other than the starter region."; return
+    var before_routes=regions.trade_routes.duplicate(true)
+    var before_reputation=regions.local_reputation.duplicate(true)
     var result=regions.establish_trade_route(origin,destination,parent.cash,parent.reputation)
     message=result["message"]
     if not result["ok"]: return
-    parent.cash-=int(result["cost"]); parent.reputation+=4
+    var spend=state_adapter.spend(int(result["cost"]),"regional trade corridor")
+    if not bool(spend.get("ok",false)):
+        regions.trade_routes=before_routes
+        regions.local_reputation=before_reputation
+        message=str(spend.get("message","Trade corridor payment failed."))
+        return
+    parent.reputation+=4
     parent._log("TRADE CORRIDOR: "+message+" (-$%s)."%_money(int(result["cost"])))
 
 func dispatch_goods()->void:
@@ -71,8 +98,10 @@ func dispatch_goods()->void:
     if amount<=0: message="Produce goods before dispatching a regional shipment."; return
     var cost:int=int(round(regions.logistics_cost(amount*45.0,origin,destination)))
     if parent.transport_capacity<amount: message="Fleet capacity is too low. Upgrade transport before shipping."; return
-    if parent.cash<cost: message="Regional freight requires $%s."%_money(cost); return
-    parent.cash-=cost; parent.finished_goods-=amount; parent.reputation+=1
+    var spend=state_adapter.spend(cost,"regional freight")
+    if not bool(spend.get("ok",false)): message=str(spend.get("message","Regional freight requires sufficient cash.")); return
+    parent.finished_goods-=amount
+    parent.reputation+=1
     regions.local_reputation[destination] = clamp(float(regions.local_reputation[destination]) + 0.8, -100.0, 100.0)
     parent._log("SHIPMENT: %d goods sent to %s for $%s freight."%[amount,regions.current()["name"],_money(cost)])
     message="Shipment delivered. Regional market is now stocked."
@@ -97,7 +126,9 @@ func branch_income()->int:
 
 func apply_branch_income()->int:
     var income:int=branch_income()
-    if income>0: parent.cash+=income
+    if income<=0: return 0
+    var received=state_adapter.receive(income,"regional operations revenue")
+    if not bool(received.get("ok",false)): return 0
     return income
 
 func _money(value:int)->String: return String.num_int64(value)
