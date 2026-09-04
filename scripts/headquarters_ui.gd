@@ -13,7 +13,7 @@ var area_ids: Array = ["executive_offices", "board_room", "research", "training"
 
 func _ready() -> void:
     system = get_node_or_null("/root/RenewHeadquartersSystem")
-    main = get_parent()
+    main = get_tree().current_scene
     _build_ui()
     _refresh()
 
@@ -45,7 +45,7 @@ func _build_ui() -> void:
     area_button.text = "BUILD / UPGRADE SELECTED AREA"
     area_button.pressed.connect(_build_area)
     box.add_child(area_button)
-    var cycle: Variant = Button.new()
+    var cycle: Button = Button.new()
     cycle.text = "NEXT AREA"
     cycle.pressed.connect(_next_area)
     box.add_child(cycle)
@@ -77,16 +77,17 @@ func _build_area() -> void:
     _refresh()
 
 func _next_area() -> void:
-    var index: Variant = area_ids.find(selected_area)
+    var index: int = area_ids.find(selected_area)
+    if index < 0: index = 0
     selected_area = area_ids[(index + 1) % area_ids.size()]
     _refresh()
 
 func _open_museum() -> void:
-    var museum = get_parent().get_node_or_null("HistoryMuseumUI")
-    if museum != null:
+    var museum = get_tree().root.get_node_or_null("Renew/HistoryPanel")
+    if museum != null and museum.has_method("toggle_archive"):
         museum.toggle_archive()
     elif system != null and system.museum_available():
-        main.message = "Corporate Museum is available with [Y]."
+        main.message = "Corporate Museum is available from the History screen."
     else:
         main.message = "Build the Museum at Corporate Center to open the visual legacy gallery."
 
@@ -106,7 +107,7 @@ func _refresh() -> void:
     museum_button.disabled = system == null or not system.museum_available()
 
 func _built_count() -> int:
-    var count: Variant = 0
+    var count: int = 0
     for area_id in area_ids:
         if system.has_area(area_id): count += 1
     return count
