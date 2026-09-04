@@ -3,13 +3,16 @@ extends Node
 ## Phase 27 — one seasonal LiveOps restoration event.
 ## The special property is intentionally separate from the permanent property
 ## catalog so the seasonal asset cannot be mistaken for a normal acquisition.
+const DomainSystem = preload("res://scripts/domain_system.gd")
 const EVENT_ID := "heritage_restoration_festival"
 const PROPERTY_ID := "heritage_museum_house"
 const PROPERTY := {"id":PROPERTY_ID,"name":"Heritage Museum House","type":"Heritage Property","description":"A historic building opened temporarily for the Heritage Restoration Festival.","value":95000}
 const REQUIREMENTS := {"cleaning":500,"repair":900,"painting":600,"furnishing":700}
 const REWARD := {"decoration":"Heritage Festival Plaque","achievement":"heritage_restorer","museum_item":"Festival Restoration Blueprint"}
+var state_adapter: Variant = DomainSystem.new()
 
 func _ready() -> void:
+    add_child(state_adapter)
     var state=_state()
     if state!=null:
         var seasonal=state.get_value("events","seasonal",{})
@@ -33,9 +36,9 @@ func restore_step(step:String)->Dictionary:
     var progress:Dictionary=seasonal.get("progress",{}).duplicate(true)
     var next=_next_step(progress)
     if next!=step:return {"ok":false,"reason":"step_locked","required_step":next}
-    var cash=int(state.get_value("economy","cash",25000));var cost=int(REQUIREMENTS[step])
-    if cash<cost:return {"ok":false,"reason":"insufficient_cash","cost":cost,"cash":cash}
-    state.set_value("economy","cash",cash-cost)
+    var cost:int= int(REQUIREMENTS[step])
+    var spend:=state_adapter.spend(cost,"seasonal restoration: %s" % step)
+    if not bool(spend.get("ok",false)):return {"ok":false,"reason":"insufficient_cash","cost":cost,"cash":int(state.get_value("economy","cash",0))}
     progress[step]=100
     seasonal["progress"]=progress
     if _all_complete(progress):_complete(state,seasonal)
