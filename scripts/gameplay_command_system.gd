@@ -53,8 +53,24 @@ func sign_contract()->void:contract_system.sign_contract()
 func cancel_active_contract(reason:String="player cancelled")->void:contract_system.cancel_active_contract(reason)
 func take_loan()->void:finance_system.take_loan()
 func repay_loan()->void:finance_system.repay_loan()
-func research_technology(id:String)->void:if technology_system!=null:technology_system.research(id)
-func research_next_technology()->void:if technology_system!=null:technology_system.research_next()
+func research_technology(id:String)->void:
+    if technology_system==null:return
+    if not technology_system.research(id):return
+    _simulate_elapsed_days(int(technology_system.get_last_research_days()))
+func research_next_technology()->void:
+    if technology_system==null:return
+    if not technology_system.research_next():return
+    _simulate_elapsed_days(int(technology_system.get_last_research_days()))
+func _simulate_elapsed_days(days:int)->bool:
+    var count:=max(0,days)
+    for _i in range(count):
+        var before_day:=int(_state_value("player","day",1))
+        advance_day()
+        var after_day:=int(_state_value("player","day",before_day))
+        if after_day <= before_day:
+            _set_state("company","message","Elapsed-day simulation stopped before completing the research period.")
+            return false
+    return true
 func advance_day()->void:
     var simulation=get_node_or_null("/root/RenewSimulationSystem");if simulation==null:_set_state("company","message","SimulationSystem is unavailable.");return
     var context={"economy":supply_system.economy,"rivals":relationship_system.rivals,"events":_events(),"expansion":expansion_system.expansion,"districts":expansion_system.districts,"employee_system":employee_system,"business_system":business_system,"production":business_system.production}
