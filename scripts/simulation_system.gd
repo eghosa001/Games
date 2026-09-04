@@ -142,8 +142,6 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     var capacity_level = int(state.get("capacity_level", 1))
     var administrative_overhead = 650 + capacity_level * 100
 
-    # The FinanceSystem owns the operating cash movement. Penalties are
-    # operating costs and therefore belong in the same settlement.
     var settlement = finance.settle_sales(sales, wages, administrative_overhead + contract_penalty, contract_income)
     var profit = int(settlement.get("profit", 0))
     state["last_sales"] = sales + contract_income
@@ -194,9 +192,9 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
 
     state["message"] = "Day %d closed. %d/%d demand sold at $%s; profit $%s; empire profit $%s." % [int(state["day"]), units_sold, customer_demand, _money(player_price), _money(profit), _money(empire_profit)]
 
-    var production_system = _production()
-    if production_system:
-        production_system.advance_day()
+    var production_system_node = _production()
+    if production_system_node:
+        production_system_node.advance_day()
 
     _sync_state_from_finance(state)
     return {
@@ -314,6 +312,8 @@ func _economy():
     return null
 
 func _production() -> Node:
+    if production_system != null:
+        return production_system
     var root = get_tree().root
     var autoload = root.get_node_or_null("RenewProductionSystem")
     if autoload: return autoload
