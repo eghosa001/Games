@@ -6,6 +6,7 @@ var summary_label: Label
 var contract_list: VBoxContainer
 var detail_label: Label
 var empty_label: Label
+var cancel_button: Button
 var selected_contract_id: Variant = ""
 
 const STATUS_GREEN := Color(0.25, 0.85, 0.45)
@@ -55,6 +56,11 @@ func _build_ui() -> void:
     detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     detail_label.custom_minimum_size = Vector2(0, 100)
     root.add_child(detail_label)
+    cancel_button = Button.new()
+    cancel_button.text = "CANCEL ACTIVE CONTRACT"
+    cancel_button.custom_minimum_size = Vector2(0, 30)
+    cancel_button.pressed.connect(_cancel_selected_contract)
+    root.add_child(cancel_button)
 
 func _refresh() -> void:
     if panel == null: return
@@ -66,6 +72,8 @@ func _refresh() -> void:
         active = contracts.list_active_contracts()
     summary_label.text = "%d active contract%s" % [active.size(), "" if active.size() == 1 else "s"]
     empty_label.visible = active.is_empty()
+    cancel_button.visible = not active.is_empty()
+    cancel_button.disabled = active.is_empty()
     if active.is_empty():
         detail_label.text = "Sign a contract to turn customer demand into scheduled production and delivery."
         return
@@ -145,6 +153,12 @@ func _select_contract(id: String) -> void:
     selected_contract_id = id
     _refresh()
 
+func _cancel_selected_contract() -> void:
+    var main = get_tree().current_scene
+    if main != null and main.has_method("cancel_active_contract"):
+        main.cancel_active_contract("player cancelled")
+    _refresh()
+
 func _show_detail(contract: Dictionary) -> void:
     if contract.is_empty():
         detail_label.text = ""
@@ -179,4 +193,4 @@ func _layout() -> void:
         panel.size = Vector2(size.x - 20.0, 350.0)
     else:
         panel.position = Vector2(12, 12)
-        panel.size = Vector2(430, 265)
+        panel.size = Vector2(430, 300)
