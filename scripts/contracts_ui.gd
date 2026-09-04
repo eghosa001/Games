@@ -28,7 +28,7 @@ func _build_ui() -> void:
     panel = Panel.new()
     panel.name = "ContractsPanel"
     panel.position = Vector2(12, 12)
-    panel.size = Vector2(430, 265)
+    panel.size = Vector2(430, 360)
     add_child(panel)
     var margin: Variant = MarginContainer.new()
     margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -193,4 +193,4 @@ func _layout() -> void:
         panel.size = Vector2(size.x - 20.0, 350.0)
     else:
         panel.position = Vector2(12, 12)
-        panel.size = Vector2(430, 300)
+        panel.size = Vector2(430, 360)
