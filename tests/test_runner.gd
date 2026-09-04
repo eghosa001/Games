@@ -13,6 +13,9 @@ var passed := 0
 var failed := 0
 var failures: Array[String] = []
 
+func _init() -> void:
+    call_deferred("run")
+
 func check(condition: bool, label: String) -> void:
     if condition:
         passed += 1
