@@ -59,5 +59,15 @@ func run() -> void:
     check(snapshot.has("production"), "Simulation captures Production state")
     check(simulation.execute("receive", {"amount": 500, "reason": "test"})["ok"], "Simulation routes finance command")
 
+    # The old end_day endpoint used to settle debt and mutate the economy
+    # independently of the canonical advance_day lifecycle. It is now a safe
+    # compatibility endpoint that performs no economic mutation.
+    var cash_before_legacy_end := finance.cash
+    var debt_before_legacy_end := finance.debt
+    var legacy_result = simulation.execute("end_day")
+    check(not bool(legacy_result.get("ok", false)), "Legacy end_day is rejected")
+    check(finance.cash == cash_before_legacy_end, "Legacy end_day does not mutate cash")
+    check(finance.debt == debt_before_legacy_end, "Legacy end_day does not mutate debt")
+
     print("SIMULATION ARCHITECTURE RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
