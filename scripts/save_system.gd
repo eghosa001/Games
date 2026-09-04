@@ -13,6 +13,8 @@ static func save_game(_state: Dictionary) -> bool:
     var game_state = _game_state()
     var payload = game_state.capture() if game_state and _state.has("domains") else _state.duplicate(true)
     payload["schema_version"] = CURRENT_VERSION
+    if payload.has("domains") and not validate_save(payload):
+        return false
     var json = JSON.stringify(payload)
     var temp = FileAccess.open(TEMP_PATH, FileAccess.WRITE)
     if temp == null:
@@ -20,9 +22,6 @@ static func save_game(_state: Dictionary) -> bool:
     temp.store_string(json)
     temp.flush()
     temp = null
-    # Backup existing save before replacing it. A failed backup must not be
-    # reported as a successful save because the previous recovery point would
-    # otherwise be silently lost.
     if FileAccess.file_exists(SAVE_PATH):
         if FileAccess.file_exists(BACKUP_PATH):
             var remove_backup_error := DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP_PATH))
@@ -31,8 +30,6 @@ static func save_game(_state: Dictionary) -> bool:
         var backup_error := DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(BACKUP_PATH))
         if backup_error != OK:
             return false
-    # Replace with new save. Remove the destination first because some Android
-    # filesystems do not reliably overwrite through rename.
     if FileAccess.file_exists(SAVE_PATH):
         var remove_save_error := DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
         if remove_save_error != OK:
@@ -43,31 +40,35 @@ static func save_game(_state: Dictionary) -> bool:
     return true
 
 static func load_game() -> Dictionary:
-    var data = _read_dictionary(SAVE_PATH)
-    if data.is_empty() or not _is_loadable_version(data):
-        data = _read_dictionary(BACKUP_PATH)
-    if data.is_empty():
-        return {}
-    var version = int(data.get("schema_version", 1))
-    if version < 1 or version > CURRENT_VERSION:
-        return {}
-    # Migrate if needed
-    while version < CURRENT_VERSION:
-        data = migrate(data, version)
+    # A save with a plausible version can still be malformed. If the primary
+    # file cannot be migrated and validated, recover from the last good backup.
+    var candidates: Array[String] = [SAVE_PATH, BACKUP_PATH]
+    for path in candidates:
+        var data := _read_dictionary(path)
         if data.is_empty():
-            return {}
-        version = int(data.get("schema_version", version + 1))
-    if not data.has("domains"):
+            continue
+        var version := int(data.get("schema_version", 1))
+        if version < 1 or version > CURRENT_VERSION:
+            continue
+        var valid := true
+        while version < CURRENT_VERSION:
+            data = migrate(data, version)
+            if data.is_empty():
+                valid = false
+                break
+            version = int(data.get("schema_version", version + 1))
+        if not valid:
+            continue
+        if data.has("domains"):
+            if not validate_save(data):
+                continue
+            var game_state = _game_state()
+            if game_state:
+                if not game_state.restore(data):
+                    continue
+                return game_state.capture()
         return data
-    # Validate
-    if not validate_save(data):
-        return {}
-    var game_state = _game_state()
-    if game_state:
-        if not game_state.restore(data):
-            return {}
-        return game_state.capture()
-    return data
+    return {}
 
 static func validate_save(data: Dictionary) -> bool:
     if not data.has("schema_version") or int(data["schema_version"]) != CURRENT_VERSION:
@@ -78,10 +79,6 @@ static func validate_save(data: Dictionary) -> bool:
         if not data["domains"].has(domain) or not (data["domains"][domain] is Dictionary):
             return false
     return true
-
-static func _is_loadable_version(data: Dictionary) -> bool:
-    var version := int(data.get("schema_version", 0))
-    return version >= 1 and version <= CURRENT_VERSION
 
 static func migrate(data: Dictionary, version: int) -> Dictionary:
     var result = data.duplicate(true)
@@ -98,6 +95,8 @@ static func migrate(data: Dictionary, version: int) -> Dictionary:
 
 static func _migrate_v7_to_v8(data: Dictionary) -> Dictionary:
     var domains = data.get("domains", {})
+    if not domains is Dictionary:
+        domains = {}
     for domain in ["player","company","properties","businesses","branches","employees","economy","resources","production","supply_chain","contracts","competitors","alliances","regions","technology","events","progression","history","news","analytics","acquisition","bankruptcy","infrastructure","diplomacy"]:
         if not domains.has(domain):
             domains[domain] = {}
