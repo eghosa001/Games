@@ -77,7 +77,7 @@ func take_loan(amount: int) -> Dictionary:
 
 func create_loan(amount: int, annual_rate: float = 0.12, term_periods: int = 20, secured: bool = false, collateral: String = "") -> Dictionary:
     if amount <= 0 or term_periods <= 0 or annual_rate < 0.0: return {"ok": false, "message": "Invalid loan terms."}
-    var id: Variant = "loan_%d" % Time.get_unix_time_from_system()
+    var id: Variant = "loan_%d_%d" % [Time.get_unix_time_from_system(), financing.size()]
     var instrument_type: Variant = INSTRUMENT_SECURED_LOAN if secured else INSTRUMENT_LOAN
     var principal: Variant = float(amount)
     var rate_per_period: Variant = annual_rate / 365.0
@@ -106,7 +106,7 @@ func refinance_loan(instrument_id: String, new_rate: float, new_term_periods: in
 
 func issue_bond(principal: int, annual_rate: float = 0.08, term_periods: int = 30) -> Dictionary:
     if principal <= 0 or annual_rate < 0.0 or term_periods <= 0: return {"ok": false, "message": "Invalid bond terms."}
-    var id: Variant = "bond_%d" % Time.get_unix_time_from_system()
+    var id: Variant = "bond_%d_%d" % [Time.get_unix_time_from_system(), financing.size()]
     financing[id] = {"id": id, "type": INSTRUMENT_BOND, "principal": float(principal), "balance": float(principal), "annual_rate": annual_rate, "term": term_periods, "remaining_periods": term_periods, "payment": int(round(principal * annual_rate / 365.0))}
     debt += principal
     cash += principal
@@ -156,14 +156,17 @@ func settle_debt_day() -> Dictionary:
     var payment: Variant = 0
     var missed: Variant = false
     if debt > 0:
+        var has_active_instrument := false
         for id in financing:
             var instrument: Dictionary = financing[id]
             var balance: Variant = float(instrument.get("balance", 0.0))
             if balance <= 0.0: continue
-            interest += max(0, int(round(balance * float(instrument.get("annual_rate", 0.12)) / 365.0)))
-            instrument["balance"] = balance + float(interest)
+            has_active_instrument = true
+            var instrument_interest: int = max(0, int(round(balance * float(instrument.get("annual_rate", 0.12)) / 365.0)))
+            interest += instrument_interest
+            instrument["balance"] = balance + float(instrument_interest)
             financing[id] = instrument
-        if interest == 0: interest = max(1, int(round(debt * 0.012)))
+        if not has_active_instrument or interest == 0: interest = max(1, int(round(debt * 0.012)))
         cash -= interest
         interest_expense += interest
         _record("interest", interest, "daily financing interest")
