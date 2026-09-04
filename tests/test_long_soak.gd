@@ -22,6 +22,17 @@ func soak_days(days: int) -> void:
     var state = get_node_or_null("/root/RenewGameState")
     check(state != null, "Canonical GameState is available")
     var start_day := int(state.get_value("player", "day", 1)) if state != null else 1
+    # advance_day is intentionally gated until a business is operating.
+    # Bootstrap the smallest valid V1 business fixture instead of testing an
+    # impossible closed-business day transition.
+    game.cash = 500000
+    game.inspect_property()
+    game.acquire_property()
+    for _i in range(5):
+        game.restore_property()
+    game.choose_business_purpose(0)
+    game.open_business()
+    check(bool(game.business_open), "V1 soak fixture opens a business")
     for i in range(days):
         game.advance_day()
         var current_day := int(state.get_value("player", "day", 0)) if state != null else 0
