@@ -15,6 +15,7 @@ const PRIMARY_SCREEN_NAMES := [
     "CollectionPanel",
     "LiveOpsPanel",
 ]
+const ROOT_SCREEN_NAMES := ["RenewDiplomacyUI"]
 
 var _previous_visible: Dictionary = {}
 var _active_screen: Node = null
@@ -29,9 +30,16 @@ func _ui_root() -> Node:
         return null
     return game_root.get_node_or_null("UI")
 
+func _root_screen_nodes() -> Array[Node]:
+    var result: Array[Node] = []
+    for screen_name in ROOT_SCREEN_NAMES:
+        var node := get_tree().root.get_node_or_null(screen_name)
+        if node != null:
+            result.append(node)
+    return result
+
 func _initialize() -> void:
-    var ui := _ui_root()
-    if ui == null:
+    if _ui_root() == null:
         call_deferred("_initialize")
         return
     for node in _screen_nodes():
@@ -47,12 +55,12 @@ func _process(_delta: float) -> void:
 func _screen_nodes() -> Array[Node]:
     var result: Array[Node] = []
     var ui := _ui_root()
-    if ui == null:
-        return result
-    for screen_name in PRIMARY_SCREEN_NAMES:
-        var node := ui.get_node_or_null(screen_name)
-        if node != null:
-            result.append(node)
+    if ui != null:
+        for screen_name in PRIMARY_SCREEN_NAMES:
+            var node := ui.get_node_or_null(screen_name)
+            if node != null:
+                result.append(node)
+    result.append_array(_root_screen_nodes())
     return result
 
 func _is_node_visible(node: Node) -> bool:
@@ -112,13 +120,14 @@ func _enforce_single_screen() -> void:
             _previous_visible[node.name] = false
 
 func show_screen(screen_name: String) -> void:
+    var target: Node = null
     var ui := _ui_root()
-    if ui == null or not PRIMARY_SCREEN_NAMES.has(screen_name):
-        push_warning("Unknown primary RENEW screen: %s" % screen_name)
-        return
-    var target := ui.get_node_or_null(screen_name)
+    if ui != null:
+        target = ui.get_node_or_null(screen_name)
     if target == null:
-        push_warning("Missing primary RENEW screen: %s" % screen_name)
+        target = get_tree().root.get_node_or_null(screen_name)
+    if target == null or not (PRIMARY_SCREEN_NAMES.has(screen_name) or ROOT_SCREEN_NAMES.has(screen_name)):
+        push_warning("Unknown primary RENEW screen: %s" % screen_name)
         return
 
     _active_screen = target
