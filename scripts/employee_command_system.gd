@@ -14,9 +14,16 @@ func get_morale_multiplier()->float: return employee_system.get_morale_multiplie
 func get_productivity_multiplier(assignment:String="factory_001")->float: return employee_system.get_productivity_multiplier(assignment)
 func hire_employee()->void:
     if not bool(state_adapter.get_value("businesses","business_open",false)): state_adapter.message("Open the business first."); return
-    var day:=int(state_adapter.get_value("player","day",1)); var current_count:=employee_system.get_active_employee_count(); var cash:=int(state_adapter.get_value("economy","cash",25000)); var preview_cost:=1200+current_count*250
+    var day:=int(state_adapter.get_value("player","day",1)); var current_count:=employee_system.get_active_employee_count()
+    var candidates:=employee_system.get_candidates()
+    if candidates.is_empty(): employee_system.refresh_candidates(); candidates=employee_system.get_candidates()
+    if candidates.is_empty(): state_adapter.message("No candidates are available right now."); return
+    var candidate:Dictionary=candidates[0]
+    var recruitment_factor:=1.0+float(max(0,80-int(candidate.get("loyalty",50))))/200.0
+    var preview_cost:=int(round((1200+current_count*250)*recruitment_factor))
+    var cash:=int(state_adapter.get_value("economy","cash",25000))
     if cash<preview_cost: state_adapter.message("Hiring requires $%s."%state_adapter.money(preview_cost)); return
-    var result=employee_system.hire_default(day)
+    var result=employee_system.hire_candidate(str(candidate.get("id","")),day)
     if not bool(result.get("ok",false)): state_adapter.message(str(result.get("message","Unable to hire employee."))); return
     var actual_cost:=int(result.get("cost",preview_cost))
     var spend:=state_adapter.spend(actual_cost,"employee hiring")
@@ -26,6 +33,8 @@ func hire_employee()->void:
     state_adapter.log_message("HIRING: employee %d joined (-$%s)."%[employee_system.get_active_employee_count(),state_adapter.money(actual_cost)]); state_adapter.message("Employee hired. More capacity, higher daily wages.")
 func train_employee(employee_id:String)->void:
     var day:=int(state_adapter.get_value("player","day",1)); var cost:=900
+    var cash:=int(state_adapter.get_value("economy","cash",25000))
+    if cash<cost: state_adapter.message("Training requires $%s."%state_adapter.money(cost)); return
     var result=employee_system.train_employee(employee_id,day,cost)
     if not bool(result.get("ok",false)): state_adapter.message(str(result.get("message","Training failed."))); return
     var spend:=state_adapter.spend(cost,"employee training")
