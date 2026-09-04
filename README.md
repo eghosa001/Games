@@ -38,6 +38,16 @@ Implemented systems now include:
 4. Press **F6/F5** to run the project.
 5. Start with **I** to inspect, **A** to acquire, then **R** repeatedly to restore.
 
+### Automated mobile QA
+
+Run the mobile release-gate test from the repository root:
+
+```text
+godot --headless --path . --script res://tests/mobile_qa_test.gd
+```
+
+It checks the five target viewport sizes, 44×44 touch-target minimums, control containment, tab navigation, the touch signal path through the opening operating loop, WORLD tab availability, GameState save/restore timing, disk save/load timing, and a short FPS/memory stability sample. See `Docs/MOBILE_QA.md` for the physical-device checklist. Automated QA does **not** replace real Android testing.
+
 ### Core controls
 
 - **I** — inspect the abandoned property
