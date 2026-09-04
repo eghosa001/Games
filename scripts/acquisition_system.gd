@@ -262,7 +262,7 @@ func _resolve_merger_employees(target: Dictionary, terms: Dictionary) -> Diction
     var count: Variant = int(target.get("employees", source.size()))
     if employee_system == null: return {"retained": count, "source_roster": source.duplicate(true), "policy": str(terms.get("employee_policy", "retain"))}
     var policy: Variant = str(terms.get("employee_policy", "retain"))
-    var retained: Variant = count if policy != "downsize" else int(round(float(count) * float(terms.get("retention_percent", 80.0)) / 100.0)
+    var retained: Variant = count if policy != "downsize" else int(round(float(count) * float(terms.get("retention_percent", 80.0)) / 100.0))
     var added: Variant = 0
     if not source.is_empty() and employee_system.get("employees") is Array:
         for employee in source:
