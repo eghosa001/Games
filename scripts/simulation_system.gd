@@ -4,7 +4,7 @@
 extends Node
 
 const DemandModel = preload("res://scripts/demand_model.gd")
-const SYSTEM_VERSION := 8
+const SYSTEM_VERSION := 9
 
 var command_count: int = 0
 var last_command: String = ""
@@ -41,10 +41,46 @@ func _settle_sales(args: Dictionary) -> Dictionary:
         return {"ok": false, "message": "FinanceSystem unavailable."}
     return finance.settle_sales(int(args.get("sales", 0)), int(args.get("wages", 0)), int(args.get("overhead", 0)), int(args.get("contract_income", 0)))
 
+func _sync_finance_mirror(state: Dictionary) -> void:
+    var game_state = _game_state()
+    var finance = _finance()
+    if not game_state or not finance:
+        return
+    finance.cash = int(game_state.get_value("economy", "cash", finance.cash))
+    finance.debt = int(game_state.get_value("finance", "debt", finance.debt))
+    finance.loan_payment = int(game_state.get_value("finance", "loan_payment", finance.loan_payment))
+
+func _sync_state_from_finance(state: Dictionary) -> void:
+    var game_state = _game_state()
+    var finance = _finance()
+    if not game_state or not finance:
+        return
+    game_state.set_value("economy", "cash", int(finance.cash))
+    game_state.set_value("finance", "debt", int(finance.debt))
+    game_state.set_value("finance", "loan_payment", int(finance.loan_payment))
+    state["cash"] = int(finance.cash)
+    state["debt"] = int(finance.debt)
+    state["loan_payment"] = int(finance.loan_payment)
+
+func _apply_cash_delta(state: Dictionary, amount: int, reason: String) -> bool:
+    var finance = _finance()
+    if not finance:
+        return false
+    if amount >= 0:
+        var received = finance.receive(amount, reason)
+        if not bool(received.get("ok", false)):
+            return false
+    else:
+        var spent = finance.spend(-amount, reason)
+        if not bool(spent.get("ok", false)):
+            return false
+    _sync_state_from_finance(state)
+    return true
+
 func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     if not bool(state.get("business_open", false)):
         return {"ok": false, "message": "No operating business yet."}
-    
+
     var rivals = context.get("rivals")
     var economy = context.get("economy")
     var events = context.get("events")
@@ -52,33 +88,40 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     var districts = context.get("districts")
     var employee_system = context.get("employee_system")
     var business_system = context.get("business_system")
-    
-    if not rivals or not economy or not events or not expansion or not districts or not employee_system or not business_system:
+    var finance = _finance()
+
+    if not rivals or not economy or not events or not expansion or not districts or not employee_system or not business_system or not finance:
         return {"ok": false, "message": "Simulation dependencies unavailable."}
-    
+
+    # Finance is the authoritative cash/debt ledger. Legacy state mirrors are
+    # synchronized at the boundary so older domain systems can still operate.
+    _sync_finance_mirror(state)
+
     # 1. Employee daily update (includes wage calculation)
     var performance = int(state.get("last_profit", 0))
     var employee_result = employee_system.daily_update(performance)
     for warning in employee_result.get("warnings", []):
         _append_log(state, "STAFF: " + str(warning))
-    
+
     # 2. Market day update
     economy.end_market_day()
-    
+
     # 3. Production
     business_system.produce_goods()
     var finished_goods = int(state.get("finished_goods", 0))
-    # Sync from GameState after production
     var game_state = _game_state()
     if game_state:
         state["finished_goods"] = int(game_state.get_value("production", "finished_goods", state.get("finished_goods", 0)))
         state["cash"] = int(game_state.get_value("economy", "cash", state.get("cash", 0)))
-    
+        # Production may still use a legacy cash path; bring its resulting
+        # balance back into the authoritative finance ledger before settlement.
+        finance.cash = int(state.get("cash", finance.cash))
+
     # 4. Demand and sales
     var player_price = int(state.get("player_price", 110))
     var rival_price = int(rivals.rivals[0]["price"]) if rivals.rivals.size() > 0 else 120
     var reputation = int(state.get("reputation", 0))
-    var quality = 75  # Could be taken from production last_run
+    var quality = 75
     var marketing_level = int(state.get("marketing_level", 0))
     var contract_bonus = int(state.get("contract_bonus", 0))
     var employee_productivity = float(employee_system.get_productivity_multiplier("factory_001"))
@@ -86,7 +129,7 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     var pressure = float(rivals.district_pressure(int(state.get("selected_district", 0))))
     var alliance = rivals.alliance_bonus(int(state.get("selected_rival", 0)))
     var deal = rivals.deal_bonus(int(state.get("selected_rival", 0)))
-    
+
     var demand_result = demand_model.calculate("consumer_goods", float(player_price), float(rival_price), reputation, quality, marketing_level, contract_bonus, employee_productivity, district_mult, pressure, float(alliance.get("sales", 0)), float(deal.get("sales", 0)))
     if not bool(demand_result.get("ok", false)):
         return {"ok": false, "message": "Demand model failed."}
@@ -96,51 +139,48 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     finished_goods -= units_sold
     state["finished_goods"] = max(0, finished_goods)
     state["last_units_sold"] = units_sold
-    
+
     # 5. Contract execution
     var contract_result = _execute_contract(state, finished_goods)
     var contract_income = int(contract_result.get("revenue", 0))
     var contract_penalty = int(contract_result.get("penalty", 0))
     if contract_result.get("ok", false):
         state["finished_goods"] = max(0, int(state["finished_goods"]) - int(contract_result.get("delivered", 0)))
-    
+
     # 6. Wages and overhead
     var wages = int(employee_system.get_daily_wage_total())
     var capacity_level = int(state.get("capacity_level", 1))
     var administrative_overhead = 650 + capacity_level * 100
-    
-    # 7. Profit and cash update
-    var profit = sales + contract_income - contract_penalty - wages - administrative_overhead
-    state["cash"] = int(state.get("cash", 0)) + profit
+
+    # 7. Operating settlement through the canonical finance ledger.
+    # Contract penalties are operating costs, so they are included in the
+    # same transaction rather than mutating the state cash field directly.
+    var settlement = finance.settle_sales(sales, wages, administrative_overhead + contract_penalty, contract_income)
+    var profit = int(settlement.get("profit", 0)) - contract_penalty
+    # settle_sales already deducted the supplied penalty from cash; profit is
+    # reconstructed here only for the gameplay-facing summary/reputation.
     state["last_sales"] = sales + contract_income
     state["last_profit"] = profit
     state["total_profit"] = int(state.get("total_profit", 0)) + profit
+    _sync_state_from_finance(state)
     if profit >= 0:
         reputation += 1
     else:
         reputation = max(0, reputation - 1)
     state["reputation"] = reputation
-    
-    # 8. Loan interest and payment
-    var debt = int(state.get("debt", 0))
-    var loan_payment = int(state.get("loan_payment", 0))
-    if debt > 0:
-        var interest = max(100, int(round(debt * 0.012)))
-        state["cash"] = int(state["cash"]) - interest
-        _append_log(state, "BANK: $%s interest charged." % _money(interest))
-    if loan_payment > 0 and debt > 0:
-        var payment = min(loan_payment, debt)
-        if int(state["cash"]) >= payment:
-            state["cash"] -= payment
-            debt -= payment
-            state["debt"] = debt
-        else:
-            _append_log(state, "BANK: missed loan payment; credit reputation damaged.")
-            state["reputation"] = max(0, int(state["reputation"]) - 2)
-    
+
+    # 8. Daily financing interest and scheduled payment through FinanceSystem.
+    var debt_result = finance.settle_debt_day()
+    _sync_state_from_finance(state)
+    if bool(debt_result.get("missed", false)):
+        _append_log(state, "BANK: missed loan payment; credit reputation damaged.")
+        state["reputation"] = max(0, int(state["reputation"]) - 2)
+    elif int(debt_result.get("interest", 0)) > 0:
+        _append_log(state, "BANK: $%s interest charged." % _money(int(debt_result["interest"])))
+
     # 9. Advance day counter
     state["day"] = int(state.get("day", 1)) + 1
-    
+
     # 10. Competitor AI
     for news in rivals.daily_update(int(state["day"])):
         _append_log(state, "RIVAL: " + news)
@@ -149,30 +189,35 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     ai_player_state["selected_district"] = int(state.get("selected_district", 0))
     for news in rivals.strategic_ai_update(int(state["day"]), ai_player_state):
         _append_log(state, "CORPORATE AI: " + news)
-    
-    # 11. Dynamic events
+
+    # 11. Dynamic events. All cash changes go through FinanceSystem.
     if int(state["day"]) % 2 == 0:
         var event = events.roll()
-        state["cash"] += int(event.get("cash", 0))
+        var event_cash = int(event.get("cash", 0))
+        if event_cash != 0 and not _apply_cash_delta(state, event_cash, "dynamic event: %s" % str(event.get("title", "event"))):
+            _append_log(state, "EVENT: cash effect could not be applied.")
         state["reputation"] += int(event.get("rep", 0))
         _append_log(state, "EVENT: %s — %s" % [event["title"], event["text"]])
-    
-    # 12. Empire expansion
+
+    # 12. Empire expansion. Normalize its net daily result through FinanceSystem.
     var empire = expansion.operate_day()
-    state["cash"] += int(empire["profit"])
+    var empire_profit = int(empire.get("profit", 0))
+    if empire_profit != 0 and not _apply_cash_delta(state, empire_profit, "empire daily operating result"):
+        _append_log(state, "EMPIRE: daily cash result could not be applied.")
     if int(empire["businesses"]) > 0:
-        _append_log(state, "EMPIRE: %d businesses generated $%s net." % [int(empire["businesses"]), _money(int(empire["profit"]))])
-    
+        _append_log(state, "EMPIRE: %d businesses generated $%s net." % [int(empire["businesses"]), _money(empire_profit)])
+
     expansion.unlock_from_reputation(int(state["reputation"]))
     districts.update_unlocks(int(state["reputation"]))
-    
-    state["message"] = "Day %d closed. %d/%d demand sold at $%s; profit $%s; empire profit $%s." % [int(state["day"]), units_sold, customer_demand, _money(player_price), _money(profit), _money(int(empire["profit"]))]
-    
+
+    state["message"] = "Day %d closed. %d/%d demand sold at $%s; profit $%s; empire profit $%s." % [int(state["day"]), units_sold, customer_demand, _money(player_price), _money(profit), _money(empire_profit)]
+
     # 13. Production system advance
     var production_system = _production()
     if production_system:
         production_system.advance_day()
-    
+
+    _sync_state_from_finance(state)
     return {
         "ok": true,
         "message": state["message"],
@@ -258,57 +303,39 @@ func capture_state() -> Dictionary:
     }
     var finance = _finance()
     var production = _production()
-    if finance:
-        result["finance"] = finance.capture_state()
-    if production:
-        result["production"] = production.capture_state()
+    if finance and finance.has_method("capture_state"): result["finance"] = finance.capture_state()
+    if production and production.has_method("capture_state"): result["production"] = production.capture_state()
     return result
 
 func restore_state(snapshot: Dictionary) -> void:
-    if snapshot.is_empty():
-        return
+    if snapshot.is_empty(): return
     command_count = int(snapshot.get("command_count", 0))
     last_command = str(snapshot.get("last_command", ""))
     last_result = snapshot.get("last_result", {}).duplicate(true)
     var finance = _finance()
-    if finance and snapshot.get("finance", {}) is Dictionary:
-        finance.restore_state(snapshot["finance"])
     var production = _production()
-    if production and snapshot.get("production", {}) is Dictionary:
-        production.restore_state(snapshot["production"])
-
-func _game_state() -> Node:
-    var root = get_tree().root
-    return root.get_node_or_null("RenewGameState") if root else null
+    if finance and snapshot.get("finance", {}) is Dictionary and finance.has_method("restore_state"): finance.restore_state(snapshot["finance"])
+    if production and snapshot.get("production", {}) is Dictionary and production.has_method("restore_state"): production.restore_state(snapshot["production"])
 
 func _finance() -> Node:
-    var root = get_tree().root
-    if not root: return null
-    var autoload = root.get_node_or_null("RenewFinanceSystem")
-    if autoload: return autoload
-    return root.get_node_or_null("FinanceSystem")
+    return get_node_or_null("/root/RenewFinanceSystem")
 
-func _production() -> Node:
-    if production_system != null:
-        return production_system
-    var root = get_tree().root
-    if not root: return null
-    var autoload = root.get_node_or_null("RenewProductionSystem")
-    if autoload: return autoload
-    var named = root.get_node_or_null("ProductionSystem")
-    if named: return named
-    for child in root.get_children():
-        if child and child.has_method("capture_state") and child.has_method("produce") and child.has_method("advance_day"):
-            return child
-    return null
+func _game_state() -> Node:
+    return get_node_or_null("/root/RenewGameState")
 
 func _economy() -> Node:
-    var root = get_tree().current_scene
-    if root and "economy" in root:
-        return root.economy
-    return null
+    return get_node_or_null("/root/RenewSimulationSystem")
+
+func _production() -> Node:
+    var root = get_tree().root
+    var autoload = root.get_node_or_null("RenewProductionSystem")
+    if autoload: return autoload
+    var scene = get_tree().current_scene
+    return scene.get_node_or_null("Systems/ProductionSystem") if scene else null
 
 func _contracts() -> Node:
     var root = get_tree().root
-    if not root: return null
-    return root.get_node_or_null("RenewContractSystem")
+    var autoload = root.get_node_or_null("RenewContractSystem")
+    if autoload: return autoload
+    var scene = get_tree().current_scene
+    return scene.get_node_or_null("Systems/ContractSystem") if scene else null
