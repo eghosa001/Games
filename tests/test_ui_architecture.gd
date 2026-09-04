@@ -36,7 +36,7 @@ func _run() -> void:
         check("screen node resolves: %s" % screen_name, _find_screen(scene, screen_name) != null)
 
     # Screen routing is the contract: exactly one managed screen is rendered
-    # after every explicit open, and the Escape path can clear it again.
+    # after every explicit open.
     for screen_name in ["CustomerSegmentsUI", "ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel", "RenewDiplomacyUI"]:
         manager.show_screen(screen_name)
         await process_frame
@@ -47,6 +47,13 @@ func _run() -> void:
     await process_frame
     check("hide_all_screens clears every managed screen", _visible_screen_count(manager) == 0)
 
+    # The world renderer owns the region controller under World; this path was
+    # previously wrong and silently removed regional artwork from the renderer.
+    var world_view := scene.get_node_or_null("World/WorldView")
+    var region_controller := scene.get_node_or_null("World/RegionController")
+    check("world renderer exists", world_view != null)
+    check("world renderer resolves world-owned RegionController", world_view != null and region_controller != null and world_view.get("game") == scene)
+
     # Validate the highest-risk UI action boundaries that previously bypassed
     # canonical state or used an invalid parent path.
     var hq := scene.get_node_or_null("UI/HeadquartersPanel")
@@ -55,6 +62,14 @@ func _run() -> void:
     check("employee UI resolves", employee != null)
     if employee != null:
         check("employee UI exposes action handler", employee.has_method("_action"))
+
+    # Save validation must reject incomplete domain payloads instead of writing
+    # a file that can never be restored successfully.
+    var save_script: Script = load("res://scripts/save_system.gd")
+    check("SaveSystem loads", save_script != null)
+    if save_script != null:
+        var incomplete := {"schema_version": 8, "domains": {"player": {}}}
+        check("SaveSystem rejects incomplete domain payload", not save_script.validate_save(incomplete))
 
     _finish()
 
