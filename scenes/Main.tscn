@@ -49,17 +49,17 @@ script = ExtResource("37")
 [node name="SkylineArt" type="Sprite2D" parent="World"]
 texture = ExtResource("38")
 position = Vector2(640, 225)
-z_index = -19
+z_index = -8
 modulate = Color(1, 1, 1, 0.72)
 [node name="WarehouseArt" type="Sprite2D" parent="World"]
 texture = ExtResource("39")
 position = Vector2(650, 480)
-z_index = -9
+z_index = -4
 modulate = Color(1, 1, 1, 0.92)
 [node name="ResourceHubArt" type="Sprite2D" parent="World"]
 texture = ExtResource("40")
 position = Vector2(1060, 485)
-z_index = -9
+z_index = -4
 modulate = Color(1, 1, 1, 0.9)
 [node name="MainRenderer" type="Node2D" parent="World"]
 z_index = -10
