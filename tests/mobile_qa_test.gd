@@ -39,7 +39,7 @@ func _test_responsive_layout(hud: Node, ui_root: Control) -> void:
         ui_root.size = Vector2(target); hud._layout_responsive(); await process_frame
         check("viewport %dx%d accepted" % [target.x, target.y], ui_root.size.x >= target.x - 1.0 and ui_root.size.y >= target.y - 1.0)
         _check_control_inside(hud.get("tabs") as Control, "tabs", target)
-        _check_control_inside(hud.get("status_panel") as Control, "status", target)
+        _check_control_inside(hud.get("status_label") as Control, "status", target)
         _check_control_inside(hud.get("action_scroll") as Control, "action scroll", target)
         _check_control_inside(hud.get("feedback_panel") as Control, "feedback", target)
         _check_control_inside(hud.get("goal_label") as Control, "goal", target)
@@ -121,7 +121,6 @@ func _test_runtime_stability() -> void:
 
 func _memory_mb() -> float:
     return float(Performance.get_monitor(Performance.MEMORY_STATIC)) / 1048576.0
-
 func check(label: String, condition: bool) -> void:
     checks += 1
     if condition: print("PASS: %s" % label)
