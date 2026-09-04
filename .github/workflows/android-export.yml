@@ -44,10 +44,12 @@ jobs:
       - name: Install matching Android export templates
         run: |
           templates="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
-          mkdir -p "$templates/templates"
+          mkdir -p "$templates"
           wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz
-          unzip -q Godot_v${GODOT_VERSION}-stable_export_templates.tpz -d "$templates"
+          unzip -q -j Godot_v${GODOT_VERSION}-stable_export_templates.tpz 'templates/*' -d "$templates"
           printf '%s\n' "${GODOT_VERSION}.stable" > "$templates/version.txt"
+          test -s "$templates/android_source.zip"
+          test -s "$templates/android_debug.apk"
       - name: Import project
         run: timeout 120s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --editor --path . --quit
       - name: Validate Android export configuration
