@@ -2,6 +2,7 @@ extends Node
 
 ## Phase 21 — compact V1 technology tree.
 ## Definitions are static; research progress and unlocked technologies live in GameState.
+const DomainSystem = preload("res://scripts/domain_system.gd")
 const TECHNOLOGIES := {
     "efficient_production": {"name":"Efficient Production","tier":1,"cost_money":2500,"cost_points":10,"time_days":2,"prerequisites":[],"effects":{"production_multiplier":0.10}},
     "better_logistics": {"name":"Better Logistics","tier":1,"cost_money":2500,"cost_points":10,"time_days":2,"prerequisites":[],"effects":{"transport_capacity_multiplier":0.25}},
@@ -11,9 +12,12 @@ const TECHNOLOGIES := {
     "supply_optimization": {"name":"Supply Optimization","tier":2,"cost_money":4500,"cost_points":15,"time_days":3,"prerequisites":["better_logistics"],"effects":{"transport_capacity_multiplier":0.20,"operating_cost_multiplier":-0.08}},
     "smart_factory": {"name":"Smart Factory","tier":3,"cost_money":7000,"cost_points":20,"time_days":4,"prerequisites":["automation"],"effects":{"production_multiplier":0.20,"worker_reduction":1}},
     "advanced_logistics": {"name":"Advanced Logistics","tier":3,"cost_money":7000,"cost_points":20,"time_days":4,"prerequisites":["better_logistics","supply_optimization"],"effects":{"transport_capacity_multiplier":0.40,"operating_cost_multiplier":-0.10}},
-    "premium_manufacturing": {"name":"Premium Manufacturing","tier":3,"cost_money":7000,"cost_points":20,"time_days":4,"prerequisites":["advanced_materials"],"effects":{"production_multiplier":0.15,"base_price_multiplier":0.15}}
+    "premium_manufacturing": {"name":"Premium Manufacturing","tier":3,"cost_money":7000,"cost_points":20,"prerequisites":["advanced_materials"],"effects":{"production_multiplier":0.15,"base_price_multiplier":0.15}}
 }
 
+var state_adapter = DomainSystem.new()
+func _ready() -> void:
+    add_child(state_adapter)
 func _state() -> Node:
     return get_node_or_null("/root/RenewGameState")
 func get_technologies() -> Array:
@@ -41,8 +45,11 @@ func research(id:String)->bool:
     var check:=can_research(id); var state=_state(); if state==null:return false
     if not bool(check.get("ok",false)):
         state.set_value("company","message",_research_error(id,check)); return false
-    var tech:=get_technology(id); var cash:=int(state.get_value("economy","cash",25000)); var points:=int(state.get_value("technology","research_points",20))
-    state.set_value("economy","cash",cash-int(tech["cost_money"])); state.set_value("technology","research_points",points-int(tech["cost_points"]))
+    var tech:=get_technology(id); var points:=int(state.get_value("technology","research_points",20))
+    var spend:=state_adapter.spend(int(tech["cost_money"]),"technology research: %s" % str(tech["name"]))
+    if not bool(spend.get("ok",false)):
+        state.set_value("company","message",str(spend.get("message","Technology research requires sufficient cash."))); return false
+    state.set_value("technology","research_points",points-int(tech["cost_points"]))
     var unlocked:Dictionary=state.get_value("technology","technology",{}); unlocked=unlocked.duplicate(true); unlocked[id]=true; state.set_value("technology","technology",unlocked)
     var day:=int(state.get_value("player","day",1))+int(tech["time_days"]); state.set_value("player","day",day)
     state.set_value("company","message","Research complete: %s. %d day(s) passed." % [tech["name"],int(tech["time_days"])])
