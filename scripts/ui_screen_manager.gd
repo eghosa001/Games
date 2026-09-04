@@ -2,8 +2,8 @@ extends Node
 class_name RenewUIScreenManager
 
 # Keeps mutually-exclusive game panels from stacking over the world.
-# Individual panels can continue to own their own input/build logic; this manager
-# only enforces the presentation rule that at most one primary screen is visible.
+# Individual panels continue to own their own input/build logic; this manager
+# enforces the presentation rule that at most one primary screen is open.
 
 const PRIMARY_SCREEN_NAMES := [
     "ContractPanel",
@@ -63,18 +63,40 @@ func _screen_nodes() -> Array[Node]:
     result.append_array(_root_screen_nodes())
     return result
 
+# Screen scripts intentionally hide their inner Panel/PanelContainer rather than
+# their CanvasLayer/Node2D host. We therefore inspect the rendered descendants.
 func _is_node_visible(node: Node) -> bool:
-    if node is CanvasLayer:
-        return node.visible
-    if node is CanvasItem:
-        return node.visible
+    for child in node.get_children():
+        if child is CanvasItem and child.is_visible_in_tree():
+            return true
+        if _has_visible_canvas_item(child):
+            return true
+    return false
+
+func _has_visible_canvas_item(node: Node) -> bool:
+    for child in node.get_children():
+        if child is CanvasItem and child.is_visible_in_tree():
+            return true
+        if _has_visible_canvas_item(child):
+            return true
     return false
 
 func _set_node_visible(node: Node, value: bool) -> void:
-    if node is CanvasLayer:
-        node.visible = value
-    elif node is CanvasItem:
-        node.visible = value
+    # Keep CanvasLayer hosts enabled so existing scripts can still open their
+    # panels by changing panel.visible. Only the actual rendered UI descendants
+    # are toggled.
+    for child in node.get_children():
+        if child is CanvasItem:
+            child.visible = value
+        else:
+            _set_canvas_descendants_visible(child, value)
+
+func _set_canvas_descendants_visible(node: Node, value: bool) -> void:
+    for child in node.get_children():
+        if child is CanvasItem:
+            child.visible = value
+        else:
+            _set_canvas_descendants_visible(child, value)
 
 func _enforce_single_screen() -> void:
     var nodes := _screen_nodes()
