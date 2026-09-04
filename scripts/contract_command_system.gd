@@ -50,10 +50,12 @@ func cancel_active_contract(reason: String = "player cancelled") -> void:
         var payment: Dictionary = finance.spend(fee, "customer contract cancellation fee")
         if not bool(payment.get("ok", false)):
             state_adapter.message(str(payment.get("message", "Cancellation fee could not be paid."))); return
+        state_adapter.set_value("economy", "cash", int(payment.get("cash", finance.get("cash"))))
     var result: Dictionary = contracts.cancel_contract(str(active.get("id", "")), reason, int(state_adapter.get_value("player", "day", 1)))
     if not bool(result.get("ok", false)):
         if fee > 0 and finance != null:
-            finance.receive(fee, "refund after failed contract cancellation")
+            var refund: Dictionary = finance.receive(fee, "refund after failed contract cancellation")
+            state_adapter.set_value("economy", "cash", int(refund.get("cash", finance.get("cash"))))
         state_adapter.message(str(result.get("message", "Contract cancellation failed."))); return
     state_adapter.set_value("contracts", "contract_days", 0)
     state_adapter.set_value("contracts", "contract_bonus", 0)
