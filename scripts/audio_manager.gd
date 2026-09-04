@@ -1,34 +1,33 @@
 extends Node
 ## RENEW premium adaptive audio system.
-## Runtime synthesis keeps the build self-contained and Android-friendly while
-## using layered envelopes, harmonics, noise textures and evolving motifs.
+## Runtime synthesis keeps the build self-contained and Android-friendly.
 
-const SAMPLE_RATE := 22050
-const MAX_SFX_PLAYERS := 12
-const TAU_F := TAU
+const SAMPLE_RATE: int = 22050
+const MAX_SFX_PLAYERS: int = 12
+const TAU_F: float = TAU
 
 var _music_player: AudioStreamPlayer
 var _music_playback: AudioStreamGeneratorPlayback
 var _sfx_players: Array[AudioStreamPlayer] = []
-var _sfx_cursor := 0
-var _last_message := ""
-var _last_day := 1
-var _last_restoration := 0
-var _last_business_open := false
-var _music_phase := 0.0
-var _music_time := 0.0
-var _music_note := 0
-var _music_note_time := 0.0
-var _music_seed := 0.0
-var _last_tap_ms := -1000
+var _sfx_cursor: int = 0
+var _last_message: String = ""
+var _last_day: int = 1
+var _last_restoration: int = 0
+var _last_business_open: bool = false
+var _music_phase: float = 0.0
+var _music_time: float = 0.0
+var _music_note: int = 0
+var _music_note_time: float = 0.0
+var _music_seed: float = 0.0
+var _last_tap_ms: int = -1000
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
     randomize()
     _music_seed = randf() * 100.0
     _setup_music()
-    for i in range(MAX_SFX_PLAYERS):
-        var player := AudioStreamPlayer.new()
+    for i: int in range(MAX_SFX_PLAYERS):
+        var player: AudioStreamPlayer = AudioStreamPlayer.new()
         player.bus = "Master"
         add_child(player)
         _sfx_players.append(player)
@@ -38,14 +37,14 @@ func _ready() -> void:
 func _setup_music() -> void:
     _music_player = AudioStreamPlayer.new()
     _music_player.name = "RenewAdaptiveMusic"
-    var stream := AudioStreamGenerator.new()
+    var stream: AudioStreamGenerator = AudioStreamGenerator.new()
     stream.mix_rate = SAMPLE_RATE
     stream.buffer_length = 2.0
     _music_player.stream = stream
     _music_player.volume_db = -23.0
     add_child(_music_player)
     _music_player.play()
-    _music_playback = _music_player.get_stream_playback()
+    _music_playback = _music_player.get_stream_playback() as AudioStreamGeneratorPlayback
     _feed_music(0.75)
 
 func _process(delta: float) -> void:
@@ -55,40 +54,42 @@ func _process(delta: float) -> void:
 func _feed_music(delta: float) -> void:
     if _music_playback == null:
         return
-    var frames := _music_playback.get_frames_available()
-    var target := int(SAMPLE_RATE * clamp(delta, 0.04, 0.12))
-    var count := min(frames, target)
-    for i in range(count):
-        var t := _music_phase / float(SAMPLE_RATE)
+    var frames: int = _music_playback.get_frames_available()
+    var target: int = int(SAMPLE_RATE * clampf(delta, 0.04, 0.12))
+    var count: int = mini(frames, target)
+    for i: int in range(count):
+        var t: float = _music_phase / float(SAMPLE_RATE)
         _music_time += 1.0 / float(SAMPLE_RATE)
         _music_note_time += 1.0 / float(SAMPLE_RATE)
         if _music_note_time >= 0.72:
             _music_note_time = 0.0
             _music_note = (_music_note + 1) % 8
-        var root := _adaptive_root()
-        var scale_steps := [0, 2, 4, 7, 9, 7, 4, 2]
-        var semitone := scale_steps[_music_note]
-        var melody_freq := root * pow(2.0, float(semitone) / 12.0)
-        var melody_pos := _music_note_time / 0.72
-        var attack := clamp(melody_pos / 0.10, 0.0, 1.0)
-        var decay := 1.0 - clamp((melody_pos - 0.18) / 0.54, 0.0, 0.65)
-        var pulse := attack * decay
-        var bass := sin(TAU_F * root * 0.5 * t) * 0.012
-        var pad_a := sin(TAU_F * root * t) * 0.016
-        var pad_b := sin(TAU_F * root * 1.5 * t + 0.7) * 0.006
-        var melody := (sin(TAU_F * melody_freq * t) * 0.010 + sin(TAU_F * melody_freq * 2.0 * t) * 0.0025) * pulse
-        var shimmer := sin(TAU_F * melody_freq * 4.0 * t + sin(t * 0.4)) * 0.0015 * pulse
-        var stereo := sin(t * 0.23 + _music_seed) * 0.003
-        _music_playback.push_frame(Vector2(bass + pad_a + pad_b + melody + shimmer + stereo, bass + pad_a + pad_b + melody + shimmer - stereo))
+        var root: float = _adaptive_root()
+        var scale_steps: Array[int] = [0, 2, 4, 7, 9, 7, 4, 2]
+        var semitone: float = float(scale_steps[_music_note])
+        var melody_freq: float = root * pow(2.0, semitone / 12.0)
+        var melody_pos: float = _music_note_time / 0.72
+        var attack: float = clampf(melody_pos / 0.10, 0.0, 1.0)
+        var decay: float = 1.0 - clampf((melody_pos - 0.18) / 0.54, 0.0, 0.65)
+        var pulse: float = attack * decay
+        var bass: float = sin(TAU_F * root * 0.5 * t) * 0.012
+        var pad_a: float = sin(TAU_F * root * t) * 0.016
+        var pad_b: float = sin(TAU_F * root * 1.5 * t + 0.7) * 0.006
+        var melody: float = (sin(TAU_F * melody_freq * t) * 0.010 + sin(TAU_F * melody_freq * 2.0 * t) * 0.0025) * pulse
+        var shimmer: float = sin(TAU_F * melody_freq * 4.0 * t + sin(t * 0.4)) * 0.0015 * pulse
+        var stereo: float = sin(t * 0.23 + _music_seed) * 0.003
+        var left: float = bass + pad_a + pad_b + melody + shimmer + stereo
+        var right: float = bass + pad_a + pad_b + melody + shimmer - stereo
+        _music_playback.push_frame(Vector2(left, right))
         _music_phase += 1.0
 
 func _adaptive_root() -> float:
-    var state := get_node_or_null("/root/RenewGameState")
+    var state: Node = get_node_or_null("/root/RenewGameState")
     if state == null:
         return 110.0
-    var day := int(state.get_value("player", "day", 1))
-    var restoration := int(state.get_value("properties", "restoration", 0))
-    var business := bool(state.get_value("businesses", "business_open", false))
+    var day: int = int(state.get_value("player", "day", 1))
+    var restoration: int = int(state.get_value("properties", "restoration", 0))
+    var business: bool = bool(state.get_value("businesses", "business_open", false))
     if business and restoration >= 3:
         return 146.83
     if restoration >= 2:
@@ -98,28 +99,28 @@ func _adaptive_root() -> float:
     return 110.0
 
 func _watch_game_state() -> void:
-    var state := get_node_or_null("/root/RenewGameState")
+    var state: Node = get_node_or_null("/root/RenewGameState")
     if state == null:
         return
-    var message = state.get_value("company", "message", "")
-    if str(message) != _last_message:
+    var message: String = str(state.get_value("company", "message", ""))
+    if message != _last_message:
         if _last_message != "":
-            var lower := str(message).to_lower()
+            var lower: String = message.to_lower()
             if _is_failure(lower):
                 play_failure()
-            elif str(message) != "":
+            elif message != "":
                 play_success()
-        _last_message = str(message)
-    var day := int(state.get_value("player", "day", 1))
+        _last_message = message
+    var day: int = int(state.get_value("player", "day", 1))
     if day != _last_day:
         _last_day = day
         play_day_end()
-    var restoration := int(state.get_value("properties", "restoration", 0))
+    var restoration: int = int(state.get_value("properties", "restoration", 0))
     if restoration != _last_restoration:
         if restoration > _last_restoration:
             play_restoration()
         _last_restoration = restoration
-    var business_open := bool(state.get_value("businesses", "business_open", false))
+    var business_open: bool = bool(state.get_value("businesses", "business_open", false))
     if business_open and not _last_business_open:
         play_construction()
     _last_business_open = business_open
@@ -129,17 +130,17 @@ func _is_failure(text: String) -> bool:
 
 func _on_node_added(node: Node) -> void:
     if node is BaseButton:
-        _hook_button(node)
+        _hook_button(node as BaseButton)
 
 func _hook_ui() -> void:
-    var root := get_tree().current_scene
+    var root: Node = get_tree().current_scene
     if root != null:
         _hook_tree(root)
 
 func _hook_tree(node: Node) -> void:
     if node is BaseButton:
-        _hook_button(node)
-    for child in node.get_children():
+        _hook_button(node as BaseButton)
+    for child: Node in node.get_children():
         _hook_tree(child)
 
 func _hook_button(button: BaseButton) -> void:
@@ -149,76 +150,76 @@ func _hook_button(button: BaseButton) -> void:
     button.pressed.connect(play_ui_tap)
 
 func _sfx_stream(duration: float) -> AudioStreamGenerator:
-    var stream := AudioStreamGenerator.new()
+    var stream: AudioStreamGenerator = AudioStreamGenerator.new()
     stream.mix_rate = SAMPLE_RATE
-    stream.buffer_length = max(0.18, duration + 0.06)
+    stream.buffer_length = maxf(0.18, duration + 0.06)
     return stream
 
 func _begin_sfx(duration: float) -> AudioStreamGeneratorPlayback:
-    var player := _sfx_players[_sfx_cursor]
+    var player: AudioStreamPlayer = _sfx_players[_sfx_cursor]
     _sfx_cursor = (_sfx_cursor + 1) % _sfx_players.size()
     player.stream = _sfx_stream(duration)
     player.volume_db = 0.0
     player.play()
     return player.get_stream_playback() as AudioStreamGeneratorPlayback
 
-func _render_sequence(notes: Array, total_duration: float, amplitude: float, harmonic := 0.15, spacing := 0.055) -> void:
-    var playback := _begin_sfx(total_duration)
-    var total_frames := min(playback.get_frames_available(), int(SAMPLE_RATE * total_duration))
-    var spacing_frames := int(SAMPLE_RATE * spacing)
-    var note_frames := int(SAMPLE_RATE * min(0.16, total_duration))
-    for frame in range(total_frames):
-        var sample := 0.0
-        for n in range(notes.size()):
-            var start := n * spacing_frames
-            var local := frame - start
+func _render_sequence(notes: Array, total_duration: float, amplitude: float, harmonic: float = 0.15, spacing: float = 0.055) -> void:
+    var playback: AudioStreamGeneratorPlayback = _begin_sfx(total_duration)
+    var total_frames: int = mini(playback.get_frames_available(), int(SAMPLE_RATE * total_duration))
+    var spacing_frames: int = int(SAMPLE_RATE * spacing)
+    var note_frames: int = int(SAMPLE_RATE * minf(0.16, total_duration))
+    for frame: int in range(total_frames):
+        var sample: float = 0.0
+        for n: int in range(notes.size()):
+            var start: int = n * spacing_frames
+            var local: int = frame - start
             if local < 0 or local >= note_frames:
                 continue
-            var p := float(local) / float(max(note_frames, 1))
-            var env := min(clamp(p / 0.010, 0.0, 1.0), clamp((1.0 - p) / 0.075, 0.0, 1.0))
-            var freq := float(notes[n])
+            var p: float = float(local) / float(maxi(note_frames, 1))
+            var env: float = minf(clampf(p / 0.010, 0.0, 1.0), clampf((1.0 - p) / 0.075, 0.0, 1.0))
+            var freq: float = float(notes[n])
             sample += (sin(TAU_F * freq * float(local) / SAMPLE_RATE) + sin(TAU_F * freq * 2.0 * float(local) / SAMPLE_RATE) * harmonic) * amplitude * env
-        var pan := sin(float(frame) / SAMPLE_RATE * 2.0 + _music_seed) * 0.10
-        playback.push_frame(Vector2(sample * (1.0 - max(pan, 0.0)), sample * (1.0 + min(pan, 0.0))))
+        var pan: float = sin(float(frame) / SAMPLE_RATE * 2.0 + _music_seed) * 0.10
+        playback.push_frame(Vector2(sample * (1.0 - maxf(pan, 0.0)), sample * (1.0 + minf(pan, 0.0))))
 
-func _tone(playback: AudioStreamGeneratorPlayback, duration: float, frequency: float, amplitude: float, slide: float = 0.0, harmonic := 0.0, noise := 0.0, pan := 0.0) -> void:
-    var frames := min(playback.get_frames_available(), int(SAMPLE_RATE * duration))
-    for i in range(frames):
-        var p := float(i) / float(max(frames, 1))
-        var f := max(20.0, frequency + slide * p)
-        var env := min(clamp(p / 0.012, 0.0, 1.0), clamp((1.0 - p) / 0.08, 0.0, 1.0))
-        var s := sin(TAU_F * f * float(i) / SAMPLE_RATE)
+func _tone(playback: AudioStreamGeneratorPlayback, duration: float, frequency: float, amplitude: float, slide: float = 0.0, harmonic: float = 0.0, noise: float = 0.0, pan: float = 0.0) -> void:
+    var frames: int = mini(playback.get_frames_available(), int(SAMPLE_RATE * duration))
+    for i: int in range(frames):
+        var p: float = float(i) / float(maxi(frames, 1))
+        var f: float = maxf(20.0, frequency + slide * p)
+        var env: float = minf(clampf(p / 0.012, 0.0, 1.0), clampf((1.0 - p) / 0.08, 0.0, 1.0))
+        var s: float = sin(TAU_F * f * float(i) / SAMPLE_RATE)
         s += sin(TAU_F * f * 2.0 * float(i) / SAMPLE_RATE) * harmonic
         s += randf_range(-1.0, 1.0) * noise * (1.0 - p)
         s *= amplitude * env
-        playback.push_frame(Vector2(s * (1.0 - max(pan, 0.0)), s * (1.0 + min(pan, 0.0))))
+        playback.push_frame(Vector2(s * (1.0 - maxf(pan, 0.0)), s * (1.0 + minf(pan, 0.0))))
 
 func play_ui_tap() -> void:
-    var now := Time.get_ticks_msec()
+    var now: int = Time.get_ticks_msec()
     if now - _last_tap_ms < 55:
         return
     _last_tap_ms = now
-    var playback := _begin_sfx(0.065)
+    var playback: AudioStreamGeneratorPlayback = _begin_sfx(0.065)
     _tone(playback, 0.055, 680.0, 0.075, 120.0, 0.22, 0.006, -0.08)
 
 func play_success() -> void:
     _render_sequence([523.25, 659.25, 783.99], 0.24, 0.075, 0.28, 0.065)
 
 func play_failure() -> void:
-    var playback := _begin_sfx(0.24)
+    var playback: AudioStreamGeneratorPlayback = _begin_sfx(0.24)
     _tone(playback, 0.20, 247.0, 0.085, -72.0, 0.35, 0.018, 0.0)
 
 func play_day_end() -> void:
     _render_sequence([659.25, 783.99, 987.77, 1174.66], 0.38, 0.065, 0.32, 0.075)
 
 func play_restoration() -> void:
-    var playback := _begin_sfx(0.30)
+    var playback: AudioStreamGeneratorPlayback = _begin_sfx(0.30)
     _tone(playback, 0.10, 280.0, 0.055, 90.0, 0.25, 0.045, -0.2)
     _tone(playback, 0.11, 410.0, 0.060, 130.0, 0.22, 0.025, 0.1)
     _tone(playback, 0.12, 620.0, 0.065, 80.0, 0.30, 0.01, -0.05)
 
 func play_construction() -> void:
-    var playback := _begin_sfx(0.34)
+    var playback: AudioStreamGeneratorPlayback = _begin_sfx(0.34)
     _tone(playback, 0.16, 82.0, 0.060, 26.0, 0.45, 0.11, -0.12)
     _tone(playback, 0.10, 175.0, 0.040, 40.0, 0.28, 0.08, 0.12)
     _tone(playback, 0.11, 310.0, 0.055, 65.0, 0.35, 0.025, -0.04)
