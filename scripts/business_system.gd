@@ -1,12 +1,11 @@
 extends Node
 const DomainSystem = preload("res://scripts/domain_system.gd")
 const Economy = preload("res://scripts/economy.gd")
-const Production = preload("res://scripts/production.gd")
 const SupplyChain = preload("res://scripts/supply_chain_system.gd")
 
 var state_adapter = DomainSystem.new()
 var economy = Economy.new()
-var production = Production.new()
+var production: Node = null
 var supply_chain = SupplyChain.new()
 var employee_system = null
 
@@ -45,16 +44,18 @@ func _ready() -> void:
     add_child(state_adapter)
     add_child(supply_chain)
     supply_chain.set_economy(economy)
+    production = get_node_or_null("/root/RenewProductionSystem")
+    if production == null:
+        var scene = get_tree().current_scene
+        production = scene.get_node_or_null("Systems/ProductionSystem") if scene else null
 
 func _technology(): return get_node_or_null("/root/RenewTechnologySystem")
-
 func get_industries() -> Array:
     var result: Array = []
     for key in INDUSTRIES.keys(): result.append(INDUSTRIES[key].duplicate(true))
     return result
 func get_industry(industry_id: String) -> Dictionary: return INDUSTRIES.get(industry_id, {}).duplicate(true)
 func get_business_purposes() -> Array: return PURPOSES.get(_origin_property_type(), []).duplicate(true)
-
 func get_business_purpose(purpose) -> Dictionary:
     var choices: Array = get_business_purposes()
     if purpose is int:
@@ -187,6 +188,8 @@ func _prepare_derived_inputs(inputs: Dictionary, cycles: int) -> bool:
 func produce_goods() -> void:
     if not bool(state_adapter.get_value("businesses", "business_open", false)):
         state_adapter.message("Create the business first."); return
+    if production == null:
+        state_adapter.message("ProductionSystem is unavailable."); return
     var industry_id: String = str(state_adapter.get_value("businesses", "industry_id", "furniture")); var config: Dictionary = _industry_production_config(industry_id)
     if config.is_empty(): state_adapter.message("Unknown V1 industry: %s." % industry_id); return
     var employee_count: int = 3; var employee_factor: float = 1.0; var morale_multiplier: float = 1.0
@@ -213,7 +216,6 @@ func produce_goods() -> void:
         var delivery_cost := int(delivery["cost"])
         var spend := state_adapter.spend(delivery_cost, "supply delivery")
         if not bool(spend.get("ok", false)):
-            # procure_bundle already reserved the market stock; restore it and warehouse additions if the canonical ledger rejects payment.
             for delivered in delivery.get("delivered", []):
                 var resource := str(delivered.get("resource", "")); var amount := float(delivered.get("amount", 0.0)); var delivered_amount := float(delivered.get("delivered_amount", amount))
                 if economy.resources.has(resource): economy.resources[resource]["stock"] = float(economy.resources[resource].get("stock", 0.0)) + amount
@@ -225,15 +227,17 @@ func produce_goods() -> void:
     if not bool(input_result.get("ok", false)): state_adapter.message("%s stopped: warehouse inputs are too low." % _business_name()); return
     var quality: int = clamp(int(round(72.0 + employee_factor*5.0 + morale_multiplier*4.0 + _technology_multiplier()*3.0 + randi_range(-3,4))),30,100)
     var output: int = max(1, cycles-int(floor(float(cycles)*0.08))); var product: String = str(config.get("product",industry_id))
-    production.finished_goods += output; production.inventory[product] = int(production.inventory.get(product,0))+output; production.inventory["goods"] = production.finished_goods
+    production.finished_goods += output
+    production.inventory[product] = int(production.inventory.get(product,0))+output
+    production.inventory["goods"] = production.finished_goods
     production.last_run = {"product":product,"industry_id":industry_id,"stage":"manufacturing","cycles":cycles,"output":output,"quality":quality,"resources":input_result.get("consumed",{}),"resource_requirements":inputs,"production_time":2.0,"employee_capacity":int(config.get("workers",3)),"base_price":int(config.get("base_price",0)),"operating_cost":int(config.get("operating_cost",0)),"reputation_effect":2}
-    supply_chain.receive_product(product,output); state_adapter.set_value("production","finished_goods",production.finished_goods)
+    supply_chain.receive_product(product,output)
+    state_adapter.set_value("production","finished_goods",production.finished_goods)
     state_adapter.message("%s produced %d %s at quality %d. Staff efficiency %.2fx." % [_business_name(),output,product.replace("_"," "),quality,output_factor])
     state_adapter.log_message("FACTORY: %s (from %s) -> Warehouse -> Customer; %d %s produced." % [_business_name(),_origin_property_name(),output,product])
 
 func warehouse_restore(resource:String, amount:float)->void:
     supply_chain.warehouse[resource] = max(0.0, float(supply_chain.warehouse.get(resource,0.0))-amount)
-
 func capture_state() -> Dictionary: return {"system_version":2,"businesses":state_adapter.get_value("businesses","businesses",{}).duplicate(true)}
 func restore_state(snapshot:Dictionary)->void:
     if snapshot.is_empty(): return
