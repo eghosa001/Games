@@ -16,6 +16,16 @@ func run() -> void:
     var state = get_node_or_null("/root/RenewGameState")
     check(state != null, "Canonical GameState is available")
     var start_day := int(state.get_value("player", "day", 1))
+    # advance_day requires an operating business; use a deterministic funded
+    # fixture so this stress test exercises the real day-transition path.
+    game.cash = 500000
+    game.inspect_property()
+    game.acquire_property()
+    for _i in range(5):
+        game.restore_property()
+    game.choose_business_purpose(0)
+    game.open_business()
+    check(bool(game.business_open), "Extreme soak fixture opens a business")
     for i in range(1000):
         game.advance_day()
         var day := int(state.get_value("player", "day", 0))
