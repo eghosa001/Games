@@ -154,11 +154,24 @@ func test_main_command_integration() -> void:
     check(game.transport_level >= 2, "integration transport upgrade command")
     check(game.transport_capacity >= 60, "integration transport capacity updated")
 
-    game.cash = 123456
-    game.save_game()
-    game.cash = 1
-    game.load_game()
-    check(game.cash == 123456, "integration save/load command boundary")
+    # Competitor reactions are part of the canonical persistent state. Prove the
+    # reaction system's history survives the real Main -> SaveSystem -> GameState
+    # path rather than relying on an out-of-band save payload.
+    var reaction = get_node_or_null("/root/RenewCompetitorReactionSystem")
+    if reaction != null:
+        reaction._remember(game.day, "integration_regression", {"ok": true})
+        var before_reaction_count := reaction.reaction_history.size()
+        check(before_reaction_count > 0, "integration competitor reaction history created")
+        game.cash = 123456
+        game.save_game()
+        game.cash = 1
+        reaction.reaction_history.clear()
+        game.load_game()
+        check(game.cash == 123456, "integration save/load command boundary")
+        check(reaction.reaction_history.size() == before_reaction_count, "integration competitor reaction history restored")
+    else:
+        check(false, "integration competitor reaction system available")
+
     check(game.expansion.properties.size() == 3, "integration expansion state restored")
 
     game.free()
