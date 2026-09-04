@@ -110,5 +110,22 @@ func run() -> void:
     var produced = production.produce(economy, 3, "furniture")
     check(bool(produced.get("ok", false)), "ProductionSystem furniture fixture succeeds")
 
+    var finance_fixture = load("res://scripts/finance_system.gd").new()
+    finance_fixture.cash = 50000
+    finance_fixture.debt = 15000
+    finance_fixture.loan_payment = 0
+    finance_fixture.financing = {
+        "loan_a": {"balance": 10000.0, "annual_rate": 0.12, "payment": 0},
+        "loan_b": {"balance": 5000.0, "annual_rate": 0.08, "payment": 0}
+    }
+    var cash_before_interest: int = finance_fixture.cash
+    var debt_before_interest: int = finance_fixture.debt
+    var debt_day = finance_fixture.settle_debt_day()
+    check(int(debt_day.get("interest", -1)) == 4, "Finance accrues interest independently per instrument")
+    check(finance_fixture.cash == cash_before_interest - 4, "Finance cash reflects total multi-loan interest")
+    check(float(finance_fixture.financing["loan_a"]["balance"]) == 10003.0, "First financing balance gets only its own interest")
+    check(float(finance_fixture.financing["loan_b"]["balance"]) == 5001.0, "Second financing balance gets only its own interest")
+    check(finance_fixture.debt == debt_before_interest, "Interest does not incorrectly reduce principal debt")
+
     print("EXTENDED RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
