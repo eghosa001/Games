@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="300" viewBox="0 0 420 300">
+<defs><linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#cad8d5"/><stop offset="1" stop-color="#829b99"/></linearGradient><linearGradient id="roof" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#38545b"/><stop offset="1" stop-color="#1b3038"/></linearGradient></defs>
+<ellipse cx="210" cy="268" rx="184" ry="18" fill="#061014" opacity=".6"/>
+<path d="M42 104 210 30l168 74v130H42Z" fill="url(#wall)" stroke="#d9e7e2" stroke-width="5"/>
+<path d="m28 106 182-82 182 82-14 22L210 57 42 128Z" fill="url(#roof)" stroke="#7fa49e" stroke-width="4"/>
+<path d="M72 120h276v18H72z" fill="#47666a"/>
+<g fill="#e9c979" stroke="#38545b" stroke-width="5"><rect x="75" y="151" width="43" height="48" rx="4"/><rect x="137" y="151" width="43" height="48" rx="4"/><rect x="240" y="151" width="43" height="48" rx="4"/><rect x="302" y="151" width="43" height="48" rx="4"/></g>
+<rect x="184" y="147" width="52" height="87" rx="5" fill="#1a2b32" stroke="#a8c3bd" stroke-width="5"/>
+<path d="M210 156v76M191 190h38" stroke="#71918e" stroke-width="3"/>
+<path d="M94 232h232" stroke="#d9e7e2" stroke-width="7"/>
+<circle cx="354" cy="90" r="12" fill="#e9c979"/><path d="M354 104v26" stroke="#e9c979" stroke-width="6"/>
+<text x="210" y="287" text-anchor="middle" fill="#d9e7e2" font-family="sans-serif" font-size="16" letter-spacing="4">RENEW GOODS</text>
+</svg>

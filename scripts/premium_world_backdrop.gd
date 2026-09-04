@@ -19,6 +19,7 @@ func _process(delta: float) -> void:
 func _draw() -> void:
     draw_rect(Rect2(0, 0, WIDTH, HEIGHT), Color("081017"), true)
     draw_rect(Rect2(0, 64, WIDTH, HEIGHT - 64), Color("0b151d"), true)
+    draw_rect(Rect2(0, 64, WIDTH, 2), Color("d5b56b", 0.30), true)
 
     _glow(Vector2(1120, 120), 240.0, Color("183a46"), 0.11)
     _glow(Vector2(160, 560), 280.0, Color("123d35"), 0.08)
@@ -60,6 +61,9 @@ func _draw() -> void:
 
     draw_line(Vector2(0, 64), Vector2(WIDTH, 64), Color("a6c6d2", 0.10), 1.0)
     draw_line(Vector2(0, HEIGHT - 1), Vector2(WIDTH, HEIGHT - 1), Color("a6c6d2", 0.06), 1.0)
+    draw_circle(Vector2(110, 116), 2.0, Color("d5b56b", 0.55))
+    draw_circle(Vector2(110, 116), 7.0, Color("d5b56b", 0.08))
+    draw_line(Vector2(122, 116), Vector2(182, 116), Color("d5b56b", 0.24), 1.0)
 
 func _glow(center: Vector2, radius: float, tint: Color, strength: float) -> void:
     for i in range(8, 0, -1):

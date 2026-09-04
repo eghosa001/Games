@@ -10,6 +10,7 @@ var tab_normal_style: StyleBoxFlat
 var tab_active_style: StyleBoxFlat
 var tab_hover_style: StyleBoxFlat
 var panel_style: StyleBoxFlat
+var accent_line: ColorRect
 
 func _build_ui() -> void:
     root = Control.new()
@@ -24,6 +25,13 @@ func _build_ui() -> void:
     top_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(top_bar)
 
+    accent_line = ColorRect.new()
+    accent_line.color = Color("d5b56b")
+    accent_line.position = Vector2(18, 62)
+    accent_line.size = Vector2(112, 2)
+    accent_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    root.add_child(accent_line)
+
     var brand: Variant = Label.new()
     brand.text = "RENEW"
     brand.position = Vector2(18, 7)
@@ -34,7 +42,7 @@ func _build_ui() -> void:
     root.add_child(brand)
 
     var subtitle: Variant = Label.new()
-    subtitle.text = "REBUILD  •  OPERATE  •  EXPAND"
+    subtitle.text = "REBUILD  /  OPERATE  /  EXPAND"
     subtitle.position = Vector2(18, 37)
     subtitle.size = Vector2(240, 20)
     subtitle.add_theme_font_size_override("font_size", 9)
@@ -133,23 +141,24 @@ func _make_button_theme() -> Theme:
     var theme: Variant = Theme.new()
     theme.default_font_size = 14
     var normal: Variant = StyleBoxFlat.new()
-    normal.bg_color = Color("18282e")
-    normal.border_color = Color("30474f")
+    normal.bg_color = Color("15252c")
+    normal.border_color = Color("34515a")
     normal.set_border_width_all(1)
     normal.set_corner_radius_all(8)
     normal.content_margin_left = 10.0
     normal.content_margin_right = 10.0
     normal.content_margin_top = 7.0
     normal.content_margin_bottom = 7.0
-    normal.shadow_color = Color(0, 0, 0, 0.18)
-    normal.shadow_size = 3
+    normal.shadow_color = Color(0, 0, 0, 0.28)
+    normal.shadow_size = 4
     var hover: Variant = normal.duplicate()
-    hover.bg_color = Color("244047")
-    hover.border_color = Color("6d9d91")
-    hover.shadow_color = Color(0.18, 0.55, 0.48, 0.16)
-    hover.shadow_size = 5
+    hover.bg_color = Color("25464a")
+    hover.border_color = Color("d5b56b")
+    hover.shadow_color = Color(0.18, 0.55, 0.48, 0.22)
+    hover.shadow_size = 6
     var pressed: Variant = hover.duplicate()
-    pressed.bg_color = Color("315b5c")
+    pressed.bg_color = Color("35645f")
+    pressed.border_color = Color("e4c77f")
     var disabled: Variant = normal.duplicate()
     disabled.bg_color = Color("10191d")
     disabled.border_color = Color("203137")
@@ -165,12 +174,12 @@ func _make_button_theme() -> Theme:
 
 func _make_panel_style() -> StyleBoxFlat:
     var style := StyleBoxFlat.new()
-    style.bg_color = Color("142229")
-    style.border_color = Color("29414a")
+    style.bg_color = Color("12232b")
+    style.border_color = Color("35535b")
     style.set_border_width_all(1)
     style.set_corner_radius_all(10)
-    style.shadow_color = Color(0, 0, 0, 0.24)
-    style.shadow_size = 6
+    style.shadow_color = Color(0, 0, 0, 0.34)
+    style.shadow_size = 8
     style.content_margin_left = 10.0
     style.content_margin_right = 10.0
     return style
@@ -185,14 +194,14 @@ func _make_status_style() -> StyleBoxFlat:
 
 func _make_tab_style(active: bool) -> StyleBoxFlat:
     var style := StyleBoxFlat.new()
-    style.bg_color = Color("183037") if active else Color("142129")
-    style.border_color = Color("78b8a7") if active else Color("2a4048")
+    style.bg_color = Color("244b4b") if active else Color("12232b")
+    style.border_color = Color("d5b56b") if active else Color("2f4b53")
     style.set_border_width_all(1)
     style.set_corner_radius_all(9)
     style.content_margin_top = 5.0
     style.content_margin_bottom = 5.0
-    style.shadow_color = Color(0.10, 0.45, 0.38, 0.18) if active else Color(0, 0, 0, 0.12)
-    style.shadow_size = 4 if active else 2
+    style.shadow_color = Color(0.10, 0.45, 0.38, 0.26) if active else Color(0, 0, 0, 0.18)
+    style.shadow_size = 6 if active else 3
     return style
 
 func _apply_tab_state() -> void:

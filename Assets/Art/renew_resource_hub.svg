@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="180" viewBox="0 0 260 180">
+<ellipse cx="130" cy="157" rx="94" ry="12" fill="#061014" opacity=".65"/>
+<path d="M65 128 84 70l38 17 18-47 31 34 25-17 18 71Z" fill="#24484d" stroke="#83b1a4" stroke-width="4"/>
+<path d="m83 70 39 17-5 37H72Zm57-30 31 34-15 50h-35Zm56 17 25-17 18 71-43-2Z" fill="#315e60" opacity=".9"/>
+<path d="M38 130h184" stroke="#e0bd6d" stroke-width="5"/>
+<circle cx="47" cy="130" r="9" fill="#e0bd6d"/><circle cx="214" cy="130" r="9" fill="#e0bd6d"/>
+<path d="M47 128V91m167 37V91" stroke="#e0bd6d" stroke-width="3"/>
+<text x="130" y="174" text-anchor="middle" fill="#d9e7e2" font-family="sans-serif" font-size="13" letter-spacing="3">RESOURCE HUB</text>
+</svg>
