@@ -17,9 +17,9 @@ func check(ok: bool, label: String) -> void:
 func run() -> void:
     var economy = load("res://scripts/economy.gd").new()
     var orders: Array = [
-        {"resource":"materials","amount":12},
-        {"resource":"packaging","amount":12},
-        {"resource":"fuel","amount":12}
+        {"resource":"timber","amount":12},
+        {"resource":"iron","amount":12},
+        {"resource":"energy","amount":12}
     ]
     var quote = economy.quote_bundle(orders, 0, 0.10, 250)
     check(quote["ok"], "Bundle quote succeeds")
