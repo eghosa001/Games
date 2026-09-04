@@ -94,6 +94,8 @@ script = ExtResource("15")
 script = ExtResource("14")
 [node name="MarketDirector" type="Node" parent="Systems"]
 script = ExtResource("16")
+[node name="EmpireGoals" type="Node" parent="Systems"]
+script = ExtResource("17")
 [node name="FinanceSystem" type="Node" parent="Systems"]
 script = ExtResource("26")
 [node name="OwnershipSystem" type="Node" parent="Systems"]
