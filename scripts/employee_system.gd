@@ -188,6 +188,7 @@ func daily_update(day:int,company_performance:int=0)->Dictionary:
         elif loyalty<=80 and randi_range(1,100)<=1: warnings.append("%s may consider outside offers."%employee["name"])
         if int(employee["ambition"])>=80 and int(employee.get("level",1))<4 and int(employee["experience"])%12==0: warnings.append("%s is ready for a career conversation."%employee["name"])
     refresh_candidates()
+    sync_roster_to_state()
     return {"warnings":warnings,"resignations":resignations,"salary":get_daily_wage_total(),"productivity":total_productivity()}
 
 func poach_candidate(employee_id:String,rival_name:String,day:int)->Dictionary:
@@ -240,3 +241,8 @@ func _record(employee_id:String,event_type:String,details:Dictionary)->void:
     var employee:=get_employee(employee_id)
     if not employee.is_empty():
         var employee_history:Array=employee.get("history",[]); employee_history.append(entry.duplicate(true)); employee["history"]=employee_history
+
+func sync_roster_to_state()->void:
+    var state=get_node_or_null("/root/RenewGameState")
+    if state:
+        state.set_value("employees","roster",get_roster())
