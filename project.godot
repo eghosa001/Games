@@ -30,6 +30,7 @@ RenewHistorySystem="*res://scripts/history_system.gd"
 RenewHistoryEventBridge="*res://scripts/history_event_bridge.gd"
 RenewNewsSystem="*res://scripts/news_system.gd"
 RenewAudioManager="*res://scripts/audio_manager.gd"
+RenewAmbientAudio="*res://scripts/ambient_audio.gd"
 
 [display]
 window/size/viewport_width=1280
