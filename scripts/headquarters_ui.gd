@@ -8,6 +8,7 @@ var area_label: Label
 var upgrade_button: Button
 var area_button: Button
 var museum_button: Button
+var hq_visual: RenewHQVisual
 var selected_area: Variant = "executive_offices"
 var area_ids: Array = ["executive_offices", "board_room", "research", "training", "archives", "museum", "technology_center"]
 
@@ -20,37 +21,49 @@ func _ready() -> void:
 func _build_ui() -> void:
     panel = PanelContainer.new()
     panel.position = Vector2(25, 110)
-    panel.size = Vector2(360, 340)
+    panel.size = Vector2(360, 470)
+    V1VisualTheme.apply_panel(panel)
     add_child(panel)
     var box: Variant = VBoxContainer.new()
+    box.add_theme_constant_override("separation", 7)
     panel.add_child(box)
     var title: Variant = Label.new()
-    title.text = "HEADQUARTERS"
-    title.add_theme_font_size_override("font_size", 22)
+    title.text = "HEADQUARTERS  /  EMPIRE"
+    V1VisualTheme.apply_label(title, 22)
     box.add_child(title)
+    hq_visual = RenewHQVisual.new()
+    hq_visual.custom_minimum_size = Vector2(330, 145)
+    box.add_child(hq_visual)
     status_label = Label.new()
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    V1VisualTheme.apply_label(status_label, 12, true)
     box.add_child(status_label)
     upgrade_button = Button.new()
     upgrade_button.text = "UPGRADE HEADQUARTERS"
+    V1VisualTheme.apply_button(upgrade_button, V1VisualTheme.GOLD)
     upgrade_button.pressed.connect(_upgrade_hq)
     box.add_child(upgrade_button)
     var area_title: Variant = Label.new()
     area_title.text = "Functional Areas"
+    V1VisualTheme.apply_label(area_title, 15)
     box.add_child(area_title)
     area_label = Label.new()
     area_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    V1VisualTheme.apply_label(area_label, 11, true)
     box.add_child(area_label)
     area_button = Button.new()
     area_button.text = "BUILD / UPGRADE SELECTED AREA"
+    V1VisualTheme.apply_button(area_button, V1VisualTheme.GREEN)
     area_button.pressed.connect(_build_area)
     box.add_child(area_button)
     var cycle: Variant = Button.new()
     cycle.text = "NEXT AREA"
+    V1VisualTheme.apply_button(cycle, V1VisualTheme.BLUE)
     cycle.pressed.connect(_next_area)
     box.add_child(cycle)
     museum_button = Button.new()
     museum_button.text = "OPEN CORPORATE MUSEUM [Y]"
+    V1VisualTheme.apply_button(museum_button, V1VisualTheme.GOLD)
     museum_button.pressed.connect(_open_museum)
     box.add_child(museum_button)
 
@@ -96,12 +109,13 @@ func _refresh() -> void:
     var next_text: Variant = "MAX LEVEL"
     if bool(check.get("ok", false)): next_text = "%s ($%s)" % [check["stage"], _money(int(check["cost"]))]
     elif system.get_stage_index() < 4: next_text = "%s" % check.get("reason", "Locked")
-    status_label.text = "Stage: %s\nValue invested: $%s\nCash: $%s\nNext: %s\nAreas: %d/%d" % [system.get_stage(), _money(system.headquarters_value), _money(int(main.get("cash"))), next_text, _built_count(), area_ids.size()]
+    hq_visual.set_stage(system.get_stage_index())
+    status_label.text = "Stage: %s  •  Value: $%s\nCash: $%s  •  Next: %s\nAreas: %d/%d" % [system.get_stage(), _money(system.headquarters_value), _money(int(main.get("cash"))), next_text, _built_count(), area_ids.size()]
     upgrade_button.disabled = system.get_stage_index() >= 4
     var spec = system.AREA_SPECS[selected_area]
     var built: Variant = system.has_area(selected_area)
     var level: Variant = system.area_level(selected_area)
-    area_label.text = "%s\nRequired stage: %s\nStatus: %s\nLevel: %d\nBase cost: $%s" % [spec["name"], system.STAGES[int(spec["min_stage"])], "Operational" if built else ("Unlocked" if system.get_stage_index() >= int(spec["min_stage"]) else "Locked"), level, _money(int(spec["cost"]) * max(1, level))]
+    area_label.text = "%s\nRequired stage: %s  •  Status: %s\nLevel: %d  •  Cost: $%s" % [spec["name"], system.STAGES[int(spec["min_stage"])], "Operational" if built else ("Unlocked" if system.get_stage_index() >= int(spec["min_stage"]) else "Locked"), level, _money(int(spec["cost"]) * max(1, level))]
     area_button.text = "UPGRADE %s" % spec["name"].to_upper() if built else "BUILD %s" % spec["name"].to_upper()
     museum_button.disabled = system == null or not system.museum_available()
 

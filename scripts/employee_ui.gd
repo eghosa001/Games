@@ -1,11 +1,10 @@
 extends CanvasLayer
 class_name RenewEmployeeUI
 
-# Phase 38: employee presentation reads canonical GameState and delegates all
-# mutations to the EmployeeCommandSystem through GameplayCommandSystem.
 var panel: Panel
 var employee_list: VBoxContainer
 var detail_label: Label
+var portrait: RenewEmployeePortrait
 var selected_id: Variant = ""
 var _refresh_clock: Variant = 0.0
 
@@ -29,6 +28,7 @@ func _build_ui() -> void:
     panel.position = Vector2(860, 70)
     panel.size = Vector2(380, 590)
     panel.visible = false
+    V1VisualTheme.apply_panel(panel)
     add_child(panel)
     var margin: Variant = MarginContainer.new()
     margin.add_theme_constant_override("margin_left", 18)
@@ -40,37 +40,47 @@ func _build_ui() -> void:
     root.add_theme_constant_override("separation", 8)
     margin.add_child(root)
     var title: Variant = Label.new()
-    title.text = "EMPLOYEES"
-    title.add_theme_font_size_override("font_size", 24)
+    title.text = "EMPLOYEES  /  PEOPLE"
+    V1VisualTheme.apply_label(title, 22)
     root.add_child(title)
     var hint: Variant = Label.new()
     hint.text = "F: close/open • Select a person to view their career."
+    V1VisualTheme.apply_label(hint, 11, true)
     root.add_child(hint)
     var split: Variant = HSplitContainer.new()
     split.size_flags_vertical = Control.SIZE_EXPAND_FILL
     root.add_child(split)
     employee_list = VBoxContainer.new()
     employee_list.custom_minimum_size.x = 145
+    employee_list.add_theme_constant_override("separation", 6)
     split.add_child(employee_list)
     var detail_scroll: Variant = ScrollContainer.new()
     detail_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     split.add_child(detail_scroll)
+    var detail_box: Variant = VBoxContainer.new()
+    detail_box.add_theme_constant_override("separation", 8)
+    detail_scroll.add_child(detail_box)
+    portrait = RenewEmployeePortrait.new()
+    portrait.custom_minimum_size = Vector2(92, 112)
+    detail_box.add_child(portrait)
     detail_label = Label.new()
     detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    detail_scroll.add_child(detail_label)
+    V1VisualTheme.apply_label(detail_label, 13)
+    detail_box.add_child(detail_label)
     var actions: Variant = GridContainer.new()
     actions.columns = 2
     root.add_child(actions)
-    _add_action(actions, "Train", "train")
-    _add_action(actions, "Promote", "promote")
-    _add_action(actions, "Assign", "assign")
-    _add_action(actions, "Transfer", "transfer")
-    _add_action(actions, "Fire", "fire")
+    _add_action(actions, "Train", "train", V1VisualTheme.BLUE)
+    _add_action(actions, "Promote", "promote", V1VisualTheme.GOLD)
+    _add_action(actions, "Assign", "assign", V1VisualTheme.GREEN)
+    _add_action(actions, "Transfer", "transfer", V1VisualTheme.BLUE)
+    _add_action(actions, "Fire", "fire", V1VisualTheme.RED)
 
-func _add_action(parent: GridContainer, text: String, action: String) -> void:
+func _add_action(parent: GridContainer, text: String, action: String, accent: Color) -> void:
     var button: Variant = Button.new()
     button.text = text
     button.custom_minimum_size = Vector2(150, 38)
+    V1VisualTheme.apply_button(button, accent)
     button.pressed.connect(_action.bind(action))
     parent.add_child(button)
 
@@ -93,6 +103,7 @@ func _rebuild_list(roster: Array) -> void:
         button.text = "%s\n%s" % [str(employee.get("name", "Employee")), str(employee.get("role", "Worker"))]
         button.alignment = HORIZONTAL_ALIGNMENT_LEFT
         button.custom_minimum_size.y = 54
+        V1VisualTheme.apply_button(button, V1VisualTheme.GREEN)
         button.pressed.connect(_select.bind(str(employee.get("id", ""))))
         employee_list.add_child(button)
 
@@ -105,8 +116,10 @@ func _update_details(roster: Array) -> void:
     if employee.is_empty():
         detail_label.text = "No employee selected."
         return
+    var role := str(employee.get("role", "Worker"))
+    portrait.set_employee(str(employee.get("id", "")), role)
     var productivity: Variant = int(round(float(employee.get("productivity", 0.0)) * 100.0))
-    detail_label.text = "%s\n%s\n────────────────\nProductivity %d%%\nExperience %d\nMorale %d\nLoyalty %d\nSalary $%d/day\nSpecialization: %s" % [str(employee.get("name", "Employee")), str(employee.get("role", "Worker")), productivity, int(employee.get("experience", 0)), int(employee.get("morale", 0)), int(employee.get("loyalty", 0)), int(employee.get("salary", 0)), str(employee.get("specialization", "general")).capitalize()]
+    detail_label.text = "%s\n%s\n────────────────\nProductivity %d%%\nExperience %d\nMorale %d\nLoyalty %d\nSalary $%d/day\nSpecialization: %s" % [str(employee.get("name", "Employee")), role, productivity, int(employee.get("experience", 0)), int(employee.get("morale", 0)), int(employee.get("loyalty", 0)), int(employee.get("salary", 0)), str(employee.get("specialization", "general")).capitalize()]
 
 func _select(employee_id: String) -> void:
     selected_id = employee_id
