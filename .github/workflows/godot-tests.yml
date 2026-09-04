@@ -12,7 +12,7 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,6 +25,10 @@ jobs:
           chmod +x Godot_v4.7.2-stable_linux.x86_64
       - name: Import project
         run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --editor --path . --quit
+      - name: Run Android release configuration test
+        run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_android_release_config.gd
+      - name: Run mobile QA automation
+        run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/mobile_qa_test.gd
       - name: Run targeted simulation architecture test
         run: timeout 60s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/test_simulation_architecture.gd
       - name: Run regression tests
