@@ -17,7 +17,6 @@ func _draw() -> void:
     var size: Variant = get_viewport_rect().size
     var w: Variant = size.x
     var h: Variant = size.y
-    draw_rect(Rect2(0, 0, w, h), Color("081116"), true)
     _draw_grid(w, h)
     _draw_header(w)
     _draw_warehouse(w, h)

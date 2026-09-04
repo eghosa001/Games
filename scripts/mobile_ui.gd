@@ -32,6 +32,7 @@ func _initialize_after_parent_ready() -> void:
     _refresh(); last_seen_day = int(parent.day); _seed_milestones()
     if root != null and not get_viewport().size_changed.is_connected(_layout_responsive): get_viewport().size_changed.connect(_layout_responsive)
     _layout_responsive()
+    _update_panel_visibility()
 
 func _process(delta: float) -> void:
     if parent == null or status_label == null: return
@@ -83,6 +84,48 @@ func _layout_responsive() -> void:
 func _set_tab(index: int) -> void:
     var target: int = clampi(index, 0, tab_names.size() - 1)
     active_tab = target; action_scroll.scroll_vertical = 0; _refresh(); _show_feedback("TAB: %s\nChoose an action below." % tab_names[active_tab])
+    _update_panel_visibility()
+
+func _update_panel_visibility() -> void:
+    var ui: Node = get_parent()
+    var renew = get_tree().root.get_node_or_null("Renew") if get_tree() != null else null
+    var panel_map: Dictionary = {
+        "HeadquartersPanel": 0,
+        "HistoryPanel": 2,
+        "TechnologyPanel": 2,
+        "AlliancePanel": 2,
+        "ContractPanel": 1,
+        "MarketPanel": 1,
+        "CustomerPanel": 1,
+        "CollectionPanel": 3,
+        "LiveOpsPanel": 3,
+        "NewsPanel": 3,
+        "EmployeePanel": 1,
+    }
+    for child: Node in ui.get_children():
+        var tab_index: Variant = panel_map.get(child.name, -1)
+        if tab_index >= 0:
+            if tab_index == active_tab:
+                child.show()
+            else:
+                child.hide()
+    var diplomacy = get_node_or_null("/root/RenewDiplomacyUI")
+    if diplomacy != null:
+        if active_tab == 2: diplomacy.show() else: diplomacy.hide()
+    if renew != null:
+        var customer_ui = renew.get_node_or_null("CustomerSegmentsUI")
+        if customer_ui != null:
+            if active_tab == 1: customer_ui.show() else: customer_ui.hide()
+    var world: Node2D = renew.get_node_or_null("World") if renew != null else null
+    if world != null:
+        var main_renderer = world.get_node_or_null("MainRenderer")
+        if main_renderer != null: main_renderer.hide()
+        var world_view = world.get_node_or_null("WorldView")
+        if world_view != null:
+            if active_tab == 3: world_view.show() else: world_view.hide()
+        var property_visual = world.get_node_or_null("PropertyVisual")
+        if property_visual != null:
+            if active_tab == 0: property_visual.show() else: property_visual.hide()
 func _clear_actions() -> void:
     for child: Node in actions.get_children(): actions.remove_child(child); child.queue_free()
 func _button(text: String, callback: Callable) -> void:

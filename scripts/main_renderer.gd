@@ -6,8 +6,7 @@ func _process(_delta: float) -> void:
 func _draw() -> void:
     var main: Node = get_parent().get_parent()
     if main == null: return
-    draw_rect(Rect2(0, 0, 1280, 720), Color("0c1218"), true)
-    draw_rect(Rect2(0, 0, 1280, 64), Color("17232d"), true)
+    draw_rect(Rect2(0, 0, 1280, 64), Color("17232d", 0.85), true)
     var font: Variant = ThemeDB.fallback_font
     draw_string(font, Vector2(28, 41), "RENEW", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color.WHITE)
     draw_string(font, Vector2(160, 39), "DAY %d" % main.day, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("9fb3c8"))
