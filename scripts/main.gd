@@ -58,7 +58,6 @@ func _next_cost() -> int:
             return int(stages[index + 1][2])
     return 0
 
-# ---- All properties with both getter and setter ----
 var cash: int:
     get: return _read("economy", "cash", 0)
     set(value): _write("economy", "cash", value)
@@ -101,7 +100,7 @@ var business_open: bool:
 
 var employees: int:
     get: return command_system.employee_system.get_active_employee_count() if command_system else 0
-    set(_value): pass  # Employees are managed via hire/fire commands
+    set(_value): pass
 
 var capacity_level: int:
     get: return _read("businesses", "capacity_level", 1)
@@ -193,7 +192,6 @@ func _process(_delta):
 func refresh_ui():
     queue_redraw()
 
-# ---- Game Actions (delegated) ----
 func inspect_property() -> void: command_system.inspect_property()
 func acquire_property() -> void: command_system.acquire_property()
 func restore_property() -> void: command_system.restore_property()
@@ -226,15 +224,31 @@ func upgrade_transport() -> Dictionary: return command_system.upgrade_transport(
 func upgrade_expansion() -> void: command_system.upgrade_expansion()
 func acquire_rival_asset() -> void: command_system.acquire_rival_asset()
 func advance_day() -> void: command_system.advance_day()
-func save_game() -> void: command_system.save_game()
-func load_game() -> void: command_system.load_game()
+func save_game() -> void:
+    _set_runtime_save_state()
+    command_system.save_game()
+func load_game() -> void:
+    command_system.load_game()
+    _restore_runtime_state()
+
+func _set_runtime_save_state() -> void:
+    if command_system == null: return
+    var expansion_system = command_system.expansion_system
+    if expansion_system != null and expansion_system.has_method("capture_state"):
+        _write("branches", "expansion", expansion_system.capture_state())
+
+func _restore_runtime_state() -> void:
+    if command_system == null: return
+    var expansion_system = command_system.expansion_system
+    var saved_expansion = _read("branches", "expansion", {})
+    if expansion_system != null and expansion_system.has_method("restore_state") and saved_expansion is Dictionary and not saved_expansion.is_empty():
+        expansion_system.restore_state(saved_expansion)
 
 func research_technology(id: String) -> void:
     if command_system.technology_system: command_system.technology_system.research(id)
 func research_next_technology() -> void:
     if command_system.technology_system: command_system.technology_system.research_next()
 
-# ---- Input Router ----
 func _input(event: InputEvent) -> void:
     if not event is InputEventKey or not event.pressed or event.echo: return
     if event.shift_pressed:
