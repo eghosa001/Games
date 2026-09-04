@@ -4,11 +4,16 @@ extends Node
 ## Basic player alliances only: membership, invitations, chat, contributions,
 ## cooperative projects and rewards. Persistent facts live in GameState.alliances.
 
+const DomainSystem = preload("res://scripts/domain_system.gd")
 const PLAYER_ID := "player"
 const MAX_MEMBERS := 6
 const RAILWAY_PROJECT_ID := "regional_railway"
 const RAILWAY_REQUIREMENTS := {"money": 1000000, "steel": 500, "timber": 100, "project_points": 100}
 const RAILWAY_EFFECTS := {"transport_cost_multiplier": 0.90, "resource_delivery_multiplier": 1.10, "regional_reputation": 5}
+var state_adapter: Variant = DomainSystem.new()
+
+func _ready() -> void:
+    add_child(state_adapter)
 
 func _state() -> Node:
     return get_node_or_null("/root/RenewGameState")
@@ -91,10 +96,12 @@ func post_message(alliance_id: String, member_id: String, text: String) -> Dicti
     alliance["chat"].append({"member": member_id, "text": text, "day": _day()}); if alliance["chat"].size() > 50: alliance["chat"] = alliance["chat"].slice(alliance["chat"].size() - 50, alliance["chat"].size())
     alliances[alliance_id] = alliance; _save(alliances); return {"ok": true, "message": "Alliance message posted."}
 func donate_money(member_id: String, amount: int) -> Dictionary:
-    if amount <= 0 or _cash() < amount: return {"ok": false, "message": "Insufficient cash for donation."}
+    if amount <= 0: return {"ok": false, "message": "Donation amount must be positive."}
     var alliances: Variant = _alliances(); var id := _member_alliance(member_id, alliances)
     if id.is_empty(): return {"ok": false, "message": "Member is not in an alliance."}
-    var alliance: Dictionary = alliances[id]; _set_cash(_cash() - amount); alliance["treasury"] = int(alliance.get("treasury", 0)) + amount
+    var spend := state_adapter.spend(amount, "alliance donation")
+    if not bool(spend.get("ok", false)): return {"ok": false, "message": "Insufficient cash for donation."}
+    var alliance: Dictionary = alliances[id]; alliance["treasury"] = int(alliance.get("treasury", 0)) + amount
     alliance["contributions"] = alliance.get("contributions", []); alliance["contributions"].append({"member": member_id, "type": "money", "amount": amount, "day": _day()})
     alliances[id] = alliance; _save(alliances); _message("Donated $%d to '%s'." % [amount, alliance["name"]]); return {"ok": true, "message": "Alliance received $%d." % amount}
 func donate_resource(member_id: String, resource_id: String, amount: int) -> Dictionary:
@@ -128,9 +135,12 @@ func contribute_to_railway(member_id: String, money: int = 0, steel: int = 0, ti
     if str(project.get("status", "")) != "active": return {"ok": false, "message": "Regional Railway Project is already complete."}
     var req: Dictionary = project["requirements"]; var current: Dictionary = project["contributed"]
     money = min(money, max(0, int(req["money"]) - int(current["money"]))); steel = min(steel, max(0, int(req["steel"]) - int(current["steel"]))); timber = min(timber, max(0, int(req["timber"]) - int(current["timber"]))); project_points = min(project_points, max(0, int(req["project_points"]) - int(current["project_points"])))
-    if money > _cash(): return {"ok": false, "message": "Not enough cash for this railway contribution."}
-    var resources: Variant = _resources(); if steel > int(resources.get("steel", 0)) or timber > int(resources.get("timber", 0)): return {"ok": false, "message": "Not enough steel or timber for this railway contribution."}
-    _set_cash(_cash() - money); resources["steel"] = int(resources.get("steel", 0)) - steel; resources["timber"] = int(resources.get("timber", 0)) - timber; _set_resources(resources)
+    var spend := state_adapter.spend(money, "regional railway contribution") if money > 0 else {"ok": true, "amount": 0}
+    if not bool(spend.get("ok", false)): return {"ok": false, "message": "Not enough cash for this railway contribution."}
+    var resources: Variant = _resources(); if steel > int(resources.get("steel", 0)) or timber > int(resources.get("timber", 0)):
+        if money > 0: state_adapter.receive(money, "railway contribution rollback")
+        return {"ok": false, "message": "Not enough steel or timber for this railway contribution."}
+    resources["steel"] = int(resources.get("steel", 0)) - steel; resources["timber"] = int(resources.get("timber", 0)) - timber; _set_resources(resources)
     current["money"] = int(current["money"]) + money; current["steel"] = int(current["steel"]) + steel; current["timber"] = int(current["timber"]) + timber; current["project_points"] = int(current["project_points"]) + project_points; project["contributed"] = current
     if not project["contributors"].has(member_id): project["contributors"].append(member_id)
     if _railway_complete(project):
