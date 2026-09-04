@@ -86,9 +86,25 @@ func _set_tab(index: int) -> void:
     active_tab = target; action_scroll.scroll_vertical = 0; _refresh(); _show_feedback("TAB: %s\nChoose an action below." % tab_names[active_tab])
     _update_panel_visibility()
 
+func _set_panel_host_visible(host: Node, value: bool) -> void:
+    if host == null: return
+    if host is CanvasLayer:
+        for child: Node in host.get_children():
+            _set_canvas_descendants_visible(child, value)
+    elif host is CanvasItem:
+        host.visible = value
+    else:
+        _set_canvas_descendants_visible(host, value)
+
+func _set_canvas_descendants_visible(node: Node, value: bool) -> void:
+    if node is CanvasItem:
+        node.visible = value
+    for child: Node in node.get_children():
+        _set_canvas_descendants_visible(child, value)
+
 func _update_panel_visibility() -> void:
     var ui: Node = get_parent()
-    var renew = get_tree().root.get_node_or_null("Renew") if get_tree() != null else null
+    var renew: Node = get_tree().root.get_node_or_null("Renew") if get_tree() != null else null
     var panel_map: Dictionary = {
         "HeadquartersPanel": 0,
         "HistoryPanel": 2,
@@ -102,34 +118,33 @@ func _update_panel_visibility() -> void:
         "NewsPanel": 3,
         "EmployeePanel": 1,
     }
-    for child: Node in ui.get_children():
-        var tab_index: Variant = panel_map.get(child.name, -1)
-        if tab_index >= 0:
-            if tab_index == active_tab:
-                child.show()
-            else:
-                child.hide()
-    var diplomacy = get_node_or_null("/root/RenewDiplomacyUI")
-    if diplomacy != null:
-        if active_tab == 2: diplomacy.show() else: diplomacy.hide()
+    if ui != null:
+        for child: Node in ui.get_children():
+            var tab_index: Variant = panel_map.get(child.name, -1)
+            if tab_index >= 0:
+                _set_panel_host_visible(child, tab_index == active_tab)
+    var diplomacy: Node = get_node_or_null("/root/RenewDiplomacyUI")
+    if diplomacy != null: diplomacy.visible = active_tab == 2
     if renew != null:
-        var customer_ui = renew.get_node_or_null("CustomerSegmentsUI")
-        if customer_ui != null:
-            if active_tab == 1: customer_ui.show() else: customer_ui.hide()
+        var customer_ui: Node = renew.get_node_or_null("CustomerSegmentsUI")
+        if customer_ui != null: customer_ui.visible = active_tab == 1
     var world: Node2D = renew.get_node_or_null("World") if renew != null else null
     if world != null:
-        var main_renderer = world.get_node_or_null("MainRenderer")
-        if main_renderer != null: main_renderer.hide()
-        var world_view = world.get_node_or_null("WorldView")
-        if world_view != null:
+        var main_renderer: Node = world.get_node_or_null("MainRenderer")
+        if main_renderer is CanvasItem: main_renderer.hide()
+        var world_view: Node = world.get_node_or_null("WorldView")
+        if world_view is CanvasItem:
             if active_tab == 3: world_view.show() else: world_view.hide()
-        var property_visual = world.get_node_or_null("PropertyVisual")
-        if property_visual != null:
+        var property_visual: Node = world.get_node_or_null("PropertyVisual")
+        if property_visual is CanvasItem:
             if active_tab == 0: property_visual.show() else: property_visual.hide()
+
 func _clear_actions() -> void:
     for child: Node in actions.get_children(): actions.remove_child(child); child.queue_free()
+
 func _button(text: String, callback: Callable) -> void:
     var b: Button = Button.new(); b.text = text; b.custom_minimum_size = Vector2(225, 48); b.focus_mode = Control.FOCUS_NONE; b.mouse_filter = Control.MOUSE_FILTER_STOP; b.pressed.connect(_run_action.bind(text, callback)); actions.add_child(b)
+
 func _run_action(label: String, callback: Callable) -> void:
     if not callback.is_valid(): _show_feedback("%s\nAction is currently unavailable." % label); return
     var before_cash: int = int(parent.cash); var before_rep: int = int(parent.reputation); var before_day: int = int(parent.day); var before_goods: int = int(parent.finished_goods); var before_message: String = String(parent.message)
@@ -144,6 +159,7 @@ func _run_action(label: String, callback: Callable) -> void:
     if int(parent.day) != before_day: changes.append("Day %d" % int(parent.day))
     if changes.size() > 0: message += "\n" + "  |  ".join(changes)
     _show_feedback(message); _pulse_feedback(); _refresh(); _detect_milestones()
+
 func _callback_message(callback: Callable, before_parent_message: String) -> String:
     var parent_message: String = String(parent.message)
     if not parent_message.is_empty() and parent_message != before_parent_message: return parent_message
@@ -152,28 +168,36 @@ func _callback_message(callback: Callable, before_parent_message: String) -> Str
         var controller_message: String = String(target.message)
         if not controller_message.is_empty(): return controller_message
     return ""
+
 func _queue_refresh() -> void:
     if refresh_pending: return
     refresh_pending = true; call_deferred("_deferred_refresh")
+
 func _deferred_refresh() -> void:
     refresh_pending = false; _refresh()
+
 func _show_feedback(text: String) -> void:
     if feedback_panel == null or feedback_label == null: return
     feedback_label.text = text; feedback_panel.show(); feedback_timer = 5.0
+
 func _pulse_feedback() -> void:
     if feedback_panel == null: return
     feedback_panel.scale = Vector2(0.98, 0.98); var tween: Tween = create_tween(); tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT); tween.tween_property(feedback_panel, "scale", Vector2.ONE, 0.22)
+
 func _seed_milestones() -> void:
     observed_milestones = {"acquired": bool(parent.owned), "restored": str(parent.stage) == "Operational", "opened": bool(parent.business_open), "profit": int(parent.total_profit) > 0, "regional": _regional_reached(), "empire": _empire_reached()}
+
 func _detect_milestones() -> void:
     var current: Dictionary = {"acquired": bool(parent.owned), "restored": str(parent.stage) == "Operational", "opened": bool(parent.business_open), "profit": int(parent.total_profit) > 0, "regional": _regional_reached(), "empire": _empire_reached()}
     var celebrations: Dictionary = {"acquired":"FIRST ASSET\nYou turned an abandoned property into something you own.", "restored":"REBUILDER\nThe warehouse is fully restored. Your first transformation is complete.", "opened":"FIRST BUSINESS\nRENEW Goods is open. Now prove the business can make money.", "profit":"FIRST PROFIT\nThe model works. Reinvest the profit and keep growing.", "regional":"GOING REGIONAL\nYour company has expanded beyond its original neighborhood.", "empire":"EMPIRE BUILDER\nMultiple assets are now working together."}
     for id: String in current:
         if bool(current[id]) and not bool(observed_milestones.get(id, false)): observed_milestones[id] = true; _show_feedback("★ MILESTONE UNLOCKED\n" + String(celebrations[id])); _pulse_feedback()
+
 func _regional_reached() -> bool:
     var region: Node = parent.get_node_or_null("RegionController")
     if region == null or region.regions == null: return false
     return int(region.regions.player_presence.count(1)) > 1
+
 func _empire_reached() -> bool:
     if parent == null or parent.expansion == null: return false
     var count: int = 0
@@ -182,10 +206,12 @@ func _empire_reached() -> bool:
     for site: Variant in parent.expansion.resource_sites:
         if bool(site.get("owned", false)): count += 1
     return count >= 3
+
 func _show_day_report() -> void:
     var profit: int = int(parent.last_profit); var result: String = "PROFIT" if profit >= 0 else "LOSS"; var sign: String = "+" if profit >= 0 else "-"; var contract_text: String = ""
     if int(parent.contract_days) > 0: contract_text = "\nContract: %d days remaining" % int(parent.contract_days)
     _show_feedback("DAY %d RESULTS\nRevenue $%s  |  %s %s$%s  |  Total profit $%s%s" % [int(parent.day) - 1, _money(int(parent.last_sales)), result, sign, _money(abs(profit)), _money(int(parent.total_profit)), contract_text]); _pulse_feedback()
+
 func _update_goal_label() -> void:
     if goal_label == null: return
     var goal: String = "GOAL: "
@@ -198,6 +224,7 @@ func _update_goal_label() -> void:
     elif not _regional_reached(): goal += "Establish a foothold in another region."
     else: goal += "Keep scaling: own resources, build alliances and challenge the giants."
     goal_label.text = goal
+
 func _refresh() -> void:
     if parent == null or actions == null: return
     _clear_actions(); status_label.text = "$%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day)]
@@ -223,21 +250,27 @@ func _refresh() -> void:
             var market: Node = get_node_or_null("../MarketDirector")
             if market != null: _button("MARKET AGGRESSIVE", market.respond_aggressively); _button("MARKET BALANCED", market.respond_balanced); _button("MARKET DEFENSIVE", market.respond_defensively)
             _button("DISTRICT", _next_district); _button("SAVE GAME", parent.save_game); _button("LOAD GAME", parent.load_game); _button("END DAY", parent.advance_day)
+
 func _next_rival() -> void:
     var count: int = int(parent.rivals.rivals.size())
     if count > 0: parent.select_rival((int(parent.selected_rival) + 1) % count)
+
 func _next_asset() -> void:
     var count: int = int(parent.expansion.properties.size())
     if count > 0: parent.select_expansion((int(parent.selected_expansion) + 1) % count)
+
 func _next_region() -> void:
     var controller: Node = get_node_or_null("../RegionController")
     if controller != null: controller.select_region((int(controller.regions.selected) + 1) % int(controller.regions.regions.size()))
+
 func _previous_region() -> void:
     var controller: Node = get_node_or_null("../RegionController")
     if controller != null:
         var count: int = int(controller.regions.regions.size())
         if count > 0: controller.select_region((int(controller.regions.selected) - 1 + count) % count)
+
 func _next_district() -> void:
     var count: int = int(parent.districts.districts.size())
     if count > 0: parent.select_district((int(parent.selected_district) + 1) % count)
+
 func _money(value: int) -> String: return str(value)
