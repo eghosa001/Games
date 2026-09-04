@@ -34,6 +34,36 @@ func set_value(domain: String, key: String, value) -> void:
     elif domain == "finance" and key == "loan_payment":
         finance.set("loan_payment", int(value))
 
+func spend(amount: int, reason: String = "expense") -> Dictionary:
+    if amount < 0:
+        return {"ok": false, "message": "Invalid spending amount."}
+    var finance = _finance()
+    if finance != null and finance.has_method("spend"):
+        var result: Dictionary = finance.spend(amount, reason)
+        if not bool(result.get("ok", false)):
+            return result
+        set_value("economy", "cash", int(result.get("cash", finance.get("cash"))))
+        return result
+    var cash: int = int(get_value("economy", "cash", 0))
+    if cash < amount:
+        return {"ok": false, "message": "Insufficient cash."}
+    set_value("economy", "cash", cash - amount)
+    return {"ok": true, "amount": amount, "cash": cash - amount}
+
+func receive(amount: int, reason: String = "income") -> Dictionary:
+    if amount < 0:
+        return {"ok": false, "message": "Invalid income amount."}
+    var finance = _finance()
+    if finance != null and finance.has_method("receive"):
+        var result: Dictionary = finance.receive(amount, reason)
+        if not bool(result.get("ok", false)):
+            return result
+        set_value("economy", "cash", int(result.get("cash", finance.get("cash"))))
+        return result
+    var cash: int = int(get_value("economy", "cash", 0)) + amount
+    set_value("economy", "cash", cash)
+    return {"ok": true, "amount": amount, "cash": cash}
+
 func log_message(text: String) -> void:
     var logs = get_value("company", "log_lines", [])
     if not logs is Array:
