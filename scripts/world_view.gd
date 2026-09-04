@@ -4,14 +4,11 @@ extends Node2D
 var game: Node
 
 const MAP_POINTS := [
-    Vector2(145, 430),
-    Vector2(300, 390),
-    Vector2(455, 455),
-    Vector2(610, 405),
-    Vector2(735, 475),
-    Vector2(600, 525)
+    Vector2(145, 430), Vector2(300, 390), Vector2(455, 455),
+    Vector2(610, 405), Vector2(735, 475), Vector2(600, 525)
 ]
-const LAND_SHAPE := PackedVector2Array([
+# Runtime arrays are intentionally mutable; PackedVector2Array() is not a GDScript constant expression.
+var land_shape: PackedVector2Array = PackedVector2Array([
     Vector2(55, 465), Vector2(80, 405), Vector2(150, 375), Vector2(215, 392),
     Vector2(275, 360), Vector2(350, 382), Vector2(405, 420), Vector2(475, 392),
     Vector2(555, 370), Vector2(625, 392), Vector2(700, 365), Vector2(770, 405),
@@ -22,10 +19,6 @@ const LAND_SHAPE := PackedVector2Array([
 
 func _ready() -> void:
     game = get_tree().root.get_node_or_null("Renew")
-    queue_redraw()
-
-func _process(_delta: float) -> void:
-    # Keep the presentation synced without animating an input-obscuring marker.
     queue_redraw()
 
 func _draw() -> void:
@@ -57,7 +50,6 @@ func _draw_grid(w: float, h: float) -> void:
         draw_line(Vector2(0, y), Vector2(w, y), Color("142229"), 1.0)
 
 func _draw_header(w: float) -> void:
-    # Compact brand lockup; the gold/emerald underline is the shared V1 signature.
     draw_string(ThemeDB.fallback_font, Vector2(28, 42), "RENEW", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color("e5efee"))
     draw_line(Vector2(29, 50), Vector2(91, 50), Color("10b981"), 3.0)
     draw_line(Vector2(92, 50), Vector2(111, 50), Color("d4af37"), 3.0)
@@ -108,7 +100,7 @@ func _stat(x: float, y: float, label: String, value: String) -> void:
     draw_string(ThemeDB.fallback_font, Vector2(x + 125, y), value, HORIZONTAL_ALIGNMENT_LEFT, 90, 12, Color("c2d1d2"))
 
 func _draw_regions(w: float, h: float) -> void:
-    var controller = game.get_node_or_null("RegionController")
+    var controller = game.get_node_or_null("World/RegionController")
     if controller == null:
         return
     var regions = controller.regions
@@ -118,26 +110,17 @@ func _draw_regions(w: float, h: float) -> void:
     draw_rect(panel, Color("2a4147"), false, 2.0)
     draw_string(ThemeDB.fallback_font, Vector2(panel.position.x + 14, panel.position.y + 23), "REGIONAL EMPIRE", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("b5c8c9"))
     draw_string(ThemeDB.fallback_font, Vector2(panel.end.x - 250, panel.position.y + 23), "TRADE / INFRASTRUCTURE / PRESENCE", HORIZONTAL_ALIGNMENT_LEFT, 240, 9, Color("5e777c"))
-
-    # Stylized landmass: deliberately abstract so the map reads as strategy geography,
-    # not a literal real-world map. Region nodes remain anchored to simulation indices.
-    draw_colored_polygon(LAND_SHAPE, Color("142a2d"))
-    draw_polyline(LAND_SHAPE, Color("35545a"), 2.0, true)
+    draw_colored_polygon(land_shape, Color("142a2d"))
+    draw_polyline(land_shape, Color("35545a"), 2.0, true)
     draw_line(Vector2(95, 500), Vector2(745, 425), Color("1f4143"), 1.0)
     draw_line(Vector2(175, 390), Vector2(640, 550), Color("1f4143"), 1.0)
-    draw_string(ThemeDB.fallback_font, Vector2(75, 520), "WESTERN RESOURCE ROUTE", HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color("45666a"))
-    draw_string(ThemeDB.fallback_font, Vector2(575, 392), "NORTHERN GROWTH ARC", HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color("45666a"))
-
-    # Existing trade corridors are drawn first so active routes visually connect nodes.
     for key in regions.trade_routes:
         var route: Dictionary = regions.trade_routes[key]
         var origin: int = int(route["origin"])
         var destination: int = int(route["destination"])
-        if origin < count and destination < count:
+        if origin >= 0 and destination >= 0 and origin < count and destination < count and origin < MAP_POINTS.size() and destination < MAP_POINTS.size():
             draw_line(MAP_POINTS[origin], MAP_POINTS[destination], Color("6fa99b"), 3.0, true)
-            var midpoint: Vector2 = (MAP_POINTS[origin] + MAP_POINTS[destination]) * 0.5
-            draw_circle(midpoint, 3.0, Color("d4af37"))
-
+            draw_circle((MAP_POINTS[origin] + MAP_POINTS[destination]) * 0.5, 3.0, Color("d4af37"))
     for i in range(min(count, MAP_POINTS.size())):
         var p: Vector2 = MAP_POINTS[i]
         var unlocked: bool = bool(regions.regions[i].get("unlocked", false))
@@ -145,16 +128,13 @@ func _draw_regions(w: float, h: float) -> void:
         var owned: bool = int(regions.player_presence[i]) > 0
         var radius: float = 15.0 if selected else 11.0
         var outer: Color = Color("d4af37") if selected else (Color("10b981") if owned else Color("47656b"))
-        if not unlocked:
-            outer = Color("394b50")
+        if not unlocked: outer = Color("394b50")
         draw_circle(p, radius + 4.0, Color("091519"))
         draw_circle(p, radius, outer)
         draw_circle(p, radius - 4.0, Color("152a2e") if unlocked else Color("182328"))
-        if owned:
-            draw_circle(p, 4.0, Color("b9d5cf"))
+        if owned: draw_circle(p, 4.0, Color("b9d5cf"))
         draw_string(ThemeDB.fallback_font, p + Vector2(18, 4), str(regions.regions[i]["name"]), HORIZONTAL_ALIGNMENT_LEFT, 145, 9, Color("c7d5d5") if unlocked else Color("637477"))
         draw_string(ThemeDB.fallback_font, p + Vector2(18, 17), "T%d  M%.2fx  I%d" % [regions.regions[i]["tier"], regions.market_levels[i], regions.infrastructure[i]], HORIZONTAL_ALIGNMENT_LEFT, 120, 8, Color("71898d"))
-
     draw_string(ThemeDB.fallback_font, Vector2(panel.position.x + 14, panel.end.y - 13), "● OWNED    ◉ SELECTED    ○ AVAILABLE    · LOCKED", HORIZONTAL_ALIGNMENT_LEFT, 390, 9, Color("62797d"))
 
 func _draw_network(w: float, h: float) -> void:
@@ -164,13 +144,8 @@ func _draw_network(w: float, h: float) -> void:
     var c: Vector2 = Vector2(w * 0.84, y)
     draw_line(a, b, Color("2e5559"), 3.0)
     draw_line(b, c, Color("2e5559"), 3.0)
-    draw_circle(a, 23, Color("172b31"))
-    draw_circle(b, 29, Color("1d3438"))
-    draw_circle(c, 23, Color("172b31"))
-    draw_circle(a, 9, Color("5d8278"))
-    draw_circle(b, 12, Color("789d91"))
-    draw_circle(c, 9, Color("5d8278"))
-    draw_circle(b, 5, Color("b5cbc6"))
+    draw_circle(a, 23, Color("172b31")); draw_circle(b, 29, Color("1d3438")); draw_circle(c, 23, Color("172b31"))
+    draw_circle(a, 9, Color("5d8278")); draw_circle(b, 12, Color("789d91")); draw_circle(c, 9, Color("5d8278")); draw_circle(b, 5, Color("b5cbc6"))
     draw_string(ThemeDB.fallback_font, a + Vector2(-42, 42), "RESOURCE", HORIZONTAL_ALIGNMENT_LEFT, 90, 10, Color("657b80"))
     draw_string(ThemeDB.fallback_font, b + Vector2(-48, 48), "RENEW HUB", HORIZONTAL_ALIGNMENT_LEFT, 100, 10, Color("91a6a9"))
     draw_string(ThemeDB.fallback_font, c + Vector2(-35, 42), "MARKET", HORIZONTAL_ALIGNMENT_LEFT, 80, 10, Color("657b80"))
