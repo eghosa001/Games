@@ -70,8 +70,6 @@ func buy_inputs() -> void:
         return
     var spend_result: Dictionary = finance.spend(procurement_cost, "input procurement")
     if not bool(spend_result.get("ok", false)):
-        # The supply chain has already moved inventory. Roll back both systems
-        # instead of manufacturing cash/revenue with a compensating refund.
         chain.restore_state(chain_before)
         finance.restore_state(finance_before)
         _sync_cash(finance)
@@ -94,7 +92,26 @@ func receive_furniture(amount: int) -> void:
     chain.receive_furniture(amount)
 
 func sell_furniture(amount: int, price: int) -> Dictionary:
-    return chain.sell_furniture(amount, price)
+    var finance := _finance()
+    if finance == null:
+        return {"ok": false, "reason": "finance_unavailable"}
+    var finance_before: Dictionary = finance.capture_state()
+    var chain_before: Dictionary = chain.capture_state()
+    var sale: Dictionary = chain.sell_furniture(amount, price)
+    if not bool(sale.get("ok", false)):
+        return sale
+    var revenue: int = int(sale.get("revenue", 0))
+    if revenue < 0:
+        chain.restore_state(chain_before)
+        return {"ok": false, "reason": "invalid_revenue"}
+    var receipt: Dictionary = finance.receive(revenue, "furniture sale")
+    if not bool(receipt.get("ok", false)):
+        chain.restore_state(chain_before)
+        finance.restore_state(finance_before)
+        _sync_cash(finance)
+        return {"ok": false, "reason": "finance_failed", "message": str(receipt.get("message", "Furniture sale could not be recorded."))}
+    _sync_cash(finance)
+    return sale
 
 func upgrade_transport() -> Dictionary:
     var finance := _finance()
