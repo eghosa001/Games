@@ -21,6 +21,13 @@ func _finance() -> Node:
     root.add_child(finance)
     return finance
 
+func _disable_scheduled_payments(finance: Node) -> void:
+    for id in finance.financing:
+        var instrument: Dictionary = finance.financing[id]
+        instrument["payment"] = 0
+        finance.financing[id] = instrument
+    finance._recalculate_loan_payment()
+
 func run() -> void:
     await test_interest_is_accrual_not_immediate_cash_outflow()
     await test_accrued_interest_is_not_cash_flow_until_paid()
@@ -35,7 +42,7 @@ func test_interest_is_accrual_not_immediate_cash_outflow() -> void:
     finance.cash = 50000
     var loan = finance.create_loan(15000, 0.10, 365)
     check(bool(loan.get("ok", false)), "loan created for accrual test")
-    finance.loan_payment = 0
+    _disable_scheduled_payments(finance)
     var cash_before = finance.cash
     var result = finance.settle_debt_day()
     check(int(result["interest"]) > 0, "daily interest accrued")
@@ -51,7 +58,7 @@ func test_accrued_interest_is_not_cash_flow_until_paid() -> void:
     finance.cash = 50000
     var loan = finance.create_loan(15000, 0.10, 365)
     check(bool(loan.get("ok", false)), "loan created for cash-flow accrual test")
-    finance.loan_payment = 0
+    _disable_scheduled_payments(finance)
     var cash_before = finance.cash
     var accrual = finance.settle_debt_day()
     var statement_after_accrual = finance.cash_flow_statement()
