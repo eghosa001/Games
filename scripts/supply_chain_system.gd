@@ -3,7 +3,7 @@ extends Node
 # Phase 9: one real V1 supply chain. Market resources move into a warehouse,
 # iron is processed into metal, factories consume warehouse inputs, and finished
 # goods remain in the warehouse until customers buy them.
-const SYSTEM_VERSION := 7
+const SYSTEM_VERSION := 8
 const RESOURCE_IDS := ["timber", "iron", "energy", "food", "electronics"]
 const WAREHOUSE_LIMIT := 500.0
 const FURNITURE_INPUTS := {"timber": 1.0, "metal": 0.5, "energy": 2.0}
@@ -129,14 +129,29 @@ func _production_node():
     var scene = get_tree().current_scene
     return scene.get_node_or_null("Systems/ProductionSystem") if scene else null
 
+func _active_product() -> String:
+    var state = get_node_or_null("/root/RenewGameState")
+    if state != null:
+        var industry_id := str(state.get_value("businesses", "industry_id", ""))
+        if not industry_id.is_empty():
+            var production = _production_node()
+            if production != null:
+                var snapshot = production.capture_state()
+                var last_run = snapshot.get("last_run", {})
+                var last_product := str(last_run.get("product", ""))
+                if last_product == industry_id or not last_product.is_empty(): return last_product
+            if industry_id in ["furniture", "construction_materials", "consumer_electronics"]: return industry_id
+    return "consumer_goods"
+
 func _sync_production_mirror(resources: Array) -> void:
     var production = _production_node()
     if production == null: return
     for resource in resources:
         var key := str(resource)
         production.inventory[key] = int(floor(stock(key)))
-    if production.inventory.has("consumer_goods"):
-        production.finished_goods = int(floor(stock("consumer_goods")))
+    var active_product := _active_product()
+    if active_product in resources or resources.is_empty():
+        production.finished_goods = int(floor(stock(active_product)))
         production.inventory["goods"] = production.finished_goods
 
 func receive_product(product: String, amount: int) -> Dictionary:
@@ -144,9 +159,6 @@ func receive_product(product: String, amount: int) -> Dictionary:
     if product.is_empty() or amount <= 0: return {"ok": false, "reason": "invalid_product"}
     var available_room: float = WAREHOUSE_LIMIT - stock(product)
     if float(amount) > available_room + 0.000001:
-        # A failed receipt is a pure rejection. The caller that produced the
-        # item owns its own rollback; the warehouse must never mutate another
-        # system while reporting failure.
         return {"ok": false, "reason": "warehouse_capacity", "product": product, "capacity": WAREHOUSE_LIMIT, "available": max(0.0, available_room), "requested": amount}
     warehouse[product] = stock(product) + amount
     _sync_production_mirror([product])
@@ -157,13 +169,19 @@ func can_make_furniture(cycles: int = 1) -> Dictionary: return can_make_inputs(F
 func consume_furniture_inputs(cycles: int) -> Dictionary: return consume_inputs(FURNITURE_INPUTS, cycles)
 func receive_furniture(amount: int) -> Dictionary: return receive_product("furniture", amount)
 
+func sell_product(product: String, amount: int, price: int) -> Dictionary:
+    if product.is_empty() or amount <= 0 or price < 0: return {"ok": false, "reason": "invalid_sale", "sold": 0, "revenue": 0}
+    _ensure_warehouse()
+    var sold: int = min(amount, int(floor(stock(product))))
+    if sold <= 0: return {"ok": false, "reason": "no_inventory", "product": product, "sold": 0, "revenue": 0}
+    var revenue: int = sold * price
+    warehouse[product] = stock(product) - sold
+    _sync_production_mirror([product])
+    last_operation = {"type": "customer_sale", "product": product, "amount": sold, "price": price, "revenue": revenue}
+    return {"ok": true, "product": product, "sold": sold, "revenue": revenue}
+
 func sell_furniture(amount: int, price: int) -> Dictionary:
-    if amount <= 0 or price < 0: return {"ok": false, "reason": "invalid_sale"}
-    var sold: int = min(amount, int(floor(stock("furniture")))); var revenue: int = sold * price
-    if sold <= 0: return {"ok": false, "reason": "no_inventory", "sold": 0, "revenue": 0}
-    warehouse["furniture"] -= sold; _sync_production_mirror(["furniture"])
-    last_operation = {"type": "customer_sale", "amount": sold, "price": price, "revenue": revenue}
-    return {"ok": true, "sold": sold, "revenue": revenue}
+    return sell_product("furniture", amount, price)
 
 func capture_state() -> Dictionary:
     return {"system_version": SYSTEM_VERSION, "warehouse": warehouse_snapshot(), "total_freight_cost": total_freight_cost, "last_operation": last_operation.duplicate(true)}
