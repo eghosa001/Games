@@ -73,6 +73,13 @@ func run() -> void:
     check(not missions.contains("parent.cash -= amount"), "World missions cannot directly subtract parent cash")
     check(not missions.contains("parent.cash += 1500"), "World mission bonuses cannot directly add parent cash")
 
+    var branch_controller := _read("res://scripts/branch_controller.gd")
+    check(branch_controller.contains("state_adapter.spend(-profit,\"regional branch operating loss\")"), "Branch operating losses route through FinanceSystem")
+    check(branch_controller.contains("state_adapter.receive(profit,\"regional branch operating result\")"), "Branch operating profits route through FinanceSystem")
+    check(branch_controller.contains("var finance_before:Dictionary = finance.capture_state()"), "Branch daily settlement snapshots FinanceSystem")
+    check(branch_controller.contains("branches.branches=branches_before"), "Failed branch daily settlement restores branch state")
+    check(not branch_controller.contains("state_adapter.receive(int(result[\"profit\"]),\"regional branch operating result\")"), "Branch losses are not silently discarded as invalid negative revenue")
+
     var bankruptcy := _read("res://scripts/bankruptcy_system.gd")
     check(not bankruptcy.contains("finance.cash = int(game.cash)"), "Bankruptcy does not overwrite FinanceSystem cash from legacy game state")
     check(not bankruptcy.contains("finance.debt = int(game.debt)"), "Bankruptcy does not overwrite FinanceSystem debt from legacy game state")
