@@ -13,9 +13,13 @@ on:
     paths:
       - 'scripts/browser-qa.sh'
       - '.github/workflows/browser-qa.yml'
+  workflow_run:
+    workflows: ["Godot Web Export"]
+    types: [completed]
 
 jobs:
   browser-qa:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -32,6 +36,10 @@ jobs:
           npm install -g agent-browser
           agent-browser install --with-deps
           agent-browser --version
+
+      - name: Allow deployment to settle
+        if: github.event_name == 'workflow_run'
+        run: sleep 30
 
       - name: Run live browser QA
         env:
