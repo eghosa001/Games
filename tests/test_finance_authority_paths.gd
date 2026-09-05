@@ -39,6 +39,10 @@ func run() -> void:
     var bankruptcy := _read("res://scripts/bankruptcy_system.gd")
     check(not bankruptcy.contains("finance.cash = int(game.cash)"), "Bankruptcy does not overwrite FinanceSystem cash from legacy game state")
     check(not bankruptcy.contains("finance.debt = int(game.debt)"), "Bankruptcy does not overwrite FinanceSystem debt from legacy game state")
+    check(not bankruptcy.contains("finance.cash +="), "Bankruptcy cash inflows route through FinanceSystem")
+    check(not bankruptcy.contains("finance.cash -="), "Bankruptcy cash outflows route through FinanceSystem")
+    check(bankruptcy.contains("finance.receive"), "Bankruptcy cash inflows use FinanceSystem")
+    check(bankruptcy.contains("finance.spend"), "Bankruptcy cash outflows use FinanceSystem")
 
     var finance_script := _read("res://scripts/finance_system.gd")
     check(finance_script.contains("func capture_state()"), "FinanceSystem exposes transaction snapshots")
