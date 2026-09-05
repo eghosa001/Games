@@ -1,0 +1,29 @@
+extends SceneTree
+
+var passed := 0
+var failed := 0
+
+func check(condition: bool, label: String) -> void:
+    if condition:
+        passed += 1
+        print("PASS: " + label)
+    else:
+        failed += 1
+        push_error("FAIL: " + label)
+
+func _init() -> void:
+    call_deferred("run")
+
+func run() -> void:
+    var business_path := "res://scripts/business_system.gd"
+    var simulation_path := "res://scripts/simulation_system.gd"
+    var business_text := FileAccess.get_file_as_string(business_path)
+    var simulation_text := FileAccess.get_file_as_string(simulation_path)
+    check(not business_text.is_empty(), "BusinessSystem source is readable")
+    check(business_text.contains("var finance = get_node_or_null(\"/root/RenewFinanceSystem\")"), "BusinessSystem resolves canonical FinanceSystem")
+    check(business_text.contains("var operating_cost: int = int(config.get(\"operating_cost\", 0))"), "Production reads configured operating cost")
+    check(business_text.contains("state_adapter.spend(operating_cost, \"production operating cost\")"), "Production operating cost is charged through FinanceSystem")
+    check(business_text.contains("delivery_cost + operating_cost"), "Production preflights delivery and operating cash together")
+    check(not simulation_text.contains("\"production_operating_cost\": 0"), "Simulation does not report a hard-coded zero production cost")
+    print("\nRENEW PRODUCTION FINANCE AUTHORITY RESULT: %d passed, %d failed" % [passed, failed])
+    quit(1 if failed > 0 else 0)
