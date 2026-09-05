@@ -4,7 +4,8 @@ set -euo pipefail
 GODOT_VERSION="4.5-stable"
 GODOT_ROOT="${HOME}/.cache/godot"
 GODOT_BIN="${GODOT_ROOT}/Godot_v4.5-stable_linux.x86_64"
-TEMPLATES_DIR="${HOME}/.local/share/godot/export_templates/${GODOT_VERSION}"
+export XDG_DATA_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}"
+TEMPLATES_DIR="${XDG_DATA_HOME}/godot/export_templates/${GODOT_VERSION}"
 TEMPLATE_ARCHIVE="/tmp/godot_export_templates.tpz"
 
 mkdir -p "${GODOT_ROOT}" "${TEMPLATES_DIR}" build/web
@@ -16,12 +17,11 @@ if [ ! -x "${GODOT_BIN}" ]; then
   chmod +x "${GODOT_BIN}"
 fi
 
-# Install the complete official template archive. The archive layout has
-# changed across Godot release tooling, so locate templates recursively
-# instead of assuming a single directory level.
+# This Web preset uses the threaded Godot Web template. Vercel serves the
+# build with COOP/COEP headers, so the browser can provide SharedArrayBuffer.
 need_templates=0
-for template in web_nothreads_debug.zip web_nothreads_release.zip web_debug.zip web_release.zip; do
-  [ -f "${TEMPLATES_DIR}/${template}" ] || need_templates=1
+for template in web_debug.zip web_release.zip; do
+  [ -s "${TEMPLATES_DIR}/${template}" ] || need_templates=1
 done
 
 if [ "${need_templates}" -eq 1 ]; then
@@ -31,8 +31,7 @@ if [ "${need_templates}" -eq 1 ]; then
   test -s "${TEMPLATE_ARCHIVE}"
   unzip -q -o "${TEMPLATE_ARCHIVE}" -d /tmp/godot_templates
 
-  # Copy the files by name from whatever directory level the .tpz uses.
-  for template in web_nothreads_debug.zip web_nothreads_release.zip web_debug.zip web_release.zip; do
+  for template in web_debug.zip web_release.zip; do
     source_file="$(find /tmp/godot_templates -type f -name "${template}" -print -quit)"
     if [ -z "${source_file}" ]; then
       echo "Template ${template} was not present in the downloaded archive." >&2
@@ -46,7 +45,7 @@ if [ "${need_templates}" -eq 1 ]; then
   [ -z "${version_file}" ] || cp -f "${version_file}" "${TEMPLATES_DIR}/version.txt"
 fi
 
-for template in web_nothreads_debug.zip web_nothreads_release.zip web_debug.zip web_release.zip; do
+for template in web_debug.zip web_release.zip; do
   test -s "${TEMPLATES_DIR}/${template}"
 done
 
