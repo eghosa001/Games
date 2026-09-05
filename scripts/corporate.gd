@@ -49,7 +49,8 @@ func _ready() -> void:
         get_tree().root.get_node("Renew/Systems").add_child.call_deferred(ownership)
     if parent != null: last_processed_day = parent.day
     _ensure_company()
-    _load_persistent_state()
+    # Corporate state is persisted by the canonical GameState/save pipeline.
+    # Do not load a second user:// ledger here; it could overwrite newer state.
     _ensure_company()
     queue_redraw()
 
@@ -370,21 +371,13 @@ func load_state(state: Dictionary) -> void:
     hostile_attempts = int(state.get("hostile_attempts",0))
     milestone_level = int(state.get("milestone_level",0))
 
+# Deprecated compatibility hooks. Corporate state is now owned by GameState's
+# save pipeline; these intentionally do not read/write a second disk ledger.
 func _persist() -> void:
-    var file: Variant = FileAccess.open("user://renew_corporate.json", FileAccess.WRITE)
-    if file != null:
-        file.store_string(JSON.stringify(save_state()))
-        file.close()
+    pass
 
 func _load_persistent_state() -> void:
-    if not FileAccess.file_exists("user://renew_corporate.json"): return
-    var file: Variant = FileAccess.open("user://renew_corporate.json", FileAccess.READ)
-    if file == null: return
-    var parsed = JSON.parse_string(file.get_as_text())
-    file.close()
-    if parsed is Dictionary:
-        load_state(parsed)
-        if parent != null: last_processed_day = parent.day
+    pass
 
 func _draw() -> void:
     if parent == null: return
