@@ -63,7 +63,7 @@ func _draw_districts(w: float, h: float) -> void:
     var names := ["INDUSTRIAL", "LOGISTICS", "COMMERCIAL", "RESEARCH", "RESIDENTIAL"]
     var x := 0.0
     for i in range(widths.size()):
-        var dw := w * widths[i]
+        var dw: float = w * float(widths[i])
         draw_rect(Rect2(x, base_y, dw, h - base_y), Color("0f2025") if i % 2 == 0 else Color("10232a"), true)
         draw_string(ThemeDB.fallback_font, Vector2(x + 12, base_y + 24), names[i], HORIZONTAL_ALIGNMENT_LEFT, dw - 24, 9, Color(MUTED.r, MUTED.g, MUTED.b, 0.65))
         x += dw
@@ -128,78 +128,3 @@ func _draw_research_center(o: Vector2) -> void:
 
 func _facility_label(pos: Vector2, text: String) -> void:
     draw_string(ThemeDB.fallback_font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, 180, 9, Color(MUTED.r, MUTED.g, MUTED.b, 0.82))
-
-func _draw_hq(w: float, h: float) -> void:
-    var hq: Node = get_node_or_null("/root/Renew/Systems/HeadquartersSystem")
-    if hq == null:
-        hq = get_node_or_null("/root/RenewHeadquartersSystem")
-    var stage := 0
-    var stage_name := "Small Office"
-    if hq != null:
-        if hq.has_method("get_stage_index"): stage = int(hq.get_stage_index())
-        if hq.has_method("get_stage"): stage_name = str(hq.get_stage())
-    var o := Vector2(w * 0.51, minf(485.0, h * 0.60))
-    var building_height := 62.0 + float(stage) * 48.0
-    var width := 100.0 + float(stage) * 24.0
-    draw_rect(Rect2(o.x-width*0.5, o.y-building_height, width, building_height), Color("1b3540"), true)
-    for floor in range(max(2, stage + 2)):
-        var fy := o.y - 16.0 - float(floor) * 34.0
-        draw_line(Vector2(o.x-width*0.42, fy), Vector2(o.x+width*0.42, fy), Color("3c5961"), 1.0)
-        for window in range(4):
-            var wx := o.x - width*0.32 + float(window)*width*0.21
-            draw_rect(Rect2(wx, fy-17, width*0.12, 12), Color(GLASS.r, GLASS.g, GLASS.b, 0.35 + 0.08*float(stage)), true)
-    if stage >= 2:
-        draw_rect(Rect2(o.x-width*0.62, o.y-16, width*0.16, 16), Color("314a52"), true)
-        draw_rect(Rect2(o.x+width*0.46, o.y-28, width*0.16, 28), Color("314a52"), true)
-    if stage >= 3:
-        draw_rect(Rect2(o.x-width*0.18, o.y-building_height-32, width*0.36, 32), Color("24434b"), true)
-    if stage >= 4:
-        draw_line(Vector2(o.x, o.y-building_height-32), Vector2(o.x, o.y-building_height-78), GOLD, 3.0)
-        draw_circle(Vector2(o.x, o.y-building_height-82), 5.0, GOLD)
-    draw_string(ThemeDB.fallback_font, Vector2(o.x-110, o.y+20), "HEADQUARTERS • %s" % stage_name.to_upper(), HORIZONTAL_ALIGNMENT_CENTER, 220, 10, Color("d7e3e4"))
-
-func _draw_life(w: float, h: float) -> void:
-    var road_y := minf(535.0, h * 0.68)
-    for i in range(5):
-        var p := fmod(_time * (0.018 + i * 0.003) + float(i) * 0.19, 1.0)
-        var x := lerpf(-40.0, w + 40.0, p)
-        var y := road_y + float(i % 2) * 12.0
-        draw_rect(Rect2(x, y-4, 18, 7), Color(GOLD.r, GOLD.g, GOLD.b, 0.7), true)
-        draw_circle(Vector2(x+4,y+4), 3, Color("071116"))
-        draw_circle(Vector2(x+15,y+4), 3, Color("071116"))
-    for i in range(12):
-        var x := 18.0 + float((i * 97) % max(120, int(w-30)))
-        var y := minf(610.0, h * 0.78) + float((i * 31) % 50)
-        draw_line(Vector2(x,y), Vector2(x,y-12), Color("315f4d", 0.8), 3.0)
-        draw_circle(Vector2(x,y-15), 7.0, Color("29523f", 0.75))
-
-func _draw_region_map(w: float, h: float) -> void:
-    var regions_node: Node = get_node_or_null("/root/Renew/World/RegionController")
-    if regions_node == null:
-        return
-    var data = regions_node.regions
-    if data == null:
-        return
-    var regions: Array = data.regions
-    if regions.is_empty():
-        return
-    var panel := Rect2(18, 86, minf(300.0, w-36.0), minf(126.0, h*0.22))
-    draw_rect(panel, Color(0.035,0.07,0.08,0.90), true)
-    draw_rect(panel, Color("34545a"), false, 1.0)
-    draw_string(ThemeDB.fallback_font, panel.position+Vector2(12,22), "REGIONAL OPERATING MAP", HORIZONTAL_ALIGNMENT_LEFT, panel.size.x-24, 12, Color("d7e3e4"))
-    var selected := int(data.selected)
-    for i in range(regions.size()):
-        var cols := 3
-        var cell_w := (panel.size.x-28)/float(cols)
-        var row := i/cols
-        var col := i%cols
-        var pos := panel.position+Vector2(10+col*cell_w, 34+row*38)
-        var active := i == selected
-        var unlocked := bool(regions[i].get("unlocked", false))
-        var dot_color: Color = GOLD if active else GREEN
-        dot_color.a = 0.9 if unlocked else 0.25
-        draw_circle(pos+Vector2(8,0), 5.0 if active else 3.5, dot_color)
-        var text_color := Color("d7e3e4") if unlocked else Color("61777d")
-        draw_string(ThemeDB.fallback_font, pos+Vector2(18,4), str(regions[i].get("name", "Region")), HORIZONTAL_ALIGNMENT_LEFT, cell_w-20, 9, text_color)
-        if i < regions.size()-1:
-            draw_line(pos+Vector2(14,10), pos+Vector2(cell_w-6,10), Color("29434a",0.7), 1.0)
