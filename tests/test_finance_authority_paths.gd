@@ -30,6 +30,13 @@ func run() -> void:
     check(market.contains("finance.receive"), "Market rewards route through FinanceSystem")
     check(market.contains("_sync_legacy_cash"), "Legacy cash mirror is synchronized after finance transactions")
 
+    var supply := _read("res://scripts/supply_command_system.gd")
+    check(supply.contains("func sell_furniture(amount: int, price: int)"), "Supply command exposes furniture sales")
+    check(supply.contains("finance.receive(revenue, \"furniture sale\")"), "Furniture sale revenue routes through FinanceSystem")
+    check(supply.contains("var finance_before: Dictionary = finance.capture_state()"), "Supply transactions snapshot FinanceSystem before mutation")
+    check(supply.contains("finance.restore_state(finance_before)"), "Supply transactions can roll back FinanceSystem on failure")
+    check(supply.contains("chain.restore_state(chain_before)"), "Supply transactions can roll back inventory on finance failure")
+
     var simulation := _read("res://scripts/simulation_system.gd")
     check(not simulation.contains("finance.cash = int(game_state.get_value(\"economy\", \"cash\", finance.cash))"), "Simulation does not overwrite FinanceSystem cash from legacy state")
     check(not simulation.contains("finance.debt = int(game_state.get_value(\"finance\", \"debt\", finance.debt))"), "Simulation does not overwrite FinanceSystem debt from legacy state")
