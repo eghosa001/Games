@@ -39,7 +39,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          wget -q "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip" -O /tmp/godot.zip
+          wget -q "https://github.com/godotengine/godot-builds/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip" -O /tmp/godot.zip
           rm -rf "$HOME/godot"
           mkdir -p "$HOME/godot"
           7z x /tmp/godot.zip -o"$HOME/godot" >/dev/null
