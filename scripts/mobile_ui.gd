@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 # Primary mobile control surface. Main/gameplay commands are the authoritative
-# action boundary; screen presentation is delegated to RenewUIScreenManager.
+action boundary; screen presentation is delegated to RenewUIScreenManager.
 var parent: Node
 var active_tab: int = 0
 var root: Control
@@ -122,6 +122,11 @@ func _update_panel_visibility() -> void:
             _set_world_visible(world.get_node_or_null("WorldView"), active_tab == 3)
             _set_world_visible(world.get_node_or_null("PropertyVisual"), active_tab == 0)
             _set_world_visible(world.get_node_or_null("RegionController"), active_tab == 3)
+            _set_world_visible(world.get_node_or_null("EmpireController"), active_tab == 2)
+            _set_world_visible(world.get_node_or_null("Corporate"), active_tab == 2)
+            _set_world_visible(world.get_node_or_null("WorldMissions"), active_tab == 3)
+            _set_world_visible(world.get_node_or_null("RivalSupplyController"), active_tab == 3)
+            _set_world_visible(world.get_node_or_null("BranchController"), active_tab in [1, 3])
             # MainRenderer is a legacy world overlay and would duplicate the
             # current presentation, so keep it disabled while the modern UI is active.
             _set_world_visible(world.get_node_or_null("MainRenderer"), false)
@@ -165,12 +170,11 @@ func _show_day_report() -> void:
 func _update_goal_label() -> void:
     var goal := "GOAL: "
     if not parent.owned: goal += "Inspect and acquire the abandoned warehouse."
-    elif parent.stage != "Operational": goal += "Finish restoring the warehouse."
-    elif not parent.business_open: goal += "Open the business."
-    elif parent.finished_goods < 5: goal += "Buy inputs and produce at least 5 goods."
-    elif parent.total_profit <= 0: goal += "Close a profitable operating day."
-    else: goal += "Expand, build alliances and challenge the giants."
+    elif str(parent.stage) != "Operational": goal += "Restore the warehouse before expanding."
+    elif not parent.business_open: goal += "Open the business and start operating."
+    elif int(parent.total_profit) < 10000: goal += "Build the operating model to $10,000 lifetime profit."
+    else: goal += "Expand into regions, resources and stronger corporate control."
     goal_label.text = goal
 func _show_feedback(text: String) -> void:
-    feedback_label.text = text; feedback_panel.show(); feedback_timer = 5.0
-func _money(value: int)->String: return String.num_int64(value)
+    feedback_label.text = text; feedback_panel.show(); feedback_timer = 7.0
+func _money(value: int) -> String: return String.num_int64(value)
