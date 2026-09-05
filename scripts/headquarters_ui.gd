@@ -77,7 +77,7 @@ func _refresh() -> void:
     elif system.get_stage_index() < 4: next_text = str(check.get("reason", "Locked"))
     status_label.text = "Stage  %s\nValue invested  $%s   •   Cash  $%s\nNext  %s   •   Areas  %d/%d" % [system.get_stage(), _money(system.headquarters_value), _money(cash), next_text, _built_count(), area_ids.size()]
     upgrade_button.disabled = system.get_stage_index() >= 4
-    var spec = system.AREA_SPECS[selected_area]; var built := system.has_area(selected_area); var level := system.area_level(selected_area)
+    var spec = system.AREA_SPECS[selected_area]; var built: bool = system.has_area(selected_area); var level: int = system.area_level(selected_area)
     area_label.text = "%s\nRequired stage  %s\nStatus  %s\nLevel  %d\nBase cost  $%s" % [spec["name"], system.STAGES[int(spec["min_stage"])], "Operational" if built else ("Unlocked" if system.get_stage_index() >= int(spec["min_stage"]) else "Locked"), level, _money(int(spec["cost"]) * max(1, level))]
     area_button.text = ("UPGRADE " if built else "BUILD ") + str(spec["name"]).to_upper(); area_button.disabled = system.get_stage_index() < int(spec["min_stage"])
     museum_button.disabled = not system.museum_available()
