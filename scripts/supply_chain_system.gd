@@ -58,9 +58,12 @@ func procure(resource: String, amount: float, cash: int, transport_level: int = 
     var capacity: float = _transport_capacity(transport_level)
     var effects = _railway_effects()
     var delivery_multiplier: float = float(effects.get("resource_delivery_multiplier", 1.0))
-    var delivered_amount: float = min(WAREHOUSE_LIMIT - stock(resource), amount * delivery_multiplier)
+    var delivered_amount: float = amount * delivery_multiplier
     if amount > capacity:
         return {"ok": false, "reason": "transport_capacity", "capacity": capacity, "requested": amount}
+    var warehouse_room: float = WAREHOUSE_LIMIT - stock(resource)
+    if delivered_amount > warehouse_room + 0.000001:
+        return {"ok": false, "reason": "warehouse_capacity", "capacity": WAREHOUSE_LIMIT, "available": max(0.0, warehouse_room), "requested": delivered_amount}
     var available: float = float(economy.resources[resource].get("stock", 0.0))
     if available < amount:
         return {"ok": false, "reason": "market_stock", "available": available, "requested": amount}
@@ -71,7 +74,7 @@ func procure(resource: String, amount: float, cash: int, transport_level: int = 
     if cash < total:
         return {"ok": false, "reason": "cash", "cost": total}
     economy.resources[resource]["stock"] = max(0.0, available - amount)
-    warehouse[resource] = min(WAREHOUSE_LIMIT, stock(resource) + delivered_amount)
+    warehouse[resource] = stock(resource) + delivered_amount
     total_freight_cost += freight
     last_operation = {"type": "procure", "resource": resource, "amount": amount, "delivered_amount": delivered_amount, "material_cost": material_cost, "freight": freight, "cost": total, "region": economy.resources[resource].get("region", "Unknown")}
     return {"ok": true, "resource": resource, "amount": amount, "delivered_amount": delivered_amount, "cost": total, "material_cost": material_cost, "freight": freight}
@@ -91,6 +94,11 @@ func procure_bundle(orders: Array, cash: int, transport_level: int = 1) -> Dicti
             return {"ok": false, "reason": "invalid_resource", "resource": resource}
         if amount <= 0.0:
             return {"ok": false, "reason": "invalid_amount", "resource": resource}
+        var effects = _railway_effects()
+        var delivery_multiplier: float = float(effects.get("resource_delivery_multiplier", 1.0))
+        var delivered_amount: float = amount * delivery_multiplier
+        if delivered_amount > WAREHOUSE_LIMIT - stock(resource) + 0.000001:
+            return {"ok": false, "reason": "warehouse_capacity", "resource": resource, "capacity": WAREHOUSE_LIMIT, "available": max(0.0, WAREHOUSE_LIMIT - stock(resource)), "requested": delivered_amount}
         if float(economy.resources[resource].get("stock", 0.0)) < amount:
             return {"ok": false, "reason": "market_stock", "resource": resource}
         total_cost += int(round(economy.current_price(resource) * amount)) + _freight_cost(resource, amount, transport_level)
