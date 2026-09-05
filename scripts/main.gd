@@ -29,6 +29,9 @@ var districts:
 func _game_state():
     return get_node_or_null("/root/RenewGameState")
 
+func _finance():
+    return get_node_or_null("/root/RenewFinanceSystem")
+
 func _read(domain: String, key: String, default_value = null):
     var state = _game_state()
     return state.get_value(domain, key, default_value) if state else default_value
@@ -59,8 +62,28 @@ func _next_cost() -> int:
     return 0
 
 var cash: int:
-    get: return _read("economy", "cash", 0)
-    set(value): _write("economy", "cash", value)
+    get:
+        var finance = _finance()
+        if finance != null and finance.has_method("available_cash"):
+            return int(finance.available_cash())
+        return int(_read("economy", "cash", 0))
+    set(value):
+        # Legacy controllers still use parent.cash +=/-= syntax. Keep that API
+        # compatible, but make FinanceSystem the only authority that mutates
+        # cash. Absolute assignments are interpreted as a delta from the
+        # authoritative balance; a missing FinanceSystem retains the old
+        # GameState fallback for isolated/test construction.
+        var finance = _finance()
+        if finance != null and finance.has_method("available_cash"):
+            var current := int(finance.available_cash())
+            var target := int(value)
+            var delta := target - current
+            if delta > 0 and finance.has_method("receive"):
+                finance.receive(delta, "legacy Main cash credit")
+            elif delta < 0 and finance.has_method("spend"):
+                finance.spend(-delta, "legacy Main cash debit")
+            return
+        _write("economy", "cash", int(value))
 
 var reputation: int:
     get: return _read("player", "reputation", 0)
