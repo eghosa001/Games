@@ -174,7 +174,7 @@ func _prepare_derived_inputs(inputs: Dictionary, cycles: int) -> bool:
 func warehouse_restore(resource:String, amount:float)->void: supply_chain.warehouse[resource] = max(0.0, float(supply_chain.warehouse.get(resource,0.0))-amount)
 func capture_state() -> Dictionary:
     var state = state_adapter.game_state(); var businesses: Dictionary = {}
-    if state != null: businesses = state.get_value("businesses", "", {}).duplicate(true)
+    if state != null: businesses = state.get_domain("businesses")
     return {"system_version":3,"businesses":businesses}
 func restore_state(snapshot:Dictionary)->void:
     if snapshot.is_empty(): return
