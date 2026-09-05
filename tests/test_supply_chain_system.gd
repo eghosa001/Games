@@ -79,5 +79,17 @@ func run() -> void:
     var over_capacity = chain.procure("timber", 1000.0, 100000, 1)
     check(not bool(over_capacity.get("ok", false)) and over_capacity.get("reason", "") == "transport_capacity", "Transport capacity rejects oversized shipment")
 
+    var resources_before_invalid_bundle := economy.resources.duplicate(true)
+    var warehouse_before_invalid_bundle := chain.warehouse_snapshot()
+    var freight_before_invalid_bundle := chain.total_freight_cost
+    var invalid_bundle := chain.procure_bundle([
+        {"resource": "timber", "amount": 1.0},
+        {"resource": "not_a_real_resource", "amount": 1.0}
+    ], 100000, 1)
+    check(not bool(invalid_bundle.get("ok", false)), "Invalid bundle is rejected")
+    check(economy.resources == resources_before_invalid_bundle, "Rejected bundle leaves market stock unchanged")
+    check(chain.warehouse == warehouse_before_invalid_bundle, "Rejected bundle leaves warehouse unchanged")
+    check(chain.total_freight_cost == freight_before_invalid_bundle, "Rejected bundle leaves freight totals unchanged")
+
     print("SUPPLY CHAIN SYSTEM RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
