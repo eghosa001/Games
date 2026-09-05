@@ -212,6 +212,10 @@ func produce_goods() -> void:
         var metal_cycles: int = int(ceil(metal_needed - supply_chain.stock("metal"))); var iron_needed: float = float(metal_cycles)*2.0; var energy_needed: float = float(metal_cycles)*0.5
         if supply_chain.stock("iron") < iron_needed: orders.append({"resource":"iron","amount":iron_needed-supply_chain.stock("iron")})
         if supply_chain.stock("energy") < energy_needed: orders.append({"resource":"energy","amount":energy_needed-supply_chain.stock("energy")})
+    var operating_cost: int = int(config.get("operating_cost", 0))
+    var finance = get_node_or_null("/root/RenewFinanceSystem")
+    if finance != null and operating_cost > int(finance.get("cash")):
+        state_adapter.message("%s stopped: $%d operating cost is unaffordable." % [_business_name(), operating_cost]); return
     if not orders.is_empty():
         var transport_level: int = int(state_adapter.get_value("supply_chain", "transport_level", 1)); var delivery: Dictionary = supply_chain.procure_bundle(orders, cash, transport_level)
         if not bool(delivery.get("ok", false)):
@@ -231,13 +235,15 @@ func produce_goods() -> void:
     var quality: int = clamp(int(round(72.0 + employee_factor*5.0 + morale_multiplier*4.0 + _technology_multiplier()*3.0 + randi_range(-3,4))),30,100)
     var output: int = max(1, cycles-int(floor(float(cycles)*0.08)))
     var product: String = str(config.get("product",industry_id))
-    # The authoritative production total may have been reduced by yesterday's sales.
     production.finished_goods = int(state_adapter.get_value("production", "finished_goods", production.finished_goods))
     production.finished_goods += output
     production.inventory[product] = int(production.inventory.get(product,0))+output
     production.inventory["goods"] = production.finished_goods
-    production.last_run = {"product":product,"industry_id":industry_id,"stage":"manufacturing","cycles":cycles,"output":output,"quality":quality,"resources":input_result.get("consumed",{}),"resource_requirements":inputs,"production_time":2.0,"employee_capacity":int(config.get("workers",3)),"base_price":int(config.get("base_price",0)),"operating_cost":int(config.get("operating_cost",0)),"reputation_effect":2}
+    production.last_run = {"product":product,"industry_id":industry_id,"stage":"manufacturing","cycles":cycles,"output":output,"quality":quality,"resources":input_result.get("consumed",{}),"resource_requirements":inputs,"production_time":2.0,"employee_capacity":int(config.get("workers",3)),"base_price":int(config.get("base_price",0)),"operating_cost":operating_cost,"reputation_effect":2}
     supply_chain.receive_product(product,output)
+    var production_spend := state_adapter.spend(operating_cost, "production operating cost")
+    if not bool(production_spend.get("ok", false)):
+        state_adapter.message("%s stopped: production operating cost could not be paid." % _business_name()); return
     state_adapter.set_value("production","finished_goods",production.finished_goods)
     state_adapter.message("%s produced %d %s at quality %d. Staff efficiency %.2fx." % [_business_name(),output,product.replace("_"," "),quality,output_factor])
     state_adapter.log_message("FACTORY: %s (from %s) -> Warehouse -> Customer; %d %s produced." % [_business_name(),_origin_property_name(),output,product])
