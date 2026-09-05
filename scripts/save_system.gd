@@ -15,6 +15,7 @@ static func save_game(_state: Dictionary) -> bool:
     var game_state = _game_state()
     var payload = game_state.capture() if game_state and _state.has("domains") else _state.duplicate(true)
     payload["schema_version"] = CURRENT_VERSION
+    _capture_runtime_ownership(payload)
     if payload.has("domains") and not validate_save(payload):
         return false
     payload = _sanitize_json_value(payload)
@@ -81,7 +82,9 @@ static func load_game() -> Dictionary:
             if game_state:
                 if not game_state.restore(data):
                     continue
+                _restore_runtime_ownership(data)
                 return game_state.capture()
+        _restore_runtime_ownership(data)
         return data
     return {}
 
@@ -126,6 +129,52 @@ static func _migrate_v7_to_v8(data: Dictionary) -> Dictionary:
     data["domains"] = domains
     data["schema_version"] = 8
     return data
+
+static func _capture_runtime_ownership(data: Dictionary) -> void:
+    if not data.has("domains") or not (data["domains"] is Dictionary):
+        return
+    var ownership = _ownership_node()
+    if ownership == null or not ownership.has_method("save_state"):
+        return
+    var domains: Dictionary = data["domains"]
+    var ownership_domain: Dictionary = domains.get("ownership", {})
+    if not ownership_domain is Dictionary:
+        ownership_domain = {}
+    ownership_domain["ledger"] = ownership.save_state()
+    domains["ownership"] = ownership_domain
+    data["domains"] = domains
+
+static func _restore_runtime_ownership(data: Dictionary) -> void:
+    if not data.has("domains") or not (data["domains"] is Dictionary):
+        return
+    var domains: Dictionary = data["domains"]
+    var ownership_domain: Variant = domains.get("ownership", {})
+    if not ownership_domain is Dictionary:
+        return
+    var ledger: Variant = ownership_domain.get("ledger", {})
+    if not ledger is Dictionary or ledger.is_empty():
+        return
+    var ownership = _ownership_node()
+    if ownership != null and ownership.has_method("load_state"):
+        ownership.load_state(ledger)
+
+static func _ownership_node():
+    var tree = Engine.get_main_loop()
+    if not tree:
+        return null
+    var root = tree.get_root()
+    if not root:
+        return null
+    var node = root.get_node_or_null("Renew/Systems/OwnershipSystem")
+    if node != null:
+        return node
+    node = root.get_node_or_null("RenewOwnershipSystem")
+    if node != null:
+        return node
+    var scene = tree.get_current_scene()
+    if scene:
+        return scene.get_node_or_null("OwnershipSystem")
+    return null
 
 static func _sanitize_json_value(value):
     if value is float:
