@@ -42,21 +42,17 @@ func can_afford(amount: int) -> bool: return amount >= 0 and cash >= amount
 
 func spend(amount: int, reason: String = "expense") -> Dictionary:
     if amount < 0 or cash < amount: return {"ok": false, "amount": 0, "reason": reason, "message": "Insufficient cash."}
-    cash -= amount; operating_expenses += amount
-    _record("spend", amount, reason); _record_cash_flow("operating", -amount, reason)
+    cash -= amount; operating_expenses += amount; _record("spend", amount, reason); _record_cash_flow("operating", -amount, reason)
     return {"ok": true, "amount": amount, "cash": cash}
 
 func receive(amount: int, reason: String = "income") -> Dictionary:
     if amount < 0: return {"ok": false, "amount": 0, "reason": reason}
-    cash += amount; revenue += amount
-    _record("receive", amount, reason); _record_cash_flow("operating", amount, reason)
+    cash += amount; revenue += amount; _record("receive", amount, reason); _record_cash_flow("operating", amount, reason)
     return {"ok": true, "amount": amount, "cash": cash}
 
 func settle_sales(sales: int, wages: int, overhead: int, contract_income: int = 0) -> Dictionary:
-    var period_revenue := float(max(0, sales) + max(0, contract_income))
-    var costs := float(max(0, wages) + max(0, overhead))
-    revenue += period_revenue; operating_expenses += costs; cash += int(round(period_revenue - costs))
-    last_sales = int(period_revenue); last_profit = int(round(period_revenue - costs)); total_profit += last_profit; retained_earnings += last_profit
+    var period_revenue := float(max(0, sales) + max(0, contract_income)); var costs := float(max(0, wages) + max(0, overhead))
+    revenue += period_revenue; operating_expenses += costs; cash += int(round(period_revenue - costs)); last_sales = int(period_revenue); last_profit = int(round(period_revenue - costs)); total_profit += last_profit; retained_earnings += last_profit
     _record("settlement", last_profit, "daily operating settlement"); _record_cash_flow("operating", last_profit, "daily operating settlement")
     return {"sales": max(0, sales), "contract_income": max(0, contract_income), "costs": int(costs), "profit": last_profit, "cash": cash}
 
@@ -64,62 +60,48 @@ func take_loan(amount: int) -> Dictionary: return create_loan(amount, 0.12, 20, 
 
 func create_loan(amount: int, annual_rate: float = 0.12, term_periods: int = 20, secured: bool = false, collateral: String = "") -> Dictionary:
     if amount <= 0 or term_periods <= 0 or annual_rate < 0.0: return {"ok": false, "message": "Invalid loan terms."}
-    var id := "loan_%d_%d" % [Time.get_unix_time_from_system(), financing.size()]
-    var instrument_type := INSTRUMENT_SECURED_LOAN if secured else INSTRUMENT_LOAN
-    var principal := float(amount); var rate_per_period := annual_rate / 365.0
+    var id := "loan_%d_%d" % [Time.get_unix_time_from_system(), financing.size()]; var instrument_type := INSTRUMENT_SECURED_LOAN if secured else INSTRUMENT_LOAN; var principal := float(amount); var rate_per_period := annual_rate / 365.0
     var payment := int(round(principal * rate_per_period / max(0.0001, 1.0 - pow(1.0 + rate_per_period, -term_periods)))) if rate_per_period > 0 else int(ceil(principal / term_periods))
     financing[id] = {"id": id, "type": instrument_type, "principal": principal, "accrued_interest": 0.0, "balance": principal, "annual_rate": annual_rate, "term": term_periods, "remaining_periods": term_periods, "payment": payment, "collateral": collateral}
-    debt += amount; loan_payment = payment; cash += amount
-    _record("loan", amount, "secured loan issued" if secured else "loan issued"); _record_cash_flow("financing", amount, "debt issuance")
+    debt += amount; loan_payment = payment; cash += amount; _record("loan", amount, "secured loan issued" if secured else "loan issued"); _record_cash_flow("financing", amount, "debt issuance")
     return {"ok": true, "id": id, "amount": amount, "payment": payment, "cash": cash, "debt": debt}
 
 func refinance_loan(instrument_id: String, new_rate: float, new_term_periods: int) -> Dictionary:
     if not financing.has(instrument_id): return {"ok": false, "message": "Financing instrument not found."}
     if new_rate < 0.0 or new_term_periods <= 0: return {"ok": false, "message": "Invalid refinancing terms."}
-    var instrument: Dictionary = financing[instrument_id]; var balance := float(instrument.get("balance", 0.0))
-    instrument["annual_rate"] = new_rate; instrument["term"] = new_term_periods; instrument["remaining_periods"] = new_term_periods
-    var rate := new_rate / 365.0; instrument["payment"] = int(round(balance * rate / max(0.0001, 1.0 - pow(1.0 + rate, -new_term_periods)))) if rate > 0 else int(ceil(balance / new_term_periods))
-    financing[instrument_id] = instrument; _record("refinance", int(balance), "loan refinanced")
+    var instrument: Dictionary = financing[instrument_id]; var balance := float(instrument.get("balance", 0.0)); instrument["annual_rate"] = new_rate; instrument["term"] = new_term_periods; instrument["remaining_periods"] = new_term_periods
+    var rate := new_rate / 365.0; instrument["payment"] = int(round(balance * rate / max(0.0001, 1.0 - pow(1.0 + rate, -new_term_periods)))) if rate > 0 else int(ceil(balance / new_term_periods)); financing[instrument_id] = instrument; _record("refinance", int(balance), "loan refinanced")
     return {"ok": true, "id": instrument_id, "balance": balance, "payment": instrument["payment"], "rate": new_rate}
 
 func issue_bond(principal: int, annual_rate: float = 0.08, term_periods: int = 30) -> Dictionary:
     if principal <= 0 or annual_rate < 0.0 or term_periods <= 0: return {"ok": false, "message": "Invalid bond terms."}
-    var id := "bond_%d_%d" % [Time.get_unix_time_from_system(), financing.size()]
-    financing[id] = {"id": id, "type": INSTRUMENT_BOND, "principal": float(principal), "accrued_interest": 0.0, "balance": float(principal), "annual_rate": annual_rate, "term": term_periods, "remaining_periods": term_periods, "payment": int(round(principal * annual_rate / 365.0))}
-    debt += principal; cash += principal
-    _record("bond", principal, "bond issued"); _record_cash_flow("financing", principal, "bond issuance")
+    var id := "bond_%d_%d" % [Time.get_unix_time_from_system(), financing.size()]; financing[id] = {"id": id, "type": INSTRUMENT_BOND, "principal": float(principal), "accrued_interest": 0.0, "balance": float(principal), "annual_rate": annual_rate, "term": term_periods, "remaining_periods": term_periods, "payment": int(round(principal * annual_rate / 365.0))}
+    debt += principal; cash += principal; _record("bond", principal, "bond issued"); _record_cash_flow("financing", principal, "bond issuance")
     return {"ok": true, "id": id, "principal": principal, "debt": debt, "cash": cash}
 
 func assume_debt(amount: int, source: String = "assumed debt") -> Dictionary:
     if amount < 0: return {"ok": false, "message": "Invalid assumed debt."}
     if amount == 0: return {"ok": true, "amount": 0, "debt": debt}
-    var id := "assumed_%d_%d" % [Time.get_unix_time_from_system(), financing.size()]
-    financing[id] = {"id": id, "type": "assumed_debt", "principal": float(amount), "accrued_interest": 0.0, "balance": float(amount), "annual_rate": 0.0, "term": 0, "remaining_periods": 0, "payment": 0, "source": source}
-    debt += amount; _record("assumed_debt", amount, source)
+    var id := "assumed_%d_%d" % [Time.get_unix_time_from_system(), financing.size()]; financing[id] = {"id": id, "type": "assumed_debt", "principal": float(amount), "accrued_interest": 0.0, "balance": float(amount), "annual_rate": 0.0, "term": 0, "remaining_periods": 0, "payment": 0, "source": source}; debt += amount; _record("assumed_debt", amount, source)
     return {"ok": true, "id": id, "amount": amount, "debt": debt}
 
 func invest(amount: int, asset_name: String = "investment") -> Dictionary:
     if amount <= 0 or cash < amount: return {"ok": false, "message": "Insufficient cash for investment."}
-    cash -= amount; investments += amount; _record("investment", amount, asset_name); _record_cash_flow("investing", -amount, asset_name)
-    return {"ok": true, "amount": amount, "cash": cash, "investments": investments}
+    cash -= amount; investments += amount; _record("investment", amount, asset_name); _record_cash_flow("investing", -amount, asset_name); return {"ok": true, "amount": amount, "cash": cash, "investments": investments}
 
 func record_equity(amount: int, source: String = "equity issuance") -> Dictionary:
     if amount <= 0: return {"ok": false, "message": "Invalid equity amount."}
-    cash += amount; equity_contributed += amount; _record("equity", amount, source); _record_cash_flow("financing", amount, source)
-    return {"ok": true, "amount": amount, "equity": equity_contributed, "cash": cash}
+    cash += amount; equity_contributed += amount; _record("equity", amount, source); _record_cash_flow("financing", amount, source); return {"ok": true, "amount": amount, "equity": equity_contributed, "cash": cash}
 
 func buyback_equity(amount: int) -> Dictionary:
     if amount <= 0 or cash < amount: return {"ok": false, "message": "Insufficient cash for buyback."}
-    cash -= amount; equity_contributed = max(0.0, equity_contributed - amount); retained_earnings = max(0.0, retained_earnings - amount)
-    _record("buyback", amount, "equity buyback"); _record_cash_flow("financing", -amount, "equity buyback")
-    return {"ok": true, "amount": amount, "cash": cash}
+    cash -= amount; equity_contributed = max(0.0, equity_contributed - amount); retained_earnings = max(0.0, retained_earnings - amount); _record("buyback", amount, "equity buyback"); _record_cash_flow("financing", -amount, "equity buyback"); return {"ok": true, "amount": amount, "cash": cash}
 
 func repay(amount: int) -> Dictionary:
     if debt <= 0: return {"ok": false, "message": "No outstanding debt."}
     var payment := min(debt + _total_accrued_interest(), max(1, amount))
     if cash < payment: return {"ok": false, "message": "Insufficient cash for repayment."}
-    var allocation := _allocate_repayment(payment)
-    cash -= payment; debt -= int(allocation["principal_paid"]); interest_expense += float(allocation["interest_paid"])
+    var allocation := _allocate_repayment(payment); cash -= payment; debt -= int(allocation["principal_paid"]); interest_expense += float(allocation["interest_paid"])
     if debt == 0 and _total_accrued_interest() == 0: loan_payment = 0
     _record("repayment", payment, "loan repayment"); _record_cash_flow("financing", -payment, "loan repayment")
     return {"ok": true, "amount": payment, "interest_paid": allocation["interest_paid"], "principal_paid": allocation["principal_paid"], "cash": cash, "debt": debt}
@@ -128,37 +110,30 @@ func settle_debt_day() -> Dictionary:
     var interest := 0; var payment := 0; var missed := false
     if debt > 0:
         for id in financing:
-            var instrument: Dictionary = financing[id]
-            var principal := float(instrument.get("principal", instrument.get("balance", 0.0)))
-            var accrued := float(instrument.get("accrued_interest", max(0.0, float(instrument.get("balance", 0.0)) - principal)))
+            var instrument: Dictionary = financing[id]; var principal := float(instrument.get("principal", instrument.get("balance", 0.0))); var accrued := float(instrument.get("accrued_interest", max(0.0, float(instrument.get("balance", 0.0)) - principal)))
             if principal <= 0.0: continue
             var annual_rate := float(instrument.get("annual_rate", 0.0)); if annual_rate <= 0.0: continue
-            var instrument_interest := max(0, int(round(principal * annual_rate / 365.0)))
-            accrued += instrument_interest; instrument["principal"] = principal; instrument["accrued_interest"] = accrued; instrument["balance"] = principal + accrued; financing[id] = instrument; interest += instrument_interest
+            var instrument_interest := max(0, int(round(principal * annual_rate / 365.0))); accrued += instrument_interest; instrument["principal"] = principal; instrument["accrued_interest"] = accrued; instrument["balance"] = principal + accrued; financing[id] = instrument; interest += instrument_interest
         if interest > 0:
             cash -= interest; interest_expense += interest; _record("interest", interest, "daily financing interest"); _record_cash_flow("financing", -interest, "daily financing interest")
     if loan_payment > 0 and debt > 0:
         payment = min(loan_payment, debt + _total_accrued_interest())
         if cash >= payment:
-            var allocation := _allocate_repayment(payment); cash -= payment; debt -= int(allocation["principal_paid"]); interest_expense += float(allocation["interest_paid"])
-            _record("scheduled_payment", payment, "scheduled debt payment"); _record_cash_flow("financing", -payment, "scheduled debt payment")
+            var allocation := _allocate_repayment(payment); cash -= payment; debt -= int(allocation["principal_paid"]); interest_expense += float(allocation["interest_paid"]); _record("scheduled_payment", payment, "scheduled debt payment"); _record_cash_flow("financing", -payment, "scheduled debt payment")
         else: missed = true
     if debt == 0 and _total_financing_balance() <= 0.01: loan_payment = 0
-    _update_credit_score(missed)
-    return {"interest": interest, "payment": payment, "missed": missed, "cash": cash, "debt": debt, "accrued_interest": _total_accrued_interest(), "credit_rating": credit_rating}
+    _update_credit_score(missed); return {"interest": interest, "payment": payment, "missed": missed, "cash": cash, "debt": debt, "accrued_interest": _total_accrued_interest(), "credit_rating": credit_rating}
 
 func _allocate_repayment(amount: int) -> Dictionary:
     var remaining := max(0, amount); var interest_paid := 0; var principal_paid := 0
     for id in financing:
         if remaining <= 0: break
-        var instrument: Dictionary = financing[id]; var accrued := max(0.0, float(instrument.get("accrued_interest", 0.0)))
-        var pay_interest := min(remaining, int(floor(accrued + 0.0001)))
+        var instrument: Dictionary = financing[id]; var accrued := max(0.0, float(instrument.get("accrued_interest", 0.0))); var pay_interest := min(remaining, int(floor(accrued + 0.0001)))
         if pay_interest > 0: accrued -= pay_interest; remaining -= pay_interest; interest_paid += pay_interest
         instrument["accrued_interest"] = accrued; instrument["balance"] = float(instrument.get("principal", 0.0)) + accrued; financing[id] = instrument
     for id in financing:
         if remaining <= 0: break
-        var instrument: Dictionary = financing[id]; var principal := max(0.0, float(instrument.get("principal", 0.0)))
-        var pay_principal := min(remaining, int(floor(principal + 0.0001)))
+        var instrument: Dictionary = financing[id]; var principal := max(0.0, float(instrument.get("principal", 0.0))); var pay_principal := min(remaining, int(floor(principal + 0.0001)))
         if pay_principal > 0: principal -= pay_principal; remaining -= pay_principal; principal_paid += pay_principal
         instrument["principal"] = principal; instrument["balance"] = principal + max(0.0, float(instrument.get("accrued_interest", 0.0))); financing[id] = instrument
     return {"interest_paid": interest_paid, "principal_paid": principal_paid, "unallocated": remaining}
@@ -174,19 +149,16 @@ func _total_financing_balance() -> float:
     return total
 
 func balance_sheet() -> Dictionary:
-    var assets := float(cash) + accounts_receivable + inventory + fixed_assets + investments
-    var liabilities := float(debt) + accounts_payable + other_liabilities + _total_accrued_interest()
+    var assets := float(cash) + accounts_receivable + inventory + fixed_assets + investments; var liabilities := float(debt) + accounts_payable + other_liabilities + _total_accrued_interest()
     return {"assets": assets, "cash": cash, "accounts_receivable": accounts_receivable, "inventory": inventory, "fixed_assets": fixed_assets, "investments": investments, "liabilities": liabilities, "debt": debt, "accrued_interest": _total_accrued_interest(), "accounts_payable": accounts_payable, "other_liabilities": other_liabilities, "equity": assets - liabilities}
 
 func income_statement() -> Dictionary:
-    var operating_profit := revenue - operating_expenses - depreciation; var net_profit := operating_profit - interest_expense - taxes
-    return {"revenue": revenue, "operating_expenses": operating_expenses, "depreciation": depreciation, "operating_profit": operating_profit, "interest": interest_expense, "taxes": taxes, "net_profit": net_profit}
+    var operating_profit := revenue - operating_expenses - depreciation; var net_profit := operating_profit - interest_expense - taxes; return {"revenue": revenue, "operating_expenses": operating_expenses, "depreciation": depreciation, "operating_profit": operating_profit, "interest": interest_expense, "taxes": taxes, "net_profit": net_profit}
 
 func cash_flow_statement() -> Dictionary:
     var operating := revenue - operating_expenses - interest_expense - taxes; var investing_flow := -investments; var financing_flow := 0.0
     for entry in history:
-        if str(entry.get("kind", "")).to_lower() in ["loan", "bond", "equity", "buyback", "repayment", "scheduled_payment", "refinance", "assumed_debt"]:
-            financing_flow += float(entry.get("amount", 0)) * (-1.0 if str(entry.get("kind")) in ["buyback", "repayment", "scheduled_payment"] else 1.0)
+        if str(entry.get("kind", "")).to_lower() in ["loan", "bond", "equity", "buyback", "repayment", "scheduled_payment", "refinance", "assumed_debt"]: financing_flow += float(entry.get("amount", 0)) * (-1.0 if str(entry.get("kind")) in ["buyback", "repayment", "scheduled_payment"] else 1.0)
     return {"operating": operating, "investing": investing_flow, "financing": financing_flow, "net_change": operating + investing_flow + financing_flow, "cash": cash}
 
 func debt_service() -> float:
@@ -198,11 +170,13 @@ func valuation(earnings_multiple: float = 6.0) -> float:
     var net_profit := float(income_statement()["net_profit"]); return max(0.0, net_profit * max(1.0, earnings_multiple)) + max(0.0, float(balance_sheet()["assets"]) - float(balance_sheet()["liabilities"]))
 
 func leverage() -> float:
-    var equity := float(balance_sheet()["equity"]); if equity <= 0.0: return INF if debt > 0 else 0.0
+    var equity := float(balance_sheet()["equity"])
+    if equity <= 0.0: return INF if debt > 0 else 0.0
     return float(debt + _total_accrued_interest()) / equity
 
 func interest_coverage() -> float:
-    var interest := float(interest_expense); if interest <= 0.0: return INF
+    var interest := float(interest_expense)
+    if interest <= 0.0: return INF
     return float(income_statement()["operating_profit"]) / interest
 
 func solvency_status() -> Dictionary:
@@ -239,8 +213,7 @@ func _migrate_financing_snapshot() -> void:
 func validate_invariants() -> Dictionary:
     var principal_total := 0.0; var balance_total := 0.0; var accrued_total := 0.0
     for id in financing:
-        var instrument: Dictionary = financing[id]; var principal := max(0.0, float(instrument.get("principal", 0.0))); var accrued := max(0.0, float(instrument.get("accrued_interest", 0.0))); var balance := float(instrument.get("balance", 0.0))
-        principal_total += principal; accrued_total += accrued; balance_total += balance
+        var instrument: Dictionary = financing[id]; var principal := max(0.0, float(instrument.get("principal", 0.0))); var accrued := max(0.0, float(instrument.get("accrued_interest", 0.0))); var balance := float(instrument.get("balance", 0.0)); principal_total += principal; accrued_total += accrued; balance_total += balance
         if abs(balance - principal - accrued) > 0.01: return {"ok": false, "error": "instrument_balance_mismatch", "id": id}
     if abs(principal_total - float(debt)) > 0.01: return {"ok": false, "error": "principal_debt_mismatch", "principal": principal_total, "debt": debt}
     if abs(balance_total - principal_total - accrued_total) > 0.01: return {"ok": false, "error": "financing_total_mismatch"}
