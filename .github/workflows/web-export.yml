@@ -63,12 +63,24 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          rm -rf build/web
           mkdir -p build/web
           "$HOME/godot/Godot_v4.5-stable_linux.x86_64" --headless --path . --editor --quit
           "$HOME/godot/Godot_v4.5-stable_linux.x86_64" --headless --path . --export-release "Web" build/web/index.html
           test -s build/web/index.html
 
-      - name: Add Vercel/static-hosting headers
+      - name: Verify single-threaded Web export
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'GODOT_THREADS_ENABLED = false' build/web/index.html
+          if grep -q 'GODOT_THREADS_ENABLED = true' build/web/index.html; then
+            echo 'ERROR: Web export still has thread support enabled.'
+            exit 1
+          fi
+          echo 'Verified: Web export is single-threaded and does not require SharedArrayBuffer isolation headers.'
+
+      - name: Add static-hosting headers file
         shell: bash
         run: |
           set -euo pipefail
