@@ -62,7 +62,7 @@ texture = ExtResource("44")
 position = Vector2(640, 400)
 scale = Vector2(0.914, 0.9)
 z_index = -27
-visible = false
+visible = true
 modulate = Color(1, 1, 1, 0.98)
 [node name="RichWorldScenery" type="Node2D" parent="World"]
 z_index = -25

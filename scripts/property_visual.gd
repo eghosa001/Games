@@ -6,13 +6,18 @@ extends Node2D
 ## It owns no gameplay state and never mutates the canonical systems.
 
 const STEPS := ["cleaning", "repair", "painting", "furnishing"]
-const GOLD := Color("d5b56e")
-const GREEN := Color("65b38f")
-const TEXT := Color("d7e3e4")
-const MUTED := Color("8ba1a3")
+const GOLD := Color("e4bd68")
+const GREEN := Color("67c99a")
+const SKY := Color("7ed0c3")
+const TEXT := Color("eef7f3")
+const MUTED := Color("a7bdbe")
 const PANEL := Color(0.035, 0.07, 0.08, 0.94)
 
 var _time := 0.0
+
+func _ready() -> void:
+    process_mode = Node.PROCESS_MODE_ALWAYS
+    queue_redraw()
 
 func _process(delta: float) -> void:
     _time += delta
@@ -20,6 +25,12 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
     var state = get_node_or_null("/root/RenewGameState")
+    var scene_art := get_node_or_null("../PremiumRestorationScene")
+    # The restoration property is part of the initial playable world, not a
+    # late-game overlay. Keep the authored scene visible even while state is
+    # still bootstrapping, then refine it from the live property state.
+    if scene_art != null:
+        scene_art.visible = true
     if state == null:
         return
     var catalog = state.get_value("properties", "catalog", [])
@@ -38,7 +49,7 @@ func _sync_scene_art(stage: String) -> void:
         return
     scene_art.visible = true
     var progress := _stage_progress(stage)
-    scene_art.modulate = Color(1.0, 1.0, 1.0, 0.78 + progress * 0.20)
+    scene_art.modulate = Color(1.0, 1.0, 1.0, 0.90 + progress * 0.10)
     var target_scale := 0.86 + progress * 0.06
     scene_art.scale = Vector2(target_scale, target_scale)
 
@@ -73,7 +84,6 @@ func _draw_site_overlay(property: Dictionary, stage: String) -> void:
     var h := maxf(viewport_size.y, 568.0)
     var progress := _stage_progress(stage)
 
-    # Cinematic vignette keeps the authored SVG scene readable beneath the HUD.
     draw_rect(Rect2(0, h - 116.0, w, 116.0), Color(0.02, 0.04, 0.05, 0.30), true)
     _draw_site_lights(w, h, progress)
     _draw_construction_activity(w, h, progress)
@@ -81,7 +91,7 @@ func _draw_site_overlay(property: Dictionary, stage: String) -> void:
     _draw_progress_card(w, h, property, stage)
 
 func _draw_site_lights(w: float, h: float, progress: float) -> void:
-    var intensity := 0.08 + progress * 0.18
+    var intensity := 0.10 + progress * 0.20
     for i in range(7):
         var x := 70.0 + float(i) * maxf(120.0, (w - 140.0) / 6.0)
         var pulse := 0.65 + 0.35 * sin(_time * 1.8 + i * 0.7)
@@ -97,13 +107,13 @@ func _draw_construction_activity(w: float, h: float, progress: float) -> void:
         var phase := fmod(_time * (0.10 + i * 0.015) + i * 0.23, 1.0)
         var x := lerpf(-60.0, w + 60.0, phase)
         var y := base_y - float(i % 2) * 18.0
-        draw_rect(Rect2(x, y, 34.0, 10.0), Color(0.83, 0.70, 0.40, 0.75 * activity), true)
+        draw_rect(Rect2(x, y, 34.0, 10.0), Color(0.93, 0.72, 0.34, 0.78 * activity), true)
         draw_circle(Vector2(x + 7, y + 11), 4.0, Color(0.02, 0.05, 0.06, 0.9))
         draw_circle(Vector2(x + 27, y + 11), 4.0, Color(0.02, 0.05, 0.06, 0.9))
     for i in range(5):
         var x := w * 0.58 + float(i) * 34.0
         var sway := sin(_time * 0.9 + i) * 5.0
-        draw_line(Vector2(x, h - 120.0), Vector2(x + sway, h - 148.0), Color(MUTED.r, MUTED.g, MUTED.b, 0.28 * activity), 2.0)
+        draw_line(Vector2(x, h - 120.0), Vector2(x + sway, h - 148.0), Color(SKY.r, SKY.g, SKY.b, 0.34 * activity), 2.0)
 
 func _draw_stage_banner(w: float, h: float, property: Dictionary, stage: String, progress: float) -> void:
     var font := ThemeDB.fallback_font
@@ -117,7 +127,7 @@ func _draw_stage_banner(w: float, h: float, property: Dictionary, stage: String,
 
 func _stage_caption(stage: String) -> String:
     match stage:
-        "Abandoned": return "Awaiting acquisition and restoration"
+        "Abandoned": return "Inspect the site • restoration starts here"
         "Cleaned": return "Site cleared • structural work next"
         "Repaired": return "Structure secured • finishing works next"
         "Painted": return "Exterior complete • fit-out in progress"

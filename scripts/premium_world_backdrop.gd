@@ -1,11 +1,9 @@
 extends Node2D
-## RENEW premium environmental backdrop.
-## Subtle depth, skyline silhouettes, grid perspective and animated light give the
-## management screen a living-world feel without texture dependencies.
+## RENEW living world backdrop: bright city, greenery, roads and visible
+## restoration targets. This layer is visual-only and never mutates game state.
 
 const WIDTH := 1280.0
 const HEIGHT := 720.0
-
 var _time := 0.0
 
 func _ready() -> void:
@@ -17,66 +15,85 @@ func _process(delta: float) -> void:
     queue_redraw()
 
 func _draw() -> void:
-    var viewport_size := get_viewport().get_visible_rect().size
-    var draw_width := maxf(WIDTH, viewport_size.x)
-    var draw_height := maxf(HEIGHT, viewport_size.y)
+    var size := get_viewport().get_visible_rect().size
+    var w := maxf(WIDTH, size.x)
+    var h := maxf(HEIGHT, size.y)
+    var horizon := minf(355.0, h * 0.43)
+    var ground := h * 0.58
+    var center := w * 0.5
 
-    # Always paint the complete expanded viewport. On portrait Web builds the
-    # engine exposes extra vertical space; leaving this area transparent makes
-    # the browser's page background show through as a large gray block.
-    draw_rect(Rect2(0, 0, draw_width, draw_height), Color("081017"), true)
-    draw_rect(Rect2(0, 64, draw_width, draw_height - 64), Color("0b151d"), true)
-    draw_rect(Rect2(0, 64, draw_width, 2), Color("d5b56b", 0.30), true)
+    draw_rect(Rect2(0, 0, w, h), Color("173847"), true)
+    draw_rect(Rect2(0, 64, w, h - 64), Color("28545c"), true)
+    draw_rect(Rect2(0, 64, w, h * 0.48), Color("32606a"), true)
+    draw_rect(Rect2(0, 64, w, 3), Color("f0c66a", 0.72), true)
+    _glow(Vector2(w * 0.82, 120), minf(270.0, w * 0.34), Color("f0b95c"), 0.16)
+    _glow(Vector2(w * 0.18, 220), minf(260.0, w * 0.32), Color("55bfa6"), 0.13)
 
-    var center_x := draw_width * 0.5
-    var center_y := draw_height * 0.72
-    _glow(Vector2(draw_width * 0.88, draw_height * 0.17), minf(240.0, draw_width * 0.30), Color("183a46"), 0.11)
-    _glow(Vector2(draw_width * 0.12, center_y), minf(280.0, draw_width * 0.35), Color("123d35"), 0.08)
-    _glow(Vector2(center_x, draw_height * 0.90), minf(360.0, draw_width * 0.45), Color("172b3c"), 0.07)
+    # Skyline.
+    var heights := [46, 82, 58, 116, 72, 94, 51, 132, 68, 105, 62, 88, 124, 70, 98, 58, 110, 76, 118, 64, 92, 55]
+    var facades := [Color("31576a"), Color("3b6670"), Color("49656f"), Color("385b52"), Color("5c5d55")]
+    var step := maxf(44.0, w / float(heights.size()))
+    for i in range(heights.size()):
+        var x := float(i) * step - 20.0
+        var bw := maxf(36.0, step - 12.0)
+        var bh := minf(float(heights[i]), maxf(30.0, horizon - 72.0))
+        var rect := Rect2(x, horizon - bh, bw, bh)
+        draw_rect(rect, facades[i % facades.size()], true)
+        draw_rect(Rect2(x, rect.position.y, bw, 4), Color("d9ad5f", 0.30), true)
+        for wy in range(int(rect.position.y + 12), int(horizon - 8), 18):
+            if i % 2 == 0:
+                draw_rect(Rect2(x + 9, wy, 5, 5), Color("f6d27a", 0.46), true)
+                draw_rect(Rect2(x + bw * 0.58, wy, 5, 5), Color("82d5c4", 0.34), true)
 
-    var grid_step := 40.0
-    for x in range(0, int(draw_width) + 1, int(grid_step)):
-        draw_line(Vector2(float(x), 64), Vector2(float(x), draw_height), Color("9bb7c5", 0.035), 1.0)
-    for y in range(80, int(draw_height) + 1, int(grid_step)):
-        draw_line(Vector2(0, float(y)), Vector2(draw_width, float(y)), Color("9bb7c5", 0.028), 1.0)
+    # Park/trees.
+    draw_rect(Rect2(0, ground - 12, w, 44), Color("326d55"), true)
+    for i in range(14):
+        var tx := 28.0 + float(i) * maxf(70.0, w / 13.0)
+        var ty := ground + 8.0 + float(i % 3) * 5.0
+        draw_rect(Rect2(tx - 2, ty + 13, 4, 18), Color("72543a"), true)
+        draw_circle(Vector2(tx, ty), 17.0, Color("3f8d64"), true)
+        draw_circle(Vector2(tx - 7, ty + 3), 10.0, Color("55a873"), true)
 
-    var horizon := minf(355.0, draw_height * 0.43)
-    draw_line(Vector2(0, horizon), Vector2(draw_width, horizon), Color("7fa6ad", 0.09), 1.0)
-    var buildings := [46, 82, 58, 116, 72, 94, 51, 132, 68, 105, 62, 88, 124, 70, 98, 58, 110, 76, 118, 64, 92, 55]
-    var building_step := maxf(44.0, draw_width / float(buildings.size()))
-    var building_width := maxf(36.0, building_step - 12.0)
-    for i in range(buildings.size()):
-        var x := float(i) * building_step - 20.0
-        var h := minf(float(buildings[i]), maxf(30.0, horizon - 72.0))
-        var rect := Rect2(x, horizon - h, building_width, h)
-        draw_rect(rect, Color("0e2029", 0.78), true)
-        if i % 3 != 0:
-            for wy in range(int(rect.position.y + 12), int(horizon - 8), 18):
-                draw_rect(Rect2(x + 9, wy, 3, 2), Color("d4af63", 0.12), true)
-                if i % 4 == 1:
-                    draw_rect(Rect2(x + building_width * 0.56, wy, 3, 2), Color("8bd3c7", 0.09), true)
-
-    var vanishing := Vector2(center_x, horizon - 7.0)
-    for x in range(-400, int(draw_width) + 401, 120):
-        draw_line(vanishing, Vector2(float(x), draw_height), Color("8da9b4", 0.045), 1.0)
+    # Roads.
+    draw_rect(Rect2(0, ground + 26, w, h - ground - 26), Color("34464c"), true)
+    var vanishing := Vector2(center, horizon + 10.0)
+    for x in range(-400, int(w) + 401, 120):
+        draw_line(vanishing, Vector2(float(x), h), Color("b5c3bf", 0.13), 2.0)
     for y in [410.0, 485.0, 580.0, 690.0]:
-        if y <= draw_height:
-            draw_line(Vector2(0, y), Vector2(draw_width, y), Color("8da9b4", 0.035), 1.0)
+        if y <= h:
+            draw_line(Vector2(0, y), Vector2(w, y), Color("d4b86c", 0.10), 2.0)
 
-    for i in range(6):
-        var lane := float(i) * 1.13
-        var p := fmod(_time * (0.035 + i * 0.004) + lane, 1.0)
-        var x := lerp(center_x, float(80 + i * maxf(90.0, draw_width / 7.0)), p)
-        var y := lerp(horizon, draw_height * 0.93, p * p)
-        var alpha := 0.10 * (1.0 - p)
-        draw_circle(Vector2(x, y), 2.0, Color("8ee6a8", alpha))
-        draw_circle(Vector2(x, y), 7.0, Color("8ee6a8", alpha * 0.12))
+    # Three unmistakable unfinished buildings: the player's world starts here.
+    _site(w * 0.12, ground + 8.0, 170.0, 112.0, Color("a8784e"), Color("d8b85f"))
+    _site(w * 0.40, ground + 8.0, 205.0, 132.0, Color("8e6b55"), Color("e0a95b"))
+    _site(w * 0.70, ground + 8.0, 190.0, 120.0, Color("6d7a63"), Color("e1c06a"))
 
-    draw_line(Vector2(0, 64), Vector2(draw_width, 64), Color("a6c6d2", 0.10), 1.0)
-    draw_line(Vector2(0, draw_height - 1), Vector2(draw_width, draw_height - 1), Color("a6c6d2", 0.06), 1.0)
-    draw_circle(Vector2(minf(110.0, draw_width * 0.12), 116), 2.0, Color("d5b56b", 0.55))
-    draw_circle(Vector2(minf(110.0, draw_width * 0.12), 116), 7.0, Color("d5b56b", 0.08))
-    draw_line(Vector2(minf(122.0, draw_width * 0.13), 116), Vector2(minf(182.0, draw_width * 0.20), 116), Color("d5b56b", 0.24), 1.0)
+    # Moving cars/work lights.
+    for i in range(7):
+        var p := fmod(_time * (0.028 + i * 0.004) + float(i) * 0.14, 1.0)
+        var x := lerpf(center, float(80 + i * maxf(90.0, w / 7.0)), p)
+        var y := lerpf(horizon + 12.0, h * 0.93, p * p)
+        var tint := Color("f4c76b") if i % 2 == 0 else Color("72d5c1")
+        draw_circle(Vector2(x, y), 3.0, Color(tint.r, tint.g, tint.b, 0.75))
+        draw_circle(Vector2(x, y), 9.0, Color(tint.r, tint.g, tint.b, 0.08))
+
+    draw_line(Vector2(0, h - 1), Vector2(w, h - 1), Color("d7e7df", 0.12), 1.0)
+
+func _site(x: float, y: float, w: float, h: float, roof: Color, accent: Color) -> void:
+    draw_rect(Rect2(x, y - h, w, h), Color("172d31"), true)
+    draw_rect(Rect2(x + 8, y - h + 10, w - 16, h - 18), Color("765e4d", 0.76), true)
+    # Missing wall section + exposed frame = visibly incomplete property.
+    draw_rect(Rect2(x + w * 0.62, y - h + 20, w * 0.28, h * 0.42), Color("21373a"), true)
+    draw_rect(Rect2(x + 12, y - h - 8, w - 24, 9), roof, true)
+    draw_line(Vector2(x + w * 0.62, y - h - 2), Vector2(x + w * 0.62, y - 12), accent, 3.0)
+    draw_line(Vector2(x + w * 0.78, y - h + 2), Vector2(x + w * 0.78, y - 4), accent, 2.0)
+    draw_line(Vector2(x + w * 0.58, y - h * 0.72), Vector2(x + w * 0.88, y - h * 0.72), accent, 2.0)
+    draw_line(Vector2(x + w * 0.63, y - h * 0.72), Vector2(x + w * 0.72, y - h * 0.34), accent, 1.5)
+    for wx in [0.12, 0.30, 0.48]:
+        draw_rect(Rect2(x + w * wx, y - h * 0.60, 22, 30), Color("d8b15d", 0.32), true)
+    draw_rect(Rect2(x + w * 0.43, y - 45, 42, 45), Color("263d40"), true)
+    draw_circle(Vector2(x + 20, y + 4), 7.0, Color("18252a"), true)
+    draw_circle(Vector2(x + w - 20, y + 4), 7.0, Color("18252a"), true)
 
 func _glow(center: Vector2, radius: float, tint: Color, strength: float) -> void:
     for i in range(8, 0, -1):
