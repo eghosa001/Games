@@ -1,7 +1,7 @@
 extends Node
 
 const DemandModel = preload("res://scripts/demand_model.gd")
-const SYSTEM_VERSION := 11
+const SYSTEM_VERSION := 12
 
 var command_count: int = 0
 var last_command: String = ""
@@ -147,11 +147,10 @@ func _advance_day_impl(state: Dictionary, context: Dictionary) -> Dictionary:
 
     economy.end_market_day()
 
-    business_system.produce_goods()
+    var production_result: Dictionary = business_system.produce_goods()
     var game_state = _game_state()
-    # BusinessSystem has a legacy void API. Convert its failure signal into a
-    # transaction failure so SimulationSystem's snapshot can roll everything
-    # back when production aborts after partially mutating any ledger.
+    if not bool(production_result.get("ok", false)):
+        return {"ok": false, "message": str(production_result.get("message", "Production failed."))}
     if game_state:
         var production_message := str(game_state.get_value("company", "message", ""))
         if production_message.find(" stopped:") >= 0:
@@ -173,21 +172,31 @@ func _advance_day_impl(state: Dictionary, context: Dictionary) -> Dictionary:
     var alliance = rivals.alliance_bonus(int(state.get("selected_rival", 0)))
     var deal = rivals.deal_bonus(int(state.get("selected_rival", 0)))
 
-    var demand_result = demand_model.calculate("consumer_goods", float(player_price), float(rival_price), reputation, quality, marketing_level, contract_bonus, employee_productivity, district_mult, pressure, float(alliance.get("sales", 0)), float(deal.get("sales", 0)))
+    var active_product := _active_product()
+    var demand_result = demand_model.calculate(active_product, float(player_price), float(rival_price), reputation, quality, marketing_level, contract_bonus, employee_productivity, district_mult, pressure, float(alliance.get("sales", 0)), float(deal.get("sales", 0)))
     if not bool(demand_result.get("ok", false)):
         return {"ok": false, "message": "Demand model failed."}
     var customer_demand = int(demand_result["demand"])
-    var units_sold = min(customer_demand, finished_goods)
-    var sales = units_sold * player_price
-    finished_goods -= units_sold
-    state["finished_goods"] = max(0, finished_goods)
+    var available_inventory := _warehouse_stock(active_product)
+    var units_requested = min(customer_demand, int(floor(available_inventory)))
+    var sales_result := _sell_inventory(active_product, units_requested, player_price)
+    if not bool(sales_result.get("ok", false)):
+        return {"ok": false, "message": "Customer sale failed: %s." % str(sales_result.get("reason", "unknown"))}
+    var units_sold := int(sales_result.get("sold", 0))
+    var sales := int(sales_result.get("revenue", 0))
+    state["finished_goods"] = int(floor(_warehouse_stock(active_product)))
     state["last_units_sold"] = units_sold
 
-    var contract_result = _execute_contract(state, finished_goods)
+    var contract_result = _execute_contract(state, int(floor(_warehouse_stock(active_product))))
     var contract_income = int(contract_result.get("revenue", 0))
     var contract_penalty = int(contract_result.get("penalty", 0))
     if contract_result.get("ok", false):
-        state["finished_goods"] = max(0, int(state["finished_goods"]) - int(contract_result.get("delivered", 0)))
+        var contract_delivered := int(contract_result.get("delivered", 0))
+        if contract_delivered > 0:
+            var contract_sale := _sell_inventory(active_product, contract_delivered, int(contract_result.get("unit_price", 0)))
+            if not bool(contract_sale.get("ok", false)) or int(contract_sale.get("sold", 0)) != contract_delivered:
+                return {"ok": false, "message": "Contract inventory settlement failed."}
+        state["finished_goods"] = int(floor(_warehouse_stock(active_product)))
 
     var wages = int(employee_system.get_daily_wage_total())
     var capacity_level = int(state.get("capacity_level", 1))
@@ -213,7 +222,7 @@ func _advance_day_impl(state: Dictionary, context: Dictionary) -> Dictionary:
         _append_log(state, "BANK: missed loan payment; credit reputation damaged.")
         state["reputation"] = max(0, int(state["reputation"]) - 2)
     elif int(debt_result.get("interest", 0)) > 0:
-        _append_log(state, "BANK: $%s interest charged." % _money(int(debt_result["interest"])))
+        _append_log(state, "BANK: $%s interest charged." % _money(int(debt_result["interest"])) )
 
     state["day"] = int(state.get("day", 1)) + 1
 
@@ -266,18 +275,61 @@ func _advance_day_impl(state: Dictionary, context: Dictionary) -> Dictionary:
         "raw_demand": float(demand_result.get("raw_demand", customer_demand))
     }
 
+func _active_product() -> String:
+    var game_state = _game_state()
+    if game_state:
+        var industry_id := str(game_state.get_value("businesses", "industry_id", ""))
+        if industry_id in ["furniture", "construction_materials", "consumer_electronics"]:
+            return industry_id
+    var production = _production()
+    if production:
+        var snapshot = production.capture_state()
+        var last_run = snapshot.get("last_run", {})
+        var product := str(last_run.get("product", ""))
+        if not product.is_empty():
+            return product
+    return "consumer_goods"
+
+func _supply_chain() -> Node:
+    var scene = get_tree().current_scene
+    if scene != null:
+        var command_system = scene.get_node_or_null("GameplayCommandSystem")
+        if command_system != null and command_system.supply_system != null:
+            var chain = command_system.supply_system.get("supply_chain")
+            if chain != null:
+                return chain
+    return null
+
+func _warehouse_stock(product: String) -> float:
+    var chain = _supply_chain()
+    if chain != null and chain.has_method("stock"):
+        return float(chain.stock(product))
+    return 0.0
+
+func _sell_inventory(product: String, amount: int, price: int) -> Dictionary:
+    if amount <= 0:
+        return {"ok": true, "product": product, "sold": 0, "revenue": 0}
+    var chain = _supply_chain()
+    if chain == null or not chain.has_method("sell_product"):
+        return {"ok": false, "reason": "SupplyChainSystem unavailable"}
+    return chain.sell_product(product, amount, price)
+
 func _execute_contract(state: Dictionary, available_after_sales: int) -> Dictionary:
     var contracts = _contracts()
     if not contracts:
         return {}
     var active = contracts.active_contract()
+    var product := _active_product()
     if active.is_empty():
         if int(state.get("contract_days", 0)) <= 0:
             return {}
-        var created = contracts.create_default_customer_contract(int(state.get("day", 1)), int(state.get("reputation", 0)))
+        var created = contracts.create_default_customer_contract(int(state.get("day", 1)), int(state.get("reputation", 0)), product)
         if not bool(created.get("ok", false)):
             return {}
         active = created["contract"]
+    product = str(active.get("resource_product", product))
+    if product != _active_product():
+        return {"ok": false, "message": "Active contract product does not match the current business product."}
     var production = _production()
     var quality = 75
     if production:
@@ -297,6 +349,7 @@ func _execute_contract(state: Dictionary, available_after_sales: int) -> Diction
         state["contract_days"] = 0
         state["contract_bonus"] = 0
         _append_log(state, "CONTRACT %s: %s." % [final_contract["id"], status.to_upper()])
+    result["unit_price"] = int(active.get("price", 0))
     result["log"] = "CONTRACT: delivered %d; revenue $%s; penalty $%s." % [int(result.get("delivered", 0)), _money(int(result.get("revenue", 0))), _money(int(result.get("penalty", 0)))]
     return result
 
