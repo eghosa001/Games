@@ -19,6 +19,10 @@ func _normalize() -> void:
         active_resource=""
         discount=0.0
 
+func _finance(parent) -> Node:
+    if parent == null: return null
+    return parent.get_node_or_null("/root/RenewFinanceSystem")
+
 func negotiate(rival_index:int, resource:String, parent)->Dictionary:
     _normalize()
     if rival_index<0 or rival_index>=parent.rivals.rivals.size(): return {"ok":false,"message":"Unknown supplier."}
@@ -30,8 +34,10 @@ func negotiate(rival_index:int, resource:String, parent)->Dictionary:
     if relationship<requirement: return {"ok":false,"message":"%s requires relationship %d before offering this contract."%[rival["name"],requirement]}
     var cost: int = 2500+max(0,25-relationship)*100
     if rival_index==2: cost+=1000
-    if int(parent.cash)<cost: return {"ok":false,"message":"Contract signing requires $%d."%cost}
-    parent.cash-=cost
+    var finance := _finance(parent)
+    if finance == null: return {"ok":false,"message":"Finance system unavailable."}
+    var payment: Dictionary = finance.spend(cost, "supply contract signing")
+    if not bool(payment.get("ok", false)): return {"ok":false,"message":"Contract signing requires $%d."%cost}
     active_rival=rival_index
     active_resource=resource
     days_remaining=12
@@ -45,9 +51,11 @@ func secure_resource(resource:String, parent)->Dictionary:
     if resource not in player_resource_rights: return {"ok":false,"message":"Unknown resource."}
     if int(player_resource_rights[resource])>=2: return {"ok":false,"message":"You already control this resource market."}
     var cost:=18000+int(player_resource_rights[resource])*14000+int(parent.reputation)*100
-    if int(parent.cash)<cost: return {"ok":false,"message":"Permanent resource rights require $%d."%cost}
     if int(parent.reputation)<30: return {"ok":false,"message":"Build at least 30 reputation before buying permanent resource rights."}
-    parent.cash-=cost
+    var finance := _finance(parent)
+    if finance == null: return {"ok":false,"message":"Finance system unavailable."}
+    var payment: Dictionary = finance.spend(cost, "permanent resource rights")
+    if not bool(payment.get("ok", false)): return {"ok":false,"message":"Permanent resource rights require $%d."%cost}
     player_resource_rights[resource]=int(player_resource_rights[resource])+1
     return {"ok":true,"cost":cost,"message":"Permanent %s supply rights secured. Rival pressure on this resource is reduced."%resource}
 
