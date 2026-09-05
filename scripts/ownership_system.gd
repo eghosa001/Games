@@ -159,7 +159,8 @@ func retire_treasury_shares(entity_id: String, quantity: int, reason: String = "
     if int(entity["treasury_shares"]) < quantity:
         return {"ok": false, "error": "insufficient_treasury"}
     entity["treasury_shares"] -= quantity
-    entity["authorized_shares"] = max(0, int(entity["authorized_shares"]) - quantity)
+    # Retirement cancels issued shares; it does not amend the board-approved
+    # authorized share capacity. The company can later reissue that capacity.
     entity["issued_shares"] = max(0, int(entity["issued_shares"]) - quantity)
     entities[entity_id] = entity
     _record(entity_id, "retire_treasury", {"quantity": quantity, "reason": reason})
@@ -351,3 +352,11 @@ func load_state(state: Dictionary) -> void:
         if entry is Dictionary:
             transaction_log.append(entry.duplicate(true))
     next_transaction_id = int(state.get("next_transaction_id", transaction_log.size() + 1))
+
+# Transaction snapshots use explicit aliases so callers do not have to know
+# that ownership's persistence API predates the cross-system transaction API.
+func capture_state() -> Dictionary:
+    return save_state()
+
+func restore_state(state: Dictionary) -> void:
+    load_state(state)
