@@ -1,0 +1,36 @@
+name: Godot Web Export
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  export-web:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: "4.5"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Export Godot project for Web
+        uses: firebelley/godot-export@v6.0.0
+        with:
+          godot_executable_download_url: https://downloads.godotengine.org/?version=${{ env.GODOT_VERSION }}&flavor=standard&platform=linux.x86_64
+          relative_project_path: ./
+          archive_output: false
+          export_debug: false
+          presets_to_export: Web
+          use_preset_export_path: true
+
+      - name: Publish Web build to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./build/web
+          force_orphan: true
