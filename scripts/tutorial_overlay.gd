@@ -74,37 +74,40 @@ func _build() -> void:
 func _layout_responsive() -> void:
     if overlay_root == null or panel == null:
         return
-    var w: Variant = maxf(overlay_root.size.x, 320.0)
-    var h: Variant = maxf(overlay_root.size.y, 480.0)
-    var narrow: Variant = w < 700.0
+    var viewport_size := get_viewport_rect().size
+    var w := viewport_size.x
+    var h := viewport_size.y
+    if w <= 1.0 or h <= 1.0:
+        return
+    var narrow := w < 700.0
     if narrow:
-        panel.position = Vector2(12, minf(418.0, h - 150.0))
-        panel.size = Vector2(w - 24.0, 86.0)
-        title_label.position = Vector2(12, 8)
-        title_label.size = Vector2(w - 150.0, 24)
-        progress_label.position = Vector2(12, 32)
-        progress_label.size = Vector2(w - 24.0, 18)
-        body_label.position = Vector2(12, 50)
-        body_label.size = Vector2(w - 24.0, 34)
+        panel.position = Vector2(8, minf(426.0, maxf(420.0, h - 104.0)))
+        panel.size = Vector2(w - 16.0, 86.0)
+        title_label.position = Vector2(10, 8)
+        title_label.size = Vector2(w - 132.0, 24)
+        progress_label.position = Vector2(10, 32)
+        progress_label.size = Vector2(w - 20.0, 18)
+        body_label.position = Vector2(10, 50)
+        body_label.size = Vector2(w - 20.0, 32)
         hint_label.hide()
-        continue_button.position = Vector2(w - 112.0, 8)
-        continue_button.size = Vector2(96, 32)
+        continue_button.position = Vector2(w - 106.0, 8)
+        continue_button.size = Vector2(94, 32)
     else:
-        panel.position = Vector2(24, 82)
-        panel.size = Vector2(360, 150)
+        panel.position = Vector2(24, 420)
+        panel.size = Vector2(minf(420.0, w - 48.0), 142.0)
         title_label.position = Vector2(18, 12)
-        title_label.size = Vector2(324, 28)
+        title_label.size = Vector2(panel.size.x - 36.0, 28)
         progress_label.position = Vector2(18, 40)
-        progress_label.size = Vector2(324, 20)
+        progress_label.size = Vector2(panel.size.x - 36.0, 20)
         body_label.position = Vector2(18, 66)
-        body_label.size = Vector2(324, 48)
+        body_label.size = Vector2(panel.size.x - 36.0, 44)
         hint_label.position = Vector2(18, 112)
-        hint_label.size = Vector2(200, 24)
+        hint_label.size = Vector2(panel.size.x - 130.0, 22)
         hint_label.show()
-        continue_button.position = Vector2(248, 108)
-        continue_button.size = Vector2(92, 32)
-    collapsed_button.position = Vector2(12, minf(418.0, h - 150.0))
-    collapsed_button.size = Vector2(120, 40)
+        continue_button.position = Vector2(panel.size.x - 110.0, 108)
+        continue_button.size = Vector2(92, 30)
+    collapsed_button.position = Vector2(8, minf(426.0, maxf(420.0, h - 48.0)))
+    collapsed_button.size = Vector2(118, 38)
 
 func _refresh() -> void:
     if dismissed or game == null:
