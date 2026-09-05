@@ -1,13 +1,17 @@
 extends Node2D
 
+const DomainSystem = preload("res://scripts/domain_system.gd")
+
 var selected: Variant = 0
 var selected_resource: Variant = 0
 var parent: Node
 var last_processed_day: Variant = 1
 var strategic_news: Array[String] = []
+var state_adapter := DomainSystem.new()
 
 func _ready() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
+    add_child(state_adapter)
     if parent != null: last_processed_day = parent.day
     queue_redraw()
 
@@ -46,35 +50,119 @@ func select_business(index:int)->void:
     selected=index; parent.selected_expansion=index
     var p=parent.expansion.properties[index]
     parent.message="Managing %s — %s."%[p["name"],p["industry"]]; parent._log("BUSINESS SELECTED: %s."%p["name"])
+
 func select_resource(index:int)->void:
     if parent==null or index<0 or index>=parent.expansion.resource_sites.size(): return
     selected_resource=index; var site=parent.expansion.resource_sites[index]
     parent.message="Resource site selected: %s (%s)."%[site["name"],site["resource"]]
+
+func _expansion_snapshot() -> Dictionary:
+    return {
+        "properties": parent.expansion.properties.duplicate(true),
+        "resource_sites": parent.expansion.resource_sites.duplicate(true),
+        "management_level": parent.expansion.management_level,
+        "management_overhead": parent.expansion.management_overhead,
+        "reputation": int(parent.reputation)
+    }
+
+func _restore_expansion(snapshot: Dictionary) -> void:
+    parent.expansion.properties = snapshot["properties"].duplicate(true)
+    parent.expansion.resource_sites = snapshot["resource_sites"].duplicate(true)
+    parent.expansion.management_level = int(snapshot["management_level"])
+    parent.expansion.management_overhead = int(snapshot["management_overhead"])
+    parent.reputation = int(snapshot["reputation"])
+
+func _finance() -> Node:
+    return get_tree().root.get_node_or_null("RenewFinanceSystem")
+
 func produce_selected()->void:
     var result=parent.expansion.produce(selected); parent.message=result["message"]
     if result["ok"]: parent.reputation+=1; parent._log(result["message"])
+
 func sell_selected()->void:
+    var snapshot:=_expansion_snapshot()
+    var finance:=_finance()
+    if finance==null:
+        parent.message="FinanceSystem unavailable."; return
+    var finance_before:Dictionary=finance.capture_state()
     var result=parent.expansion.sell(selected); parent.message=result["message"]
-    if result["ok"]: parent.cash+=int(result["profit"]); parent.total_profit+=int(result["profit"]); parent.last_profit=int(result["profit"]); parent.last_sales=int(result["revenue"]); parent._log("%s Net $%s."%[result["message"],parent._money(int(result["profit"]))])
-func hire_selected()->void:
-    var result=parent.expansion.hire(selected,parent.cash)
-    if result["ok"]: parent.cash-=int(result["cost"]); parent.reputation+=1
+    if not result["ok"]: return
+    var revenue:=int(result["revenue"])
+    var operating_cost:=max(0,revenue-int(result["profit"]))
+    if finance.cash + int(result["profit"]) < 0:
+        _restore_expansion(snapshot)
+        finance.restore_state(finance_before)
+        parent.message="Sale cannot be settled without sufficient cash for its operating cost."
+        return
+    var settled=finance.settle_sales(revenue,operating_cost,0)
+    if not bool(settled.get("ok",false)):
+        _restore_expansion(snapshot)
+        finance.restore_state(finance_before)
+        parent.message=str(settled.get("message","Sale settlement failed."))
+        return
     parent.message=result["message"]
+    parent.reputation+=1
+    parent._log("%s Net $%s."%[result["message"],parent._money(int(result["profit"]))])
+
+func hire_selected()->void:
+    var snapshot:=_expansion_snapshot()
+    var finance:=_finance()
+    if finance==null:
+        parent.message="FinanceSystem unavailable."; return
+    var finance_before:Dictionary=finance.capture_state()
+    var result=parent.expansion.hire(selected,parent.cash)
+    if not result["ok"]:
+        parent.message=result["message"]; return
+    var spend=state_adapter.spend(int(result["cost"]),"business hiring")
+    if not bool(spend.get("ok",false)):
+        _restore_expansion(snapshot)
+        finance.restore_state(finance_before)
+        parent.message=str(spend.get("message","Hiring payment failed.")); return
+    parent.reputation+=1
+    parent.message=result["message"]
+
 func price_selected(delta:int)->void:
     var result=parent.expansion.change_price(selected,delta); parent.message=result["message"]
+
 func toggle_selected()->void:
     var result=parent.expansion.toggle_active(selected); parent.message=result["message"]
+
 func harvest_selected_resource()->void:
     var result=parent.expansion.harvest_resource(selected_resource); parent.message=result["message"]
     if result["ok"]: parent.reputation+=1; parent._log("RESOURCE: "+result["message"])
+
 func buy_selected_resource_site()->void:
+    var snapshot:=_expansion_snapshot()
+    var finance:=_finance()
+    if finance==null:
+        parent.message="FinanceSystem unavailable."; return
+    var finance_before:Dictionary=finance.capture_state()
     var result=parent.expansion.buy_resource_site(selected_resource,parent.cash)
-    if result["ok"]: parent.cash-=int(result["cost"]); parent.reputation+=4
+    if result["ok"]:
+        var spend=state_adapter.spend(int(result["cost"]),"resource site acquisition")
+        if not bool(spend.get("ok",false)):
+            _restore_expansion(snapshot); finance.restore_state(finance_before)
+            result={"ok":false,"message":str(spend.get("message","Resource site payment failed."))}
+        else:
+            parent.reputation+=4
     parent.message=result["message"]
+
 func upgrade_selected_resource_site()->void:
+    var snapshot:=_expansion_snapshot()
+    var finance:=_finance()
+    if finance==null:
+        parent.message="FinanceSystem unavailable."; return
+    var finance_before:Dictionary=finance.capture_state()
     var result=parent.expansion.upgrade_resource_site(selected_resource,parent.cash)
-    if result["ok"]: parent.cash-=int(result["cost"]); parent.reputation+=2
+    if result["ok"]:
+        var spend=state_adapter.spend(int(result["cost"]),"resource site upgrade")
+        if not bool(spend.get("ok",false)):
+            _restore_expansion(snapshot); finance.restore_state(finance_before)
+            result={"ok":false,"message":str(spend.get("message","Resource upgrade payment failed."))}
+        else:
+            parent.reputation+=2
     parent.message=result["message"]
+
 func dispatch_internal_supply()->void:
     if selected<0 or selected>=parent.expansion.properties.size(): parent.message="No business selected."; return
     var p=parent.expansion.properties[selected]; var moved_total:=0; var messages:Array[String]=[]
@@ -87,14 +175,28 @@ func dispatch_internal_supply()->void:
         var goods_result=parent.expansion.transfer_core_goods(selected,20,parent.finished_goods)
         if goods_result["ok"]: parent.finished_goods-=int(goods_result["moved"]); moved_total+=int(goods_result["moved"]); messages.append("%d finished goods"%goods_result["moved"])
     parent.message="Internal logistics moved "+", ".join(messages)+"." if moved_total>0 else "No internal supply was available."
+
 func management_upgrade()->void:
+    var snapshot:=_expansion_snapshot()
+    var finance:=_finance()
+    if finance==null:
+        parent.message="FinanceSystem unavailable."; return
+    var finance_before:Dictionary=finance.capture_state()
     var result=parent.expansion.management_upgrade(parent.cash)
-    if result["ok"]: parent.cash-=int(result["cost"]); parent.reputation+=3
+    if result["ok"]:
+        var spend=state_adapter.spend(int(result["cost"]),"HQ management upgrade")
+        if not bool(spend.get("ok",false)):
+            _restore_expansion(snapshot); finance.restore_state(finance_before)
+            result={"ok":false,"message":str(spend.get("message","Management upgrade payment failed."))}
+        else:
+            parent.reputation+=3
     parent.message=result["message"]
+
 func district_cycle()->void:
     if parent==null: return
     var next: int = (parent.districts.selected+1)%parent.districts.districts.size()
     parent.select_district(next)
+
 func upgrade_transport()->void:
     parent.upgrade_transport()
 
@@ -132,6 +234,5 @@ func _draw()->void:
         draw_string(ThemeDB.fallback_font,Vector2(872,311),"[D] Supply   [Q] Upgrade business",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("8ee6a8"))
         draw_string(ThemeDB.fallback_font,Vector2(872,333),"[7] Retail [8] Factory [9] Warehouse",HORIZONTAL_ALIGNMENT_LEFT,-1,12,Color("c6d0d8"))
         draw_string(ThemeDB.fallback_font,Vector2(872,355),"HQ level %d | Management overhead $%d"%[parent.expansion.management_level,parent.expansion.management_overhead],HORIZONTAL_ALIGNMENT_LEFT,-1,11,Color("c6d0d8"))
-
     draw_string(ThemeDB.fallback_font,Vector2(872,385),"Rival: %s | Presence %d | Relationship %d"%[parent.rivals.rivals[parent.selected_rival]["name"],parent.rivals.rivals[parent.selected_rival]["presence"],parent.rivals.rivals[parent.selected_rival]["relationship"]],HORIZONTAL_ALIGNMENT_LEFT,-1,10,Color("ffad8f"))
     draw_string(ThemeDB.fallback_font,Vector2(872,402),"1-3 select rival | L negotiate | C alliance | X acquire asset",HORIZONTAL_ALIGNMENT_LEFT,-1,10,Color("c6d0d8"))
