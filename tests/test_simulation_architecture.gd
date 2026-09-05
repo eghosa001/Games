@@ -18,10 +18,12 @@ func run() -> void:
     var Finance = load("res://scripts/finance_system.gd")
     var Production = load("res://scripts/production_system.gd")
     var Simulation = load("res://scripts/simulation_system.gd")
+    var Gameplay = load("res://scripts/gameplay_command_system.gd")
     check(Finance != null, "FinanceSystem loads")
     check(Production != null, "ProductionSystem loads")
     check(Simulation != null, "SimulationSystem loads")
-    if Finance == null or Production == null or Simulation == null:
+    check(Gameplay != null, "GameplayCommandSystem loads")
+    if Finance == null or Production == null or Simulation == null or Gameplay == null:
         quit(1)
         return
 
@@ -32,9 +34,6 @@ func run() -> void:
     root.add_child(production)
     var simulation = Simulation.new()
     root.add_child(simulation)
-    # Inject the authoritative production instance directly for this isolated
-    # simulation-system architecture test. Runtime composition supplies the
-    # same dependency through advance_day(context).
     simulation.production_system = production
     await process_frame
 
@@ -43,8 +42,6 @@ func run() -> void:
     check(finance.take_loan(5000)["ok"], "Finance owns borrowing")
     check(finance.debt == 5000, "Finance owns debt")
 
-    # Use the canonical V1 economy resources. The old materials/packaging/fuel
-    # fixture belonged to an obsolete pre-Phase-11 economy model.
     var economy_script = load("res://scripts/economy.gd")
     var economy = economy_script.new()
     economy.resources["timber"]["stock"] = 20
@@ -59,9 +56,14 @@ func run() -> void:
     check(snapshot.has("production"), "Simulation captures Production state")
     check(simulation.execute("receive", {"amount": 500, "reason": "test"})["ok"], "Simulation routes finance command")
 
-    # The old end_day endpoint used to settle debt and mutate the economy
-    # independently of the canonical advance_day lifecycle. It is now a safe
-    # compatibility endpoint that performs no economic mutation.
+    var gameplay_text := FileAccess.get_file_as_string("res://scripts/gameplay_command_system.gd")
+    check(gameplay_text.contains("func _daily_transaction_participants()"), "Daily transaction has an explicit participant registry")
+    check(gameplay_text.contains("not node.has_method(\"capture_state\") or not node.has_method(\"restore_state\")"), "Daily transaction fails closed for non-rollback-capable state")
+    check(gameplay_text.contains("RenewContractSystem"), "ContractSystem is inside the daily transaction boundary")
+    check(gameplay_text.contains("supply_chain"), "SupplyChain is inside the daily transaction boundary")
+    check(gameplay_text.contains("_restore_daily_transaction(transaction[\"snapshot\"])") , "Failed daily simulation restores the outer transaction")
+    check(not gameplay_text.contains("supply_chain.warehouse[\"furniture\"]=float(_state_value(\"production\",\"finished_goods\",0))"), "Production no longer overwrites canonical supply inventory")
+
     var cash_before_legacy_end := finance.cash
     var debt_before_legacy_end := finance.debt
     var legacy_result = simulation.execute("end_day")
