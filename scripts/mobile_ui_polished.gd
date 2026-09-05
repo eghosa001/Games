@@ -210,12 +210,12 @@ func _button(text: String, callback: Callable) -> void:
 func _layout_responsive() -> void:
     if root == null or tabs == null or action_scroll == null or actions == null:
         return
-    var size := get_viewport_rect().size
-    var w := size.x
-    var h := size.y
+    var size: Vector2 = get_viewport().get_visible_rect().size
+    var w: float = size.x
+    var h: float = size.y
     if w <= 1.0 or h <= 1.0:
         return
-    var narrow := w < 700.0
+    var narrow: bool = w < 700.0
     top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
     top_bar.position = Vector2.ZERO
     top_bar.size.y = 64.0
@@ -276,4 +276,3 @@ func _layout_responsive() -> void:
         goal_label.position = Vector2(18, 344)
         goal_label.size = Vector2(minf(920.0, w - 36.0), 48.0)
     _apply_tab_state()
-
