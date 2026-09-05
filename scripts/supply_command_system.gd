@@ -51,6 +51,8 @@ func buy_inputs() -> void:
         return
     var cash: int = _sync_cash(finance)
     var transport_level: int = int(state_adapter.get_value("supply_chain", "transport_level", 1))
+    var finance_before: Dictionary = finance.capture_state()
+    var chain_before: Dictionary = chain.capture_state()
     var result: Dictionary = chain.procure_bundle([
         {"resource": "timber", "amount": 10.0},
         {"resource": "iron", "amount": 10.0},
@@ -59,13 +61,25 @@ func buy_inputs() -> void:
     if not bool(result.get("ok", false)):
         state_adapter.message("Input delivery failed (%s)." % str(result.get("reason", "unknown")))
         return
-    var spend_result: Dictionary = finance.spend(int(result.get("cost", 0)), "input procurement")
+    var procurement_cost: int = int(result.get("cost", 0))
+    if procurement_cost < 0:
+        chain.restore_state(chain_before)
+        finance.restore_state(finance_before)
+        _sync_cash(finance)
+        state_adapter.message("Input purchase was rejected because its cost was invalid.")
+        return
+    var spend_result: Dictionary = finance.spend(procurement_cost, "input procurement")
     if not bool(spend_result.get("ok", false)):
+        # The supply chain has already moved inventory. Roll back both systems
+        # instead of manufacturing cash/revenue with a compensating refund.
+        chain.restore_state(chain_before)
+        finance.restore_state(finance_before)
+        _sync_cash(finance)
         state_adapter.message(str(spend_result.get("message", "Input purchase could not be funded.")))
         return
     _sync_cash(finance)
     state_adapter.message("Inputs delivered to the warehouse.")
-    state_adapter.log_message("INPUTS: timber, iron and energy delivered (-$%d)." % int(result.get("cost", 0)))
+    state_adapter.log_message("INPUTS: timber, iron and energy delivered (-$%d)." % procurement_cost)
 
 func process_iron_to_metal(cycles: int = 1) -> Dictionary:
     return chain.process_iron_to_metal(cycles)
