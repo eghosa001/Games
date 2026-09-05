@@ -30,6 +30,16 @@ func run() -> void:
     check(market.contains("finance.receive"), "Market rewards route through FinanceSystem")
     check(market.contains("_sync_legacy_cash"), "Legacy cash mirror is synchronized after finance transactions")
 
+    var simulation := _read("res://scripts/simulation_system.gd")
+    check(not simulation.contains("finance.cash = int(game_state.get_value(\"economy\", \"cash\""), "Simulation does not overwrite Finance cash from legacy state")
+    check(not simulation.contains("finance.debt = int(game_state.get_value(\"finance\", \"debt\""), "Simulation does not overwrite Finance debt from legacy state")
+    check(simulation.contains("func _sync_state_from_finance"), "Simulation has an explicit Finance-to-state mirror")
+
+    var bankruptcy := _read("res://scripts/bankruptcy_system.gd")
+    check(not bankruptcy.contains("finance.cash = int(game.cash)"), "Bankruptcy does not overwrite Finance cash from legacy game cash")
+    check(not bankruptcy.contains("finance.debt = int(game.debt)"), "Bankruptcy does not overwrite Finance debt from legacy game debt")
+    check(not bankruptcy.contains("finance.loan_payment = int(game.loan_payment)"), "Bankruptcy does not overwrite Finance payment schedule from legacy game state")
+
     var finance_script := _read("res://scripts/finance_system.gd")
     check(finance_script.contains("func capture_state()"), "FinanceSystem exposes transaction snapshots")
     check(finance_script.contains("func restore_state(snapshot: Dictionary)"), "FinanceSystem exposes transaction rollback")
