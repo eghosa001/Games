@@ -89,16 +89,30 @@ func procure_bundle(orders: Array, cash: int, transport_level: int = 1) -> Dicti
         var amount: float = float(order.get("amount", 0.0))
         if economy == null or not economy.resources.has(resource):
             return {"ok": false, "reason": "invalid_resource", "resource": resource}
+        if amount <= 0.0:
+            return {"ok": false, "reason": "invalid_amount", "resource": resource}
         if float(economy.resources[resource].get("stock", 0.0)) < amount:
             return {"ok": false, "reason": "market_stock", "resource": resource}
         total_cost += int(round(economy.current_price(resource) * amount)) + _freight_cost(resource, amount, transport_level)
     if cash < total_cost:
         return {"ok": false, "reason": "cash", "cost": total_cost}
+
+    # Procurement mutates both market stock and warehouse state. Keep the whole
+    # bundle atomic so a later delivery failure cannot leave earlier orders
+    # purchased while the caller receives an error.
+    var warehouse_before := warehouse.duplicate(true)
+    var resources_before := economy.resources.duplicate(true)
+    var freight_before := total_freight_cost
+    var operation_before := last_operation.duplicate(true)
     var delivered: Array = []
     var remaining_cash: int = cash
     for order in orders:
         var result: Dictionary = procure(str(order["resource"]), float(order["amount"]), remaining_cash, transport_level)
-        if not result.get("ok", false):
+        if not bool(result.get("ok", false)):
+            warehouse = warehouse_before
+            economy.resources = resources_before
+            total_freight_cost = freight_before
+            last_operation = operation_before
             return {"ok": false, "reason": "delivery_failed", "details": result}
         remaining_cash -= int(result["cost"])
         delivered.append(result)
