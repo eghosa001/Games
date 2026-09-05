@@ -4,6 +4,7 @@ config/icon="res://Assets/renew_icon.svg"
 run/main_scene="res://scenes/Main.tscn"
 
 [autoload]
+RenewWebResponsive="*res://scripts/web_responsive.gd"
 RenewGameState="*res://scripts/game_state.gd"
 RenewAutosave="*res://scripts/autosave.gd"
 RenewFinanceSystem="*res://scripts/finance_system.gd"
