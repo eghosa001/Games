@@ -1,0 +1,48 @@
+name: Live Browser QA
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'Deployed RENEW URL'
+        required: false
+        default: 'https://games-3lpvuxrii-ogs7.vercel.app/'
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/browser-qa.sh'
+      - '.github/workflows/browser-qa.yml'
+
+jobs:
+  browser-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install agent-browser
+        run: |
+          npm install -g agent-browser
+          agent-browser install --with-deps
+          agent-browser --version
+
+      - name: Run live browser QA
+        env:
+          RENEW_BROWSER_URL: ${{ inputs.url || 'https://games-3lpvuxrii-ogs7.vercel.app/' }}
+        run: bash scripts/browser-qa.sh
+
+      - name: Upload screenshots and diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: renew-browser-qa
+          path: artifacts/browser-qa/
+          if-no-files-found: warn
+          retention-days: 14
