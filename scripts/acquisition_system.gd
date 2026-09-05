@@ -114,13 +114,24 @@ func merge_entities(acquirer_id: String, target_id: String, price: float, share_
 
     var diligence: Variant = due_diligence(target_id)
     var valuation_data: Variant = _resolve_valuation(target, price, terms)
-    # Finance is settled before ownership mutation. This prevents a failed
-    # affordability check from leaving the ownership ledger partially changed.
+
+    # Snapshot every mutable subsystem that the merger can touch. The current
+    # implementation only has fallible ownership/finance stages, but keeping
+    # the employee and acquisition snapshots here makes the transaction safe
+    # if a later integration stage becomes fallible.
+    var finance = get_node_or_null("/root/RenewFinanceSystem")
+    var ownership = _resolve_ownership_node()
+    var employee_system = get_node_or_null("/root/RenewEmployeeSystem")
+    var finance_before: Dictionary = finance.capture_state() if finance != null and finance.has_method("capture_state") else {}
+    var ownership_before: Dictionary = ownership.capture_state() if ownership != null and ownership.has_method("capture_state") else {}
+    var employees_before: Dictionary = employee_system.capture_state() if employee_system != null and employee_system.has_method("capture_state") else {}
+    var acquisition_before: Dictionary = capture_state()
+
     var finance_result: Variant = _resolve_merger_finance(target, price, terms)
     if not bool(finance_result.get("ok", false)): return finance_result
     var ownership_result: Variant = _resolve_merger_ownership(acquirer_id, target_id, target, share_exchange, terms)
     if not bool(ownership_result.get("ok", false)):
-        _rollback_merger_finance(finance_result)
+        _rollback_merger_transaction(finance_before, ownership_before, employees_before, acquisition_before)
         return ownership_result
 
     var employee_result: Variant = _resolve_merger_employees(target, terms)
@@ -189,6 +200,24 @@ func restore_state(snapshot: Dictionary) -> void:
     if snapshot.is_empty(): return
     next_id = int(snapshot.get("next_id", 1)); targets = snapshot.get("targets", {}).duplicate(true); acquisitions = snapshot.get("acquisitions", []).duplicate(true); mergers = snapshot.get("mergers", []).duplicate(true)
 
+func _resolve_ownership_node():
+    var ownership = get_node_or_null("/root/RenewOwnershipSystem")
+    if ownership != null: return ownership
+    var scene = get_tree().current_scene if get_tree() != null else null
+    if scene != null:
+        ownership = scene.get_node_or_null("Systems/OwnershipSystem")
+        if ownership == null: ownership = scene.get_node_or_null("OwnershipSystem")
+    return ownership
+
+func _rollback_merger_transaction(finance_before: Dictionary, ownership_before: Dictionary, employees_before: Dictionary, acquisition_before: Dictionary) -> void:
+    var finance = get_node_or_null("/root/RenewFinanceSystem")
+    if finance != null and not finance_before.is_empty() and finance.has_method("restore_state"): finance.restore_state(finance_before)
+    var ownership = _resolve_ownership_node()
+    if ownership != null and not ownership_before.is_empty() and ownership.has_method("restore_state"): ownership.restore_state(ownership_before)
+    var employee_system = get_node_or_null("/root/RenewEmployeeSystem")
+    if employee_system != null and not employees_before.is_empty() and employee_system.has_method("restore_state"): employee_system.restore_state(employees_before)
+    restore_state(acquisition_before)
+
 func _resolve_valuation(target: Dictionary, price: float, terms: Dictionary) -> Dictionary:
     var assets: Variant = 0.0
     for asset in target.get("assets", []):
@@ -200,8 +229,7 @@ func _resolve_valuation(target: Dictionary, price: float, terms: Dictionary) -> 
     return {"asset_value": assets, "net_asset_value": target_value, "agreed_value": max(0.0, negotiated), "premium_percent": premium, "consideration": price}
 
 func _resolve_merger_ownership(acquirer_id: String, target_id: String, target: Dictionary, share_exchange: float, terms: Dictionary) -> Dictionary:
-    var ownership = get_node_or_null("/root/RenewOwnershipSystem")
-    if ownership == null: ownership = get_tree().current_scene.get_node_or_null("OwnershipSystem") if get_tree().current_scene != null else null
+    var ownership = _resolve_ownership_node()
     var surviving_entity: Variant = str(terms.get("surviving_entity", acquirer_id))
     var target_entity: Variant = str(terms.get("target_entity", target_id))
     var target_percent: Variant = float(terms.get("target_owner_percent", 0.0))
