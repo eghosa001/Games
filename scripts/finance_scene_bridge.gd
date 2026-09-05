@@ -56,7 +56,7 @@ func validate_invariants() -> Dictionary:
     var finance = _finance()
     return finance.validate_invariants() if finance != null else {"ok": false, "error": "FinanceSystem unavailable."}
 
-func _get(property: String):
+func _get(property: StringName) -> Variant:
     var finance = _finance()
     if finance == null:
         return null
