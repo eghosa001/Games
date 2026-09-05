@@ -15,15 +15,48 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install Godot export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          GODOT_VERSION="4.5-stable"
+          GODOT_DATA="$HOME/.local/share/godot"
+          mkdir -p "$GODOT_DATA/export_templates/$GODOT_VERSION"
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v4.5-stable_export_templates.tpz" -O /tmp/templates.tpz
+          rm -rf /tmp/templates
+          mkdir -p /tmp/templates
+          7z x /tmp/templates.tpz -o/tmp/templates >/dev/null
+          cp -R /tmp/templates/templates/. "$GODOT_DATA/export_templates/$GODOT_VERSION/"
+
+      - name: Install Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          wget -q "https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip" -O /tmp/godot.zip
+          rm -rf "$HOME/godot"
+          mkdir -p "$HOME/godot"
+          7z x /tmp/godot.zip -o"$HOME/godot" >/dev/null
+          chmod +x "$HOME/godot/Godot_v4.5-stable_linux.x86_64"
+          "$HOME/godot/Godot_v4.5-stable_linux.x86_64" --version
+
       - name: Export Web build
-        uses: firebelley/godot-export@v6.0.0
-        with:
-          godot_executable_download_url: https://github.com/godotengine/godot/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip
-          relative_project_path: ./
-          archive_output: false
-          export_debug: false
-          presets_to_export: Web
-          use_preset_export_path: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/web
+          "$HOME/godot/Godot_v4.5-stable_linux.x86_64" --headless --path . --editor --quit
+          "$HOME/godot/Godot_v4.5-stable_linux.x86_64" --headless --path . --export-release "Web" build/web/index.html
+
+      - name: Add Vercel/static-hosting headers
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > build/web/_headers <<'EOF'
+          /*
+            Cross-Origin-Opener-Policy: same-origin
+            Cross-Origin-Embedder-Policy: require-corp
+            Cross-Origin-Resource-Policy: cross-origin
+          EOF
 
       - name: Publish Web build to gh-pages
         uses: peaceiris/actions-gh-pages@v4
