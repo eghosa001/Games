@@ -80,6 +80,18 @@ func run() -> void:
     check(branch_controller.contains("branches.branches=branches_before"), "Failed branch daily settlement restores branch state")
     check(not branch_controller.contains("state_adapter.receive(int(result[\"profit\"]),\"regional branch operating result\")"), "Branch losses are not silently discarded as invalid negative revenue")
 
+    var empire := _read("res://scripts/empire_controller.gd")
+    check(empire.contains("const DomainSystem = preload(\"res://scripts/domain_system.gd\")"), "Empire controller uses the Finance authority bridge")
+    check(empire.contains("finance.settle_sales(revenue,operating_cost,0)"), "Empire business sales settle through FinanceSystem")
+    check(empire.contains("state_adapter.spend(int(result[\"cost\"]),\"business hiring\")"), "Empire hiring routes through FinanceSystem")
+    check(empire.contains("state_adapter.spend(int(result[\"cost\"]),\"resource site acquisition\")"), "Resource-site acquisition routes through FinanceSystem")
+    check(empire.contains("state_adapter.spend(int(result[\"cost\"]),\"resource site upgrade\")"), "Resource-site upgrades route through FinanceSystem")
+    check(empire.contains("state_adapter.spend(int(result[\"cost\"]),\"HQ management upgrade\")"), "HQ management upgrades route through FinanceSystem")
+    check(empire.contains("finance.restore_state(finance_before)"), "Empire transactions can roll back FinanceSystem")
+    check(empire.contains("_restore_expansion(snapshot)"), "Empire transactions can roll back expansion state")
+    check(not empire.contains("parent.cash+=int(result[\"profit\"]);"), "Empire sales cannot directly add parent cash")
+    check(not empire.contains("parent.cash-=int(result[\"cost\"]);"), "Empire purchases cannot directly subtract parent cash")
+
     var bankruptcy := _read("res://scripts/bankruptcy_system.gd")
     check(not bankruptcy.contains("finance.cash = int(game.cash)"), "Bankruptcy does not overwrite FinanceSystem cash from legacy game state")
     check(not bankruptcy.contains("finance.debt = int(game.debt)"), "Bankruptcy does not overwrite FinanceSystem debt from legacy game state")
