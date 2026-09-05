@@ -22,5 +22,6 @@ func run() -> void:
     check(business_text.contains("var operating_cost: int = int(config.get(\"operating_cost\", 0))"), "Production reads configured operating cost")
     check(business_text.contains("state_adapter.spend(operating_cost, \"production operating cost\")"), "Production operating cost is charged through FinanceSystem")
     check(business_text.contains("delivery_cost + operating_cost"), "Production preflights delivery and operating cash together")
+    check(business_text.contains("func warehouse_restore(resource:String, amount:float)->void: supply_chain.warehouse[resource] = max(0.0, float(supply_chain.warehouse.get(resource,0.0))+amount)"), "Production rollback restores delivered warehouse inventory")
     print("\nRENEW PRODUCTION FINANCE AUTHORITY RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
