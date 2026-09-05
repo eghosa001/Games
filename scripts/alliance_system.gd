@@ -35,6 +35,30 @@ func create_alliance(founder_id: String, name: String, treasury: int = 0) -> Dic
     _event("alliance_created", "Alliance %s created" % name, {"alliance_id": id, "founder": founder_id})
     return {"ok": true, "alliance": get_alliance(id), "message": "Alliance %s created. You are Chairman." % name}
 
+## Creates an alliance and funds it through the canonical FinanceSystem in one
+## recoverable transaction. The UI must use this instead of coordinating two ledgers.
+func create_alliance_with_finance(finance: Node, founder_id: String, name: String, amount: int) -> Dictionary:
+    if finance == null or not finance.has_method("spend") or not finance.has_method("capture_state") or not finance.has_method("restore_state"):
+        return {"ok": false, "message": "Finance system is unavailable."}
+    if amount <= 0: return {"ok": false, "message": "Alliance funding must be positive."}
+    if not finance.has_method("can_afford") or not finance.can_afford(amount):
+        return {"ok": false, "message": "Insufficient cash to establish the alliance."}
+    var finance_snapshot: Dictionary = finance.capture_state()
+    var alliance_snapshot: Dictionary = capture_state()
+    var created: Dictionary = create_alliance(founder_id, name, 0)
+    if not bool(created.get("ok", false)): return created
+    var payment: Dictionary = finance.spend(amount, "alliance founding contribution")
+    if not bool(payment.get("ok", false)):
+        restore_state(alliance_snapshot)
+        finance.restore_state(finance_snapshot)
+        return {"ok": false, "message": String(payment.get("message", "Alliance funding failed."))}
+    var contribution: Dictionary = contribute(founder_id, amount)
+    if not bool(contribution.get("ok", false)):
+        restore_state(alliance_snapshot)
+        finance.restore_state(finance_snapshot)
+        return {"ok": false, "message": "Alliance funding could not be posted; transaction rolled back."}
+    return {"ok": true, "alliance": contribution.get("alliance", get_member_alliance(founder_id)), "payment": payment, "message": "Alliance %s created. You are Chairman." % name}
+
 func join_alliance(alliance_id: String, member_id: String, role: String = ROLE_MEMBER) -> Dictionary:
     var alliance: Variant = alliances.get(alliance_id, {})
     if alliance.is_empty() or alliance.get("status") != STATUS_ACTIVE: return {"ok": false, "message": "Alliance is unavailable."}
@@ -65,7 +89,28 @@ func contribute(member_id: String, amount: int) -> Dictionary:
     alliance["contributions"].append({"member": member_id, "amount": amount, "day": _day()})
     alliance["trust"] = min(100.0, float(alliance["trust"]) + min(3.0, amount / 10000.0))
     _write_org(alliance)
-    return {"ok": true, "treasury": alliance["treasury"], "message": "Alliance treasury increased by $%d." % amount}
+    return {"ok": true, "alliance": get_alliance(str(alliance["id"])), "treasury": alliance["treasury"], "message": "Alliance treasury increased by $%d." % amount}
+
+## Atomically debits FinanceSystem and posts the contribution. Both ledgers are
+## restored if either side rejects the operation.
+func contribute_from_finance(finance: Node, member_id: String, amount: int) -> Dictionary:
+    if finance == null or not finance.has_method("spend") or not finance.has_method("capture_state") or not finance.has_method("restore_state"):
+        return {"ok": false, "message": "Finance system is unavailable."}
+    if amount <= 0: return {"ok": false, "message": "Contribution must be positive."}
+    var alliance_id := str(member_alliance.get(member_id, ""))
+    if alliance_id.is_empty() or not alliances.has(alliance_id): return {"ok": false, "message": "Member is not in an alliance."}
+    if not finance.has_method("can_afford") or not finance.can_afford(amount): return {"ok": false, "message": "Insufficient cash for this contribution."}
+    var finance_snapshot: Dictionary = finance.capture_state()
+    var alliance_snapshot: Dictionary = capture_state()
+    var payment: Dictionary = finance.spend(amount, "alliance contribution")
+    if not bool(payment.get("ok", false)): return payment
+    var result: Dictionary = contribute(member_id, amount)
+    if not bool(result.get("ok", false)):
+        restore_state(alliance_snapshot)
+        finance.restore_state(finance_snapshot)
+        return {"ok": false, "message": "Contribution transaction rolled back."}
+    result["payment"] = payment
+    return result
 
 func withdraw(member_id: String, amount: int, purpose: String = "alliance spending") -> Dictionary:
     if amount <= 0: return {"ok": false, "message": "Withdrawal must be positive."}
