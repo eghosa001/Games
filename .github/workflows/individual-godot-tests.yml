@@ -23,6 +23,7 @@ jobs:
           - test_runner.gd
           - test_extended.gd
           - test_finance_regressions.gd
+          - test_finance_authority_paths.gd
           - test_expansion_api.gd
           - test_economy_transactions.gd
           - test_edge_cases.gd
