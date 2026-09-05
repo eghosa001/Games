@@ -95,7 +95,23 @@ func record_equity(amount: int, source: String = "equity issuance") -> Dictionar
 
 func buyback_equity(amount: int) -> Dictionary:
     if amount <= 0 or cash < amount: return {"ok": false, "message": "Insufficient cash for buyback."}
-    cash -= amount; equity_contributed = max(0.0, equity_contributed - amount); retained_earnings = max(0.0, retained_earnings - amount); _record("buyback", amount, "equity buyback"); _record_cash_flow("financing", -amount, "equity buyback"); return {"ok": true, "amount": amount, "cash": cash}
+    cash -= amount; retained_earnings -= float(amount); _record("buyback", amount, "equity buyback"); _record_cash_flow("financing", -amount, "equity buyback"); return {"ok": true, "amount": amount, "cash": cash, "equity": float(balance_sheet()["equity"])}
+
+## Records a fixed-asset disposal without misclassifying the proceeds as operating revenue.
+## The asset leaves the balance sheet at book value, cash increases by the sale price,
+## and the gain/loss is recognized in retained earnings. Proceeds are investing cash flow.
+func record_asset_sale(asset_name: String, sale_value: int, book_value: int = 0) -> Dictionary:
+    if sale_value <= 0 or book_value < 0:
+        return {"ok": false, "message": "Invalid asset sale."}
+    if float(fixed_assets) < float(book_value):
+        return {"ok": false, "message": "Book value exceeds available fixed assets."}
+    var gain_loss := sale_value - book_value
+    fixed_assets -= float(book_value)
+    cash += sale_value
+    retained_earnings += float(gain_loss)
+    _record("asset_sale", sale_value, "asset sale: %s" % asset_name)
+    _record_cash_flow("investing", sale_value, "asset sale: %s" % asset_name)
+    return {"ok": true, "asset": asset_name, "sale_value": sale_value, "book_value": book_value, "gain_loss": gain_loss, "cash": cash, "fixed_assets": fixed_assets}
 
 func repay(amount: int) -> Dictionary:
     if amount <= 0: return {"ok": false, "message": "Repayment amount must be greater than zero."}
