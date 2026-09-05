@@ -1,7 +1,8 @@
 extends "res://scripts/mobile_ui.gd"
 
-# Production presentation layer. Inherits the tested action/state logic and
-# replaces only the control surface so simulation APIs remain untouched.
+# Production presentation layer. The simulation/action logic remains in mobile_ui.gd;
+# this layer owns the visual system and compensates for Godot's logical Web viewport
+# so phone controls are rendered at CSS-pixel/touch-friendly sizes.
 var top_bar: ColorRect
 var bottom_bar: ColorRect
 var status_panel: Panel
@@ -19,29 +20,22 @@ func _build_ui() -> void:
     top_bar = ColorRect.new()
     top_bar.name = "TopBar"
     top_bar.color = Color("101820")
-    top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
-    top_bar.position = Vector2(0, 0)
-    top_bar.size.y = 64
     top_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(top_bar)
     accent_line = ColorRect.new()
     accent_line.color = Color("d5b56b")
-    accent_line.position = Vector2(18, 62)
-    accent_line.size = Vector2(112, 2)
     accent_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(accent_line)
     var brand := Label.new()
     brand.text = "RENEW"
-    brand.position = Vector2(18, 7)
-    brand.size = Vector2(120, 34)
+    brand.name = "Brand"
     brand.add_theme_font_size_override("font_size", 22)
     brand.add_theme_color_override("font_color", Color("e6f1ef"))
     brand.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(brand)
     var subtitle := Label.new()
     subtitle.text = "REBUILD  /  OPERATE  /  EXPAND"
-    subtitle.position = Vector2(18, 37)
-    subtitle.size = Vector2(240, 20)
+    subtitle.name = "Subtitle"
     subtitle.add_theme_font_size_override("font_size", 9)
     subtitle.add_theme_color_override("font_color", Color("789096"))
     subtitle.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -207,25 +201,52 @@ func _button(text: String, callback: Callable) -> void:
     b.pressed.connect(_run_action.bind(text, callback))
     actions.add_child(b)
 
+func _browser_size() -> Vector2:
+    if not OS.has_feature("web"):
+        return Vector2.ZERO
+    var result = JavaScriptBridge.eval("[Math.round(window.innerWidth), Math.round(window.innerHeight)]")
+    if result is Array and result.size() >= 2:
+        return Vector2(maxf(1.0, float(result[0])), maxf(1.0, float(result[1])))
+    return Vector2.ZERO
+
 func _layout_responsive() -> void:
     if root == null or tabs == null or action_scroll == null or actions == null:
         return
-    var size: Vector2 = get_viewport().get_visible_rect().size
-    var w: float = size.x
-    var h: float = size.y
+    var logical_size := get_viewport().get_visible_rect().size
+    var browser := _browser_size()
+    var narrow := logical_size.x < 700.0 or (browser.x > 0.0 and browser.x < 700.0)
+
+    # CanvasLayer is independent from the world stretch. On Web/mobile the
+    # logical viewport can be wider than the CSS viewport; compensate here so
+    # these dimensions become real touch/CSS pixels instead of half-sized HUDs.
+    if narrow and browser.x > 0.0:
+        var scale_factor := maxf(1.0, logical_size.x / browser.x)
+        scale = Vector2(scale_factor, scale_factor)
+    else:
+        scale = Vector2.ONE
+
+    var w := browser.x if narrow and browser.x > 0.0 else logical_size.x
+    var h := browser.y if narrow and browser.y > 0.0 else logical_size.y
     if w <= 1.0 or h <= 1.0:
         return
-    var narrow: bool = w < 700.0
-    top_bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
+
     top_bar.position = Vector2.ZERO
-    top_bar.size.y = 64.0
-    bottom_bar.position = Vector2(0, maxf(0.0, h - 150.0))
-    bottom_bar.size = Vector2(w, 150.0)
+    top_bar.size = Vector2(w, 64.0)
     accent_line.position = Vector2(18, 62)
+    accent_line.size = Vector2(112, 2)
+    var brand := root.get_node_or_null("Brand") as Label
+    if brand != null:
+        brand.position = Vector2(18, 7)
+        brand.size = Vector2(120, 34)
+    var subtitle := root.get_node_or_null("Subtitle") as Label
+    if subtitle != null:
+        subtitle.position = Vector2(18, 37)
+        subtitle.size = Vector2(240, 20)
+
     if narrow:
         tabs.position = Vector2(8, 8)
         tabs.size = Vector2(w - 16.0, 42.0)
-        var tab_width := maxf(44.0, (w - 16.0 - 21.0) / 4.0)
+        var tab_width := maxf(64.0, (w - 16.0 - 21.0) / 4.0)
         for child in tabs.get_children():
             if child is Button:
                 child.custom_minimum_size = Vector2(tab_width, 40.0)
@@ -236,20 +257,22 @@ func _layout_responsive() -> void:
         status_label.size = Vector2(w - 32.0, 24.0)
         status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
         action_scroll.position = Vector2(8, 88)
-        action_scroll.size = Vector2(w - 16.0, minf(190.0, maxf(120.0, h * 0.24)))
+        action_scroll.size = Vector2(w - 16.0, minf(250.0, maxf(150.0, h * 0.30)))
         actions.columns = 2
         actions.custom_minimum_size = Vector2(w - 16.0, 0)
-        var button_width := maxf(120.0, (w - 16.0 - 9.0) / 2.0)
+        var button_width := maxf(150.0, (w - 16.0 - 9.0) / 2.0)
         for child in actions.get_children():
             if child is Button:
-                child.custom_minimum_size = Vector2(button_width, 44.0)
-                child.add_theme_font_size_override("font_size", 11)
-        feedback_panel.position = Vector2(8, 286)
-        feedback_panel.size = Vector2(w - 16.0, 72.0)
+                child.custom_minimum_size = Vector2(button_width, 46.0)
+                child.add_theme_font_size_override("font_size", 12)
+        feedback_panel.position = Vector2(8, minf(350.0, h - 210.0))
+        feedback_panel.size = Vector2(w - 16.0, 70.0)
         feedback_label.position = Vector2(12, 6)
-        feedback_label.size = Vector2(w - 40.0, 60.0)
-        goal_label.position = Vector2(8, 366)
-        goal_label.size = Vector2(w - 16.0, 52.0)
+        feedback_label.size = Vector2(w - 40.0, 58.0)
+        goal_label.position = Vector2(8, minf(430.0, h - 145.0))
+        goal_label.size = Vector2(w - 16.0, 58.0)
+        bottom_bar.position = Vector2(0, maxf(0.0, h - 82.0))
+        bottom_bar.size = Vector2(w, 82.0)
     else:
         tabs.position = Vector2(270, 10)
         tabs.size = Vector2(minf(700.0, w - 570.0), 44.0)
@@ -275,4 +298,6 @@ func _layout_responsive() -> void:
         feedback_label.size = Vector2(feedback_panel.size.x - 36.0, 72.0)
         goal_label.position = Vector2(18, 344)
         goal_label.size = Vector2(minf(920.0, w - 36.0), 48.0)
+        bottom_bar.position = Vector2(0, maxf(0.0, h - 64.0))
+        bottom_bar.size = Vector2(w, 64.0)
     _apply_tab_state()
