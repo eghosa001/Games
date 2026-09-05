@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="800" viewBox="0 0 1400 800">
+<defs><linearGradient id="sky" x2="0" y2="1"><stop stop-color="#071319"/><stop offset="1" stop-color="#123039"/></linearGradient><linearGradient id="wall" x2="1" y2="1"><stop stop-color="#243d43"/><stop offset="1" stop-color="#132a31"/></linearGradient><linearGradient id="glass" x2="0" y2="1"><stop stop-color="#9cc5bd" stop-opacity=".7"/><stop offset="1" stop-color="#41676b" stop-opacity=".25"/></linearGradient></defs>
+<rect width="1400" height="800" fill="url(#sky)"/><path d="M0 410 Q340 360 700 420T1400 400V800H0Z" fill="#0d1d22"/>
+<!-- old property shell -->
+<g transform="translate(180 190)"><path d="M0 300V80L260 0l300 80v220Z" fill="#172d34" stroke="#65777a" stroke-width="5"/><path d="M0 80 260 0 560 80" fill="none" stroke="#8a8f8b" stroke-width="8"/><path d="M25 120h510v40H25z" fill="#0a171c"/>
+<g fill="#071116" stroke="#566b70" stroke-width="3"><rect x="45" y="185" width="90" height="70"/><rect x="170" y="185" width="90" height="70"/><rect x="295" y="185" width="90" height="70"/><rect x="420" y="185" width="90" height="70"/></g>
+<path d="M15 270h530" stroke="#d5b56e" stroke-opacity=".35" stroke-width="4"/><text x="0" y="350" fill="#8ba1a3" font-family="sans-serif" font-size="20" letter-spacing="4">ACQUIRED PROPERTY • RESTORATION SITE</text></g>
+<!-- cranes/scaffolding -->
+<g stroke="#587277" fill="none" stroke-width="6"><path d="M790 470V100h300"/><path d="M820 145h245"/><path d="M830 100 760 500M1080 100 1180 500"/><path d="M870 250h160M870 360h160"/></g><g fill="#d5b56e"><rect x="1060" y="132" width="65" height="12"/><rect x="1015" y="150" width="35" height="8"/></g>
+<!-- restored wing -->
+<g transform="translate(760 450)"><rect width="500" height="170" rx="8" fill="url(#wall)" stroke="#5e787c" stroke-width="5"/><path d="M-25 0H525L465-55H35Z" fill="#29484f" stroke="#6a8285" stroke-width="4"/><g fill="url(#glass)" stroke="#53777a"><rect x="35" y="40" width="85" height="80"/><rect x="150" y="40" width="85" height="80"/><rect x="265" y="40" width="85" height="80"/><rect x="380" y="40" width="85" height="80"/></g><rect x="20" y="132" width="460" height="12" fill="#65b38f" opacity=".7"/><text x="250" y="205" text-anchor="middle" fill="#d7e3e4" font-family="sans-serif" font-size="18" letter-spacing="3">RESTORED &amp; CERTIFIED</text></g>
+<!-- equipment --> <g fill="#d5b56e"><rect x="80" y="650" width="120" height="25" rx="5"/><rect x="220" y="650" width="85" height="25" rx="5"/><rect x="430" y="650" width="130" height="25" rx="5"/></g><g fill="#071116"><circle cx="105" cy="682" r="9"/><circle cx="175" cy="682" r="9"/><circle cx="245" cy="682" r="9"/><circle cx="285" cy="682" r="9"/><circle cx="460" cy="682" r="9"/><circle cx="530" cy="682" r="9"/></g>
+<path d="M0 735H1400" stroke="#3b5a60" stroke-width="5"/><path d="M0 750H1400" stroke="#d5b56e" stroke-opacity=".2" stroke-width="4" stroke-dasharray="45 30"/>
+</svg>
