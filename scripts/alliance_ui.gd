@@ -106,6 +106,6 @@ func _layout() -> void:
         if child is Button and child != close_button: buttons.append(child)
     var y := 188.0; var cols := 2 if narrow else 3; var bw := (width - 42.0) / float(cols)
     for i in range(buttons.size()): buttons[i].position = Vector2(14 + (i % cols) * (bw + 7), y + (i / cols) * 50); buttons[i].size = Vector2(bw,44)
-    var partners_title := panel.get_node_or_null("PartnersTitle") as Label; var partner_y := y + ceil(float(buttons.size()) / float(cols)) * 50 + 6
+    var partners_title := panel.get_node_or_null("PartnersTitle") as Label; var partner_y: float = y + ceil(float(buttons.size()) / float(cols)) * 50 + 6
     if partners_title != null: partners_title.position = Vector2(14,partner_y); partners_title.size = Vector2(width - 28,18)
     partner_scroll.position = Vector2(14,partner_y + 22); partner_scroll.size = Vector2(width - 28,86); partner_box.custom_minimum_size = Vector2(maxf(width - 28,560.0),82)
