@@ -11,7 +11,20 @@ var _initializing := true
 var _suppress_hooks := false
 
 func _ready() -> void:
-    call_deferred("_initialize")
+    # The autoload can enter the tree before Main.tscn. Never recursively
+    # defer initialization while Renew is absent; that floods the message
+    # queue before the main scene has even been attached.
+    call_deferred("_try_initialize")
+
+func _try_initialize() -> void:
+    if not _initializing:
+        return
+    if get_tree().root.get_node_or_null("Renew") == null:
+        return
+    _suppress_hooks = true
+    hide_all_screens()
+    _suppress_hooks = false
+    _initializing = false
 
 func _ui_root() -> Node:
     var game_root := get_tree().root.get_node_or_null("Renew")
@@ -35,13 +48,11 @@ func _screen_nodes() -> Array[Node]:
     result.append_array(_root_screen_nodes())
     return result
 
-func _initialize() -> void:
-    if get_tree().root.get_node_or_null("Renew") == null:
-        call_deferred("_initialize"); return
-    _suppress_hooks = true; hide_all_screens(); _suppress_hooks = false; _initializing = false
-
 func _process(_delta: float) -> void:
-    if not _initializing: _enforce_single_screen()
+    if _initializing:
+        _try_initialize()
+        return
+    _enforce_single_screen()
 
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and _active_screen != null:
@@ -53,7 +64,7 @@ func _is_node_visible(node: Node) -> bool:
         for child in node.get_children():
             if _has_visible_canvas_item(child): return true
         return false
-    return node is CanvasItem and node.visible and node.is_visible_in_tree() or _has_visible_canvas_item(node)
+    return (node is CanvasItem and node.visible and node.is_visible_in_tree()) or _has_visible_canvas_item(node)
 
 func _has_visible_canvas_item(node: Node) -> bool:
     for child in node.get_children():
@@ -78,7 +89,9 @@ func _set_node_visible(node: Node, value: bool) -> void:
 
 func hide_all_screens() -> void:
     _active_screen = null
-    for node in _screen_nodes(): _set_node_visible(node, false); _previous_visible[node.name] = false
+    for node in _screen_nodes():
+        _set_node_visible(node, false)
+        _previous_visible[node.name] = false
 
 func _enforce_single_screen() -> void:
     var nodes := _screen_nodes(); var newly_opened: Node = null
@@ -88,12 +101,15 @@ func _enforce_single_screen() -> void:
         _previous_visible[node.name] = now
     if newly_opened != null: _active_screen = newly_opened
     if _active_screen == null or not _is_node_visible(_active_screen):
-        if _active_screen != null: _active_screen = null
+        _active_screen = null
         return
     for node in nodes:
-        if node != _active_screen and _is_node_visible(node): _set_node_visible(node, false); _previous_visible[node.name] = false
+        if node != _active_screen and _is_node_visible(node):
+            _set_node_visible(node, false)
+            _previous_visible[node.name] = false
 
 func show_screen(screen_name: String) -> void:
+    if _initializing: _try_initialize()
     var target: Node = null; var ui := _ui_root()
     if ui != null: target = ui.get_node_or_null(screen_name)
     if target == null: target = get_tree().root.get_node_or_null("Renew/" + screen_name)
@@ -102,7 +118,9 @@ func show_screen(screen_name: String) -> void:
         push_warning("Unknown primary RENEW screen: %s" % screen_name); return
     _active_screen = target
     for node in _screen_nodes():
-        var should_show := node == target; _set_node_visible(node, should_show); _previous_visible[node.name] = should_show
+        var should_show := node == target
+        _set_node_visible(node, should_show)
+        _previous_visible[node.name] = should_show
 
 func get_active_screen_name() -> String:
     return String(_active_screen.name) if _active_screen != null and is_instance_valid(_active_screen) else ""
