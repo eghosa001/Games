@@ -42,6 +42,13 @@ func run() -> void:
     check(supply.contains("finance.restore_state(finance_before)"), "Supply transactions can roll back FinanceSystem on failure")
     check(supply.contains("chain.restore_state(chain_before)"), "Supply transactions can roll back inventory on finance failure")
 
+    var supply_contracts := _read("res://scripts/supply_contracts.gd")
+    check(supply_contracts.contains("func _finance(parent) -> Node:"), "Supply contracts resolve the authoritative FinanceSystem")
+    check(supply_contracts.contains("finance.spend(cost, \"supply contract signing\")"), "Supply contract signing routes through FinanceSystem")
+    check(supply_contracts.contains("finance.spend(cost, \"permanent resource rights\")"), "Permanent resource rights route through FinanceSystem")
+    check(not supply_contracts.contains("parent.cash-=cost"), "Supply contracts cannot directly subtract parent cash")
+    check(not supply_contracts.contains("parent.cash -= cost"), "Resource rights cannot directly subtract parent cash")
+
     var supply_chain := _read("res://scripts/supply_chain_system.gd")
     check(supply_chain.contains("const SYSTEM_VERSION := 7"), "Supply chain inventory ledger version is incremented")
     check(supply_chain.contains("func _sync_production_mirror(resources: Array)"), "Supply chain owns production inventory reconciliation")
