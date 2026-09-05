@@ -17,6 +17,7 @@ static func save_game(_state: Dictionary) -> bool:
     payload["schema_version"] = CURRENT_VERSION
     if payload.has("domains") and not validate_save(payload):
         return false
+    payload = _sanitize_json_value(payload)
     var json = JSON.stringify(payload)
     var temp = FileAccess.open(TEMP_PATH, FileAccess.WRITE)
     if temp == null:
@@ -25,8 +26,6 @@ static func save_game(_state: Dictionary) -> bool:
     temp.flush()
     temp = null
 
-    # Prepare the old primary as a temporary backup first. Never delete the
-    # last known-good backup before the new primary is safely installed.
     var had_primary := FileAccess.file_exists(SAVE_PATH)
     if had_primary:
         if FileAccess.file_exists(BACKUP_TEMP_PATH):
@@ -43,9 +42,6 @@ static func save_game(_state: Dictionary) -> bool:
             return false
     var rename_error := DirAccess.rename_absolute(ProjectSettings.globalize_path(TEMP_PATH), ProjectSettings.globalize_path(SAVE_PATH))
     if rename_error != OK:
-        # The primary was removed immediately before the rename. Restore it
-        # from the temporary backup so a failed save cannot destroy the last
-        # playable save.
         if had_primary and FileAccess.file_exists(BACKUP_TEMP_PATH):
             DirAccess.copy_absolute(ProjectSettings.globalize_path(BACKUP_TEMP_PATH), ProjectSettings.globalize_path(SAVE_PATH))
         return false
@@ -61,8 +57,6 @@ static func save_game(_state: Dictionary) -> bool:
     return true
 
 static func load_game() -> Dictionary:
-    # A save with a plausible version can still be malformed. If the primary
-    # file cannot be migrated and validated, recover from the last good backup.
     var candidates: Array[String] = [SAVE_PATH, BACKUP_PATH]
     for path in candidates:
         var data := _read_dictionary(path)
@@ -132,6 +126,21 @@ static func _migrate_v7_to_v8(data: Dictionary) -> Dictionary:
     data["domains"] = domains
     data["schema_version"] = 8
     return data
+
+static func _sanitize_json_value(value):
+    if value is float:
+        return value if is_finite(value) else 0.0
+    if value is Dictionary:
+        var result: Dictionary = {}
+        for key in value.keys():
+            result[key] = _sanitize_json_value(value[key])
+        return result
+    if value is Array:
+        var result: Array = []
+        for item in value:
+            result.append(_sanitize_json_value(item))
+        return result
+    return value
 
 static func _read_dictionary(path: String) -> Dictionary:
     if not FileAccess.file_exists(path):
