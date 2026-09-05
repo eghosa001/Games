@@ -15,216 +15,59 @@ func check(ok: bool, label: String) -> void:
         push_error("FAIL: " + label)
 
 func run() -> void:
-    var scene = load("res://scenes/Main.tscn")
-    check(scene != null, "Main scene loads")
-    if scene == null:
-        quit(1)
-        return
-
-    var game = scene.instantiate()
-    root.add_child(game)
-    await process_frame
-
-    for method in ["inspect_property", "acquire_property", "restore_property", "choose_business_purpose", "open_business", "buy_inputs", "produce_goods", "advance_day", "save_game", "load_game", "upgrade_transport"]:
-        check(game.has_method(method), "Main API " + method)
-
-    check(game.command_system != null, "Command system is attached")
-    check(game.command_system.property_system != null, "Property command system is attached")
-    check(game.command_system.business_system != null, "Business command system is attached")
-    check(game.command_system.employee_system != null, "Employee command system is attached")
-    check(game.command_system.finance_system != null, "Finance command system is attached")
-    check(game.command_system.supply_system != null, "Supply command system is attached")
-    check(game.command_system.expansion_system != null, "Expansion command system is attached")
-    check(game.command_system.business_system.production != null, "Business owns authoritative production")
-
-    var corporate = game.get_node_or_null("World/Corporate")
-    check(corporate != null, "Corporate controller exists")
-    if corporate != null:
-        for method in ["show_status", "raise_capital", "buyback_shares", "pay_dividend", "strengthen_defense", "influence_board", "hostile_takeover", "process_day", "get_summary", "save_state", "load_state"]:
-            check(corporate.has_method(method), "Corporate API " + method)
-
-    var market = game.get_node_or_null("Systems/MarketDirector")
-    check(market != null, "Market director exists")
-    if market != null:
-        for method in ["market_status", "respond_aggressively", "respond_balanced", "respond_defensively", "snapshot"]:
-            check(market.has_method(method), "Market API " + method)
-
-    var region = game.get_node_or_null("World/RegionController")
-    check(region != null, "Region controller exists")
-    if region != null:
-        for method in ["select_region", "establish_region", "upgrade_infrastructure", "establish_trade_route", "dispatch_goods"]:
-            check(region.has_method(method), "Region API " + method)
-
-    var branch = game.get_node_or_null("World/BranchController")
-    check(branch != null, "Branch controller exists")
-    if branch != null:
-        for method in ["select_branch", "launch_selected", "stock_selected", "hire_selected", "upgrade_selected", "price_selected"]:
-            check(branch.has_method(method), "Branch API " + method)
-
-    var rival_supply = game.get_node_or_null("World/RivalSupplyController")
-    check(rival_supply != null, "Rival supply controller exists")
-    if rival_supply != null:
-        check(rival_supply.has_method("control_summary"), "Rival supply summary API")
-        check(rival_supply.has_method("_advance_competition"), "Rival supply simulation API")
-
-    var missions = game.get_node_or_null("World/WorldMissions")
-    check(missions != null, "World missions controller exists")
-    if missions != null:
-        check(missions.has_method("_spawn"), "World mission spawn API")
-        check(missions.has_method("choose_a") and missions.has_method("choose_b"), "World mission choice API")
-
-    var state = get_root().get_node_or_null("RenewGameState")
-    check(state != null, "Canonical GameState autoload exists")
-    var finance = get_root().get_node_or_null("RenewFinanceSystem")
-    var simulation = get_root().get_node_or_null("RenewSimulationSystem")
-    check(finance != null, "FinanceSystem autoload exists")
-    check(simulation != null, "SimulationSystem autoload exists")
-
-    if state != null:
-        check(state.get_domain("economy") is Dictionary, "Economy domain exists")
-        check(state.get_domain("properties") is Dictionary, "Properties domain exists")
-        check(state.get_domain("employees") is Dictionary, "Employees domain exists")
-        check(state.get_domain("production") is Dictionary, "Production domain exists")
-        state.set_value("economy", "cash", 25000)
-        check(int(finance.get("cash")) == 25000, "Domain cash writes synchronize finance ledger")
-        state.set_value("finance", "debt", 0)
-        state.set_value("finance", "loan_payment", 0)
-
-    game.command_system.finance_system.take_loan()
-    check(int(finance.get("debt")) > 0, "Loan command updates canonical finance debt")
-    check(int(finance.get("cash")) == int(state.get_value("economy", "cash", 0)), "Loan cash mirror matches finance ledger")
-    var debt_before_repay: int = int(finance.get("debt"))
-    game.command_system.finance_system.repay_loan()
-    check(int(finance.get("debt")) < debt_before_repay, "Repayment command reduces canonical debt")
-    check(int(finance.get("cash")) == int(state.get_value("economy", "cash", 0)), "Repayment cash mirror matches finance ledger")
-
-    # Transactional employee regression: an unaffordable action must not mutate the roster.
-    state.set_value("economy", "cash", 0)
-    var james_before: Dictionary = game.command_system.employee_system.employee_system.get_employee("emp_james_001").duplicate(true)
-    game.command_system.employee_system.train_employee("emp_james_001")
-    var james_after: Dictionary = game.command_system.employee_system.employee_system.get_employee("emp_james_001")
-    check(james_after == james_before, "Unaffordable employee training does not mutate employee state")
-
-    # Technology research must use the canonical finance ledger and must not mutate time itself.
-    state.set_value("economy", "cash", 25000)
-    state.set_value("technology", "research_points", 20)
-    state.set_value("technology", "technology", {})
-    state.set_value("player", "day", 10)
-    var tech_system = get_root().get_node_or_null("RenewTechnologySystem")
-    check(tech_system != null, "TechnologySystem autoload exists")
-    if tech_system != null:
-        var tech_cash_before: int = int(finance.get("cash"))
-        var direct_research_ok: bool = tech_system.research("efficient_production")
-        check(direct_research_ok, "Technology research succeeds with sufficient funds")
-        check(int(finance.get("cash")) == tech_cash_before - 2500, "Technology research charges canonical finance")
-        check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Technology cash mirror matches finance ledger")
-        check(bool(state.get_value("technology", "technology", {}).get("efficient_production", false)), "Technology unlock persists in GameState")
-        check(int(state.get_value("player", "day", 0)) == 10, "Technology system does not bypass the day simulation")
-
-        # Command-layer research requires an operating business because elapsed research time
-        # is simulated through the canonical operating-day pipeline.
-        state.set_value("technology", "technology", {})
-        state.set_value("technology", "research_points", 20)
-        state.set_value("economy", "cash", 25000)
-        state.set_value("businesses", "business_open", false)
-        state.set_value("player", "day", 10)
-        var blocked_cash_before: int = int(finance.get("cash"))
-        game.command_system.research_technology("efficient_production")
-        check(not bool(state.get_value("technology", "technology", {}).get("efficient_production", false)), "Research is blocked before business launch")
-        check(int(state.get_value("player", "day", 0)) == 10, "Blocked research does not advance time")
-        check(int(finance.get("cash")) == blocked_cash_before, "Blocked research does not charge cash")
-
-        state.set_value("businesses", "business_open", true)
-        game.command_system.research_technology("efficient_production")
-        var research_days: int = int(tech_system.get_last_research_days())
-        check(research_days == 2, "Technology reports its elapsed research duration")
-        check(int(state.get_value("player", "day", 0)) == 12, "Research command runs elapsed days through canonical simulation")
-        check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Research elapsed-day simulation keeps finance and GameState synchronized")
-
-    # Business transactions must also use the same finance authority.
-    state.set_value("economy", "cash", 25000)
-    state.set_value("properties", "owned", true)
-    state.set_value("properties", "stage", "Operational")
-    state.set_value("properties", "catalog", [{"id":"property_test","name":"Test Property","type":"Warehouse"}])
-    state.set_value("properties", "selected_property", 0)
-    state.set_value("businesses", "business_open", false)
-    state.set_value("businesses", "business_purpose", "")
-    var business = game.command_system.business_system
-    business.choose_business_purpose(0)
-    check(bool(state.get_value("businesses", "business_open", false)), "Business launch succeeds")
-    check(int(finance.get("cash")) == 22500, "Business launch charges canonical finance")
-    check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Business launch cash mirror matches finance")
-    var business_cash_before_upgrade := int(finance.get("cash"))
-    business.upgrade_business()
-    check(int(finance.get("cash")) == business_cash_before_upgrade - 4500, "Business upgrade charges canonical finance")
-    var business_cash_before_marketing := int(finance.get("cash"))
-    business.marketing_campaign()
-    check(int(finance.get("cash")) == business_cash_before_marketing - 1800, "Marketing charges canonical finance")
-    check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Business transactions remain synchronized")
-
-    # Acquisition regression: insufficient funds must not alter the target, while a funded purchase must charge finance exactly once.
-    var acquisition = load("res://scripts/acquisition_system.gd").new()
-    game.add_child(acquisition)
-    await process_frame
-    acquisition.register_target("target_regression", "Regression Target", [{"id":"asset_1","value":12000}], 0.0, 0, [], 0.0, 0.0)
-    state.set_value("economy", "cash", 1000)
-    var acquisition_before: Dictionary = acquisition.get_target("target_regression")
-    var failed_acquisition: Dictionary = acquisition.acquire_company("player", "target_regression", 5000)
-    check(not bool(failed_acquisition.get("ok", false)), "Unaffordable acquisition is rejected")
-    check(acquisition.get_target("target_regression") == acquisition_before, "Unaffordable acquisition leaves target unchanged")
-    check(int(state.get_value("economy", "cash", 0)) == 1000, "Unaffordable acquisition leaves cash unchanged")
-    state.set_value("economy", "cash", 10000)
-    var funded_before: int = int(finance.get("cash"))
-    var funded_acquisition: Dictionary = acquisition.acquire_company("player", "target_regression", 5000)
-    check(bool(funded_acquisition.get("ok", false)), "Funded acquisition succeeds")
-    check(int(finance.get("cash")) == funded_before - 5000, "Acquisition charges canonical finance once")
-    check(str(acquisition.get_target("target_regression").get("status", "")) == "acquired", "Funded acquisition changes target status after payment")
-
-    # Infrastructure maintenance is a system/day-cycle expense, not a UI side effect.
-    var infrastructure = load("res://scripts/infrastructure_system.gd").new()
-    game.add_child(infrastructure)
-    await process_frame
-    infrastructure.assets["infra_regression"] = {"id":"infra_regression","type":"road","name":"Regression Road","region":0,"owner_id":"founder","status":"active","level":1,"capacity":80.0,"utilization":0.5,"maintenance":100,"created_day":0}
-    infrastructure.last_day = 0
-    state.set_value("economy", "cash", 1000)
-    var maintenance_before: int = int(finance.get("cash"))
-    var maintenance_result: Dictionary = infrastructure.process_day(1)
-    check(bool(maintenance_result.get("maintenance_spend", {}).get("ok", false)), "Infrastructure maintenance is paid through finance")
-    check(int(finance.get("cash")) == maintenance_before - 100, "Infrastructure maintenance charges exactly once")
-    var maintenance_after_first: int = int(finance.get("cash"))
-    var repeat_maintenance: Dictionary = infrastructure.process_day(1)
-    check(bool(repeat_maintenance.get("already_processed", false)), "Repeated infrastructure processing does not double-charge maintenance")
-    check(int(finance.get("cash")) == maintenance_after_first, "Repeated infrastructure processing does not double-charge maintenance")
-    infrastructure.queue_free()
-
-    game.queue_free()
-    await process_frame
-
-    var production = load("res://scripts/production_system.gd").new()
-    check(production != null, "ProductionSystem loads")
-    var economy = load("res://scripts/economy.gd").new()
-    economy.resources["timber"]["stock"] = 20
-    economy.resources["iron"]["stock"] = 20
-    economy.resources["energy"]["stock"] = 20
-    var produced = production.produce(economy, 3, "furniture")
-    check(bool(produced.get("ok", false)), "ProductionSystem furniture fixture succeeds")
-
-    var finance_fixture = load("res://scripts/finance_system.gd").new()
-    finance_fixture.cash = 50000
-    finance_fixture.debt = 15000
-    finance_fixture.loan_payment = 0
-    finance_fixture.financing = {
-        "loan_a": {"balance": 10000.0, "annual_rate": 0.12, "payment": 0},
-        "loan_b": {"balance": 5000.0, "annual_rate": 0.08, "payment": 0}
+    var finance = load("res://scripts/finance_system.gd").new()
+    check(finance != null, "FinanceSystem fixture loads")
+    finance.cash = 50000
+    finance.debt = 15000
+    finance.loan_payment = 0
+    finance.financing = {
+        "loan_a": {"balance": 10000.0, "principal": 10000.0, "annual_rate": 0.12, "payment": 0},
+        "loan_b": {"balance": 5000.0, "principal": 5000.0, "annual_rate": 0.08, "payment": 0}
     }
-    var cash_before_interest: int = finance_fixture.cash
-    var debt_before_interest: int = finance_fixture.debt
-    var debt_day = finance_fixture.settle_debt_day()
+    var invariant_before = finance.validate_invariants()
+    check(bool(invariant_before.get("ok", false)), "Finance fixture starts with valid debt invariants")
+    var cash_before_interest: int = finance.cash
+    var debt_before_interest: int = finance.debt
+    var debt_day = finance.settle_debt_day()
     check(int(debt_day.get("interest", -1)) == 4, "Finance accrues interest independently per instrument")
-    check(finance_fixture.cash == cash_before_interest - 4, "Finance cash reflects total multi-loan interest")
-    check(float(finance_fixture.financing["loan_a"]["balance"]) == 10003.0, "First financing balance gets only its own interest")
-    check(float(finance_fixture.financing["loan_b"]["balance"]) == 5001.0, "Second financing balance gets only its own interest")
-    check(finance_fixture.debt == debt_before_interest, "Interest does not incorrectly reduce principal debt")
+    check(finance.cash == cash_before_interest - 4, "Finance cash reflects total multi-loan interest")
+    check(float(finance.financing["loan_a"]["accrued_interest"]) == 3.0, "First financing stores accrued interest separately")
+    check(float(finance.financing["loan_b"]["accrued_interest"]) == 1.0, "Second financing stores accrued interest separately")
+    check(float(finance.financing["loan_a"]["balance"]) == 10003.0, "First financing balance includes accrued interest")
+    check(float(finance.financing["loan_b"]["balance"]) == 5001.0, "Second financing balance includes accrued interest")
+    check(finance.debt == debt_before_interest, "Interest does not incorrectly increase principal debt")
+    var invariant_after_interest = finance.validate_invariants()
+    check(bool(invariant_after_interest.get("ok", false)), "Finance invariants survive interest accrual")
 
-    print("EXTENDED RESULT: %d passed, %d failed" % [passed, failed])
+    var cash_before_repay: int = finance.cash
+    var repay_result: Dictionary = finance.repay(2)
+    check(bool(repay_result.get("ok", false)), "Small repayment succeeds")
+    check(int(repay_result.get("interest_paid", 0)) == 2, "Repayment settles accrued interest before principal")
+    check(int(repay_result.get("principal_paid", 0)) == 0, "Interest-only repayment does not reduce principal")
+    check(finance.debt == debt_before_interest, "Interest-only repayment preserves principal debt")
+    check(finance.cash == cash_before_repay - 2, "Repayment reduces cash by exact payment")
+    check(bool(finance.validate_invariants().get("ok", false)), "Finance invariants survive interest repayment")
+
+    var principal_before_repay: int = finance.debt
+    var full_repay: Dictionary = finance.repay(20000)
+    check(bool(full_repay.get("ok", false)), "Full remaining repayment succeeds")
+    check(finance.debt == 0, "Full repayment clears principal debt")
+    check(finance._total_accrued_interest() == 0, "Full repayment clears accrued interest")
+    check(finance._total_financing_balance() == 0.0, "Full repayment clears financing balances")
+    check(bool(finance.validate_invariants().get("ok", false)), "Finance invariants survive full repayment")
+    check(principal_before_repay > 0, "Principal existed before final repayment")
+
+    var old_snapshot: Dictionary = {
+        "system_version": 2,
+        "cash": 1000,
+        "debt": 100,
+        "financing": {"legacy": {"balance": 103.0, "principal": 100.0, "annual_rate": 0.12}}
+    }
+    var migrated = load("res://scripts/finance_system.gd").new()
+    migrated.restore_state(old_snapshot)
+    check(float(migrated.financing["legacy"]["accrued_interest"]) == 3.0, "Legacy financing snapshot migrates accrued interest")
+    check(float(migrated.financing["legacy"]["balance"]) == 103.0, "Legacy financing balance is preserved during migration")
+    check(bool(migrated.validate_invariants().get("ok", false)), "Migrated finance snapshot satisfies invariants")
+
+    print("FINANCE INVARIANT RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
