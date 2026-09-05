@@ -221,6 +221,12 @@ func produce_goods() -> void:
         if not bool(delivery.get("ok", false)):
             state_adapter.message("%s stopped: supply delivery failed (%s)." % [_business_name(), str(delivery.get("reason", "unknown"))]); return
         var delivery_cost := int(delivery["cost"])
+        if finance != null and int(finance.get("cash")) < delivery_cost + operating_cost:
+            for delivered in delivery.get("delivered", []):
+                var resource := str(delivered.get("resource", "")); var amount := float(delivered.get("amount", 0.0)); var delivered_amount := float(delivered.get("delivered_amount", amount))
+                if economy.resources.has(resource): economy.resources[resource]["stock"] = float(economy.resources[resource].get("stock", 0.0)) + amount
+                warehouse_restore(resource, delivered_amount)
+            state_adapter.message("%s stopped: supply and operating costs are unaffordable." % _business_name()); return
         var spend := state_adapter.spend(delivery_cost, "supply delivery")
         if not bool(spend.get("ok", false)):
             for delivered in delivery.get("delivered", []):
