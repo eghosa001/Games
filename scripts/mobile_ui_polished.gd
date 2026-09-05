@@ -1,7 +1,4 @@
 extends "res://scripts/mobile_ui.gd"
-
-## Unified responsive presentation shell. Gameplay remains owned by main.gd and
-## its command systems; this script only builds and presents controls.
 const BG := Color("071319")
 const SURFACE := Color("0d2028")
 const SURFACE_2 := Color("102831")
@@ -9,7 +6,6 @@ const BORDER := Color("274852")
 const TEXT := Color("e7f2ef")
 const MUTED := Color("78949a")
 const ACCENT := Color("d5b56b")
-
 var top_bar: ColorRect
 var sidebar: Panel
 var content_scroll: ScrollContainer
@@ -128,7 +124,9 @@ func _next_rival()->void:
     if parent.rivals!=null and not parent.rivals.rivals.is_empty(): parent.select_rival((int(parent.selected_rival)+1)%parent.rivals.rivals.size())
 func _layout_responsive()->void:
     if root==null:return
-    var s:=get_viewport().get_visible_rect().size; var w:=maxf(320,s.x); var h:=maxf(480,s.y); var mobile:=w<760
+    var s:=root.size
+    if s.x < 1.0 or s.y < 1.0: s=get_viewport().get_visible_rect().size
+    var w:=maxf(320,s.x); var h:=maxf(480,s.y); var mobile:=w<760
     top_bar.size=Vector2(w,72 if mobile else 64); sidebar.visible=not mobile; bottom_bar.visible=mobile; tabs.visible=not mobile
     tabs.position=Vector2(260,10) if not mobile else Vector2(8,76); tabs.size=Vector2(minf(500,w-16),44)
     for tab in tabs.get_children(): tab.custom_minimum_size=Vector2(maxf(70,(tabs.size.x-18)/4),44)
