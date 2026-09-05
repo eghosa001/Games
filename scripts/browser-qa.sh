@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-URL="${RENEW_BROWSER_URL:-https://games-3lpvuxrii-ogs7.vercel.app/}"
+# User-confirmed live Vercel deployment.
+URL="${RENEW_BROWSER_URL:-https://games-etat66slj-ogs7.vercel.app/}"
 OUT="${RENEW_BROWSER_OUTPUT:-artifacts/browser-qa}"
 mkdir -p "$OUT"
 
-# Always leave diagnostics behind, even when navigation or rendering fails.
 cleanup() {
   printf 'Browser QA exit code: %s\n' "$?" > "$OUT/qa-status.txt"
   agent-browser console > "$OUT/final.console.txt" 2>&1 || true
@@ -14,9 +14,6 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Godot Web can keep its document load event pending, so do not wait on a load-state
-# event. The browser open command establishes the page; the fixed delay below gives
-# the WebAssembly runtime time to initialize before visual/console inspection.
 agent-browser open "$URL"
 agent-browser wait 10000
 agent-browser screenshot --full "$OUT/startup.png"
