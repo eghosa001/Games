@@ -1,7 +1,7 @@
 extends Node
 
 const DemandModel = preload("res://scripts/demand_model.gd")
-const SYSTEM_VERSION := 10
+const SYSTEM_VERSION := 11
 
 var command_count: int = 0
 var last_command: String = ""
@@ -148,8 +148,15 @@ func _advance_day_impl(state: Dictionary, context: Dictionary) -> Dictionary:
     economy.end_market_day()
 
     business_system.produce_goods()
-    var finished_goods = int(state.get("finished_goods", 0))
     var game_state = _game_state()
+    # BusinessSystem has a legacy void API. Convert its failure signal into a
+    # transaction failure so SimulationSystem's snapshot can roll everything
+    # back when production aborts after partially mutating any ledger.
+    if game_state:
+        var production_message := str(game_state.get_value("company", "message", ""))
+        if production_message.find(" stopped:") >= 0:
+            return {"ok": false, "message": production_message}
+    var finished_goods = int(state.get("finished_goods", 0))
     if game_state:
         state["finished_goods"] = int(game_state.get_value("production", "finished_goods", state.get("finished_goods", 0)))
     _sync_state_from_finance(state)
