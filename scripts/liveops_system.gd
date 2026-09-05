@@ -56,28 +56,34 @@ func _expire_content(day: int) -> void:
     for key in challenges.keys():
         if int(challenges[key].get("expires_day", day + 1)) < day: challenges.erase(key)
 
+func _apply_reward(reward: Dictionary, reason: String) -> void:
+    var finance = get_node_or_null("/root/RenewFinanceSystem")
+    var cash_reward := int(round(float(reward.get("cash", 0.0))))
+    if finance != null and cash_reward > 0:
+        finance.receive(cash_reward, reason)
+    var state = get_node_or_null("/root/RenewGameState")
+    var reputation_reward := int(reward.get("reputation", 0))
+    if state != null and reputation_reward != 0:
+        var reputation := int(state.get_value("player", "reputation", 0))
+        state.set_value("player", "reputation", reputation + reputation_reward)
+
 func _advance_community_goal(day: int) -> void:
     var finance = get_node_or_null("/root/RenewFinanceSystem")
     var contribution: Variant = 0.0
-    if finance != null and finance.has_method("get_cash"): contribution = max(0.0, float(finance.get_cash())) * 0.001
+    if finance != null:
+        contribution = max(0.0, float(finance.get("cash"))) * 0.001
     community_goal["progress"] = min(float(community_goal["target"]), float(community_goal["progress"]) + contribution)
     if float(community_goal["progress"]) >= float(community_goal["target"]):
-        var main = get_tree().current_scene
-        if main != null:
-            main.set("cash", float(main.get("cash")) if main.get("cash") != null else 0.0 + float(community_goal["reward"].get("cash",0.0)))
-            main.set("reputation", int(main.get("reputation")) if main.get("reputation") != null else 0 + int(community_goal["reward"].get("reputation",0)))
+        _apply_reward(community_goal.get("reward", {}), "LiveOps community goal reward")
         community_goal["progress"] = 0.0
         _track("liveops_community_goal_completed", {"day":day})
 
 func complete_challenge(challenge_id: String, progress := 1) -> Dictionary:
     if not challenges.has(challenge_id): return {"ok":false,"error":"challenge_not_found"}
     var c: Dictionary = challenges[challenge_id]
-    c["progress"] = int(c.get("progress",0)) + progress
+    c["progress"] = int(c.get("progress",0)) + int(progress)
     if int(c["progress"]) >= int(c.get("target",1)):
-        var main = get_tree().current_scene
-        if main != null:
-            main.set("cash", float(main.get("cash")) if main.get("cash") != null else 0.0 + float(c["reward"].get("cash",0.0)))
-            main.set("reputation", int(main.get("reputation")) if main.get("reputation") != null else 0 + int(c["reward"].get("reputation",0)))
+        _apply_reward(c.get("reward", {}), "LiveOps challenge reward")
         _track("liveops_challenge_completed", {"id":challenge_id})
     challenges[challenge_id] = c
     return {"ok":true,"challenge":c.duplicate(true)}
@@ -100,5 +106,5 @@ func _track(name: String, data: Dictionary) -> void:
     if analytics != null and analytics.has_method("track"): analytics.track(name, data)
 
 func _day() -> int:
-    var scene: Variant = get_tree().current_scene if get_tree() != null else null
-    return int(scene.get("day",1)) if scene != null else 1
+    var state = get_node_or_null("/root/RenewGameState")
+    return int(state.get_value("player", "day", 1)) if state != null else 1
