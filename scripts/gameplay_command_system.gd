@@ -77,11 +77,53 @@ func _simulate_elapsed_days(days:int)->bool:
             _set_state("company","message","Elapsed-day simulation stopped before completing the research period.")
             return false
     return true
+
+func _daily_transaction_participants()->Array:
+    return [
+        {"name":"game_state","node":get_node_or_null("/root/RenewGameState")},
+        {"name":"finance","node":get_node_or_null("/root/RenewFinanceSystem")},
+        {"name":"production","node":get_node_or_null("/root/RenewProductionSystem")},
+        {"name":"contracts","node":get_node_or_null("/root/RenewContractSystem")},
+        {"name":"rivals","node":relationship_system.rivals},
+        {"name":"economy","node":supply_system.economy},
+        {"name":"supply_chain","node":business_system.supply_chain},
+        {"name":"expansion","node":expansion_system.expansion},
+        {"name":"districts","node":expansion_system.districts},
+        {"name":"employees","node":employee_system},
+        {"name":"business","node":business_system},
+        {"name":"competitor_reactions","node":competitor_reactions},
+    ]
+
+func _capture_daily_transaction() -> Dictionary:
+    var snapshot:Dictionary={"participants":{}}
+    for participant in _daily_transaction_participants():
+        var node=participant.get("node")
+        var name:=str(participant.get("name","unknown"))
+        if node==null:
+            return {"ok":false,"message":"Daily transaction cannot start: %s is unavailable."%name}
+        if not node.has_method("capture_state") or not node.has_method("restore_state"):
+            return {"ok":false,"message":"Daily transaction cannot start: %s is not rollback-capable."%name}
+        snapshot["participants"][name]=node.capture_state()
+    return {"ok":true,"snapshot":snapshot}
+
+func _restore_daily_transaction(snapshot:Dictionary)->void:
+    var participants:Dictionary=snapshot.get("participants",{})
+    for participant in _daily_transaction_participants():
+        var node=participant.get("node")
+        var name:=str(participant.get("name","unknown"))
+        if node!=null and participants.get(name, null) is Dictionary:
+            node.restore_state(participants[name])
+
 func advance_day()->void:
     var simulation=get_node_or_null("/root/RenewSimulationSystem");if simulation==null:_set_state("company","message","SimulationSystem is unavailable.");return
-    var context={"economy":supply_system.economy,"rivals":relationship_system.rivals,"events":_events(),"expansion":expansion_system.expansion,"districts":expansion_system.districts,"employee_system":employee_system,"business_system":business_system,"production":business_system.production}
+    var transaction:=_capture_daily_transaction()
+    if not bool(transaction.get("ok",false)):
+        _set_state("company","message",str(transaction.get("message","Daily transaction could not start.")));return
+    var context={"economy":supply_system.economy,"rivals":relationship_system.rivals,"events":_events(),"expansion":expansion_system.expansion,"districts":expansion_system.districts,"employee_system":employee_system,"business_system":business_system,"production":business_system.production,"contracts":get_node_or_null("/root/RenewContractSystem")}
     var result:Dictionary=simulation.advance_day(_simulation_state(),context)
-    if not bool(result.get("ok",false)):_set_state("company","message",str(result.get("message","Unable to advance the day.")));return
+    if not bool(result.get("ok",false)):
+        _restore_daily_transaction(transaction["snapshot"])
+        _set_state("company","message",str(result.get("message","Unable to advance the day.")));return
     _apply_simulation_state(result.get("state",{}));employee_system.sync_roster()
     if technology_system!=null:technology_system.add_daily_research_points(3)
     if competitor_reactions!=null:
@@ -91,7 +133,10 @@ func advance_day()->void:
     if units_sold>0:
         var demand_result:Dictionary=supply_system.economy.register_customer_demand("furniture",units_sold)
         if bool(demand_result.get("ok",false)):_log("MARKET: customers bought %d furniture; upstream resource demand increased."%units_sold)
-    business_system.supply_chain.warehouse["furniture"]=float(_state_value("production","finished_goods",0))
+    # SupplyChainSystem owns physical inventory; production is its mirror, never the source for this write.
+    if business_system.supply_chain.has_method("_sync_production_mirror"):
+        business_system.supply_chain._sync_production_mirror(business_system.supply_chain.warehouse.keys())
+
 func _events():
     if not has_meta("events_model"):set_meta("events_model",load("res://scripts/events.gd").new())
     return get_meta("events_model")
