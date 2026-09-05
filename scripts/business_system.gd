@@ -55,7 +55,7 @@ func choose_business_purpose(index: int) -> void:
     var purpose: Dictionary = get_business_purpose(index); if purpose.is_empty(): state_adapter.message("Invalid business purpose."); return
     state_adapter.set_value("businesses", "business_purpose", str(purpose.get("id", ""))); state_adapter.log_message("PURPOSE SELECTED: %s -> %s." % [_origin_property_name(), purpose.get("name", "Business")]); create_business(str(purpose.get("id", "")))
 func create_business(purpose_id: String = "") -> void:
-    if not bool(state_adapter.get_value("properties", "owned", false)) or str(state_adapter.get_value("properties", "stage", "Neglected")) != "Operational": state_adapter.message("Finish restoration first."); return
+    if not bool(state_adapter.get_value("properties", "owned", false)) or str(state_adapter.get_value("properties", "stage", "Neglected")) != "Operational": state_adapter.message("Finish restoring the property first."); return
     if bool(state_adapter.get_value("businesses", "business_open", false)): state_adapter.message("%s is already open." % _business_name()); return
     var purpose: Dictionary = get_business_purpose(purpose_id if not purpose_id.is_empty() else str(state_adapter.get_value("businesses", "business_purpose", ""))); if purpose.is_empty(): state_adapter.message("Choose a business purpose first: press 4, 5 or 6."); return
     var cost := 3000; var cash: int = int(state_adapter.get_value("economy", "cash", 25000)); if cash < cost: state_adapter.message("Need $3,000 working capital to launch the business."); return
@@ -171,12 +171,12 @@ func _produce_goods_impl() -> Dictionary:
 func _prepare_derived_inputs(inputs: Dictionary, cycles: int) -> bool:
     var metal_needed: float = float(inputs.get("metal", 0.0)) * float(cycles); if metal_needed <= supply_chain.stock("metal"): return true
     var missing: float = metal_needed - supply_chain.stock("metal"); var metal_cycles: int = int(ceil(missing / 1.0)); var result: Dictionary = supply_chain.process_iron_to_metal(metal_cycles); return bool(result.get("ok", false)) and supply_chain.stock("metal") >= metal_needed
-func warehouse_restore(resource:String, amount:float)->void: supply_chain.warehouse[resource] = max(0.0, float(supply_chain.warehouse.get(resource,0.0))-amount)
+func warehouse_restore(resource:String, amount:float)->void: supply_chain.warehouse[resource] = max(0.0, float(supply_chain.warehouse.get(resource,0.0))+amount)
 func capture_state() -> Dictionary:
     var state = state_adapter.game_state(); var businesses: Dictionary = {}
     if state != null: businesses = state.get_domain("businesses")
     return {"system_version":3,"businesses":businesses}
 func restore_state(snapshot:Dictionary)->void:
     if snapshot.is_empty(): return
-    var state = state_adapter.game_state(); var businesses=snapshot.get("businesses",{})
-    if state != null and businesses is Dictionary: state.set_domain("businesses", businesses.duplicate(true))
+    var businesses: Dictionary = snapshot.get("businesses",{}); if businesses is Dictionary:
+        for key in businesses: state_adapter.set_value("businesses",str(key),businesses[key])
