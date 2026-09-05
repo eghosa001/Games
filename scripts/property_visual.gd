@@ -17,7 +17,31 @@ func _draw() -> void:
     var property: Dictionary = catalog[index]
     var owned: Variant = bool(state.get_value("properties", "owned", false))
     var stage: Variant = _visual_stage(property, owned)
+    _sync_scene_art(stage)
     _draw_property(Vector2(650, 585), property, stage)
+
+func _sync_scene_art(stage: String) -> void:
+    var scene_art := get_node_or_null("../PremiumRestorationScene")
+    if scene_art == null:
+        return
+    var active := stage != "Operational"
+    scene_art.visible = active
+    if not active:
+        return
+    var progress := _stage_progress(stage)
+    scene_art.modulate = Color(1.0, 1.0, 1.0, 0.72 + progress * 0.24)
+    var target_scale := 0.84 + progress * 0.08
+    scene_art.scale = Vector2(target_scale, target_scale)
+
+func _stage_progress(stage: String) -> float:
+    match stage:
+        "Abandoned": return 0.0
+        "Cleaned": return 0.24
+        "Repaired": return 0.48
+        "Painted": return 0.68
+        "Furnished": return 0.86
+        "Operational": return 1.0
+    return 0.0
 
 func _visual_stage(property: Dictionary, owned: bool) -> String:
     if not owned: return "Abandoned"
