@@ -3,7 +3,7 @@ extends Node
 # Phase 9: one real V1 supply chain. Market resources move into a warehouse,
 # iron is processed into metal, factories consume warehouse inputs, and finished
 # goods remain in the warehouse until customers buy them.
-const SYSTEM_VERSION := 5
+const SYSTEM_VERSION := 6
 const RESOURCE_IDS := ["timber", "iron", "energy", "food", "electronics"]
 const WAREHOUSE_LIMIT := 500.0
 const FURNITURE_INPUTS := {"timber": 1.0, "metal": 0.5, "energy": 2.0}
@@ -107,9 +107,6 @@ func procure_bundle(orders: Array, cash: int, transport_level: int = 1) -> Dicti
     if cash < total_cost:
         return {"ok": false, "reason": "cash", "cost": total_cost}
 
-    # Procurement mutates both market stock and warehouse state. Keep the whole
-    # bundle atomic so a later delivery failure cannot leave earlier orders
-    # purchased while the caller receives an error.
     var warehouse_before := warehouse.duplicate(true)
     var resources_before := economy.resources.duplicate(true)
     var freight_before := total_freight_cost
@@ -141,6 +138,7 @@ func process_iron_to_metal(cycles: int = 1) -> Dictionary:
     warehouse["iron"] -= METAL_RECIPE["iron"] * possible
     warehouse["energy"] -= METAL_RECIPE["energy"] * possible
     warehouse["metal"] += output
+    _sync_production_mirror(["iron", "energy", "metal"])
     last_operation = {"type": "metal_processing", "cycles": possible, "iron_consumed": METAL_RECIPE["iron"] * possible, "energy_consumed": METAL_RECIPE["energy"] * possible, "metal_output": output}
     return {"ok": true, "cycles": possible, "output": output, "iron_consumed": METAL_RECIPE["iron"] * possible, "energy_consumed": METAL_RECIPE["energy"] * possible}
 
@@ -160,8 +158,30 @@ func consume_inputs(inputs: Dictionary, cycles: int) -> Dictionary:
         var amount: float = float(inputs[resource]) * run_cycles
         warehouse[String(resource)] -= amount
         consumed[String(resource)] = amount
+    _sync_production_mirror(inputs.keys())
     last_operation = {"type": "industry_inputs", "cycles": run_cycles, "consumed": consumed.duplicate(true)}
     return {"ok": true, "cycles": run_cycles, "consumed": consumed}
+
+func _production_node():
+    var root = get_tree().root
+    var production = root.get_node_or_null("RenewProductionSystem")
+    if production != null: return production
+    var scene = get_tree().current_scene
+    return scene.get_node_or_null("Systems/ProductionSystem") if scene else null
+
+## ProductionSystem keeps a compatibility mirror for older UI/code. The supply
+## warehouse remains authoritative; every successful physical inventory mutation
+## reconciles the mirror, and failed output registration rolls back the legacy
+## production-side increment when a caller already applied it.
+func _sync_production_mirror(resources: Array) -> void:
+    var production = _production_node()
+    if production == null: return
+    for resource in resources:
+        var key := str(resource)
+        production.inventory[key] = int(floor(stock(key)))
+    production.finished_goods = int(floor(stock("goods"))) if production.inventory.has("goods") else production.finished_goods
+    if production.inventory.has("goods"):
+        production.inventory["goods"] = production.finished_goods
 
 func receive_product(product: String, amount: int) -> Dictionary:
     _ensure_warehouse()
@@ -169,8 +189,13 @@ func receive_product(product: String, amount: int) -> Dictionary:
         return {"ok": false, "reason": "invalid_product"}
     var available_room: float = WAREHOUSE_LIMIT - stock(product)
     if float(amount) > available_room + 0.000001:
+        var production = _production_node()
+        if production != null:
+            production.inventory[product] = max(0, int(production.inventory.get(product, 0)) - amount)
+            if product == "goods": production.finished_goods = max(0, production.finished_goods - amount)
         return {"ok": false, "reason": "warehouse_capacity", "product": product, "capacity": WAREHOUSE_LIMIT, "available": max(0.0, available_room), "requested": amount}
     warehouse[product] = stock(product) + amount
+    _sync_production_mirror([product])
     last_operation = {"type": "receive_product", "product": product, "amount": amount}
     return {"ok": true, "product": product, "amount": amount}
 
@@ -191,6 +216,7 @@ func sell_furniture(amount: int, price: int) -> Dictionary:
     if sold <= 0:
         return {"ok": false, "reason": "no_inventory", "sold": 0, "revenue": 0}
     warehouse["furniture"] -= sold
+    _sync_production_mirror(["furniture"])
     last_operation = {"type": "customer_sale", "amount": sold, "price": price, "revenue": revenue}
     return {"ok": true, "sold": sold, "revenue": revenue}
 
@@ -204,3 +230,4 @@ func restore_state(snapshot: Dictionary) -> void:
     total_freight_cost = int(snapshot.get("total_freight_cost", 0))
     last_operation = snapshot.get("last_operation", {}).duplicate(true)
     _ensure_warehouse()
+    _sync_production_mirror(warehouse.keys())
