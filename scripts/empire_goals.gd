@@ -64,11 +64,19 @@ func _reached(id: String) -> bool:
 
 func _claim(goal: Dictionary) -> void:
     var id: Variant = String(goal["id"])
+    var reward := int(goal.get("cash", 0))
+    var finance = game.get_node_or_null("FinanceSystem")
+    if finance == null:
+        finance = get_node_or_null("/root/Renew/FinanceSystem")
+    if finance == null:
+        return
+    var result: Dictionary = finance.record_equity(reward, "company goal: %s" % String(goal["title"]))
+    if not bool(result.get("ok", false)):
+        return
     claimed[id] = true
-    game.cash += int(goal["cash"])
     game.reputation += int(goal["rep"])
     game._log("COMPANY GOAL: %s — %s" % [goal["title"], goal["text"]])
-    game.message = "%s COMPLETE — +$%s and +%d reputation." % [goal["title"], game._money(int(goal["cash"])), int(goal["rep"])]
+    game.message = "%s COMPLETE — +$%s and +%d reputation." % [goal["title"], game._money(reward), int(goal["rep"])]
     _save_state()
 
 func current_goal() -> Dictionary:
