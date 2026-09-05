@@ -59,6 +59,13 @@ func run() -> void:
     check(simulation.contains("_transaction_restore(transaction_snapshot, context)"), "Daily simulation rolls back failed day execution")
     check(simulation.contains("finance.validate_invariants()"), "Daily simulation validates finance invariants before commit")
 
+    var missions := _read("res://scripts/world_missions.gd")
+    check(missions.contains("func _finance() -> Node:"), "World missions resolve the authoritative FinanceSystem")
+    check(missions.contains("finance.spend(amount, \"world opportunity\")"), "World mission spending routes through FinanceSystem")
+    check(missions.contains("finance.receive(amount, reason)"), "World mission rewards route through FinanceSystem")
+    check(not missions.contains("parent.cash -= amount"), "World missions cannot directly subtract parent cash")
+    check(not missions.contains("parent.cash += 1500"), "World mission bonuses cannot directly add parent cash")
+
     var bankruptcy := _read("res://scripts/bankruptcy_system.gd")
     check(not bankruptcy.contains("finance.cash = int(game.cash)"), "Bankruptcy does not overwrite FinanceSystem cash from legacy game state")
     check(not bankruptcy.contains("finance.debt = int(game.debt)"), "Bankruptcy does not overwrite FinanceSystem debt from legacy game state")
