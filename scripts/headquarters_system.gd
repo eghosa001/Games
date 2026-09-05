@@ -57,6 +57,25 @@ func upgrade(cash: int, day: int = 0) -> Dictionary:
     expansion_history.append({"day": day, "stage": get_stage(), "cost": int(check["cost"])})
     return {"ok": true, "cost": int(check["cost"]), "stage": get_stage(), "stage_index": stage_index}
 
+## Atomically upgrades HQ state and debits the canonical FinanceSystem.
+func upgrade_with_finance(finance: Node, day: int = 0) -> Dictionary:
+    if finance == null or not finance.has_method("spend") or not finance.has_method("capture_state") or not finance.has_method("restore_state"):
+        return {"ok": false, "reason": "Financial system is unavailable."}
+    var cash := int(finance.cash) if "cash" in finance else 0
+    var check: Dictionary = can_upgrade(cash)
+    if not bool(check.get("ok", false)): return check
+    var finance_snapshot: Dictionary = finance.capture_state()
+    var hq_snapshot: Dictionary = capture_state()
+    var upgraded: Dictionary = upgrade(cash, day)
+    if not bool(upgraded.get("ok", false)): return upgraded
+    var payment: Dictionary = finance.spend(int(upgraded.get("cost", 0)), "headquarters upgrade")
+    if not bool(payment.get("ok", false)):
+        restore_state(hq_snapshot)
+        finance.restore_state(finance_snapshot)
+        return {"ok": false, "reason": str(payment.get("message", "HQ payment failed."))}
+    upgraded["payment"] = payment
+    return upgraded
+
 func unlock_area(area_id: String, cash: int) -> Dictionary:
     if not AREA_SPECS.has(area_id): return {"ok": false, "reason": "Unknown headquarters area."}
     if has_area(area_id): return {"ok": false, "reason": "%s is already operational." % AREA_SPECS[area_id]["name"]}
@@ -78,6 +97,23 @@ func upgrade_area(area_id: String, cash: int) -> Dictionary:
     area_levels[area_id] = level + 1
     headquarters_value += cost
     return {"ok": true, "cost": cost, "level": level + 1, "area": AREA_SPECS[area_id]["name"]}
+
+## Atomically builds/upgrades an HQ area and debits the canonical FinanceSystem.
+func build_area_with_finance(finance: Node, area_id: String) -> Dictionary:
+    if finance == null or not finance.has_method("spend") or not finance.has_method("capture_state") or not finance.has_method("restore_state"):
+        return {"ok": false, "reason": "Financial system is unavailable."}
+    var cash := int(finance.cash) if "cash" in finance else 0
+    var hq_snapshot: Dictionary = capture_state()
+    var finance_snapshot: Dictionary = finance.capture_state()
+    var result: Dictionary = upgrade_area(area_id, cash) if has_area(area_id) else unlock_area(area_id, cash)
+    if not bool(result.get("ok", false)): return result
+    var payment: Dictionary = finance.spend(int(result.get("cost", 0)), "headquarters area upgrade")
+    if not bool(payment.get("ok", false)):
+        restore_state(hq_snapshot)
+        finance.restore_state(finance_snapshot)
+        return {"ok": false, "reason": str(payment.get("message", "Area payment failed."))}
+    result["payment"] = payment
+    return result
 
 func has_area(area_id: String) -> bool:
     return bool(owned_areas.get(area_id, false))
