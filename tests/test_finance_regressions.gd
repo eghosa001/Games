@@ -34,6 +34,7 @@ func test_interest_is_accrual_not_immediate_cash_outflow() -> void:
     finance.cash = 50000
     var loan = finance.create_loan(15000, 0.10, 365)
     check(bool(loan.get("ok", false)), "loan created for accrual test")
+    finance.loan_payment = 0
     var cash_before = finance.cash
     var result = finance.settle_debt_day()
     check(int(result["interest"]) > 0, "daily interest accrued")
