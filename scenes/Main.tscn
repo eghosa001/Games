@@ -1,4 +1,4 @@
-[gd_scene load_steps=44 format=3]
+[gd_scene load_steps=45 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -41,6 +41,7 @@
 [ext_resource path="res://scripts/mobile_ui_mobile_scale_fix.gd" type="Script" id="41"]
 [ext_resource path="res://scripts/rich_world_scenery.gd" type="Script" id="42"]
 [ext_resource path="res://Assets/Art/premium_industrial_district.svg" type="Texture2D" id="43"]
+[ext_resource path="res://Assets/Art/premium_restoration_site.svg" type="Texture2D" id="44"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -54,6 +55,13 @@ texture = ExtResource("43")
 position = Vector2(640, 360)
 scale = Vector2(0.8, 0.8)
 z_index = -18
+modulate = Color(1, 1, 1, 0.96)
+[node name="PremiumRestorationScene" type="Sprite2D" parent="World"]
+texture = ExtResource("44")
+position = Vector2(640, 400)
+scale = Vector2(0.914, 0.9)
+z_index = -14
+visible = false
 modulate = Color(1, 1, 1, 0.96)
 [node name="RichWorldScenery" type="Node2D" parent="World"]
 z_index = -15
