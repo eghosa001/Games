@@ -1,9 +1,7 @@
 extends Node
 
-# Web-only display adapter. Godot's Adaptive canvas makes the canvas fill the
-# browser, but the game's 1280x720 design space can still become too small on
-# portrait phones. This switches the content design size to the actual browser
-# viewport on portrait/tight screens so the UI remains touch-sized and readable.
+# Web-only display adapter. Keeps the game canvas adaptive while explicitly
+# managing legacy presentation layers that are not part of the active tab.
 const DESKTOP_SIZE := Vector2i(1280, 720)
 const MIN_MOBILE_WIDTH := 320
 const MAX_MOBILE_WIDTH := 900
@@ -48,11 +46,9 @@ func _apply() -> void:
         _apply_scene_visibility()
         return
     _last_browser_size = browser
-
     var root := get_tree().root
     root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
     root.content_scale_stretch = Window.CONTENT_SCALE_STRETCH_FRACTIONAL
-
     var portrait := browser.y > browser.x * 1.15
     var tight_landscape := browser.x < 700
     if portrait or tight_landscape:
@@ -70,7 +66,11 @@ func _apply() -> void:
 
 func _set_visible(path: String, value: bool) -> void:
     var node := get_node_or_null(path)
-    if node is CanvasItem:
+    if node == null:
+        return
+    if node is CanvasLayer:
+        node.visible = value
+    elif node is CanvasItem:
         node.visible = value
 
 func _apply_scene_visibility() -> void:
@@ -92,29 +92,33 @@ func _apply_scene_visibility() -> void:
     if region_controller is CanvasItem:
         region_controller.visible = tab == 3
 
-    # Distress controls are actionable only after the company leaves the stable
-    # state. Keeping the panel hidden at startup prevents a large fixed legacy
-    # card from covering the property and the primary action surface.
+    # BankruptcyControls is a CanvasLayer, not a CanvasItem. Always hide it
+    # while the company is healthy; this prevents the legacy fixed 680x325 card
+    # from covering the primary HUD at startup.
     var bankruptcy := renew.get_node_or_null("Systems/BankruptcySystem")
     var distress_state := "stable"
     if bankruptcy != null:
         distress_state = str(bankruptcy.get("state"))
     var distress_controls := bankruptcy.get_node_or_null("BankruptcyControls") if bankruptcy != null else null
-    if distress_controls is CanvasItem:
+    if distress_controls is CanvasLayer:
         distress_controls.visible = distress_state != "stable"
 
+    # CorporateControl is a legacy world renderer. The Empire tab owns that
+    # information surface now, so the renderer is shown only there on desktop
+    # and never on the compact mobile layout.
+    var corporate := renew.get_node_or_null("World/Corporate")
+    if corporate is CanvasItem:
+        corporate.visible = (not mobile) and tab == 2
+
     if mobile:
-        # Mobile uses the touch HUD as the information surface. Keep only the
-        # backdrop and the central warehouse artwork visible; fixed-coordinate
-        # desktop diagnostic panels are too small and collide with the HUD.
         _set_visible("/root/Renew/World/PropertyVisual", false)
-        _set_visible("/root/Renew/World/Corporate", false)
         _set_visible("/root/Renew/World/WorldMissions", false)
         _set_visible("/root/Renew/World/EmpireController", false)
         _set_visible("/root/Renew/World/RivalSupplyController", false)
         _set_visible("/root/Renew/World/BranchController", false)
         _set_visible("/root/Renew/World/RegionController", false)
         _set_visible("/root/Renew/World/WorldView", false)
+        _set_visible("/root/Renew/World/Corporate", false)
         _set_visible("/root/Renew/World/ResourceHubArt", false)
         var warehouse := renew.get_node_or_null("World/WarehouseArt")
         if warehouse is Node2D and not _scene_adjusted:
@@ -124,4 +128,4 @@ func _apply_scene_visibility() -> void:
         if skyline is Node2D and not _scene_adjusted:
             skyline.position = Vector2(browser.x * 0.5, 145.0)
             skyline.scale = Vector2(0.58, 0.58)
-        _scene_adjusted = true
+    _scene_adjusted = true
