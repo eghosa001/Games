@@ -19,10 +19,25 @@ func _process(_delta:float)->void:
     if parent.day!=last_day:
         var region_controller=parent.get_node_or_null("World/RegionController")
         if region_controller!=null:
+            var finance=get_tree().root.get_node_or_null("RenewFinanceSystem")
+            var finance_before:Dictionary = finance.capture_state() if finance != null else {}
+            var branches_before=branches.branches.duplicate(true)
             var result=branches.operate_day(region_controller.regions)
-            var received=state_adapter.receive(int(result["profit"]),"regional branch operating result")
-            if bool(received.get("ok",false)) and int(result["businesses"])>0:
-                parent._log("BRANCHES: %d regional businesses generated $%s."%[result["businesses"],_money(int(result["profit"]))])
+            var profit:=int(result.get("profit",0))
+            var settled:Dictionary
+            if profit>0:
+                settled=state_adapter.receive(profit,"regional branch operating result")
+            elif profit<0:
+                settled=state_adapter.spend(-profit,"regional branch operating loss")
+            else:
+                settled={"ok":true}
+            if not bool(settled.get("ok",false)):
+                branches.branches=branches_before
+                if finance != null and not finance_before.is_empty():
+                    finance.restore_state(finance_before)
+                message=str(settled.get("message","Branch operating result could not be settled."))
+            elif int(result["businesses"])>0:
+                parent._log("BRANCHES: %d regional businesses generated $%s."%[result["businesses"],_money(profit)])
         last_day=parent.day
     queue_redraw()
 
