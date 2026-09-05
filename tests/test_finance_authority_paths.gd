@@ -43,12 +43,15 @@ func run() -> void:
     check(not bankruptcy.contains("finance.cash -="), "Bankruptcy cash outflows route through FinanceSystem")
     check(bankruptcy.contains("finance.receive"), "Bankruptcy cash inflows use FinanceSystem")
     check(bankruptcy.contains("finance.spend"), "Bankruptcy cash outflows use FinanceSystem")
+    check(bankruptcy.contains("finance.record_asset_sale"), "Bankruptcy asset disposals use the accounting asset-sale transaction")
+    check(not bankruptcy.contains("finance.receive(int(proceeds), \"liquidation proceeds\")"), "Liquidation does not misclassify asset proceeds as operating revenue")
 
     var finance_script := _read("res://scripts/finance_system.gd")
     check(finance_script.contains("func capture_state()"), "FinanceSystem exposes transaction snapshots")
     check(finance_script.contains("func restore_state(snapshot: Dictionary)"), "FinanceSystem exposes transaction rollback")
     check(finance_script.contains("accrued_interest"), "FinanceSystem models accrued interest explicitly")
     check(finance_script.contains("func validate_invariants()"), "FinanceSystem exposes accounting invariants")
+    check(finance_script.contains("func record_asset_sale"), "FinanceSystem exposes accounting-safe asset disposal")
     check(finance_script.contains("Cash flow is derived only from recorded cash movements"), "Cash-flow statement uses recorded cash movements")
 
     print("\nRENEW FINANCE AUTHORITY PATH RESULT: %d passed, %d failed" % [passed, failed])
