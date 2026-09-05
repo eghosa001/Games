@@ -135,11 +135,11 @@ func contribute_to_railway(member_id: String, money: int = 0, steel: int = 0, ti
     if str(project.get("status", "")) != "active": return {"ok": false, "message": "Regional Railway Project is already complete."}
     var req: Dictionary = project["requirements"]; var current: Dictionary = project["contributed"]
     money = min(money, max(0, int(req["money"]) - int(current["money"]))); steel = min(steel, max(0, int(req["steel"]) - int(current["steel"]))); timber = min(timber, max(0, int(req["timber"]) - int(current["timber"]))); project_points = min(project_points, max(0, int(req["project_points"]) - int(current["project_points"])))
+    var resources: Variant = _resources()
+    if steel > int(resources.get("steel", 0)) or timber > int(resources.get("timber", 0)):
+        return {"ok": false, "message": "Not enough steel or timber for this railway contribution."}
     var spend := state_adapter.spend(money, "regional railway contribution") if money > 0 else {"ok": true, "amount": 0}
     if not bool(spend.get("ok", false)): return {"ok": false, "message": "Not enough cash for this railway contribution."}
-    var resources: Variant = _resources(); if steel > int(resources.get("steel", 0)) or timber > int(resources.get("timber", 0)):
-        if money > 0: state_adapter.receive(money, "railway contribution rollback")
-        return {"ok": false, "message": "Not enough steel or timber for this railway contribution."}
     resources["steel"] = int(resources.get("steel", 0)) - steel; resources["timber"] = int(resources.get("timber", 0)) - timber; _set_resources(resources)
     current["money"] = int(current["money"]) + money; current["steel"] = int(current["steel"]) + steel; current["timber"] = int(current["timber"]) + timber; current["project_points"] = int(current["project_points"]) + project_points; project["contributed"] = current
     if not project["contributors"].has(member_id): project["contributors"].append(member_id)
