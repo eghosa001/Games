@@ -27,14 +27,14 @@ jobs:
           wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v4.5-stable_export_templates.tpz" -O /tmp/templates.tpz
           test -s /tmp/templates.tpz
           7z x /tmp/templates.tpz -o/tmp/godot_templates >/dev/null
-          for template in web_debug.zip web_release.zip; do
+          for template in web_nothreads_debug.zip web_nothreads_release.zip; do
             source_file="$(find /tmp/godot_templates -type f -name "$template" -print -quit)"
             test -n "$source_file"
             cp -f "$source_file" "$TEMPLATES_DIR/$template"
           done
           version_file="$(find /tmp/godot_templates -type f -name version.txt -print -quit || true)"
           [ -z "$version_file" ] || cp -f "$version_file" "$TEMPLATES_DIR/version.txt"
-          for template in web_debug.zip web_release.zip; do
+          for template in web_nothreads_debug.zip web_nothreads_release.zip; do
             test -s "$TEMPLATES_DIR/$template"
           done
 
@@ -78,7 +78,7 @@ jobs:
             echo 'ERROR: Web export still has thread support enabled.'
             exit 1
           fi
-          echo 'Verified: Web export is single-threaded and does not require SharedArrayBuffer isolation headers.'
+          echo 'Verified: Web export is single-threaded.'
 
       - name: Add static-hosting headers file
         shell: bash
