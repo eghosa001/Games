@@ -81,7 +81,7 @@ func _refresh(force: bool = false) -> void:
     _show_detail(_find_contract(active, selected_contract_id)); _layout(); contract_scroll.set_deferred("scroll_vertical", scroll_value)
 
 func _add_contract_row(contract: Dictionary) -> void:
-    var id := str(contract.get("id", "")); var customer := str(contract.get("customer_id", "Customer")); var product := str(contract.get("resource_product", "product")).replace("_", " ").capitalize(); var delivered := int(contract.get("quantity_delivered", 0)); var quantity := max(1, int(contract.get("quantity", 0))); var days_elapsed := int(contract.get("days_elapsed", 0)); var schedule: Dictionary = contract.get("delivery_schedule", {}); var duration := max(1, int(schedule.get("duration_days", 1))); var days_left := max(0, duration - days_elapsed); var expected := quantity * minf(1.0, float(days_elapsed) / float(duration)); var progress := clampf(float(delivered) / float(quantity), 0.0, 1.0); var status: Array = _delivery_status(delivered, expected, days_left, quantity)
+    var id := str(contract.get("id", "")); var customer := str(contract.get("customer_id", "Customer")); var product := str(contract.get("resource_product", "product")).replace("_", " ").capitalize(); var delivered := int(contract.get("quantity_delivered", 0)); var quantity := max(1, int(contract.get("quantity", 0))); var days_elapsed := int(contract.get("days_elapsed", 0)); var schedule: Dictionary = contract.get("delivery_schedule", {}); var duration := max(1, int(schedule.get("duration_days", 1))); var days_left := max(0, duration - days_elapsed); var expected: float = float(quantity) * minf(1.0, float(days_elapsed) / float(duration)); var progress := clampf(float(delivered) / float(quantity), 0.0, 1.0); var status: Array = _delivery_status(delivered, expected, days_left, quantity)
     var button := Button.new(); button.text = "%s  •  %s\n%d / %d  •  %d%%  •  %s" % [customer, product, delivered, quantity, roundi(progress * 100.0), status[0]]; button.alignment = HORIZONTAL_ALIGNMENT_LEFT; button.custom_minimum_size = Vector2(0, 58); button.focus_mode = Control.FOCUS_NONE; button.add_theme_stylebox_override("normal", _button_style(SURFACE_2)); button.add_theme_stylebox_override("hover", _button_style(Color("17343d"))); button.add_theme_stylebox_override("pressed", _button_style(Color("1b3d46"))); button.add_theme_color_override("font_color", TEXT); button.pressed.connect(_select_contract.bind(id)); contract_list.add_child(button)
 
 func _delivery_status(delivered: int, expected: float, days_left: int, quantity: int) -> Array:
@@ -107,8 +107,30 @@ func _close() -> void:
     else: visible = false
 
 func _show_detail(contract: Dictionary) -> void:
-    if contract.is_empty(): detail_label.text = ""; return
-    var customer := str(contract.get("customer_id", "Customer")); var product := str(contract.get("resource_product", "product")).replace("_", " ").capitalize(); var quantity := max(1, int(contract.get("quantity", 0))); var delivered := int(contract.get("quantity_delivered", 0)); var due := int(contract.get("quantity_due", 0)); var price := int(contract.get("price", 0)); var penalty := int(contract.get("penalty", 0)); var penalties_paid := int(contract.get("penalties_paid", 0)); var quality := int(contract.get("quality_requirement", 0)); var days_elapsed := int(contract.get("days_elapsed", 0)); var schedule: Dictionary = contract.get("delivery_schedule", {}); var duration := max(1, int(schedule.get("duration_days", 1))); var days_left := max(0, duration - days_elapsed); var expected := quantity * minf(1.0, float(days_elapsed) / float(duration)); var status: Array = _delivery_status(delivered, expected, days_left, quantity); var relationship := 50; var contracts = _contracts(); if contracts != null and contracts.has_method("get_customer_relationship"): relationship = int(contracts.get_customer_relationship(customer)); var fulfillment_ratio := clampf(float(delivered) / float(quantity), 0.0, 1.0); var renewal := "Likely" if relationship >= 70 and fulfillment_ratio >= 0.80 else ("Possible" if relationship >= 50 else "Unlikely")
+    if contract.is_empty():
+        detail_label.text = ""
+        return
+    var customer := str(contract.get("customer_id", "Customer"))
+    var product := str(contract.get("resource_product", "product")).replace("_", " ").capitalize()
+    var quantity := max(1, int(contract.get("quantity", 0)))
+    var delivered := int(contract.get("quantity_delivered", 0))
+    var due := int(contract.get("quantity_due", 0))
+    var price := int(contract.get("price", 0))
+    var penalty := int(contract.get("penalty", 0))
+    var penalties_paid := int(contract.get("penalties_paid", 0))
+    var quality := int(contract.get("quality_requirement", 0))
+    var days_elapsed := int(contract.get("days_elapsed", 0))
+    var schedule: Dictionary = contract.get("delivery_schedule", {})
+    var duration := max(1, int(schedule.get("duration_days", 1)))
+    var days_left := max(0, duration - days_elapsed)
+    var expected: float = float(quantity) * minf(1.0, float(days_elapsed) / float(duration))
+    var status: Array = _delivery_status(delivered, expected, days_left, quantity)
+    var relationship := 50
+    var contracts = _contracts()
+    if contracts != null and contracts.has_method("get_customer_relationship"):
+        relationship = int(contracts.get_customer_relationship(customer))
+    var fulfillment_ratio: float = clampf(float(delivered) / float(quantity), 0.0, 1.0)
+    var renewal: String = "Likely" if relationship >= 70 and fulfillment_ratio >= 0.80 else ("Possible" if relationship >= 50 else "Unlikely")
     detail_label.text = "%s  |  %s\nDelivery %d / %d   •   Progress %d%%   •   Due %d\nStatus  %s\nDeadline  %d day%s left   •   Price  $%d/unit\nPenalty  $%d/unit   •   Paid  $%d   •   Quality ≥ %d\nCustomer relationship  %d/100   •   Renewal  %s" % [customer, product, delivered, quantity, roundi(fulfillment_ratio * 100.0), due, status[0], days_left, "" if days_left == 1 else "s", price, penalty, penalties_paid, quality, relationship, renewal]
 
 func _layout() -> void:
