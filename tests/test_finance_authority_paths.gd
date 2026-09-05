@@ -41,7 +41,7 @@ func run() -> void:
     check(not bankruptcy.contains("finance.debt = int(game.debt)"), "Bankruptcy does not overwrite FinanceSystem debt from legacy game state")
     check(not bankruptcy.contains("finance.cash +="), "Bankruptcy cash inflows route through FinanceSystem")
     check(not bankruptcy.contains("finance.cash -="), "Bankruptcy cash outflows route through FinanceSystem")
-    check(bankruptcy.contains("finance.receive"), "Bankruptcy cash inflows use FinanceSystem")
+    check(bankruptcy.contains("finance.record_equity"), "Bankruptcy rescue capital uses the FinanceSystem equity transaction")
     check(bankruptcy.contains("finance.spend"), "Bankruptcy cash outflows use FinanceSystem")
     check(bankruptcy.contains("finance.record_asset_sale"), "Bankruptcy asset disposals use the accounting asset-sale transaction")
     check(not bankruptcy.contains("finance.receive(int(proceeds), \"liquidation proceeds\")"), "Liquidation does not misclassify asset proceeds as operating revenue")
