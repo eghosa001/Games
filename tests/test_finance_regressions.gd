@@ -23,6 +23,7 @@ func _finance() -> Node:
 
 func run() -> void:
     await test_interest_is_accrual_not_immediate_cash_outflow()
+    await test_accrued_interest_is_not_cash_flow_until_paid()
     await test_repayment_rejects_non_positive_amount()
     await test_multiple_loans_have_aggregate_scheduled_payment()
     await test_assumed_debt_does_not_create_cash()
@@ -42,6 +43,27 @@ func test_interest_is_accrual_not_immediate_cash_outflow() -> void:
     check(finance._total_accrued_interest() == int(result["interest"]), "accrued interest is carried as liability")
     check(float(finance.interest_expense) == float(result["interest"]), "accrued interest is recognized as expense once")
     check(bool(finance.validate_invariants().get("ok", false)), "finance invariants hold after accrual")
+    finance.free()
+    await process_frame
+
+func test_accrued_interest_is_not_cash_flow_until_paid() -> void:
+    var finance = _finance()
+    finance.cash = 50000
+    var loan = finance.create_loan(15000, 0.10, 365)
+    check(bool(loan.get("ok", false)), "loan created for cash-flow accrual test")
+    finance.loan_payment = 0
+    var cash_before = finance.cash
+    var accrual = finance.settle_debt_day()
+    var statement_after_accrual = finance.cash_flow_statement()
+    check(float(statement_after_accrual["operating"]) == 0.0, "accrued interest is absent from operating cash flow before payment")
+    check(float(statement_after_accrual["net_change"]) == float(finance.cash - 25000), "cash-flow net change matches actual recorded cash movement")
+    check(finance.cash == cash_before, "cash remains unchanged after interest accrual")
+    var payment = int(accrual["interest"])
+    if payment > 0:
+        var repayment = finance.repay(payment)
+        check(bool(repayment.get("ok", false)), "accrued interest can be paid later")
+        var statement_after_payment = finance.cash_flow_statement()
+        check(float(statement_after_payment["financing"]) == float(loan.get("amount", 0) - payment), "financing cash flow reflects debt proceeds and actual repayment")
     finance.free()
     await process_frame
 
