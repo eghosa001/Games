@@ -22,11 +22,18 @@ jobs:
           GODOT_VERSION="4.5-stable"
           GODOT_DATA="$HOME/.local/share/godot"
           mkdir -p "$GODOT_DATA/export_templates/$GODOT_VERSION"
-          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}/Godot_v4.5-stable_export_templates.tpz" -O /tmp/templates.tpz
+          wget -q "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v4.5-stable_export_templates.tpz" -O /tmp/templates.tpz
           rm -rf /tmp/templates
           mkdir -p /tmp/templates
           7z x /tmp/templates.tpz -o/tmp/templates >/dev/null
-          cp -R /tmp/templates/templates/. "$GODOT_DATA/export_templates/$GODOT_VERSION/"
+          if [ -d /tmp/templates/templates ]; then
+            cp -R /tmp/templates/templates/. "$GODOT_DATA/export_templates/$GODOT_VERSION/"
+          else
+            cp -R /tmp/templates/. "$GODOT_DATA/export_templates/$GODOT_VERSION/"
+          fi
+          for template in web_nothreads_debug.zip web_nothreads_release.zip web_debug.zip web_release.zip; do
+            test -f "$GODOT_DATA/export_templates/$GODOT_VERSION/$template"
+          done
 
       - name: Install Godot
         shell: bash
@@ -39,6 +46,34 @@ jobs:
           chmod +x "$HOME/godot/Godot_v4.5-stable_linux.x86_64"
           "$HOME/godot/Godot_v4.5-stable_linux.x86_64" --version
 
+      - name: Normalize Godot 4.5 build-only compatibility issues
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in \
+            scripts/production_system.gd \
+            scripts/infrastructure_system.gd \
+            scripts/collection_system.gd \
+            scripts/liveops_system.gd \
+            scripts/headquarters_system.gd \
+            scripts/employee_system.gd \
+            scripts/global_ranking_system.gd \
+            scripts/world_event_system.gd \
+            scripts/analytics_system.gd \
+            scripts/ui_screen_manager.gd; do
+            [ -f "$file" ] && sed -i '/^class_name Renew\(ProductionSystem\|InfrastructureSystem\|CollectionSystem\|LiveOpsSystem\|HeadquartersSystem\|EmployeeSystem\|GlobalRankingSystem\|WorldEventSystem\|AnalyticsSystem\|UIScreenManager\)$/d' "$file"
+          done
+          find scripts -type f -name '*.gd' -print0 | xargs -0 sed -i \
+            -e 's/var spend:=/var spend: Dictionary =/g' \
+            -e 's/var spend :=/var spend: Dictionary =/g' \
+            -e 's/var production_spend :=/var production_spend: Dictionary =/g' \
+            -e 's/var resources_before :=/var resources_before: Dictionary =/g'
+          sed -i \
+            -e 's/func _origin_property_type() -> String:/func _origin_property_type():/' \
+            -e 's/func _origin_property_name() -> String:/func _origin_property_name():/' \
+            -e 's/func _technology_multiplier() -> float:/func _technology_multiplier():/' \
+            scripts/business_system.gd
+
       - name: Export Web build
         shell: bash
         run: |
@@ -46,6 +81,7 @@ jobs:
           mkdir -p build/web
           "$HOME/godot/Godot_v4.5-stable_linux.x86_64" --headless --path . --editor --quit
           "$HOME/godot/Godot_v4.5-stable_linux.x86_64" --headless --path . --export-release "Web" build/web/index.html
+          test -s build/web/index.html
 
       - name: Add Vercel/static-hosting headers
         shell: bash
