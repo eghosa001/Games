@@ -1,9 +1,9 @@
 extends Node
 
 ## Mobile Web presentation hotfix.
-## The primary HUD lives on a CanvasLayer, which is not governed by the same
-## stretch transform as the world canvas. On narrow Web viewports the HUD must
-## explicitly map its CSS-pixel layout back into the 1280x720 logical canvas.
+## CanvasLayer HUDs are not governed by the same stretch transform as the world
+## canvas. The responsive HUD is authored in browser/CSS pixels, so on a narrow
+## Web viewport we explicitly scale that Control back into the Godot canvas.
 var _layer: CanvasLayer
 var _root: Control
 var _last_browser := Vector2.ZERO
@@ -41,20 +41,18 @@ func _apply() -> void:
     if _root == null:
         return
 
-    var logical := get_viewport().get_visible_rect().size
     var browser := _browser_size()
-    if logical.x <= 1.0 or logical.y <= 1.0:
+    if browser.x <= 1.0 or browser.y <= 1.0:
         return
 
-    var mobile := browser.x > 0.0 and (browser.x < 700.0 or browser.y > browser.x * 1.15)
-    if mobile and browser.x > 1.0:
-        # Existing mobile_ui_polished.gd lays its controls out in CSS-pixel
-        # coordinates. Scale that Control back into the logical canvas so a
-        # 390px phone gets genuinely touch-sized controls instead of a tiny
-        # 1280px desktop HUD squeezed into the phone.
-        var sx := logical.x / browser.x
-        var sy := logical.y / browser.y if browser.y > 1.0 else sx
-        var uniform := maxf(1.0, minf(sx, sy))
+    var mobile := browser.x < 700.0 or browser.y > browser.x * 1.15
+    if mobile:
+        # MainHUD's mobile layout uses the actual browser dimensions. The
+        # CanvasLayer itself is rendered through the 1280x720 project canvas,
+        # so compensate using the desktop design width. A uniform X-derived
+        # scale keeps touch targets and text proportions intact.
+        var design_width := 1280.0
+        var uniform := maxf(1.0, design_width / browser.x)
         _root.scale = Vector2(uniform, uniform)
         _root.position = Vector2.ZERO
     else:
@@ -85,8 +83,6 @@ func _hide_legacy_mobile_layers(mobile: bool) -> void:
         if node is CanvasItem:
             node.visible = not mobile
 
-    # These dashboards duplicate information already provided by the responsive
-    # MainHUD on phones and otherwise compete for the same limited vertical area.
     var strategy := renew.get_node_or_null("UI/StrategyHUD")
     if strategy is CanvasLayer:
         strategy.visible = not mobile
