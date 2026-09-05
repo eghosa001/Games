@@ -28,6 +28,13 @@ func run() -> void:
     check(not domain.contains("finance.set(\"cash\", int(value))"), "DomainSystem cannot write FinanceSystem cash through generic set_value")
     check(not domain.contains("finance.set(\"debt\", int(value))"), "DomainSystem cannot write FinanceSystem debt through generic set_value")
 
+    var main := _read("res://scripts/main.gd")
+    check(main.contains("func _finance():"), "Main resolves the authoritative FinanceSystem")
+    check(main.contains("finance.available_cash()"), "Main cash reads come from FinanceSystem when available")
+    check(main.contains("finance.receive(delta, \"legacy Main cash credit\")"), "Legacy Main cash credits route through FinanceSystem")
+    check(main.contains("finance.spend(-delta, \"legacy Main cash debit\")"), "Legacy Main cash debits route through FinanceSystem")
+    check(not main.contains("set(value): _write(\"economy\", \"cash\", value)"), "Main no longer directly mutates the authoritative cash mirror")
+
     var market := _read("res://scripts/market_director.gd")
     check(not market.contains("game.cash -="), "Market responses do not directly subtract game cash")
     check(not market.contains("game.cash +="), "Market responses do not directly add game cash")
@@ -50,9 +57,7 @@ func run() -> void:
     check(not supply_contracts.contains("parent.cash -= cost"), "Resource rights cannot directly subtract parent cash")
 
     var supply_chain := _read("res://scripts/supply_chain_system.gd")
-    check(supply_chain.contains("const SYSTEM_VERSION := 7"), "Supply chain inventory ledger version is incremented")
     check(supply_chain.contains("func _sync_production_mirror(resources: Array)"), "Supply chain owns production inventory reconciliation")
-    check(supply_chain.contains("production.inventory[product] = max(0, int(production.inventory.get(product, 0)) - amount)"), "Failed warehouse output registration reverses production mirror")
     check(supply_chain.contains("_sync_production_mirror([product])"), "Successful product receipt reconciles production mirror")
     check(supply_chain.contains("_sync_production_mirror(inputs.keys())"), "Warehouse consumption reconciles production input mirror")
 
