@@ -66,8 +66,8 @@ func _scan_employees(day: int) -> void:
         var name: Variant = str(employee.get("name", id))
         var hire_day: Variant = int(employee.get("hire_date", 1))
         record("employees", "%s — historic employee" % name, {"employee_id":id,"role":employee.get("role", ""),"specialization":employee.get("specialization", ""),"hire_day":hire_day,"status":employee.get("status", "active")}, hire_day, "employee|" + id)
-        if int(employee.get("career_level", 1)) >= 4:
-            record("employees", "%s reached executive level" % name, {"employee_id":id,"role":employee.get("role", "")}, day, "employee_exec|%s|%d" % [id, int(employee.get("career_level", 1))])
+        if int(employee.get("level", 1)) >= 4:
+            record("employees", "%s reached executive level" % name, {"employee_id":id,"role":employee.get("role", "")}, day, "employee_exec|%s|%d" % [id, int(employee.get("level", 1))])
 
 func _scan_research(day: int) -> void:
     var research = get_node_or_null("/root/RenewResearchSystem")
