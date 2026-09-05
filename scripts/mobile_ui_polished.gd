@@ -93,9 +93,10 @@ func _button(text:String,callback:Callable)->void:
 func _screen(text:String,screen_name:String)->void: _button(text,Callable(self,"_open_screen").bind(screen_name))
 func _open_screen(screen_name:String)->void:
     var manager:=get_node_or_null("/root/RenewUIScreenManager")
-    if manager!=null and manager.has_method("show_screen"): manager.show_screen(screen_name)
+    if manager!=null and manager.has_method("show_screen"): manager.show_screen(screen_name); _show_feedback("OPENED: %s" % screen_name.replace("Panel","").replace("UI",""))
+    else: _show_feedback("Screen manager is unavailable.")
 func _run_action(label:String,callback:Callable)->void:
-    if parent==null or not callback.is_valid():return
+    if parent==null or not callback.is_valid():_show_feedback(label+"\nAction is unavailable."); return
     var before_cash:=int(parent.cash); var before_rep:=int(parent.reputation); var before_day:=int(parent.day); var before_message:=String(parent.message); var result=callback.call(); var message:=""
     if result is Dictionary and result.has("message"):message=String(result["message"])
     if message.is_empty() and String(parent.message)!=before_message:message=String(parent.message)
@@ -105,13 +106,14 @@ func _run_action(label:String,callback:Callable)->void:
     if dr!=0:changes.append("REP "+("+" if dr>0 else "")+str(dr))
     if int(parent.day)!=before_day:changes.append("Day "+str(int(parent.day)))
     if not changes.is_empty():message+="\n"+"  •  ".join(changes)
-    objective_label.text="LATEST DECISION\n"+message; _refresh()
+    _show_feedback(message); objective_label.text="LATEST DECISION\n"+message; _refresh(); _detect_milestones()
 func _show_finance_status()->void:
     var finance:=get_node_or_null("/root/RenewFinanceSystem")
     if finance==null:
-        objective_label.text="FINANCE STATUS\nAuthoritative finance ledger is unavailable."; return
+        objective_label.text="FINANCE STATUS\nAuthoritative finance ledger is unavailable."; _show_feedback("Finance ledger is unavailable."); return
     var accrued:=int(finance._total_accrued_interest()) if finance.has_method("_total_accrued_interest") else 0
     objective_label.text="FINANCE STATUS\nCash $%s  •  Debt $%s  •  Accrued interest $%s\nCredit %s (%s)" % [_money(int(finance.cash)),_money(int(finance.debt)),_money(accrued),str(finance.credit_rating),str(finance.credit_score)]
+    _show_feedback("FINANCE STATUS\nAuthoritative ledger values displayed.")
 func _update_text()->void:
     if parent==null:return
     var objective:="Inspect → acquire → restore your first property."
@@ -153,9 +155,10 @@ func _layout_responsive()->void:
         for c in actions.get_children():c.custom_minimum_size=Vector2(maxf(160,(w-300)/3),46)
     _apply_nav_state()
 func _set_tab(index:int)->void:
-    active_tab=clampi(index,0,3); if action_scroll:action_scroll.scroll_vertical=0; _refresh(); _apply_nav_state(); _refresh_network()
+    active_tab=clampi(index,0,3); if action_scroll:action_scroll.scroll_vertical=0; _refresh(); _apply_nav_state(); _refresh_network(); _show_feedback("TAB: %s\nChoose an action below." % ["RESTORE","BUSINESS","EMPIRE","WORLD"][active_tab])
 func _process(delta:float)->void:
     if parent==null:return
-    status_label.text="$"+_money(int(parent.cash))+"  •  REP "+str(int(parent.reputation))+"  •  DAY "+str(int(parent.day))
+    super(delta)
+    if status_panel!=null and status_label!=null:status_label.text="$"+_money(int(parent.cash))+"  •  REP "+str(int(parent.reputation))+"  •  DAY "+str(int(parent.day))
     refresh_clock+=delta
     if refresh_clock>=1.0:refresh_clock=0.0; _refresh_network()
