@@ -19,6 +19,7 @@ var action_title: Label
 var network_panel: Panel
 var network_summary: Label
 var network_cards: HBoxContainer
+var network_scroll: ScrollContainer
 var bottom_bar: Panel
 var button_theme: Theme
 var bottom_buttons: Array[Button] = []
@@ -30,9 +31,9 @@ func _build_ui() -> void:
     var bg := ColorRect.new(); bg.color = BG; bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); bg.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(bg)
     top_bar = ColorRect.new(); top_bar.color = SURFACE; root.add_child(top_bar)
     var brand := Label.new(); brand.name = "Brand"; brand.text = "RENEW"; brand.add_theme_font_size_override("font_size", 22); brand.add_theme_color_override("font_color", TEXT); root.add_child(brand)
-    var strap := Label.new(); strap.text = "RESTORE  •  OPERATE  •  COOPERATE  •  EXPAND"; strap.add_theme_font_size_override("font_size", 9); strap.add_theme_color_override("font_color", MUTED); root.add_child(strap)
+    var strap := Label.new(); strap.text = "RESTORE  •  OPERATE  •  COOPERATE  •  EXPAND"; strap.add_theme_font_size_override("font_size", 9); strap.add_theme_color_override("font_color", MUTED); strap.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; root.add_child(strap)
     status_panel = Panel.new(); status_panel.add_theme_stylebox_override("panel", _style(SURFACE_2, BORDER, 12)); root.add_child(status_panel)
-    status_label = Label.new(); status_label.add_theme_font_size_override("font_size", 11); status_label.add_theme_color_override("font_color", TEXT); status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER; status_panel.add_child(status_label)
+    status_label = Label.new(); status_label.add_theme_font_size_override("font_size", 11); status_label.add_theme_color_override("font_color", TEXT); status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER; status_label.clip_text = true; status_panel.add_child(status_label)
     tabs = HBoxContainer.new(); tabs.add_theme_constant_override("separation",6); root.add_child(tabs)
     for i in range(4):
         var tab := Button.new(); tab.text=["RESTORE","BUSINESS","EMPIRE","WORLD"][i]; tab.custom_minimum_size=Vector2(92,44); tab.focus_mode=Control.FOCUS_NONE; tab.pressed.connect(_set_tab.bind(i)); tabs.add_child(tab)
@@ -45,7 +46,7 @@ func _build_ui() -> void:
     content_scroll = ScrollContainer.new(); content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; content_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; content_scroll.mouse_filter = Control.MOUSE_FILTER_STOP; root.add_child(content_scroll)
     content = VBoxContainer.new(); content.add_theme_constant_override("separation", 12); content_scroll.add_child(content)
     objective_panel = Panel.new(); objective_panel.add_theme_stylebox_override("panel", _style(SURFACE_2,BORDER,12)); objective_panel.custom_minimum_size.y = 82; content.add_child(objective_panel)
-    objective_label = Label.new(); objective_label.position = Vector2(16,10); objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; objective_label.add_theme_font_size_override("font_size",13); objective_label.add_theme_color_override("font_color",TEXT); objective_panel.add_child(objective_label)
+    objective_label = Label.new(); objective_label.position = Vector2(16,10); objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; objective_label.add_theme_font_size_override("font_size",13); objective_label.add_theme_color_override("font_color",TEXT); objective_label.size = Vector2(0,60); objective_panel.add_child(objective_label)
     feedback_panel = objective_panel; goal_label = objective_label
     action_panel = Panel.new(); action_panel.add_theme_stylebox_override("panel", _style(SURFACE,BORDER,12)); content.add_child(action_panel)
     action_title = Label.new(); action_title.position = Vector2(16,10); action_title.add_theme_font_size_override("font_size",11); action_title.add_theme_color_override("font_color",MUTED); action_panel.add_child(action_title)
@@ -54,7 +55,8 @@ func _build_ui() -> void:
     network_panel = Panel.new(); network_panel.add_theme_stylebox_override("panel", _style(Color("0c2229"),Color("315b60"),12)); content.add_child(network_panel)
     var nt := Label.new(); nt.text = "CORPORATE NETWORK"; nt.position = Vector2(16,10); nt.add_theme_font_size_override("font_size",11); nt.add_theme_color_override("font_color",TEXT); network_panel.add_child(nt)
     network_summary = Label.new(); network_summary.position = Vector2(16,32); network_summary.add_theme_font_size_override("font_size",9); network_summary.add_theme_color_override("font_color",MUTED); network_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; network_panel.add_child(network_summary)
-    network_cards = HBoxContainer.new(); network_cards.position = Vector2(16,66); network_cards.add_theme_constant_override("separation",8); network_panel.add_child(network_cards)
+    network_scroll = ScrollContainer.new(); network_scroll.position = Vector2(12,64); network_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; network_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; network_scroll.mouse_filter = Control.MOUSE_FILTER_STOP; network_panel.add_child(network_scroll)
+    network_cards = HBoxContainer.new(); network_cards.add_theme_constant_override("separation",8); network_scroll.add_child(network_cards)
     bottom_bar = Panel.new(); bottom_bar.add_theme_stylebox_override("panel", _style(SURFACE,BORDER,0)); root.add_child(bottom_bar)
     var bottom := HBoxContainer.new(); bottom.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); bottom.add_theme_constant_override("separation",4); bottom_bar.add_child(bottom)
     for i in range(5):
@@ -123,7 +125,7 @@ func _refresh_network()->void:
     network_summary.text="Live relationships from the authoritative competitor state."
     if parent==null or parent.rivals==null:return
     for i in range(min(3,parent.rivals.rivals.size())):
-        var r:Dictionary=parent.rivals.rivals[i]; var p:=Panel.new(); p.custom_minimum_size=Vector2(200,62); p.add_theme_stylebox_override("panel",_style(Color("122c33"),BORDER,8)); var n:=Label.new(); n.text=str(r.get("name","Corporate Partner")); n.position=Vector2(9,7); n.add_theme_color_override("font_color",TEXT); p.add_child(n); var rel:=Label.new(); rel.text="Relationship  "+str(int(r.get("relationship",0))); rel.position=Vector2(9,31); rel.add_theme_font_size_override("font_size",9); rel.add_theme_color_override("font_color",MUTED); p.add_child(rel); network_cards.add_child(p)
+        var r:Dictionary=parent.rivals.rivals[i]; var p:=Panel.new(); p.custom_minimum_size=Vector2(200,62); p.add_theme_stylebox_override("panel",_style(Color("122c33"),BORDER,8)); var n:=Label.new(); n.text=str(r.get("name","Corporate Partner")); n.position=Vector2(9,7); n.size=Vector2(180,20); n.clip_text=true; n.add_theme_color_override("font_color",TEXT); p.add_child(n); var rel:=Label.new(); rel.text="Relationship  "+str(int(r.get("relationship",0))); rel.position=Vector2(9,31); rel.add_theme_font_size_override("font_size",9); rel.add_theme_color_override("font_color",MUTED); p.add_child(rel); network_cards.add_child(p)
 func _clear_actions()->void:
     for c in actions.get_children():c.queue_free()
 func _next_rival()->void:
@@ -136,15 +138,18 @@ func _layout_responsive()->void:
     top_bar.size=Vector2(w,72 if mobile else 64); sidebar.visible=not mobile; bottom_bar.visible=mobile; tabs.visible=not mobile
     tabs.position=Vector2(260,10) if not mobile else Vector2(8,76); tabs.size=Vector2(minf(500,w-16),44)
     for tab in tabs.get_children():tab.custom_minimum_size=Vector2(maxf(70,(tabs.size.x-18)/4),44)
-    var brand:=root.get_node_or_null("Brand") as Label; if brand:brand.position=Vector2(16,7); brand.size=Vector2(150,30)
-    var strap:=root.get_child(3) as Label; if strap:strap.position=Vector2(16,38); strap.size=Vector2(minf(330,w-32),18)
+    var brand:=root.get_node_or_null("Brand") as Label; if brand:brand.position=Vector2(16,7); brand.size=Vector2(140,30)
+    var strap:=root.get_child(3) as Label
+    if strap:
+        strap.position=Vector2(16,38)
+        strap.size=Vector2(maxf(100,minf(330,maxf(100,w-250))),18) if mobile else Vector2(330,18)
     status_panel.position=Vector2(maxf(150,w-230),10); status_panel.size=Vector2(minf(220,w-166),38); status_label.position=Vector2(8,3); status_label.size=Vector2(status_panel.size.x-16,30); status_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_RIGHT
     if mobile:
-        title_label.position=Vector2(12,82); title_label.size=Vector2(w-24,30); content_scroll.position=Vector2(10,116); content_scroll.size=Vector2(w-20,maxf(260,h-184)); content.custom_minimum_size.x=w-20; objective_panel.custom_minimum_size.y=76; action_panel.custom_minimum_size.y=maxf(190,minf(330,h*.36)); action_scroll.size=Vector2(w-44,action_panel.custom_minimum_size.y-48); actions.columns=2; network_panel.custom_minimum_size.y=138
+        title_label.position=Vector2(12,82); title_label.size=Vector2(w-24,30); content_scroll.position=Vector2(10,116); content_scroll.size=Vector2(w-20,maxf(260,h-184)); content.custom_minimum_size.x=w-20; objective_panel.custom_minimum_size.y=76; objective_label.size=Vector2(w-52,58); action_panel.custom_minimum_size.y=maxf(190,minf(330,h*.36)); action_scroll.size=Vector2(w-44,action_panel.custom_minimum_size.y-48); actions.columns=2; network_panel.custom_minimum_size.y=138; network_scroll.size=Vector2(w-24,62)
         for c in actions.get_children():c.custom_minimum_size=Vector2(maxf(120,(w-40)/2),46)
         bottom_bar.position=Vector2(0,h-58); bottom_bar.size=Vector2(w,58)
     else:
-        sidebar.position=Vector2(0,64); sidebar.size=Vector2(202,h-64); title_label.position=Vector2(224,78); title_label.size=Vector2(w-246,34); content_scroll.position=Vector2(224,122); content_scroll.size=Vector2(w-246,h-184); content.custom_minimum_size.x=w-246; objective_panel.custom_minimum_size.y=76; action_panel.custom_minimum_size.y=230; action_scroll.size=Vector2(w-270,190); actions.columns=3; network_panel.custom_minimum_size.y=136
+        sidebar.position=Vector2(0,64); sidebar.size=Vector2(202,h-64); title_label.position=Vector2(224,78); title_label.size=Vector2(w-246,34); content_scroll.position=Vector2(224,122); content_scroll.size=Vector2(w-246,h-184); content.custom_minimum_size.x=w-246; objective_panel.custom_minimum_size.y=76; objective_label.size=Vector2(w-278,58); action_panel.custom_minimum_size.y=230; action_scroll.size=Vector2(w-270,190); actions.columns=3; network_panel.custom_minimum_size.y=136; network_scroll.size=Vector2(w-250,62)
         for c in actions.get_children():c.custom_minimum_size=Vector2(maxf(160,(w-300)/3),46)
     _apply_nav_state()
 func _set_tab(index:int)->void:
