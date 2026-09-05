@@ -1,4 +1,4 @@
-[gd_scene load_steps=41 format=3]
+[gd_scene load_steps=42 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -38,6 +38,7 @@
 [ext_resource path="res://Assets/Art/renew_skyline.svg" type="Texture2D" id="38"]
 [ext_resource path="res://Assets/Art/renew_warehouse.svg" type="Texture2D" id="39"]
 [ext_resource path="res://Assets/Art/renew_resource_hub.svg" type="Texture2D" id="40"]
+[ext_resource path="res://scripts/mobile_ui_mobile_scale_fix.gd" type="Script" id="41"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -110,6 +111,8 @@ layer = 20
 [node name="MainHUD" type="CanvasLayer" parent="UI"]
 script = ExtResource("7")
 layer = 20
+[node name="MobileScaleFix" type="Node" parent="UI/MainHUD"]
+script = ExtResource("41")
 [node name="StrategyHUD" type="CanvasLayer" parent="UI"]
 script = ExtResource("18")
 layer = 25
