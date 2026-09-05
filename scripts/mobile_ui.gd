@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 # Primary mobile control surface. Main/gameplay commands are the authoritative
-action boundary; screen presentation is delegated to RenewUIScreenManager.
+# action boundary; screen presentation is delegated to RenewUIScreenManager.
 var parent: Node
 var active_tab: int = 0
 var root: Control
