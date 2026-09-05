@@ -11,17 +11,14 @@ const MUTED := Color("78949a")
 const ACCENT := Color("d5b56b")
 
 var top_bar: ColorRect
-var tabs: HBoxContainer
 var sidebar: Panel
 var content_scroll: ScrollContainer
 var content: VBoxContainer
 var title_label: Label
 var status_panel: Panel
-var status_label: Label
 var objective_panel: Panel
 var objective_label: Label
 var action_panel: Panel
-var action_scroll: ScrollContainer
 var action_title: Label
 var network_panel: Panel
 var network_summary: Label
@@ -31,8 +28,6 @@ var button_theme: Theme
 var bottom_buttons: Array[Button] = []
 var side_buttons: Array[Button] = []
 var refresh_clock := 0.0
-var feedback_panel: Panel
-var goal_label: Label
 
 func _build_ui() -> void:
     root = Control.new(); root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); root.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(root)
@@ -45,13 +40,11 @@ func _build_ui() -> void:
     tabs = HBoxContainer.new(); tabs.add_theme_constant_override("separation",6); root.add_child(tabs)
     for i in range(4):
         var tab := Button.new(); tab.text=["RESTORE","BUSINESS","EMPIRE","WORLD"][i]; tab.custom_minimum_size=Vector2(92,44); tab.focus_mode=Control.FOCUS_NONE; tab.pressed.connect(_set_tab.bind(i)); tabs.add_child(tab)
-
     sidebar = Panel.new(); sidebar.add_theme_stylebox_override("panel", _style(SURFACE, BORDER, 0)); root.add_child(sidebar)
     var side_title := Label.new(); side_title.text = "CORPORATE CONTROL"; side_title.position = Vector2(16, 16); side_title.add_theme_font_size_override("font_size", 10); side_title.add_theme_color_override("font_color", MUTED); sidebar.add_child(side_title)
     var side_box := VBoxContainer.new(); side_box.position = Vector2(10, 46); side_box.add_theme_constant_override("separation", 6); sidebar.add_child(side_box)
     for item in [["HOME",0],["ASSETS",0],["OPERATE",1],["NETWORK",2],["WORLD",3]]:
         var b := Button.new(); b.text = String(item[0]); b.custom_minimum_size = Vector2(180,44); b.focus_mode = Control.FOCUS_NONE; b.pressed.connect(_select_nav.bind(int(item[1]))); side_box.add_child(b); side_buttons.append(b)
-
     title_label = Label.new(); title_label.add_theme_font_size_override("font_size", 24); title_label.add_theme_color_override("font_color", TEXT); root.add_child(title_label)
     content_scroll = ScrollContainer.new(); content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; content_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; content_scroll.mouse_filter = Control.MOUSE_FILTER_STOP; root.add_child(content_scroll)
     content = VBoxContainer.new(); content.add_theme_constant_override("separation", 12); content_scroll.add_child(content)
@@ -71,7 +64,6 @@ func _build_ui() -> void:
     for i in range(5):
         var b := Button.new(); b.text = ["HOME","ASSETS","OPERATE","NETWORK","WORLD"][i]; b.focus_mode = Control.FOCUS_NONE; b.size_flags_horizontal = Control.SIZE_EXPAND_FILL; b.pressed.connect(_select_bottom.bind(i)); bottom.add_child(b); bottom_buttons.append(b)
     button_theme = _make_theme(); _layout_responsive(); _refresh(); _refresh_network(); _apply_nav_state()
-
 func _style(bg: Color, border: Color, radius: int) -> StyleBoxFlat:
     var s := StyleBoxFlat.new(); s.bg_color=bg; s.border_color=border; s.set_border_width_all(1); s.set_corner_radius_all(radius); return s
 func _make_theme() -> Theme:
