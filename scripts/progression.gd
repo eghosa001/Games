@@ -64,7 +64,6 @@ func _claim(milestone: Dictionary) -> void:
         if not bool(reward_result.get("ok", false)):
             claimed.erase(id)
             return
-        parent.cash = int(finance.cash)
 
     parent.reputation += int(milestone["rep"])
     parent._log("MILESTONE: %s — %s" % [milestone["title"], milestone["text"]])
