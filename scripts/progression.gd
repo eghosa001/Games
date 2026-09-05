@@ -50,9 +50,23 @@ func _check_milestones() -> void:
 
 func _claim(milestone: Dictionary) -> void:
     var id: Variant = String(milestone["id"])
+    if bool(claimed.get(id, false)):
+        return
     claimed[id] = true
+
+    var cash_reward := int(milestone.get("cash", 0))
+    if cash_reward > 0:
+        var finance = get_node_or_null("/root/RenewFinanceSystem")
+        if finance == null or not finance.has_method("receive"):
+            claimed.erase(id)
+            return
+        var reward_result: Dictionary = finance.receive(cash_reward, "milestone reward: %s" % str(milestone.get("title", id)))
+        if not bool(reward_result.get("ok", false)):
+            claimed.erase(id)
+            return
+        parent.cash = int(finance.cash)
+
     parent.reputation += int(milestone["rep"])
-    parent.cash += int(milestone["cash"])
     parent._log("MILESTONE: %s — %s" % [milestone["title"], milestone["text"]])
     parent.message = "%s — %s" % [milestone["title"], milestone["text"]]
     _save_state()
@@ -67,4 +81,4 @@ func _load_state() -> void:
     if state != null:
         var saved = state.get_value("progression", "milestones", {})
         if saved is Dictionary and not saved.is_empty():
-            claimed = saved
+            claimed = saved.duplicate(true)
