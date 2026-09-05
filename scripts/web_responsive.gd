@@ -11,6 +11,8 @@ const MIN_MOBILE_HEIGHT := 568
 const MAX_MOBILE_HEIGHT := 1200
 
 var _last_browser_size := Vector2i.ZERO
+var _scene_adjusted := false
+var _adjust_clock := 0.0
 
 func _ready() -> void:
     if not OS.has_feature("web"):
@@ -20,7 +22,16 @@ func _ready() -> void:
     if not root.size_changed.is_connected(_on_window_size_changed):
         root.size_changed.connect(_on_window_size_changed)
 
+func _process(delta: float) -> void:
+    if not OS.has_feature("web"):
+        return
+    _adjust_clock -= delta
+    if _adjust_clock <= 0.0:
+        _adjust_clock = 0.25
+        _apply_scene_visibility()
+
 func _on_window_size_changed() -> void:
+    _scene_adjusted = false
     call_deferred("_apply")
 
 func _browser_size() -> Vector2i:
@@ -34,6 +45,7 @@ func _browser_size() -> Vector2i:
 func _apply() -> void:
     var browser := _browser_size()
     if browser == Vector2i.ZERO or browser == _last_browser_size:
+        _apply_scene_visibility()
         return
     _last_browser_size = browser
 
@@ -53,3 +65,40 @@ func _apply() -> void:
     else:
         root.content_scale_size = DESKTOP_SIZE
         root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
+    _scene_adjusted = false
+    call_deferred("_apply_scene_visibility")
+
+func _apply_scene_visibility() -> void:
+    var renew := get_node_or_null("/root/Renew")
+    if renew == null:
+        return
+    var browser := _last_browser_size
+    if browser == Vector2i.ZERO:
+        browser = _browser_size()
+    var mobile := browser.y > browser.x * 1.15 or browser.x < 700
+
+    var infrastructure_ui := get_node_or_null("/root/RenewInfrastructureUI")
+    if infrastructure_ui is CanvasItem:
+        var hud := renew.get_node_or_null("UI/MainHUD")
+        var tab := int(hud.get("active_tab")) if hud != null else 0
+        infrastructure_ui.visible = tab == 3
+
+    var region_controller := renew.get_node_or_null("World/RegionController")
+    if region_controller is CanvasItem:
+        var hud := renew.get_node_or_null("UI/MainHUD")
+        var tab := int(hud.get("active_tab")) if hud != null else 0
+        region_controller.visible = tab == 3
+
+    if mobile and not _scene_adjusted:
+        var warehouse := renew.get_node_or_null("World/WarehouseArt")
+        if warehouse is Node2D:
+            warehouse.position = Vector2(browser.x * 0.5, minf(520.0, browser.y * 0.58))
+            warehouse.scale = Vector2(0.62, 0.62)
+        var skyline := renew.get_node_or_null("World/SkylineArt")
+        if skyline is Node2D:
+            skyline.position = Vector2(browser.x * 0.5, 145.0)
+            skyline.scale = Vector2(0.58, 0.58)
+        var resource_hub := renew.get_node_or_null("World/ResourceHubArt")
+        if resource_hub is CanvasItem:
+            resource_hub.visible = false
+        _scene_adjusted = true
