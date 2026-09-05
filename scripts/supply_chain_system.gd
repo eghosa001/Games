@@ -144,10 +144,9 @@ func receive_product(product: String, amount: int) -> Dictionary:
     if product.is_empty() or amount <= 0: return {"ok": false, "reason": "invalid_product"}
     var available_room: float = WAREHOUSE_LIMIT - stock(product)
     if float(amount) > available_room + 0.000001:
-        var production = _production_node()
-        if production != null:
-            production.inventory[product] = max(0, int(production.inventory.get(product, 0)) - amount)
-            if product == "consumer_goods": production.finished_goods = max(0, production.finished_goods - amount)
+        # A failed receipt is a pure rejection. The caller that produced the
+        # item owns its own rollback; the warehouse must never mutate another
+        # system while reporting failure.
         return {"ok": false, "reason": "warehouse_capacity", "product": product, "capacity": WAREHOUSE_LIMIT, "available": max(0.0, available_room), "requested": amount}
     warehouse[product] = stock(product) + amount
     _sync_production_mirror([product])
