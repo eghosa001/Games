@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+<defs>
+ <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#071319"/><stop offset=".55" stop-color="#0b1c24"/><stop offset="1" stop-color="#123039"/></linearGradient>
+ <linearGradient id="ground" x2="0" y2="1"><stop stop-color="#10242a"/><stop offset="1" stop-color="#071116"/></linearGradient>
+ <linearGradient id="glass" x2="0" y2="1"><stop stop-color="#9bc6bd" stop-opacity=".72"/><stop offset="1" stop-color="#37666b" stop-opacity=".35"/></linearGradient>
+ <linearGradient id="metal" x2="1" y2="1"><stop stop-color="#294750"/><stop offset="1" stop-color="#142c34"/></linearGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="8"/></filter>
+</defs>
+<rect width="1600" height="900" fill="url(#sky)"/>
+<ellipse cx="310" cy="250" rx="300" ry="130" fill="#1b6a59" opacity=".13" filter="url(#glow)"/>
+<ellipse cx="1280" cy="270" rx="320" ry="150" fill="#2a5d72" opacity=".13" filter="url(#glow)"/>
+<!-- distant city -->
+<g fill="#10242d" stroke="#29434b" stroke-width="3" opacity=".95">
+ <path d="M0 430V260h90v78h55V185h105v245h58V300h84v130h64V220h130v210h55V145h105v285h58V270h92v160h55V190h126v240h70V255h100v175h72V310h118v120h88v470H0Z"/>
+</g>
+<g fill="#d5b56e" opacity=".38">
+ <path d="M50 300h14v18H50zm30 0h14v18H80zm120-70h14v18h-14zm30 0h14v18h-14zm160 80h14v18h-14zm30 0h14v18h-14zm150-95h14v18h-14zm30 0h14v18h-14zm200 85h14v18h-14zm30 0h14v18h-14zm170-70h14v18h-14zm30 0h14v18h-14z"/>
+</g>
+<!-- terrain --> <path d="M0 470 Q420 430 800 475 T1600 455V900H0Z" fill="url(#ground)"/>
+<!-- arterial road -->
+<path d="M570 450 L1030 450 L1550 900H50Z" fill="#162a30" stroke="#34545b" stroke-width="5"/>
+<path d="M800 450 L800 900" stroke="#d5b56e" stroke-opacity=".28" stroke-width="5" stroke-dasharray="34 30"/>
+<path d="M590 450 L130 900M1010 450 L1470 900" stroke="#47636a" stroke-width="3"/>
+<!-- factory -->
+<g transform="translate(110 360)">
+ <path d="M0 180V65h90V25h120v40h105v-70h120v185Z" fill="url(#metal)" stroke="#49656c" stroke-width="4"/>
+ <path d="M300 180V5h34v175" fill="#3b5258" stroke="#5b7378" stroke-width="3"/>
+ <path d="M317 -8c45-36 42-72 5-100 56 28 60 76 20 116" fill="none" stroke="#9bb0ad" stroke-opacity=".16" stroke-width="16"/>
+ <g fill="url(#glass)" stroke="#4d7478"><rect x="20" y="90" width="65" height="55"/><rect x="105" y="90" width="65" height="55"/><rect x="190" y="90" width="65" height="55"/></g>
+ <rect x="25" y="150" width="250" height="30" fill="#0b181d" stroke="#4a6268"/>
+ <text x="0" y="215" fill="#7f999d" font-family="sans-serif" font-size="18" letter-spacing="3">INDUSTRIAL WORKS</text>
+</g>
+<!-- logistics terminal -->
+<g transform="translate(1040 380)">
+ <rect width="420" height="190" rx="10" fill="url(#metal)" stroke="#49656c" stroke-width="4"/>
+ <path d="M-20 0H440L390-48H30Z" fill="#25424a" stroke="#4a646b" stroke-width="4"/>
+ <g fill="url(#glass)" stroke="#4e7074"><rect x="35" y="45" width="100" height="82"/><rect x="160" y="45" width="100" height="82"/><rect x="285" y="45" width="100" height="82"/></g>
+ <g fill="#d5b56e" opacity=".65"><rect x="30" y="145" width="70" height="9"/><rect x="120" y="145" width="70" height="9"/><rect x="210" y="145" width="70" height="9"/><rect x="300" y="145" width="70" height="9"/></g>
+ <text x="0" y="225" fill="#7f999d" font-family="sans-serif" font-size="18" letter-spacing="3">REGIONAL LOGISTICS TERMINAL</text>
+</g>
+<!-- HQ tower -->
+<g transform="translate(650 235)">
+ <rect x="0" y="0" width="300" height="335" rx="8" fill="#19343d" stroke="#668083" stroke-width="4"/>
+ <path d="M-22 0H322L280-42H20Z" fill="#29474e" stroke="#6a8184" stroke-width="3"/>
+ <g fill="url(#glass)" stroke="#496e72">
+  <path d="M28 45h55v46H28zm96 0h55v46h-55zm96 0h55v46h-55z"/>
+  <path d="M28 115h55v46H28zm96 0h55v46h-55zm96 0h55v46h-55z"/>
+  <path d="M28 185h55v46H28zm96 0h55v46h-55zm96 0h55v46h-55z"/>
+  <path d="M28 255h55v46H28zm96 0h55v46h-55zm96 0h55v46h-55z"/>
+ </g>
+ <path d="M150 0V-82" stroke="#d5b56e" stroke-width="5"/><circle cx="150" cy="-90" r="9" fill="#d5b56e"/>
+ <text x="150" y="372" text-anchor="middle" fill="#d7e3e4" font-family="sans-serif" font-size="20" letter-spacing="4">CORPORATE HEADQUARTERS</text>
+</g>
+<!-- foreground service road -->
+<path d="M0 680 Q400 610 800 690 T1600 660V900H0Z" fill="#0c1b20" stroke="#2f4e55" stroke-width="4"/>
+<g fill="#d5b56e" opacity=".65"><rect x="100" y="730" width="120" height="6" rx="3"/><rect x="330" y="690" width="120" height="6" rx="3"/><rect x="1080" y="720" width="120" height="6" rx="3"/><rect x="1350" y="680" width="120" height="6" rx="3"/></g>
+<!-- trucks -->
+<g fill="#d5b56e"><rect x="380" y="742" width="78" height="25" rx="4"/><rect x="455" y="750" width="35" height="17" rx="3"/><rect x="1160" y="735" width="78" height="25" rx="4"/><rect x="1235" y="743" width="35" height="17" rx="3"/></g>
+<g fill="#071116"><circle cx="398" cy="770" r="8"/><circle cx="472" cy="770" r="8"/><circle cx="1178" cy="763" r="8"/><circle cx="1252" cy="763" r="8"/></g>
+</svg>
