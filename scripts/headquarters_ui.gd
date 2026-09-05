@@ -47,21 +47,19 @@ func _message(text: String) -> void:
     _refresh()
 func _upgrade_hq() -> void:
     if system == null or main == null: return
-    if not system.has_method("upgrade_with_finance"):
-        _message("HQ finance transaction is unavailable."); return
+    if not system.has_method("upgrade_with_finance"): _message("HQ finance transaction is unavailable."); return
     var result: Dictionary = system.upgrade_with_finance(finance, int(main.get("day")))
     if bool(result.get("ok", false)):
         _message("HQ upgraded to %s for $%s." % [result["stage"], _money(int(result.get("cost", 0)))])
-        if main.has_method("_log"): main._log("HEADQUARTERS: upgraded to %s (-$%s)." % [result["stage"], _money(int(result["cost"])))])
+        if main.has_method("_log"): main._log("HEADQUARTERS: upgraded to %s (-$%s)." % [result["stage"], _money(int(result["cost"]))])
     else: _message(str(result.get("reason", "HQ upgrade unavailable.")))
 func _build_area() -> void:
     if system == null or main == null: return
-    if not system.has_method("build_area_with_finance"):
-        _message("HQ area finance transaction is unavailable."); return
+    if not system.has_method("build_area_with_finance"): _message("HQ area finance transaction is unavailable."); return
     var result: Dictionary = system.build_area_with_finance(finance, selected_area)
     if bool(result.get("ok", false)):
         _message("%s is now operational (level %d) for $%s." % [result["area"], int(result.get("level", 1)), _money(int(result.get("cost", 0)))])
-        if main.has_method("_log"): main._log("HQ AREA: %s level %d (-$%s)." % [result["area"], int(result.get("level", 1)), _money(int(result["cost"])))])
+        if main.has_method("_log"): main._log("HQ AREA: %s level %d (-$%s)." % [result["area"], int(result.get("level", 1)), _money(int(result["cost"]))])
     else: _message(str(result.get("reason", "Area unavailable.")))
 func _next_area() -> void:
     var index := area_ids.find(selected_area); if index < 0: index = 0
