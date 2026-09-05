@@ -8,7 +8,11 @@ var employee_system = EmployeeSystem.new()
 func _ready() -> void:
     add_child(state_adapter); add_child(employee_system); sync_roster()
 func get_active_employee_count()->int: return employee_system.get_active_employee_count()
-func get_roster()->Array[Dictionary]: return employee_system.get_roster()
+func get_roster()->Array[Dictionary]:
+    var roster: Array[Dictionary] = []
+    for employee in employee_system.employees:
+        if employee is Dictionary: roster.append(employee.duplicate(true))
+    return roster
 func get_daily_wage_total()->int: return employee_system.get_daily_wage_total()
 func get_morale_multiplier()->float: return employee_system.get_morale_multiplier()
 func get_productivity_multiplier(assignment:String="factory_001")->float: return employee_system.get_productivity_multiplier(assignment)
@@ -40,7 +44,6 @@ func train_employee(employee_id:String)->void:
     var day:=int(state_adapter.get_value("player","day",1)); var cost:=900
     var cash:=int(state_adapter.get_value("economy","cash",25000))
     if cash<cost: state_adapter.message("Training requires $%s."%state_adapter.money(cost)); return
-    # Charge finance first so training can never mutate an employee without payment.
     var spend:=state_adapter.spend(cost,"employee training")
     if not bool(spend.get("ok",false)): state_adapter.message(str(spend.get("message","Training requires sufficient cash."))); return
     var result=employee_system.train_employee(employee_id,day,cost)
@@ -63,4 +66,8 @@ func fire_employee(employee_id:String)->void:
     sync_roster(); state_adapter.message(str(result.get("message","Employee dismissed.")))
 func daily_update(company_performance:int=0)->Dictionary:
     var result:=employee_system.daily_update(int(state_adapter.get_value("player","day",1)),company_performance); sync_roster(); return result
-func sync_roster()->void: state_adapter.set_value("employees","roster",employee_system.get_roster())
+func sync_roster()->void:
+    var roster: Array[Dictionary] = []
+    for employee in employee_system.employees:
+        if employee is Dictionary: roster.append(employee.duplicate(true))
+    state_adapter.set_value("employees","roster",roster)
