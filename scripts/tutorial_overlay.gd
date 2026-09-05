@@ -74,12 +74,12 @@ func _build() -> void:
 func _layout_responsive() -> void:
     if overlay_root == null or panel == null:
         return
-    var viewport_size := get_viewport_rect().size
-    var w := viewport_size.x
-    var h := viewport_size.y
+    var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+    var w: float = viewport_size.x
+    var h: float = viewport_size.y
     if w <= 1.0 or h <= 1.0:
         return
-    var narrow := w < 700.0
+    var narrow: bool = w < 700.0
     if narrow:
         panel.position = Vector2(8, minf(426.0, maxf(420.0, h - 104.0)))
         panel.size = Vector2(w - 16.0, 86.0)
