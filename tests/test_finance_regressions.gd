@@ -32,6 +32,7 @@ func run() -> void:
     await test_interest_is_accrual_not_immediate_cash_outflow()
     await test_accrued_interest_is_not_cash_flow_until_paid()
     await test_repayment_rejects_non_positive_amount()
+    await test_settlement_rejects_negative_inputs()
     await test_multiple_loans_have_aggregate_scheduled_payment()
     await test_assumed_debt_does_not_create_cash()
     await test_asset_sale_is_investing_cash_flow_and_recognizes_gain_loss()
@@ -87,6 +88,23 @@ func test_repayment_rejects_non_positive_amount() -> void:
     check(not bool(zero.get("ok", false)), "zero repayment rejected")
     check(not bool(negative.get("ok", false)), "negative repayment rejected")
     check(finance.cash == before_cash and finance.debt == before_debt, "invalid repayments do not mutate ledger")
+    finance.free()
+    await process_frame
+
+func test_settlement_rejects_negative_inputs() -> void:
+    var finance = _finance()
+    finance.cash = 25000
+    var before := finance.capture_state()
+    var cases := [
+        [-1, 0, 0, 0],
+        [0, -1, 0, 0],
+        [0, 0, -1, 0],
+        [0, 0, 0, -1]
+    ]
+    for values in cases:
+        var result := finance.settle_sales(values[0], values[1], values[2], values[3])
+        check(not bool(result.get("ok", false)), "negative settlement input rejected")
+        check(finance.cash == int(before["cash"]) and finance.revenue == float(before["revenue"]) and finance.operating_expenses == float(before["operating_expenses"]), "rejected settlement leaves ledger unchanged")
     finance.free()
     await process_frame
 
