@@ -40,11 +40,11 @@ func _personality_for(name:String)->String:
 func refresh_candidates()->void:
     candidates.clear()
     for i in range(4):
-        var n:String=FIRST_NAMES[(i+_day)%FIRST_NAMES.size()]
-        var role:String=ROLES[(i+_day)%ROLES.size()]
-        var spec:String=SPECIALIZATIONS[(i+_day)%SPECIALIZATIONS.size()]
-        var base_skill:int=40+((i*9+_day*3)%31)
-        candidates.append({"id":"candidate_%d_%d"%[_day,i],"name":n,"role":role,"level":1,"skills":{"production":base_skill,"logistics":max(20,base_skill-10),"management":max(10,base_skill-25)},"experience":3+i*4,"salary":360+i*55,"loyalty":50+i*4,"morale":70,"productivity":0.55+i*0.05,"ambition":50+i*7,"specialization":spec,"status":"candidate","assignment":"factory_001"})
+        var n:String=FIRST_NAMES[(i+int(_day))%FIRST_NAMES.size()]
+        var role:String=ROLES[(i+int(_day))%ROLES.size()]
+        var spec:String=SPECIALIZATIONS[(i+int(_day))%SPECIALIZATIONS.size()]
+        var base_skill:int=40+((i*9+int(_day)*3)%31)
+        candidates.append({"id":"candidate_%d_%d"%[int(_day),i],"name":n,"role":role,"level":1,"skills":{"production":base_skill,"logistics":max(20,base_skill-10),"management":max(10,base_skill-25)},"experience":3+i*4,"salary":360+i*55,"loyalty":50+i*4,"morale":70,"productivity":0.55+i*0.05,"ambition":50+i*7,"specialization":spec,"status":"candidate","assignment":"factory_001"})
 
 func get_active_employee_count()->int:
     var count:=0
@@ -106,8 +106,20 @@ func get_employee(employee_id:String)->Dictionary:
     for employee in employees:
         if employee.get("id","")==employee_id: return employee
     return {}
-func get_roster()->Array[Dictionary]: return employees.duplicate(true)
-func get_candidates()->Array[Dictionary]: return candidates.duplicate(true)
+
+func get_roster()->Array[Dictionary]:
+    var roster: Array[Dictionary] = []
+    for employee in employees:
+        if employee is Dictionary:
+            roster.append(employee.duplicate(true))
+    return roster
+
+func get_candidates()->Array[Dictionary]:
+    var result: Array[Dictionary] = []
+    for candidate in candidates:
+        if candidate is Dictionary:
+            result.append(candidate.duplicate(true))
+    return result
 
 func hire_candidate(candidate_id:String,day:int)->Dictionary:
     for candidate in candidates:
