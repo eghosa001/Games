@@ -34,6 +34,30 @@ func set_value(domain: String, key: String, value) -> void:
     if state != null:
         state.set_value(domain, key, value)
 
+func spend(amount: int, reason: String = "expense") -> Dictionary:
+    # Compatibility bridge for existing domain systems. FinanceSystem remains
+    # authoritative; this method deliberately delegates instead of maintaining
+    # or mutating a second cash ledger.
+    var finance = _finance()
+    if finance == null:
+        return {"ok": false, "message": "FinanceSystem unavailable."}
+    var result: Dictionary = finance.spend(amount, reason)
+    if bool(result.get("ok", false)):
+        _sync_finance_mirrors(finance)
+    return result
+
+func receive(amount: int, reason: String = "income") -> Dictionary:
+    # Compatibility bridge for existing domain systems. FinanceSystem remains
+    # authoritative; this method deliberately delegates instead of maintaining
+    # or mutating a second cash ledger.
+    var finance = _finance()
+    if finance == null:
+        return {"ok": false, "message": "FinanceSystem unavailable."}
+    var result: Dictionary = finance.receive(amount, reason)
+    if bool(result.get("ok", false)):
+        _sync_finance_mirrors(finance)
+    return result
+
 func _sync_finance_mirrors(finance) -> void:
     var state = game_state()
     if state == null or finance == null:
