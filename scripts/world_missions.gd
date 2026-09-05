@@ -78,7 +78,7 @@ func choose_a() -> void:
             success = _spend(6000)
             if success:
                 parent.reputation += 5
-                parent.cash += 1500
+                _receive(1500, "world opportunity bonus")
         "distressed":
             success = _spend(12000)
             if success:
@@ -97,12 +97,25 @@ func choose_b() -> void:
         "distressed": parent.message = "You passed on the distressed asset. Another buyer may claim it."
     _complete("You declined the opportunity. The market will remember the choice.")
 
+func _finance() -> Node:
+    return get_node_or_null("/root/RenewFinanceSystem")
+
 func _spend(amount: int) -> bool:
-    if parent.cash < amount:
+    var finance := _finance()
+    if finance == null:
+        parent.message = "Finance system unavailable."
+        return false
+    var result: Dictionary = finance.spend(amount, "world opportunity")
+    if not bool(result.get("ok", false)):
         parent.message = "You need $%s to take this opportunity." % parent._money(amount)
         return false
-    parent.cash -= amount
     return true
+
+func _receive(amount: int, reason: String) -> bool:
+    var finance := _finance()
+    if finance == null: return false
+    var result: Dictionary = finance.receive(amount, reason)
+    return bool(result.get("ok", false))
 
 func _complete(result: String) -> void:
     completed += 1
