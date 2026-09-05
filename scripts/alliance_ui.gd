@@ -41,25 +41,13 @@ func _create_alliance() -> void:
     if not existing.is_empty(): return
     var game: Variant = get_tree().current_scene
     var finance: Variant = get_node_or_null("/root/RenewFinanceSystem")
-    if game == null or finance == null or not finance.has_method("can_afford") or not finance.can_afford(5000):
-        if game != null: game.message = "Insufficient cash to establish the alliance."
+    if game == null or finance == null:
+        if game != null: game.message = "Financial system is unavailable."
         return
-
-    # Finance is the only authority allowed to debit player cash. The alliance
-    # is created unfunded, then receives the already-authorized founding payment.
-    var result: Variant = alliance_system.create_alliance(PLAYER_ID, "RENEW Strategic Alliance", 0)
+    var result: Variant = alliance_system.create_alliance_with_finance(finance, PLAYER_ID, "RENEW Strategic Alliance", 5000)
     if bool(result.get("ok", false)):
-        var payment: Variant = finance.spend(5000, "alliance founding contribution")
-        if bool(payment.get("ok", false)):
-            var contribution: Variant = alliance_system.contribute(PLAYER_ID, 5000)
-            if bool(contribution.get("ok", false)):
-                game.cash = int(finance.cash)
-                game.message = "RENEW Strategic Alliance created. You are Chairman."
-            else:
-                game.cash = int(finance.cash)
-                game.message = "Alliance funding failed after the cash transaction."
-        else:
-            game.message = String(payment.get("message", "Alliance funding failed."))
+        game.cash = int(finance.cash)
+        game.message = String(result.get("message", "RENEW Strategic Alliance created. You are Chairman."))
     else:
         game.message = String(result.get("message", "Alliance creation failed."))
     _refresh()
@@ -68,24 +56,14 @@ func _contribute() -> void:
     if alliance_system == null: return
     var game: Variant = get_tree().current_scene
     var finance: Variant = get_node_or_null("/root/RenewFinanceSystem")
-    if game == null or finance == null or not finance.has_method("can_afford") or not finance.can_afford(1000):
-        if game != null: game.message = "Insufficient cash for this contribution."
+    if game == null or finance == null:
+        if game != null: game.message = "Financial system is unavailable."
         return
-
-    # Debit first from the canonical ledger. Only after a successful debit do
-    # we mutate the alliance treasury, eliminating the old dual-ledger ordering.
-    var payment: Variant = finance.spend(1000, "alliance contribution")
-    if not bool(payment.get("ok", false)):
-        game.message = String(payment.get("message", "Contribution could not be funded."))
-        _refresh()
-        return
-    var result: Variant = alliance_system.contribute(PLAYER_ID, 1000)
+    var result: Variant = alliance_system.contribute_from_finance(finance, PLAYER_ID, 1000)
     if bool(result.get("ok", false)):
         game.cash = int(finance.cash)
-        game.message = String(result.get("message", "Contribution made."))
-    else:
-        game.cash = int(finance.cash)
-        game.message = "Contribution was debited but could not be posted to the alliance ledger."
+    if game != null:
+        game.message = String(result.get("message", "Contribution could not be completed."))
     _refresh()
 
 func _project() -> void:
