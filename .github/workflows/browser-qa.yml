@@ -6,7 +6,7 @@ on:
       url:
         description: 'Deployed RENEW URL'
         required: false
-        default: 'https://eghosa001.github.io/Games/'
+        default: 'https://games-etat66slj-ogs7.vercel.app/'
         type: string
   push:
     branches: [main]
@@ -43,7 +43,7 @@ jobs:
 
       - name: Run live browser QA
         env:
-          RENEW_BROWSER_URL: ${{ inputs.url || 'https://eghosa001.github.io/Games/' }}
+          RENEW_BROWSER_URL: ${{ inputs.url || 'https://games-etat66slj-ogs7.vercel.app/' }}
         run: bash scripts/browser-qa.sh
 
       - name: Upload screenshots and diagnostics
