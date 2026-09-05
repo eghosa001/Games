@@ -214,7 +214,7 @@ func run() -> void:
     var debt_before_interest: int = finance_fixture.debt
     var debt_day = finance_fixture.settle_debt_day()
     check(int(debt_day.get("interest", -1)) == 4, "Finance accrues interest independently per instrument")
-    check(finance_fixture.cash == cash_before_interest - 4, "Finance cash reflects total multi-loan interest")
+    check(finance_fixture.cash == cash_before_interest, "Accrued interest does not reduce cash before repayment")
     check(float(finance_fixture.financing["loan_a"]["accrued_interest"]) == 3.0, "First financing stores accrued interest separately")
     check(float(finance_fixture.financing["loan_b"]["accrued_interest"]) == 1.0, "Second financing stores accrued interest separately")
     check(float(finance_fixture.financing["loan_a"]["balance"]) == 10003.0, "First financing balance includes accrued interest")
