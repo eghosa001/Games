@@ -21,19 +21,19 @@ func _read(path: String) -> String:
     return file.get_as_text()
 
 func run() -> void:
-    var market := _read("res://scripts/market_director.gd")
-    check(not market.contains("game.cash -="), "Market responses do not directly subtract game cash")
-    check(not market.contains("game.cash +="), "Market responses do not directly add game cash")
-    check(market.contains("finance.spend"), "Market spending routes through FinanceSystem")
-    check(market.contains("finance.receive"), "Market rewards route through FinanceSystem")
-    check(market.contains("_sync_legacy_cash"), "Market legacy mirror sync is explicit")
-
     var domain := _read("res://scripts/domain_system.gd")
     check(domain.contains("const FINANCE_MIRROR_FIELDS"), "DomainSystem declares finance mirror fields centrally")
     check(domain.contains("Never allow generic domain writes to mutate authoritative finance state"), "DomainSystem documents the finance write boundary")
     check(domain.contains("func _sync_finance_mirrors(finance)"), "DomainSystem has a dedicated finance-to-mirror sync path")
     check(not domain.contains("finance.set(\"cash\", int(value))"), "DomainSystem cannot write FinanceSystem cash through generic set_value")
     check(not domain.contains("finance.set(\"debt\", int(value))"), "DomainSystem cannot write FinanceSystem debt through generic set_value")
+
+    var market := _read("res://scripts/market_director.gd")
+    check(not market.contains("game.cash -="), "Market responses do not directly subtract game cash")
+    check(not market.contains("game.cash +="), "Market responses do not directly add game cash")
+    check(market.contains("finance.spend"), "Market spending routes through FinanceSystem")
+    check(market.contains("finance.receive"), "Market rewards route through FinanceSystem")
+    check(market.contains("_sync_legacy_cash"), "Market legacy mirror sync is explicit")
 
     var supply := _read("res://scripts/supply_command_system.gd")
     check(supply.contains("func sell_furniture(amount: int, price: int)"), "Supply command exposes furniture sales")
@@ -43,7 +43,7 @@ func run() -> void:
     check(supply.contains("chain.restore_state(chain_before)"), "Supply transactions can roll back inventory on finance failure")
 
     var supply_chain := _read("res://scripts/supply_chain_system.gd")
-    check(supply_chain.contains("const SYSTEM_VERSION := 6"), "Supply chain inventory ledger version is incremented")
+    check(supply_chain.contains("const SYSTEM_VERSION := 7"), "Supply chain inventory ledger version is incremented")
     check(supply_chain.contains("func _sync_production_mirror(resources: Array)"), "Supply chain owns production inventory reconciliation")
     check(supply_chain.contains("production.inventory[product] = max(0, int(production.inventory.get(product, 0)) - amount)"), "Failed warehouse output registration reverses production mirror")
     check(supply_chain.contains("_sync_production_mirror([product])"), "Successful product receipt reconciles production mirror")
@@ -71,8 +71,8 @@ func run() -> void:
 
     var finance_script := _read("res://scripts/finance_system.gd")
     check(finance_script.contains("const OPENING_EQUITY := 25000.0"), "Finance ledger has an explicit opening equity balance")
-    check(finance_script.contains("retained_earnings -= amount"), "Finance spending records the equity effect of expenses")
-    check(finance_script.contains("retained_earnings += amount"), "Finance receipts record the equity effect of revenue")
+    check(finance_script.contains("retained_earnings -= float(amount)"), "Finance spending records the equity effect of expenses")
+    check(finance_script.contains("retained_earnings += float(amount)"), "Finance receipts record the equity effect of revenue")
     check(finance_script.contains("func capture_state()"), "FinanceSystem exposes transaction snapshots")
     check(finance_script.contains("func restore_state(snapshot: Dictionary)"), "FinanceSystem exposes transaction rollback")
     check(finance_script.contains("accrued_interest"), "FinanceSystem models accrued interest explicitly")
