@@ -32,9 +32,11 @@ func _process(delta: float) -> void:
         queue_redraw()
 
 func _install() -> void:
-    hud_root = get_parent().get_node_or_null("/root/Renew/UI/MainHUD") if get_parent() != null else null
-    if hud_root == null:
-        hud_root = get_parent() if get_parent() is Control else null
+    var main_hud := get_node_or_null("/root/Ren/UI/MainHUD")
+    if main_hud != null:
+        hud_root = main_hud.get("root") as Control
+    if hud_root == null and get_parent() is Control:
+        hud_root = get_parent() as Control
     if hud_root == null:
         return
     _style_existing_controls(hud_root)
@@ -133,22 +135,15 @@ func _draw() -> void:
     var mobile := s.x < 760.0
     var dock_h := 78.0 if mobile else 0.0
     var top_h := 86.0 if mobile else 92.0
-
-    # Subtle cinematic frame. It is intentionally transparent over the authored world.
     draw_rect(Rect2(0, 0, s.x, 2), Color(GOLD.r, GOLD.g, GOLD.b, 0.28), true)
     draw_rect(Rect2(0, 0, s.x, top_h), Color(DEEP.r, DEEP.g, DEEP.b, 0.72), true)
     draw_line(Vector2(18, top_h - 1), Vector2(s.x - 18, top_h - 1), Color(EDGE.r, EDGE.g, EDGE.b, 0.72), 1.0)
-
-    # Corner brackets create a tactical/simulation HUD language rather than app chrome.
     _corner(Vector2(18, top_h + 14), 26.0, GOLD)
     _corner(Vector2(s.x - 18, top_h + 14), -26.0, Color(GREEN.r, GREEN.g, GREEN.b, 0.72))
-
     if mobile:
         _draw_mobile_command_dock(s, dock_h)
     else:
         _draw_desktop_command_rail(s)
-
-    # Live signal lights: deliberately tiny, like a strategy-game status indicator.
     var base := Vector2(s.x - (78 if mobile else 118), 28)
     for i in range(3):
         var alpha := 0.42 + 0.28 * sin(pulse * 1.7 + i * 1.8)
