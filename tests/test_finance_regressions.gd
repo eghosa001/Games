@@ -34,6 +34,8 @@ func run() -> void:
     await test_repayment_rejects_non_positive_amount()
     await test_multiple_loans_have_aggregate_scheduled_payment()
     await test_assumed_debt_does_not_create_cash()
+    await test_asset_sale_is_investing_cash_flow_and_recognizes_gain_loss()
+    await test_equity_buyback_reduces_equity_once()
     print("\nRENEW FINANCE REGRESSION RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
 
@@ -109,5 +111,38 @@ func test_assumed_debt_does_not_create_cash() -> void:
     check(finance.cash == before_cash, "assumed debt creates no cash inflow")
     check(finance.debt == 12000, "assumed debt increases principal debt")
     check(bool(finance.validate_invariants().get("ok", false)), "finance invariants hold after debt assumption")
+    finance.free()
+    await process_frame
+
+func test_asset_sale_is_investing_cash_flow_and_recognizes_gain_loss() -> void:
+    var finance = _finance()
+    finance.cash = 25000
+    finance.fixed_assets = 10000
+    var revenue_before = finance.revenue
+    var equity_before = float(finance.balance_sheet()["equity"])
+    var result = finance.record_asset_sale("factory", 6500, 10000)
+    check(bool(result.get("ok", false)), "asset sale accepted")
+    check(finance.cash == 31500, "asset sale increases cash by sale proceeds")
+    check(abs(float(finance.fixed_assets)) < 0.01, "asset book value leaves fixed assets")
+    check(abs(finance.revenue - revenue_before) < 0.01, "asset sale does not create operating revenue")
+    check(float(finance.cash_flow_statement()["investing"]) == 6500.0, "asset sale is recorded as investing cash flow")
+    check(abs(finance.retained_earnings + 3500.0) < 0.01, "asset sale loss is recognized in retained earnings")
+    check(abs(float(finance.balance_sheet()["equity"]) - (equity_before - 3500.0)) < 0.01, "asset sale gain or loss changes equity by the disposal result")
+    finance.free()
+    await process_frame
+
+func test_equity_buyback_reduces_equity_once() -> void:
+    var finance = _finance()
+    finance.cash = 25000
+    finance.equity_contributed = 10000
+    finance.retained_earnings = 5000
+    var equity_before = float(finance.balance_sheet()["equity"])
+    var result = finance.buyback_equity(2000)
+    check(bool(result.get("ok", false)), "equity buyback accepted")
+    check(finance.cash == 23000, "buyback reduces cash once")
+    check(abs(finance.equity_contributed - 10000.0) < 0.01, "buyback does not reduce contributed capital and retained earnings together")
+    check(abs(finance.retained_earnings - 3000.0) < 0.01, "buyback reduces retained earnings once")
+    check(abs(float(finance.balance_sheet()["equity"]) - (equity_before - 2000.0)) < 0.01, "buyback reduces total equity by the cash paid")
+    check(float(finance.cash_flow_statement()["financing"]) == -2000.0, "buyback is recorded as financing cash flow")
     finance.free()
     await process_frame
