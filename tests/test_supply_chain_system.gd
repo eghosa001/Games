@@ -91,5 +91,12 @@ func run() -> void:
     check(chain.warehouse == warehouse_before_invalid_bundle, "Rejected bundle leaves warehouse unchanged")
     check(chain.total_freight_cost == freight_before_invalid_bundle, "Rejected bundle leaves freight totals unchanged")
 
+    var timber_stock_before_capacity := float(economy.resources["timber"]["stock"])
+    var timber_warehouse_before_capacity := chain.stock("timber")
+    var capacity_failure := chain.procure("timber", WAREHOUSE_LIMIT, 100000, 1)
+    check(not bool(capacity_failure.get("ok", false)) and capacity_failure.get("reason", "") == "warehouse_capacity", "Warehouse capacity rejects overflow")
+    check(float(economy.resources["timber"]["stock"]) == timber_stock_before_capacity, "Warehouse overflow does not remove market stock")
+    check(chain.stock("timber") == timber_warehouse_before_capacity, "Warehouse overflow does not add partial stock")
+
     print("SUPPLY CHAIN SYSTEM RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
