@@ -14,7 +14,6 @@ const GREEN := Color("65b38f")
 const MUTED := Color("6f858a")
 
 var _time := 0.0
-var _last_signature := ""
 
 func _ready() -> void:
     z_index = -15
@@ -47,8 +46,8 @@ func _draw_landscape(w: float, h: float) -> void:
         draw_rect(Rect2(bx, horizon - bh, 105.0, bh), Color("10242c"), true)
         if i % 2 == 0:
             for wy in range(int(horizon - bh + 12.0), int(horizon - 8.0), 19):
-                draw_rect(Rect2(bx + 14, wy, 5, 3), Color(GOLD, 0.18), true)
-                draw_rect(Rect2(bx + 40, wy, 5, 3), Color(GLASS, 0.13), true)
+                draw_rect(Rect2(bx + 14, wy, 5, 3), Color(GOLD.r, GOLD.g, GOLD.b, 0.18), true)
+                draw_rect(Rect2(bx + 40, wy, 5, 3), Color(GLASS.r, GLASS.g, GLASS.b, 0.13), true)
     draw_line(Vector2(0, horizon), Vector2(w, horizon), Color("50747a", 0.24), 2.0)
     _draw_atmosphere(Vector2(w * 0.18, horizon * 0.55), minf(240.0, w * 0.28), Color("174139"))
     _draw_atmosphere(Vector2(w * 0.82, horizon * 0.45), minf(280.0, w * 0.30), Color("193744"))
@@ -66,7 +65,7 @@ func _draw_districts(w: float, h: float) -> void:
     for i in range(widths.size()):
         var dw := w * widths[i]
         draw_rect(Rect2(x, base_y, dw, h - base_y), Color("0f2025") if i % 2 == 0 else Color("10232a"), true)
-        draw_string(ThemeDB.fallback_font, Vector2(x + 12, base_y + 24), names[i], HORIZONTAL_ALIGNMENT_LEFT, dw - 24, 9, Color(MUTED, 0.65))
+        draw_string(ThemeDB.fallback_font, Vector2(x + 12, base_y + 24), names[i], HORIZONTAL_ALIGNMENT_LEFT, dw - 24, 9, Color(MUTED.r, MUTED.g, MUTED.b, 0.65))
         x += dw
 
 func _draw_roads(w: float, h: float) -> void:
@@ -79,13 +78,13 @@ func _draw_roads(w: float, h: float) -> void:
     draw_line(Vector2(w * 0.42, horizon), Vector2(w * 0.04, h), ROAD_EDGE, 2.0)
     draw_line(Vector2(w * 0.58, horizon), Vector2(w * 0.96, h), ROAD_EDGE, 2.0)
     for t in range(7):
-        var p := (fmod(_time * 0.045 + float(t) * 0.15, 1.0))
+        var p := fmod(_time * 0.045 + float(t) * 0.15, 1.0)
         var y := lerpf(horizon + 8.0, h - 20.0, p * p)
         var half := lerpf(7.0, w * 0.18, p)
-        draw_line(Vector2(w * 0.5 - half, y), Vector2(w * 0.5 + half, y), Color(GOLD, 0.16), 2.0)
-    draw_line(Vector2(0, road_y), Vector2(w, road_y), Color(ROAD_EDGE, 0.6), 5.0)
+        draw_line(Vector2(w * 0.5 - half, y), Vector2(w * 0.5 + half, y), Color(GOLD.r, GOLD.g, GOLD.b, 0.16), 2.0)
+    draw_line(Vector2(0, road_y), Vector2(w, road_y), Color(ROAD_EDGE.r, ROAD_EDGE.g, ROAD_EDGE.b, 0.6), 5.0)
     for x in range(30, int(w), 100):
-        draw_line(Vector2(x, road_y - 4), Vector2(x + 35, road_y - 4), Color(GOLD, 0.24), 2.0)
+        draw_line(Vector2(x, road_y - 4), Vector2(x + 35, road_y - 4), Color(GOLD.r, GOLD.g, GOLD.b, 0.24), 2.0)
 
 func _draw_facilities(w: float, h: float) -> void:
     var anchors := [Vector2(w * 0.17, h * 0.62), Vector2(w * 0.37, h * 0.69), Vector2(w * 0.67, h * 0.61), Vector2(w * 0.84, h * 0.72)]
@@ -123,14 +122,15 @@ func _draw_research_center(o: Vector2) -> void:
     draw_rect(Rect2(o.x - 70, o.y - 70, 140, 70), Color("19343c"), true)
     draw_colored_polygon(PackedVector2Array([Vector2(o.x-80,o.y-70),Vector2(o.x+80,o.y-70),Vector2(o.x+48,o.y-90),Vector2(o.x-48,o.y-90)]), Color("25434a"))
     for i in range(4):
-        draw_rect(Rect2(o.x - 54 + i*30, o.y-48, 20, 24), Color("8bb7b1", 0.18 + 0.08*sin(_time+i)), true)
+        var a := 0.18 + 0.08 * sin(_time + i)
+        draw_rect(Rect2(o.x - 54 + i*30, o.y-48, 20, 24), Color(GLASS.r, GLASS.g, GLASS.b, a), true)
     _facility_label(o + Vector2(-70, 18), "RESEARCH")
 
 func _facility_label(pos: Vector2, text: String) -> void:
-    draw_string(ThemeDB.fallback_font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, 180, 9, Color(MUTED, 0.82))
+    draw_string(ThemeDB.fallback_font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, 180, 9, Color(MUTED.r, MUTED.g, MUTED.b, 0.82))
 
 func _draw_hq(w: float, h: float) -> void:
-    var hq := get_node_or_null("/root/Renew/Systems/HeadquartersSystem")
+    var hq: Node = get_node_or_null("/root/Renew/Systems/HeadquartersSystem")
     if hq == null:
         hq = get_node_or_null("/root/RenewHeadquartersSystem")
     var stage := 0
@@ -139,32 +139,32 @@ func _draw_hq(w: float, h: float) -> void:
         if hq.has_method("get_stage_index"): stage = int(hq.get_stage_index())
         if hq.has_method("get_stage"): stage_name = str(hq.get_stage())
     var o := Vector2(w * 0.51, minf(485.0, h * 0.60))
-    var height := 62.0 + float(stage) * 48.0
+    var building_height := 62.0 + float(stage) * 48.0
     var width := 100.0 + float(stage) * 24.0
-    draw_rect(Rect2(o.x-width*0.5, o.y-height, width, height), Color("1b3540"), true)
+    draw_rect(Rect2(o.x-width*0.5, o.y-building_height, width, building_height), Color("1b3540"), true)
     for floor in range(max(2, stage + 2)):
         var fy := o.y - 16.0 - float(floor) * 34.0
         draw_line(Vector2(o.x-width*0.42, fy), Vector2(o.x+width*0.42, fy), Color("3c5961"), 1.0)
         for window in range(4):
             var wx := o.x - width*0.32 + float(window)*width*0.21
-            draw_rect(Rect2(wx, fy-17, width*0.12, 12), Color(GLASS, 0.35 + 0.08*float(stage)), true)
+            draw_rect(Rect2(wx, fy-17, width*0.12, 12), Color(GLASS.r, GLASS.g, GLASS.b, 0.35 + 0.08*float(stage)), true)
     if stage >= 2:
         draw_rect(Rect2(o.x-width*0.62, o.y-16, width*0.16, 16), Color("314a52"), true)
         draw_rect(Rect2(o.x+width*0.46, o.y-28, width*0.16, 28), Color("314a52"), true)
     if stage >= 3:
-        draw_rect(Rect2(o.x-width*0.18, o.y-height-32, width*0.36, 32), Color("24434b"), true)
+        draw_rect(Rect2(o.x-width*0.18, o.y-building_height-32, width*0.36, 32), Color("24434b"), true)
     if stage >= 4:
-        draw_line(Vector2(o.x, o.y-height-32), Vector2(o.x, o.y-height-78), GOLD, 3.0)
-        draw_circle(Vector2(o.x, o.y-height-82), 5.0, GOLD)
+        draw_line(Vector2(o.x, o.y-building_height-32), Vector2(o.x, o.y-building_height-78), GOLD, 3.0)
+        draw_circle(Vector2(o.x, o.y-building_height-82), 5.0, GOLD)
     draw_string(ThemeDB.fallback_font, Vector2(o.x-110, o.y+20), "HEADQUARTERS • %s" % stage_name.to_upper(), HORIZONTAL_ALIGNMENT_CENTER, 220, 10, Color("d7e3e4"))
 
 func _draw_life(w: float, h: float) -> void:
-    # Small animated vehicles, workers and landscaping details keep the world alive.
+    var road_y := minf(535.0, h * 0.68)
     for i in range(5):
         var p := fmod(_time * (0.018 + i * 0.003) + float(i) * 0.19, 1.0)
         var x := lerpf(-40.0, w + 40.0, p)
-        var y := minf(535.0, h * 0.68) + float(i % 2) * 12.0
-        draw_rect(Rect2(x, y-4, 18, 7), Color("d2a95f", 0.7), true)
+        var y := road_y + float(i % 2) * 12.0
+        draw_rect(Rect2(x, y-4, 18, 7), Color(GOLD.r, GOLD.g, GOLD.b, 0.7), true)
         draw_circle(Vector2(x+4,y+4), 3, Color("071116"))
         draw_circle(Vector2(x+15,y+4), 3, Color("071116"))
     for i in range(12):
@@ -174,11 +174,11 @@ func _draw_life(w: float, h: float) -> void:
         draw_circle(Vector2(x,y-15), 7.0, Color("29523f", 0.75))
 
 func _draw_region_map(w: float, h: float) -> void:
-    var regions_node := get_node_or_null("/root/Renew/World/RegionController")
-    if regions_node == null or not "regions" in regions_node:
+    var regions_node: Node = get_node_or_null("/root/Renew/World/RegionController")
+    if regions_node == null:
         return
     var data = regions_node.regions
-    if data == null or not "regions" in data:
+    if data == null:
         return
     var regions: Array = data.regions
     if regions.is_empty():
@@ -196,7 +196,10 @@ func _draw_region_map(w: float, h: float) -> void:
         var pos := panel.position+Vector2(10+col*cell_w, 34+row*38)
         var active := i == selected
         var unlocked := bool(regions[i].get("unlocked", false))
-        draw_circle(pos+Vector2(8,0), 5.0 if active else 3.5, Color(GOLD if active else GREEN, 0.9 if unlocked else 0.25))
-        draw_string(ThemeDB.fallback_font, pos+Vector2(18,4), str(regions[i].get("name", "Region")), HORIZONTAL_ALIGNMENT_LEFT, cell_w-20, 9, Color("d7e3e4") if unlocked else Color("61777d"))
+        var dot_color: Color = GOLD if active else GREEN
+        dot_color.a = 0.9 if unlocked else 0.25
+        draw_circle(pos+Vector2(8,0), 5.0 if active else 3.5, dot_color)
+        var text_color := Color("d7e3e4") if unlocked else Color("61777d")
+        draw_string(ThemeDB.fallback_font, pos+Vector2(18,4), str(regions[i].get("name", "Region")), HORIZONTAL_ALIGNMENT_LEFT, cell_w-20, 9, text_color)
         if i < regions.size()-1:
             draw_line(pos+Vector2(14,10), pos+Vector2(cell_w-6,10), Color("29434a",0.7), 1.0)
