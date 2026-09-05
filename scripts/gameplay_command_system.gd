@@ -30,7 +30,67 @@ func open_business()->void:business_system.open_business()
 func choose_business_purpose(index:int)->void:business_system.choose_business_purpose(index)
 func create_business()->void:business_system.create_business()
 func buy_inputs()->void:supply_system.buy_inputs()
-func produce_goods()->void:business_system.produce_goods()
+
+# Production is a cross-ledger operation. BusinessSystem predates the current
+# transaction boundary, so the gameplay command captures every mutable ledger
+# before entering it and restores all of them if the operation reports failure.
+# This keeps the public gameplay path atomic even when an internal operation
+# fails after partially mutating SupplyChain, Production, Economy or Finance.
+func _production_transaction_participants()->Array:
+    return [
+        {"name":"game_state","node":get_node_or_null("/root/RenewGameState")},
+        {"name":"finance","node":get_node_or_null("/root/RenewFinanceSystem")},
+        {"name":"production","node":business_system.production},
+        {"name":"economy","node":supply_system.economy},
+        {"name":"supply_chain","node":business_system.supply_chain},
+        {"name":"business","node":business_system},
+    ]
+
+func _capture_production_transaction() -> Dictionary:
+    var snapshot:Dictionary={"participants":{}}
+    for participant in _production_transaction_participants():
+        var node=participant.get("node")
+        var name:=str(participant.get("name","unknown"))
+        if node==null:
+            return {"ok":false,"message":"Production transaction cannot start: %s is unavailable."%name}
+        if not node.has_method("capture_state") or not node.has_method("restore_state"):
+            return {"ok":false,"message":"Production transaction cannot start: %s is not rollback-capable."%name}
+        snapshot["participants"][name]=node.capture_state()
+    return {"ok":true,"snapshot":snapshot}
+
+func _restore_production_transaction(snapshot:Dictionary)->void:
+    var participants:Dictionary=snapshot.get("participants",{})
+    # Restore in reverse dependency order: business/UI state first, then the
+    # ledgers it orchestrates. Each restore is defensive so one broken
+    # participant cannot prevent the remaining ledgers from being recovered.
+    var ordered:Array=["business","supply_chain","economy","production","finance","game_state"]
+    var by_name:Dictionary={}
+    for participant in _production_transaction_participants():
+        by_name[str(participant.get("name","unknown"))]=participant.get("node")
+    for name in ordered:
+        var node=by_name.get(name)
+        var state=participants.get(name,null)
+        if node!=null and state is Dictionary:
+            node.restore_state(state)
+
+func produce_goods()->void:
+    var transaction:=_capture_production_transaction()
+    if not bool(transaction.get("ok",false)):
+        _set_state("company","message",str(transaction.get("message","Production transaction could not start.")))
+        return
+    var before_message:=str(_state_value("company","message",""))
+    business_system.produce_goods()
+    var after_message:=str(_state_value("company","message",""))
+    # BusinessSystem's successful production path always reports a produced
+    # quantity; all known failure paths report a stopping/error message.
+    var success:=after_message.find(" produced ")>=0 and after_message.find("stopped")<0
+    if success:
+        return
+    _restore_production_transaction(transaction["snapshot"])
+    # Preserve the failure reason after rollback; UI state is deliberately not
+    # allowed to erase the diagnostic that caused the transaction to abort.
+    _set_state("company","message",after_message if after_message!=before_message else "Production transaction failed and was rolled back.")
+
 func hire_employee()->void:employee_system.hire_employee()
 func upgrade_business()->void:business_system.upgrade_business()
 func marketing_campaign()->void:business_system.marketing_campaign()
@@ -47,8 +107,8 @@ func acquire_rival_asset()->void:relationship_system.acquire_rival_asset()
 func select_expansion(index:int)->void:expansion_system.select_expansion(index)
 func select_district(index:int)->void:expansion_system.select_district(index)
 func buy_expansion()->void:expansion_system.buy_expansion()
-func upgrade_expansion()->void:expansion_system.upgrade_expansion()
 func upgrade_transport()->Dictionary:return supply_system.upgrade_transport()
+func upgrade_expansion()->void:expansion_system.upgrade_expansion()
 func sign_contract()->void:contract_system.sign_contract()
 func cancel_active_contract(reason:String="player cancelled")->void:contract_system.cancel_active_contract(reason)
 func take_loan()->void:finance_system.take_loan()
@@ -94,7 +154,7 @@ func _daily_transaction_participants()->Array:
         {"name":"competitor_reactions","node":competitor_reactions},
     ]
 
-func _capture_daily_transaction() -> Dictionary:
+func _capture_daily_transaction()->Dictionary:
     var snapshot:Dictionary={"participants":{}}
     for participant in _daily_transaction_participants():
         var node=participant.get("node")
@@ -111,7 +171,7 @@ func _restore_daily_transaction(snapshot:Dictionary)->void:
     for participant in _daily_transaction_participants():
         var node=participant.get("node")
         var name:=str(participant.get("name","unknown"))
-        if node!=null and participants.get(name, null) is Dictionary:
+        if node!=null and participants.get(name,null) is Dictionary:
             node.restore_state(participants[name])
 
 func advance_day()->void:
@@ -133,7 +193,6 @@ func advance_day()->void:
     if units_sold>0:
         var demand_result:Dictionary=supply_system.economy.register_customer_demand("furniture",units_sold)
         if bool(demand_result.get("ok",false)):_log("MARKET: customers bought %d furniture; upstream resource demand increased."%units_sold)
-    # SupplyChainSystem owns physical inventory; production is its mirror, never the source for this write.
     if business_system.supply_chain.has_method("_sync_production_mirror"):
         business_system.supply_chain._sync_production_mirror(business_system.supply_chain.warehouse.keys())
 
