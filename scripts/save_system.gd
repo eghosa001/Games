@@ -9,6 +9,7 @@ const BACKUP_PATH := "user://renew_save.backup.json"
 const TEMP_PATH := "user://renew_save.tmp.json"
 const BACKUP_TEMP_PATH := "user://renew_save.backup.tmp.json"
 const CURRENT_VERSION := 8
+const REQUIRED_DOMAINS := ["player", "company", "properties", "economy", "businesses", "branches", "employees", "resources", "production", "supply_chain", "contracts", "competitors", "finance", "alliances", "diplomacy", "regions", "infrastructure", "technology", "events", "progression", "history", "news", "analytics", "acquisition", "bankruptcy"]
 
 static func save_game(_state: Dictionary) -> bool:
     var game_state = _game_state()
@@ -42,6 +43,11 @@ static func save_game(_state: Dictionary) -> bool:
             return false
     var rename_error := DirAccess.rename_absolute(ProjectSettings.globalize_path(TEMP_PATH), ProjectSettings.globalize_path(SAVE_PATH))
     if rename_error != OK:
+        # The primary was removed immediately before the rename. Restore it
+        # from the temporary backup so a failed save cannot destroy the last
+        # playable save.
+        if had_primary and FileAccess.file_exists(BACKUP_TEMP_PATH):
+            DirAccess.copy_absolute(ProjectSettings.globalize_path(BACKUP_TEMP_PATH), ProjectSettings.globalize_path(SAVE_PATH))
         return false
 
     if had_primary:
@@ -90,7 +96,7 @@ static func validate_save(data: Dictionary) -> bool:
         return false
     if not data.has("domains") or not (data["domains"] is Dictionary):
         return false
-    for domain in ["player", "company", "properties", "economy", "businesses", "branches", "employees", "resources", "production", "supply_chain", "contracts", "competitors", "finance", "alliances", "diplomacy", "regions", "infrastructure", "technology", "events", "progression", "history", "news", "analytics", "acquisition", "bankruptcy"]:
+    for domain in REQUIRED_DOMAINS:
         if not data["domains"].has(domain) or not (data["domains"][domain] is Dictionary):
             return false
     return true
@@ -106,15 +112,21 @@ static func migrate(data: Dictionary, version: int) -> Dictionary:
         6: result["schema_version"] = 7
         7: result = _migrate_v7_to_v8(result)
         _: return {}
-    return result
+    return _ensure_required_domains(result)
 
-static func _migrate_v7_to_v8(data: Dictionary) -> Dictionary:
+static func _ensure_required_domains(data: Dictionary) -> Dictionary:
     var domains = data.get("domains", {})
     if not domains is Dictionary:
         domains = {}
-    for domain in ["player","company","properties","businesses","branches","employees","economy","resources","production","supply_chain","contracts","competitors","alliances","regions","technology","events","progression","history","news","analytics","acquisition","bankruptcy","infrastructure","diplomacy"]:
-        if not domains.has(domain):
+    for domain in REQUIRED_DOMAINS:
+        if not domains.has(domain) or not (domains[domain] is Dictionary):
             domains[domain] = {}
+    data["domains"] = domains
+    return data
+
+static func _migrate_v7_to_v8(data: Dictionary) -> Dictionary:
+    data = _ensure_required_domains(data)
+    var domains = data["domains"]
     if domains.has("competitors") and domains["competitors"] is Dictionary and not domains["competitors"].has("reaction_system"):
         domains["competitors"]["reaction_system"] = {}
     data["domains"] = domains
