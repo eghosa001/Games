@@ -1,10 +1,7 @@
-# ===============================================
-# File: scripts/simulation_system.gd
-# ===============================================
 extends Node
 
 const DemandModel = preload("res://scripts/demand_model.gd")
-const SYSTEM_VERSION := 9
+const SYSTEM_VERSION := 10
 
 var command_count: int = 0
 var last_command: String = ""
@@ -72,7 +69,62 @@ func _apply_cash_delta(state: Dictionary, amount: int, reason: String) -> bool:
     _sync_state_from_finance(state)
     return true
 
+func _transaction_capture(context: Dictionary) -> Dictionary:
+    var snapshot: Dictionary = {}
+    var game_state = _game_state()
+    if game_state != null and game_state.has_method("capture"):
+        snapshot["game_state"] = game_state.capture()
+    var finance = _finance()
+    if finance != null and finance.has_method("capture_state"):
+        snapshot["finance"] = finance.capture_state()
+    var production = _production()
+    if production != null and production.has_method("capture_state"):
+        snapshot["production"] = production.capture_state()
+    var seen: Dictionary = {}
+    for key in ["rivals", "economy", "events", "expansion", "districts", "employee_system", "business_system", "business", "contracts"]:
+        var node = context.get(key)
+        if node == null or seen.has(node):
+            continue
+        seen[node] = true
+        if node.has_method("capture_state"):
+            snapshot["node_%s" % key] = node.capture_state()
+    return snapshot
+
+func _transaction_restore(snapshot: Dictionary, context: Dictionary) -> void:
+    if snapshot.is_empty():
+        return
+    var game_state = _game_state()
+    if game_state != null and snapshot.get("game_state", {}) is Dictionary:
+        game_state.restore(snapshot["game_state"])
+    var finance = _finance()
+    if finance != null and snapshot.get("finance", {}) is Dictionary and finance.has_method("restore_state"):
+        finance.restore_state(snapshot["finance"])
+    var production = _production()
+    if production != null and snapshot.get("production", {}) is Dictionary and production.has_method("restore_state"):
+        production.restore_state(snapshot["production"])
+    for key in ["rivals", "economy", "events", "expansion", "districts", "employee_system", "business_system", "business", "contracts"]:
+        var node = context.get(key)
+        if node == null:
+            continue
+        var key_name := "node_%s" % key
+        if snapshot.get(key_name, {}) is Dictionary and node.has_method("restore_state"):
+            node.restore_state(snapshot[key_name])
+
 func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
+    var transaction_snapshot := _transaction_capture(context)
+    var result := _advance_day_impl(state, context)
+    if not bool(result.get("ok", false)):
+        _transaction_restore(transaction_snapshot, context)
+        return result
+    var finance = _finance()
+    if finance != null and finance.has_method("validate_invariants"):
+        var invariants: Dictionary = finance.validate_invariants()
+        if not bool(invariants.get("ok", false)):
+            _transaction_restore(transaction_snapshot, context)
+            return {"ok": false, "message": "Daily simulation rolled back: finance invariant failed (%s)." % str(invariants.get("error", "unknown"))}
+    return result
+
+func _advance_day_impl(state: Dictionary, context: Dictionary) -> Dictionary:
     if not bool(state.get("business_open", false)):
         return {"ok": false, "message": "No operating business yet."}
 
@@ -135,6 +187,8 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     var administrative_overhead = 650 + capacity_level * 100
 
     var settlement = finance.settle_sales(sales, wages, administrative_overhead + contract_penalty, contract_income)
+    if not bool(settlement.get("ok", false)):
+        return {"ok": false, "message": str(settlement.get("message", "Daily settlement failed."))}
     var profit = int(settlement.get("profit", 0))
     state["last_sales"] = sales + contract_income
     state["last_profit"] = profit
@@ -168,14 +222,14 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
         var event = events.roll()
         var event_cash = int(event.get("cash", 0))
         if event_cash != 0 and not _apply_cash_delta(state, event_cash, "dynamic event: %s" % str(event.get("title", "event"))):
-            _append_log(state, "EVENT: cash effect could not be applied.")
+            return {"ok": false, "message": "Dynamic event cash effect could not be applied."}
         state["reputation"] += int(event.get("rep", 0))
         _append_log(state, "EVENT: %s — %s" % [event["title"], event["text"]])
 
     var empire = expansion.operate_day()
     var empire_profit = int(empire.get("profit", 0))
     if empire_profit != 0 and not _apply_cash_delta(state, empire_profit, "empire daily operating result"):
-        _append_log(state, "EMPIRE: daily cash result could not be applied.")
+        return {"ok": false, "message": "Empire daily cash result could not be applied."}
     if int(empire["businesses"]) > 0:
         _append_log(state, "EMPIRE: %d businesses generated $%s net." % [int(empire["businesses"]), _money(empire_profit)])
 
@@ -240,34 +294,20 @@ func _execute_contract(state: Dictionary, available_after_sales: int) -> Diction
     return result
 
 func _append_log(state: Dictionary, text: String) -> void:
-    if text.is_empty():
-        return
+    if text.is_empty(): return
     var logs = state.get("log_lines", [])
     if logs is Array:
         logs.append(text)
-        if logs.size() > 100:
-            logs.pop_front()
+        if logs.size() > 100: logs.pop_front()
         state["log_lines"] = logs
 
-func _money(value: int) -> String:
-    return str(value)
+func _money(value: int) -> String: return str(value)
 
 func end_day(args: Dictionary = {}) -> Dictionary:
-    # Legacy compatibility endpoint. The canonical day lifecycle is
-    # advance_day(state, context), invoked by GameplayCommandSystem.
-    # This endpoint must never settle debt or mutate the market independently.
-    return {
-        "ok": false,
-        "message": "Legacy end_day is disabled. Use the canonical advance_day flow."
-    }
+    return {"ok": false, "message": "Legacy end_day is disabled. Use the canonical advance_day flow."}
 
 func capture_state() -> Dictionary:
-    var result = {
-        "system_version": SYSTEM_VERSION,
-        "command_count": command_count,
-        "last_command": last_command,
-        "last_result": last_result.duplicate(true)
-    }
+    var result = {"system_version": SYSTEM_VERSION, "command_count": command_count, "last_command": last_command, "last_result": last_result.duplicate(true)}
     var finance = _finance()
     var production = _production()
     if finance and finance.has_method("capture_state"): result["finance"] = finance.capture_state()
@@ -284,24 +324,18 @@ func restore_state(snapshot: Dictionary) -> void:
     if finance and snapshot.get("finance", {}) is Dictionary and finance.has_method("restore_state"): finance.restore_state(snapshot["finance"])
     if production and snapshot.get("production", {}) is Dictionary and production.has_method("restore_state"): production.restore_state(snapshot["production"])
 
-func _finance() -> Node:
-    return get_node_or_null("/root/RenewFinanceSystem")
-
-func _game_state() -> Node:
-    return get_node_or_null("/root/RenewGameState")
+func _finance() -> Node: return get_node_or_null("/root/RenewFinanceSystem")
+func _game_state() -> Node: return get_node_or_null("/root/RenewGameState")
 
 func _economy():
     var scene = get_tree().current_scene
-    if scene == null:
-        return null
+    if scene == null: return null
     var command_system = scene.get_node_or_null("GameplayCommandSystem")
-    if command_system != null and command_system.supply_system != null:
-        return command_system.supply_system.economy
+    if command_system != null and command_system.supply_system != null: return command_system.supply_system.economy
     return null
 
 func _production() -> Node:
-    if production_system != null:
-        return production_system
+    if production_system != null: return production_system
     var root = get_tree().root
     var autoload = root.get_node_or_null("RenewProductionSystem")
     if autoload: return autoload
