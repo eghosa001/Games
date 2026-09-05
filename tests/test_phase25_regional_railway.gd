@@ -26,6 +26,17 @@ func _ready() -> void:
     assert(int(project["requirements"]["project_points"]) == 100)
 
     state.set_value("economy", "cash", 1000000)
+    state.set_value("resources", "resources", {"steel": 499, "timber": 100})
+    var before_cash := int(state.get_value("economy", "cash", 0))
+    var failed_contribution := system.contribute_to_railway("player", 1000000, 500, 100, 100)
+    assert(not bool(failed_contribution.get("ok", false)))
+    assert(int(state.get_value("economy", "cash", 0)) == before_cash)
+    var after_failed := system.get_alliance(alliance_id)["projects"][0]["contributed"]
+    assert(int(after_failed["money"]) == 0)
+    assert(int(after_failed["steel"]) == 0)
+    assert(int(after_failed["timber"]) == 0)
+    assert(int(after_failed["project_points"]) == 0)
+
     state.set_value("resources", "resources", {"steel": 500, "timber": 100})
     var contribution := system.contribute_to_railway("player", 1000000, 500, 100, 100)
     assert(bool(contribution.get("ok", false)))
