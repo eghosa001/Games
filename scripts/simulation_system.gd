@@ -195,8 +195,6 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
         "state": state.duplicate(true),
         "contract": contract_result,
         "wages": wages,
-        "production_operating_cost": 0,
-        "production_config": {},
         "employee_update": employee_result,
         "customer_demand": customer_demand,
         "units_sold": units_sold,
