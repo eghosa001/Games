@@ -51,10 +51,12 @@ func receive(amount: int, reason: String = "income") -> Dictionary:
     return {"ok": true, "amount": amount, "cash": cash}
 
 func settle_sales(sales: int, wages: int, overhead: int, contract_income: int = 0) -> Dictionary:
-    var period_revenue := float(max(0, sales) + max(0, contract_income)); var costs := float(max(0, wages) + max(0, overhead))
+    if sales < 0 or wages < 0 or overhead < 0 or contract_income < 0:
+        return {"ok": false, "message": "Settlement amounts cannot be negative."}
+    var period_revenue := float(sales + contract_income); var costs := float(wages + overhead)
     revenue += period_revenue; operating_expenses += costs; cash += int(round(period_revenue - costs)); last_sales = int(period_revenue); last_profit = int(round(period_revenue - costs)); total_profit += last_profit; retained_earnings += last_profit
     _record("settlement", last_profit, "daily operating settlement"); _record_cash_flow("operating", last_profit, "daily operating settlement")
-    return {"sales": max(0, sales), "contract_income": max(0, contract_income), "costs": int(costs), "profit": last_profit, "cash": cash}
+    return {"ok": true, "sales": sales, "contract_income": contract_income, "costs": int(costs), "profit": last_profit, "cash": cash}
 
 func take_loan(amount: int) -> Dictionary: return create_loan(amount, 0.12, 20, false, "unsecured loan")
 
