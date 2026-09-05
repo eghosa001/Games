@@ -77,7 +77,7 @@ func issue_bond(principal: int, annual_rate: float = 0.08, term_periods: int = 3
     if principal <= 0 or annual_rate < 0.0 or term_periods <= 0: return {"ok": false, "message": "Invalid bond terms."}
     var id := "bond_%d_%d" % [Time.get_unix_time_from_system(), financing.size()]; financing[id] = {"id": id, "type": INSTRUMENT_BOND, "principal": float(principal), "accrued_interest": 0.0, "balance": float(principal), "annual_rate": annual_rate, "term": term_periods, "remaining_periods": term_periods, "payment": int(round(principal * annual_rate / 365.0))}
     debt += principal; _recalculate_loan_payment(); cash += principal; _record("bond", principal, "bond issued"); _record_cash_flow("financing", principal, "bond issuance")
-    return {"ok": true, "id": id, "principal": principal, "debt": debt, "cash": cash}
+    return {"ok": true, "principal": principal, "debt": debt, "cash": cash}
 
 func assume_debt(amount: int, source: String = "assumed debt") -> Dictionary:
     if amount < 0: return {"ok": false, "message": "Invalid assumed debt."}
@@ -158,10 +158,20 @@ func income_statement() -> Dictionary:
     var operating_profit := revenue - operating_expenses - depreciation; var net_profit := operating_profit - interest_expense - taxes; return {"revenue": revenue, "operating_expenses": operating_expenses, "depreciation": depreciation, "operating_profit": operating_profit, "interest": interest_expense, "taxes": taxes, "net_profit": net_profit}
 
 func cash_flow_statement() -> Dictionary:
-    var operating := revenue - operating_expenses - interest_expense - taxes; var investing_flow := -investments; var financing_flow := 0.0
-    for entry in history:
-        if str(entry.get("kind", "")).to_lower() in ["loan", "bond", "equity", "buyback", "repayment", "scheduled_payment", "refinance"]: financing_flow += float(entry.get("amount", 0)) * (-1.0 if str(entry.get("kind")) in ["buyback", "repayment", "scheduled_payment"] else 1.0)
-    return {"operating": operating, "investing": investing_flow, "financing": financing_flow, "net_change": operating + investing_flow + financing_flow, "cash": cash}
+    ## Cash flow is derived only from recorded cash movements. Accrued interest
+    ## belongs in profit/liabilities when incurred, but must not reduce cash
+    ## until a repayment actually occurs.
+    var operating := 0.0
+    var investing_flow := 0.0
+    var financing_flow := 0.0
+    for entry in cash_flow_history:
+        var kind := str(entry.get("kind", "")).to_lower()
+        var amount := float(entry.get("amount", 0.0))
+        if kind == "operating": operating += amount
+        elif kind == "investing": investing_flow += amount
+        elif kind == "financing": financing_flow += amount
+    var net_change := operating + investing_flow + financing_flow
+    return {"operating": operating, "investing": investing_flow, "financing": financing_flow, "net_change": net_change, "beginning_cash": float(cash) - net_change, "cash": cash}
 
 func debt_service() -> float:
     var total := 0.0
