@@ -42,25 +42,24 @@ func _settle_sales(args: Dictionary) -> Dictionary:
     return finance.settle_sales(int(args.get("sales", 0)), int(args.get("wages", 0)), int(args.get("overhead", 0)), int(args.get("contract_income", 0)))
 
 func _sync_finance_mirror(state: Dictionary) -> void:
-    var game_state = _game_state()
-    var finance = _finance()
-    if not game_state or not finance:
-        return
-    finance.cash = int(game_state.get_value("economy", "cash", finance.cash))
-    finance.debt = int(game_state.get_value("finance", "debt", finance.debt))
-    finance.loan_payment = int(game_state.get_value("finance", "loan_payment", finance.loan_payment))
+    # FinanceSystem is authoritative. Legacy GameState is only a read/display mirror.
+    # Never copy legacy cash/debt back into FinanceSystem because that can erase
+    # transactions already recorded by the authoritative ledger.
+    _sync_state_from_finance(state)
 
 func _sync_state_from_finance(state: Dictionary) -> void:
     var game_state = _game_state()
     var finance = _finance()
-    if not game_state or not finance:
+    if not finance:
+        return
+    state["cash"] = int(finance.cash)
+    state["debt"] = int(finance.debt)
+    state["loan_payment"] = int(finance.loan_payment)
+    if not game_state:
         return
     game_state.set_value("economy", "cash", int(finance.cash))
     game_state.set_value("finance", "debt", int(finance.debt))
     game_state.set_value("finance", "loan_payment", int(finance.loan_payment))
-    state["cash"] = int(finance.cash)
-    state["debt"] = int(finance.debt)
-    state["loan_payment"] = int(finance.loan_payment)
 
 func _apply_cash_delta(state: Dictionary, amount: int, reason: String) -> bool:
     var finance = _finance()
@@ -107,8 +106,7 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
     var game_state = _game_state()
     if game_state:
         state["finished_goods"] = int(game_state.get_value("production", "finished_goods", state.get("finished_goods", 0)))
-        state["cash"] = int(game_state.get_value("economy", "cash", state.get("cash", 0)))
-        finance.cash = int(state.get("cash", finance.cash))
+    _sync_state_from_finance(state)
 
     var player_price = int(state.get("player_price", 110))
     var rival_price = int(rivals.rivals[0]["price"]) if rivals.rivals.size() > 0 else 120
