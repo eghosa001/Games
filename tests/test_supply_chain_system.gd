@@ -31,7 +31,7 @@ func run() -> void:
     var chain = SupplyChain.new()
     chain.set_economy(economy)
 
-    check(chain.SYSTEM_VERSION == 5, "Supply chain system version is current")
+    check(chain.SYSTEM_VERSION == 7, "Supply chain system version is current")
     check(chain.RESOURCE_IDS.size() == 5, "Supply chain uses canonical V1 resources")
     for resource in ["timber", "iron", "energy", "food", "electronics"]:
         check(economy.resources.has(resource), "Economy exposes canonical resource: " + resource)
