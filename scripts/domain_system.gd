@@ -19,18 +19,9 @@ func _finance():
 
 func get_value(domain: String, key: String, default_value):
     var state = game_state()
-    if domain == "economy" and key == "cash":
-        var finance = _finance()
-        if finance != null:
-            return int(finance.get("cash"))
-    elif domain == "finance" and key == "debt":
-        var finance = _finance()
-        if finance != null:
-            return int(finance.get("debt"))
-    elif domain == "finance" and key == "loan_payment":
-        var finance = _finance()
-        if finance != null:
-            return int(finance.get("loan_payment"))
+    var finance = _finance()
+    if finance != null and FINANCE_MIRROR_FIELDS.has(domain) and FINANCE_MIRROR_FIELDS[domain].has(key):
+        return finance.get(key, default_value)
     return default_value if state == null else state.get_value(domain, key, default_value)
 
 func set_value(domain: String, key: String, value) -> void:
