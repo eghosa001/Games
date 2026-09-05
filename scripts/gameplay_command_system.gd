@@ -30,34 +30,29 @@ func open_business()->void:business_system.open_business()
 func choose_business_purpose(index:int)->void:business_system.choose_business_purpose(index)
 func create_business()->void:business_system.create_business()
 func buy_inputs()->void:supply_system.buy_inputs()
+func _ownership_node():
+    var root=get_tree().root if get_tree()!=null else null
+    if root==null:return null
+    var node=root.get_node_or_null("Renew/Systems/OwnershipSystem")
+    if node!=null:return node
+    var scene=get_tree().current_scene
+    return scene.get_node_or_null("OwnershipSystem") if scene!=null else null
 
 # Production is a cross-ledger operation. BusinessSystem predates the current
 # transaction boundary, so the gameplay command captures every mutable ledger
 # before entering it and restores all of them if the operation reports failure.
-# This keeps the public gameplay path atomic even when an internal operation
-# fails after partially mutating SupplyChain, Production, Economy or Finance.
 func _production_transaction_participants()->Array:
-    return [
-        {"name":"game_state","node":get_node_or_null("/root/RenewGameState")},
-        {"name":"finance","node":get_node_or_null("/root/RenewFinanceSystem")},
-        {"name":"production","node":business_system.production},
-        {"name":"economy","node":supply_system.economy},
-        {"name":"supply_chain","node":business_system.supply_chain},
-        {"name":"business","node":business_system},
-    ]
+    return [{"name":"game_state","node":get_node_or_null("/root/RenewGameState")},{"name":"finance","node":get_node_or_null("/root/RenewFinanceSystem")},{"name":"production","node":business_system.production},{"name":"economy","node":supply_system.economy},{"name":"supply_chain","node":business_system.supply_chain},{"name":"business","node":business_system}]
 func _capture_production_transaction()->Dictionary:
     var snapshot:Dictionary={"participants":{}}
     for participant in _production_transaction_participants():
-        var node=participant.get("node")
-        var name:=str(participant.get("name","unknown"))
+        var node=participant.get("node");var name:=str(participant.get("name","unknown"))
         if node==null:return {"ok":false,"message":"Production transaction cannot start: %s is unavailable."%name}
         if not node.has_method("capture_state") or not node.has_method("restore_state"):return {"ok":false,"message":"Production transaction cannot start: %s is not rollback-capable."%name}
         snapshot["participants"][name]=node.capture_state()
     return {"ok":true,"snapshot":snapshot}
 func _restore_production_transaction(snapshot:Dictionary)->void:
-    var participants:Dictionary=snapshot.get("participants",{})
-    var ordered:Array=["business","supply_chain","economy","production","finance","game_state"]
-    var by_name:Dictionary={}
+    var participants:Dictionary=snapshot.get("participants",{});var ordered:Array=["business","supply_chain","economy","production","finance","game_state"];var by_name:Dictionary={}
     for participant in _production_transaction_participants():by_name[str(participant.get("name","unknown"))]=participant.get("node")
     for name in ordered:
         var node=by_name.get(name);var state=participants.get(name,null)
@@ -65,13 +60,9 @@ func _restore_production_transaction(snapshot:Dictionary)->void:
 func produce_goods()->void:
     var transaction:=_capture_production_transaction()
     if not bool(transaction.get("ok",false)):_set_state("company","message",str(transaction.get("message","Production transaction could not start.")));return
-    var before_message:=str(_state_value("company","message",""))
-    business_system.produce_goods()
-    var after_message:=str(_state_value("company","message",""))
-    var success:=after_message.find(" produced ")>=0 and after_message.find("stopped")<0
+    var before_message:=str(_state_value("company","message",""));business_system.produce_goods();var after_message:=str(_state_value("company","message",""));var success:=after_message.find(" produced ")>=0 and after_message.find("stopped")<0
     if success:return
-    _restore_production_transaction(transaction["snapshot"])
-    _set_state("company","message",after_message if after_message!=before_message else "Production transaction failed and was rolled back.")
+    _restore_production_transaction(transaction["snapshot"]);_set_state("company","message",after_message if after_message!=before_message else "Production transaction failed and was rolled back.")
 func hire_employee()->void:employee_system.hire_employee()
 func upgrade_business()->void:business_system.upgrade_business()
 func marketing_campaign()->void:business_system.marketing_campaign()
@@ -111,20 +102,27 @@ func _simulate_elapsed_days(days:int)->bool:
         if after_day<=before_day:_set_state("company","message","Elapsed-day simulation stopped before completing the research period.");return false
     return true
 func _daily_transaction_participants()->Array:
-    return [{"name":"game_state","node":get_node_or_null("/root/RenewGameState")},{"name":"finance","node":get_node_or_null("/root/RenewFinanceSystem")},{"name":"production","node":get_node_or_null("/root/RenewProductionSystem")},{"name":"contracts","node":get_node_or_null("/root/RenewContractSystem")},{"name":"rivals","node":relationship_system.rivals},{"name":"economy","node":supply_system.economy},{"name":"supply_chain","node":business_system.supply_chain},{"name":"expansion","node":expansion_system.expansion},{"name":"districts","node":expansion_system.districts},{"name":"employees","node":employee_system},{"name":"business","node":business_system},{"name":"competitor_reactions","node":competitor_reactions}]
+    return [{"name":"game_state","node":get_node_or_null("/root/RenewGameState")},{"name":"finance","node":get_node_or_null("/root/RenewFinanceSystem")},{"name":"production","node":get_node_or_null("/root/RenewProductionSystem")},{"name":"contracts","node":get_node_or_null("/root/RenewContractSystem")},{"name":"rivals","node":relationship_system.rivals},{"name":"economy","node":supply_system.economy},{"name":"supply_chain","node":business_system.supply_chain},{"name":"expansion","node":expansion_system.expansion},{"name":"districts","node":expansion_system.districts},{"name":"employees","node":employee_system},{"name":"business","node":business_system},{"name":"competitor_reactions","node":competitor_reactions},{"name":"ownership","node":_ownership_node()}]
 func _capture_daily_transaction()->Dictionary:
     var snapshot:Dictionary={"participants":{}}
     for participant in _daily_transaction_participants():
         var node=participant.get("node");var name:=str(participant.get("name","unknown"))
         if node==null:return {"ok":false,"message":"Daily transaction cannot start: %s is unavailable."%name}
-        if not node.has_method("capture_state") or not node.has_method("restore_state"):return {"ok":false,"message":"Daily transaction cannot start: %s is not rollback-capable."%name}
+        if not node.has_method("capture_state") or not node.has_method("restore_state"):
+            if name=="ownership" and node.has_method("save_state") and node.has_method("load_state"):
+                snapshot["participants"][name]=node.save_state();continue
+            return {"ok":false,"message":"Daily transaction cannot start: %s is not rollback-capable."%name}
         snapshot["participants"][name]=node.capture_state()
     return {"ok":true,"snapshot":snapshot}
 func _restore_daily_transaction(snapshot:Dictionary)->void:
     var participants:Dictionary=snapshot.get("participants",{})
     for participant in _daily_transaction_participants():
-        var node=participant.get("node");var name:=str(participant.get("name","unknown"))
-        if node!=null and participants.get(name,null) is Dictionary:node.restore_state(participants[name])
+        var node=participant.get("node");var name:=str(participant.get("name","unknown"));var state=participants.get(name,null)
+        if node==null or not state is Dictionary:continue
+        if name=="ownership" and not node.has_method("restore_state") and node.has_method("load_state"):
+            node.load_state(state)
+        elif node.has_method("restore_state"):
+            node.restore_state(state)
 func advance_day()->void:
     var simulation=get_node_or_null("/root/RenewSimulationSystem");if simulation==null:_set_state("company","message","SimulationSystem is unavailable.");return
     var transaction:=_capture_daily_transaction()
