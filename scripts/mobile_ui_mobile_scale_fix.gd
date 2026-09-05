@@ -1,9 +1,9 @@
 extends Node
 
 ## Mobile Web presentation hotfix.
-## CanvasLayer HUDs are rendered outside the world stretch transform. The
-## responsive HUD is authored in browser/CSS pixels, so its CanvasLayer itself
-## must be scaled back to the Godot desktop design width on narrow screens.
+## CanvasLayer HUDs are not governed by the same stretch transform as the world
+## canvas. The responsive HUD is authored in browser/CSS pixels, so on a narrow
+## Web viewport we explicitly map that layout back into the 1280px design canvas.
 var _layer: CanvasLayer
 var _root: Control
 var _last_browser := Vector2.ZERO
@@ -17,9 +17,9 @@ func _ready() -> void:
 func _process(_delta: float) -> void:
     if not OS.has_feature("web"):
         return
-    # Re-apply continuously because mobile_ui_polished.gd also manages the
-    # CanvasLayer scale during its responsive layout pass.
-    _apply()
+    var browser := _browser_size()
+    if browser != Vector2.ZERO and browser != _last_browser:
+        _apply()
 
 func _browser_size() -> Vector2:
     if not OS.has_feature("web"):
@@ -47,16 +47,17 @@ func _apply() -> void:
 
     var mobile := browser.x < 700.0 or browser.y > browser.x * 1.15
     if mobile:
-        # The project canvas is 1280px wide. The compact HUD is laid out using
-        # browser pixels (for example 390px on a phone), so restore that scale
-        # at the CanvasLayer boundary rather than relying on viewport stretch.
+        # The compact HUD is laid out in browser pixels while CanvasLayer is
+        # rendered through the 1280px-wide project canvas. Apply the transform
+        # at both boundaries so either CanvasLayer or Control layout updates do
+        # not leave the phone HUD at desktop-scale coordinates.
         var uniform := maxf(1.0, 1280.0 / browser.x)
-        _layer.scale = uniform
+        _layer.scale = Vector2(uniform, uniform)
         if _root != null:
-            _root.scale = Vector2.ONE
+            _root.scale = Vector2(uniform, uniform)
             _root.position = Vector2.ZERO
     else:
-        _layer.scale = 1.0
+        _layer.scale = Vector2.ONE
         if _root != null:
             _root.scale = Vector2.ONE
             _root.position = Vector2.ZERO
