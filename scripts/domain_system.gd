@@ -3,9 +3,13 @@ extends Node
 # Shared infrastructure for domain systems. Domain systems mutate only their
 # owning GameState bucket and communicate results back to the command layer.
 #
-# Finance is the canonical cash/debt ledger. Legacy domain buckets are kept as
-# compatibility mirrors because the current UI and older gameplay systems read
-# those values directly.
+# Finance is the canonical cash/debt ledger. Legacy domain buckets are read-only
+# mirrors for financial fields; callers must use FinanceSystem transactions.
+
+const FINANCE_MIRROR_FIELDS := {
+    "economy": ["cash", "last_sales", "last_profit", "total_profit"],
+    "finance": ["debt", "loan_payment"]
+}
 
 func game_state():
     return get_node_or_null("/root/RenewGameState")
@@ -15,54 +19,63 @@ func _finance():
 
 func get_value(domain: String, key: String, default_value):
     var state = game_state()
+    if domain == "economy" and key == "cash":
+        var finance = _finance()
+        if finance != null:
+            return int(finance.get("cash"))
+    elif domain == "finance" and key == "debt":
+        var finance = _finance()
+        if finance != null:
+            return int(finance.get("debt"))
+    elif domain == "finance" and key == "loan_payment":
+        var finance = _finance()
+        if finance != null:
+            return int(finance.get("loan_payment"))
     return default_value if state == null else state.get_value(domain, key, default_value)
 
 func set_value(domain: String, key: String, value) -> void:
+    # Never allow generic domain writes to mutate authoritative finance state.
+    # Financial state changes must be represented by FinanceSystem transactions.
+    if FINANCE_MIRROR_FIELDS.has(domain) and FINANCE_MIRROR_FIELDS[domain].has(key):
+        return
     var state = game_state()
     if state != null:
         state.set_value(domain, key, value)
-    # Keep the legacy GameState mirrors and the canonical finance ledger aligned
-    # whenever a domain command changes cash/debt. This prevents old command
-    # paths from silently creating a second, divergent money ledger.
-    var finance = _finance()
-    if finance == null:
+
+func _sync_finance_mirrors(finance) -> void:
+    var state = game_state()
+    if state == null or finance == null:
         return
-    if domain == "economy" and key == "cash":
-        finance.set("cash", int(value))
-    elif domain == "finance" and key == "debt":
-        finance.set("debt", int(value))
-    elif domain == "finance" and key == "loan_payment":
-        finance.set("loan_payment", int(value))
+    state.set_value("economy", "cash", int(finance.get("cash")))
+    state.set_value("economy", "last_sales", int(finance.get("last_sales")))
+    state.set_value("economy", "last_profit", int(finance.get("last_profit")))
+    state.set_value("economy", "total_profit", int(finance.get("total_profit")))
+    state.set_value("finance", "debt", int(finance.get("debt")))
+    state.set_value("finance", "loan_payment", int(finance.get("loan_payment")))
 
 func spend(amount: int, reason: String = "expense") -> Dictionary:
     if amount < 0:
-        return {"ok": false, "message": "Invalid spending amount."}
+        return {"ok": false, "amount": 0, "reason": reason, "message": "Invalid spending amount."}
     var finance = _finance()
     if finance != null and finance.has_method("spend"):
         var result: Dictionary = finance.spend(amount, reason)
         if not bool(result.get("ok", false)):
             return result
-        set_value("economy", "cash", int(result.get("cash", finance.get("cash"))))
+        _sync_finance_mirrors(finance)
         return result
-    var cash: int = int(get_value("economy", "cash", 0))
-    if cash < amount:
-        return {"ok": false, "message": "Insufficient cash."}
-    set_value("economy", "cash", cash - amount)
-    return {"ok": true, "amount": amount, "cash": cash - amount}
+    return {"ok": false, "amount": 0, "reason": reason, "message": "FinanceSystem unavailable."}
 
 func receive(amount: int, reason: String = "income") -> Dictionary:
     if amount < 0:
-        return {"ok": false, "message": "Invalid income amount."}
+        return {"ok": false, "amount": 0, "reason": reason, "message": "Invalid income amount."}
     var finance = _finance()
     if finance != null and finance.has_method("receive"):
         var result: Dictionary = finance.receive(amount, reason)
         if not bool(result.get("ok", false)):
             return result
-        set_value("economy", "cash", int(result.get("cash", finance.get("cash"))))
+        _sync_finance_mirrors(finance)
         return result
-    var cash: int = int(get_value("economy", "cash", 0)) + amount
-    set_value("economy", "cash", cash)
-    return {"ok": true, "amount": amount, "cash": cash}
+    return {"ok": false, "amount": 0, "reason": reason, "message": "FinanceSystem unavailable."}
 
 func log_message(text: String) -> void:
     var logs = get_value("company", "log_lines", [])
