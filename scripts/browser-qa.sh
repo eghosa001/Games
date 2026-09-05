@@ -14,10 +14,11 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Godot Web keeps network activity alive, so network-idle is not a valid readiness signal.
+# Godot Web can keep its document load event pending, so do not wait on a load-state
+# event. The browser open command establishes the page; the fixed delay below gives
+# the WebAssembly runtime time to initialize before visual/console inspection.
 agent-browser open "$URL"
-agent-browser wait --load load
-agent-browser wait 5000
+agent-browser wait 10000
 agent-browser screenshot --full "$OUT/startup.png"
 agent-browser snapshot -i > "$OUT/startup.snapshot.txt"
 agent-browser console > "$OUT/startup.console.txt" 2>&1 || true
@@ -37,8 +38,7 @@ agent-browser errors > "$OUT/opening-loop.errors.txt" 2>&1 || true
 # Capture a mobile-sized run as a second visual baseline.
 agent-browser set viewport 390 844
 agent-browser reload
-agent-browser wait --load load
-agent-browser wait 5000
+agent-browser wait 10000
 agent-browser screenshot --full "$OUT/mobile-startup.png"
 agent-browser snapshot -i > "$OUT/mobile-startup.snapshot.txt"
 agent-browser console > "$OUT/mobile-startup.console.txt" 2>&1 || true
