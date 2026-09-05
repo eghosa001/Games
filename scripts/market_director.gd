@@ -60,6 +60,32 @@ func _economy():
         return null
     return game.get("economy")
 
+func _finance():
+    if game == null:
+        return null
+    var finance = game.get_node_or_null("FinanceSystem")
+    if finance == null:
+        finance = get_node_or_null("/root/RenewFinanceSystem")
+    return finance
+
+func _spend(amount: int, reason: String) -> Dictionary:
+    var finance = _finance()
+    if finance != null and finance.has_method("spend"):
+        return finance.spend(amount, reason)
+    return {"ok": false, "message": "Financial system is unavailable."}
+
+func _receive(amount: int, reason: String) -> Dictionary:
+    var finance = _finance()
+    if finance != null and finance.has_method("receive"):
+        return finance.receive(amount, reason)
+    return {"ok": false, "message": "Financial system is unavailable."}
+
+func _sync_legacy_cash() -> void:
+    var finance = _finance()
+    if finance == null or game == null:
+        return
+    game.cash = int(finance.cash)
+
 func _apply_event_pressure(event_type: String, expiry: int) -> void:
     var economy = _economy()
     if economy == null:
@@ -119,12 +145,14 @@ func _respond(style: String) -> void:
     var reward: Variant = 0
     var rep: Variant = 0
     var outcome: Variant = ""
+    var spend_amount := 0
+    var spend_reason := ""
     match event_type:
         "shortage":
             if style == "aggressive":
-                var spend: Variant = min(int(game.cash), 3500)
-                game.cash -= spend
-                reward = spend / 2
+                spend_amount = 3500
+                spend_reason = "market shortage inventory response"
+                reward = 1750
                 rep = 2
                 _set_response_modifier(0.92, 0.92, 0.95)
                 outcome = "You secured scarce inventory early."
@@ -134,13 +162,14 @@ func _respond(style: String) -> void:
                 _set_response_modifier(1.08, 1.06, 1.10)
                 outcome = "You rationed supplies and protected cash flow."
             else:
-                game.cash += 500
-                game.reputation = max(0, int(game.reputation) - 1)
+                reward = 500
+                rep = -1
                 _set_response_modifier(1.18, 1.15, 1.20)
                 outcome = "You conserved cash but surrendered some market share."
         "boom":
             if style == "aggressive":
-                game.cash -= min(int(game.cash), 2500)
+                spend_amount = 2500
+                spend_reason = "market boom capacity campaign"
                 reward = 6500
                 rep = 2
                 _set_response_modifier(0.88, 0.90, 0.92)
@@ -156,7 +185,8 @@ func _respond(style: String) -> void:
                 outcome = "You played safely and kept your cash reserves."
         "war":
             if style == "aggressive":
-                game.cash -= min(int(game.cash), 3000)
+                spend_amount = 3000
+                spend_reason = "price war defensive campaign"
                 reward = 4200
                 rep = 1
                 _set_response_modifier(1.05, 1.04, 1.00)
@@ -167,7 +197,7 @@ func _respond(style: String) -> void:
                 _set_response_modifier(1.03, 1.02, 1.00)
                 outcome = "You protected margins while keeping customers."
             else:
-                game.reputation = max(0, int(game.reputation) - 1)
+                rep = -1
                 _set_response_modifier(1.08, 1.05, 1.00)
                 outcome = "You refused to chase the rival downward."
         "contract":
@@ -197,8 +227,18 @@ func _respond(style: String) -> void:
             else:
                 reward = 500
                 outcome = "You kept liquidity instead of buying another asset."
-    game.cash += reward
-    game.reputation += rep
+    if spend_amount > 0:
+        var spend_result := _spend(spend_amount, spend_reason)
+        if not bool(spend_result.get("ok", false)):
+            game.message = String(spend_result.get("message", "Market response could not be funded."))
+            return
+    if int(reward) > 0:
+        var receive_result := _receive(int(reward), "market response: %s" % style)
+        if not bool(receive_result.get("ok", false)):
+            game.message = String(receive_result.get("message", "Market reward could not be posted."))
+            return
+    _sync_legacy_cash()
+    game.reputation = max(0, int(game.reputation) + int(rep))
     game._log("MARKET RESPONSE: %s — +$%s, +%d rep. %s" % [style, game._money(reward), rep, outcome])
     game.message = "%s %s" % [active_event, outcome]
     active_event = ""
