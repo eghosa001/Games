@@ -41,12 +41,8 @@ func _settle_sales(args: Dictionary) -> Dictionary:
         return {"ok": false, "message": "FinanceSystem unavailable."}
     return finance.settle_sales(int(args.get("sales", 0)), int(args.get("wages", 0)), int(args.get("overhead", 0)), int(args.get("contract_income", 0)))
 
-func _sync_finance_mirror(state: Dictionary) -> void:
-    # FinanceSystem is authoritative. Legacy GameState is only a read/display mirror.
-    # Never copy legacy cash/debt back into FinanceSystem because that can erase
-    # transactions already recorded by the authoritative ledger.
-    _sync_state_from_finance(state)
-
+## FinanceSystem is the only authoritative financial state. GameState is a
+## compatibility mirror and may only be updated from FinanceSystem.
 func _sync_state_from_finance(state: Dictionary) -> void:
     var game_state = _game_state()
     var finance = _finance()
@@ -91,8 +87,6 @@ func advance_day(state: Dictionary, context: Dictionary) -> Dictionary:
 
     if not rivals or not economy or not events or not expansion or not districts or not employee_system or not business_system or not finance:
         return {"ok": false, "message": "Simulation dependencies unavailable."}
-
-    _sync_finance_mirror(state)
 
     var performance = int(state.get("last_profit", 0))
     var employee_result = employee_system.daily_update(performance)
@@ -263,8 +257,7 @@ func _money(value: int) -> String:
 func end_day(args: Dictionary = {}) -> Dictionary:
     # Legacy compatibility endpoint. The canonical day lifecycle is
     # advance_day(state, context), invoked by GameplayCommandSystem.
-    # This endpoint must never settle debt or mutate the market independently,
-    # otherwise callers can charge a second day's interest/payment.
+    # This endpoint must never settle debt or mutate the market independently.
     return {
         "ok": false,
         "message": "Legacy end_day is disabled. Use the canonical advance_day flow."
