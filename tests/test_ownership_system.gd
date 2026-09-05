@@ -45,6 +45,14 @@ func run() -> void:
     var buyback = ownership.buyback("renew_co", "fund_b", 25000, 12.0)
     check(bool(buyback["ok"]), "Buyback succeeds")
     check(int(ownership.get_entity("renew_co")["treasury_shares"]) == 25000, "Buyback moves shares to treasury")
+    var authorized_before_retirement := int(ownership.get_entity("renew_co")["authorized_shares"])
+    var issued_before_retirement := int(ownership.get_entity("renew_co")["issued_shares"])
+    var retirement = ownership.retire_treasury_shares("renew_co", 10000)
+    check(bool(retirement["ok"]), "Treasury retirement succeeds")
+    var retired_entity = ownership.get_entity("renew_co")
+    check(int(retired_entity["treasury_shares"]) == 15000, "Retirement reduces treasury shares")
+    check(int(retired_entity["issued_shares"]) == issued_before_retirement - 10000, "Retirement reduces issued shares")
+    check(int(retired_entity["authorized_shares"]) == authorized_before_retirement, "Retirement preserves authorized share capacity")
 
     var board = ownership.set_board_size("renew_co", 5)
     check(bool(board["ok"]), "Board size can be configured")
@@ -74,6 +82,11 @@ func run() -> void:
     check(restored.has_entity("renew_co") and restored.has_entity("warehouse_01") and restored.has_entity("renew_partner_jv"), "Ownership state persists across save/load")
     check(restored.transaction_log.size() == ownership.transaction_log.size(), "Ownership transaction history persists")
     check(restored.get_ownership_percent("renew_partner_jv", "renew_co") == ownership.get_ownership_percent("renew_partner_jv", "renew_co"), "Restored ownership percentages match")
+
+    var capture = ownership.capture_state()
+    var capture_restored = OwnershipSystem.new()
+    capture_restored.restore_state(capture)
+    check(capture_restored.get_entity("renew_co") == ownership.get_entity("renew_co"), "Cross-system ownership snapshot restores exactly")
 
     var control = restored.takeover_control("renew_co", "founder", 50.0)
     check(bool(control["ok"]), "Control check succeeds for controlling holder")
