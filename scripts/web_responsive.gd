@@ -68,6 +68,11 @@ func _apply() -> void:
     _scene_adjusted = false
     call_deferred("_apply_scene_visibility")
 
+func _set_visible(path: String, value: bool) -> void:
+    var node := get_node_or_null(path)
+    if node is CanvasItem:
+        node.visible = value
+
 func _apply_scene_visibility() -> void:
     var renew := get_node_or_null("/root/Renew")
     if renew == null:
@@ -76,29 +81,47 @@ func _apply_scene_visibility() -> void:
     if browser == Vector2i.ZERO:
         browser = _browser_size()
     var mobile := browser.y > browser.x * 1.15 or browser.x < 700
+    var hud := renew.get_node_or_null("UI/MainHUD")
+    var tab := int(hud.get("active_tab")) if hud != null else 0
 
     var infrastructure_ui := get_node_or_null("/root/RenewInfrastructureUI")
     if infrastructure_ui is CanvasItem:
-        var hud := renew.get_node_or_null("UI/MainHUD")
-        var tab := int(hud.get("active_tab")) if hud != null else 0
         infrastructure_ui.visible = tab == 3
 
     var region_controller := renew.get_node_or_null("World/RegionController")
     if region_controller is CanvasItem:
-        var hud := renew.get_node_or_null("UI/MainHUD")
-        var tab := int(hud.get("active_tab")) if hud != null else 0
         region_controller.visible = tab == 3
 
-    if mobile and not _scene_adjusted:
+    # Distress controls are actionable only after the company leaves the stable
+    # state. Keeping the panel hidden at startup prevents a large fixed legacy
+    # card from covering the property and the primary action surface.
+    var bankruptcy := renew.get_node_or_null("Systems/BankruptcySystem")
+    var distress_state := "stable"
+    if bankruptcy != null:
+        distress_state = str(bankruptcy.get("state"))
+    var distress_controls := bankruptcy.get_node_or_null("BankruptcyControls") if bankruptcy != null else null
+    if distress_controls is CanvasItem:
+        distress_controls.visible = distress_state != "stable"
+
+    if mobile:
+        # Mobile uses the touch HUD as the information surface. Keep only the
+        # backdrop and the central warehouse artwork visible; fixed-coordinate
+        # desktop diagnostic panels are too small and collide with the HUD.
+        _set_visible("/root/Renew/World/PropertyVisual", false)
+        _set_visible("/root/Renew/World/Corporate", false)
+        _set_visible("/root/Renew/World/WorldMissions", false)
+        _set_visible("/root/Renew/World/EmpireController", false)
+        _set_visible("/root/Renew/World/RivalSupplyController", false)
+        _set_visible("/root/Renew/World/BranchController", false)
+        _set_visible("/root/Renew/World/RegionController", false)
+        _set_visible("/root/Renew/World/WorldView", false)
+        _set_visible("/root/Renew/World/ResourceHubArt", false)
         var warehouse := renew.get_node_or_null("World/WarehouseArt")
-        if warehouse is Node2D:
+        if warehouse is Node2D and not _scene_adjusted:
             warehouse.position = Vector2(browser.x * 0.5, minf(520.0, browser.y * 0.58))
             warehouse.scale = Vector2(0.62, 0.62)
         var skyline := renew.get_node_or_null("World/SkylineArt")
-        if skyline is Node2D:
+        if skyline is Node2D and not _scene_adjusted:
             skyline.position = Vector2(browser.x * 0.5, 145.0)
             skyline.scale = Vector2(0.58, 0.58)
-        var resource_hub := renew.get_node_or_null("World/ResourceHubArt")
-        if resource_hub is CanvasItem:
-            resource_hub.visible = false
         _scene_adjusted = true
