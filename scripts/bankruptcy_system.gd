@@ -207,6 +207,8 @@ func begin_restructuring(reason: String = "covenant pressure") -> Dictionary:
         _start_plan(reason)
     return {"ok": true, "plan": restructuring_plan.duplicate(true), "state": state}
 
+## Records a disposal through FinanceSystem so the proceeds are investing cash flow,
+## not operating revenue, and the gain/loss is reflected in retained earnings.
 func sell_asset(finance: Node, asset_name: String, sale_value: int, book_value: int = 0) -> Dictionary:
     if finance == null or sale_value <= 0 or book_value < 0:
         return {"ok": false, "message": "Invalid asset sale."}
@@ -214,11 +216,10 @@ func sell_asset(finance: Node, asset_name: String, sale_value: int, book_value: 
         return {"ok": false, "message": "Asset sales are a distress action."}
     if book_value > 0 and float(finance.fixed_assets) < float(book_value):
         return {"ok": false, "message": "Book value exceeds available fixed assets."}
-    finance.fixed_assets = max(0.0, float(finance.fixed_assets) - float(book_value))
-    var cash_result: Dictionary = finance.receive(sale_value, "distress asset sale: %s" % asset_name)
-    if not bool(cash_result.get("ok", false)):
-        return cash_result
-    var entry: Variant = {"asset": asset_name, "sale_value": sale_value, "book_value": book_value, "gain_loss": sale_value - book_value, "day": _game_day()}
+    var result: Dictionary = finance.record_asset_sale(asset_name, sale_value, book_value)
+    if not bool(result.get("ok", false)):
+        return result
+    var entry: Variant = {"asset": asset_name, "sale_value": sale_value, "book_value": book_value, "gain_loss": int(result.get("gain_loss", sale_value - book_value)), "day": _game_day()}
     asset_sale_history.append(entry)
     _ensure_plan("emergency asset sale")
     restructuring_plan["asset_sales"] = int(restructuring_plan.get("asset_sales", 0)) + sale_value
@@ -304,19 +305,31 @@ func liquidate(finance: Node, assets_to_liquidate: Array = []) -> Dictionary:
         return {"ok": false, "message": "Finance system is required."}
     if state != ADMINISTRATION:
         return {"ok": false, "message": "Liquidation requires administration."}
-    var proceeds: Variant = 0
+    var total_book_value := 0.0
     for asset in assets_to_liquidate:
         if asset is Dictionary:
-            var value: Variant = int(asset.get("liquidation_value", asset.get("value", 0)))
-            if value > 0:
-                proceeds += value
-                liquidation_history.append({"asset": asset.get("name", "asset"), "sale_value": value, "book_value": int(asset.get("book_value", 0)), "day": _game_day()})
-    if proceeds > 0:
-        var cash_result: Dictionary = finance.receive(int(proceeds), "liquidation proceeds")
-        if not bool(cash_result.get("ok", false)):
-            return cash_result
+            total_book_value += max(0, int(asset.get("book_value", 0)))
+    if total_book_value > float(finance.fixed_assets) + 0.01:
+        return {"ok": false, "message": "Liquidation book values exceed available fixed assets."}
+
+    var proceeds: int = 0
+    var entries: Array = []
+    for asset in assets_to_liquidate:
+        if asset is Dictionary:
+            var value: int = int(asset.get("liquidation_value", asset.get("value", 0)))
+            var book_value: int = max(0, int(asset.get("book_value", 0)))
+            if value <= 0:
+                continue
+            var sale_result: Dictionary = finance.record_asset_sale(str(asset.get("name", "asset")), value, book_value)
+            if not bool(sale_result.get("ok", false)):
+                return sale_result
+            proceeds += value
+            var entry: Dictionary = {"asset": asset.get("name", "asset"), "sale_value": value, "book_value": book_value, "gain_loss": int(sale_result.get("gain_loss", value - book_value)), "day": _game_day()}
+            entries.append(entry)
+            liquidation_history.append(entry)
+
     _sync_game_finance_mirror(finance)
-    var entry: Variant = {"proceeds": proceeds, "assets": assets_to_liquidate.duplicate(true), "day": _game_day()}
+    var entry: Variant = {"proceeds": proceeds, "assets": assets_to_liquidate.duplicate(true), "day": _game_day(), "sales": entries.duplicate(true)}
     liquidation_history.append(entry)
     _transition(LIQUIDATION, "administration completed; assets liquidated")
     _event("liquidation", "Company liquidated", entry)
