@@ -1,6 +1,6 @@
 extends Node
 const PropertySystem=preload("res://scripts/property_system.gd")
-const BusinessSystem=preload("res://scripts/business_system.gd")
+const BusinessSystem=preload("res://scripts/business_system_fixed.gd")
 const EmployeeCommandSystem=preload("res://scripts/employee_command_system.gd")
 const FinanceCommandSystem=preload("res://scripts/finance_command_system.gd")
 const SupplyCommandSystem=preload("res://scripts/supply_command_system.gd")
@@ -45,52 +45,33 @@ func _production_transaction_participants()->Array:
         {"name":"supply_chain","node":business_system.supply_chain},
         {"name":"business","node":business_system},
     ]
-
-func _capture_production_transaction() -> Dictionary:
+func _capture_production_transaction()->Dictionary:
     var snapshot:Dictionary={"participants":{}}
     for participant in _production_transaction_participants():
         var node=participant.get("node")
         var name:=str(participant.get("name","unknown"))
-        if node==null:
-            return {"ok":false,"message":"Production transaction cannot start: %s is unavailable."%name}
-        if not node.has_method("capture_state") or not node.has_method("restore_state"):
-            return {"ok":false,"message":"Production transaction cannot start: %s is not rollback-capable."%name}
+        if node==null:return {"ok":false,"message":"Production transaction cannot start: %s is unavailable."%name}
+        if not node.has_method("capture_state") or not node.has_method("restore_state"):return {"ok":false,"message":"Production transaction cannot start: %s is not rollback-capable."%name}
         snapshot["participants"][name]=node.capture_state()
     return {"ok":true,"snapshot":snapshot}
-
 func _restore_production_transaction(snapshot:Dictionary)->void:
     var participants:Dictionary=snapshot.get("participants",{})
-    # Restore in reverse dependency order: business/UI state first, then the
-    # ledgers it orchestrates. Each restore is defensive so one broken
-    # participant cannot prevent the remaining ledgers from being recovered.
     var ordered:Array=["business","supply_chain","economy","production","finance","game_state"]
     var by_name:Dictionary={}
-    for participant in _production_transaction_participants():
-        by_name[str(participant.get("name","unknown"))]=participant.get("node")
+    for participant in _production_transaction_participants():by_name[str(participant.get("name","unknown"))]=participant.get("node")
     for name in ordered:
-        var node=by_name.get(name)
-        var state=participants.get(name,null)
-        if node!=null and state is Dictionary:
-            node.restore_state(state)
-
+        var node=by_name.get(name);var state=participants.get(name,null)
+        if node!=null and state is Dictionary:node.restore_state(state)
 func produce_goods()->void:
     var transaction:=_capture_production_transaction()
-    if not bool(transaction.get("ok",false)):
-        _set_state("company","message",str(transaction.get("message","Production transaction could not start.")))
-        return
+    if not bool(transaction.get("ok",false)):_set_state("company","message",str(transaction.get("message","Production transaction could not start.")));return
     var before_message:=str(_state_value("company","message",""))
     business_system.produce_goods()
     var after_message:=str(_state_value("company","message",""))
-    # BusinessSystem's successful production path always reports a produced
-    # quantity; all known failure paths report a stopping/error message.
     var success:=after_message.find(" produced ")>=0 and after_message.find("stopped")<0
-    if success:
-        return
+    if success:return
     _restore_production_transaction(transaction["snapshot"])
-    # Preserve the failure reason after rollback; UI state is deliberately not
-    # allowed to erase the diagnostic that caused the transaction to abort.
     _set_state("company","message",after_message if after_message!=before_message else "Production transaction failed and was rolled back.")
-
 func hire_employee()->void:employee_system.hire_employee()
 func upgrade_business()->void:business_system.upgrade_business()
 func marketing_campaign()->void:business_system.marketing_campaign()
@@ -115,75 +96,42 @@ func take_loan()->void:finance_system.take_loan()
 func repay_loan()->void:finance_system.repay_loan()
 func research_technology(id:String)->void:
     if technology_system==null:return
-    if not bool(_state_value("businesses","business_open",false)):
-        _set_state("company","message","Open an operating business before researching technology.")
-        return
+    if not bool(_state_value("businesses","business_open",false)):_set_state("company","message","Open an operating business before researching technology.");return
     if not technology_system.research(id):return
     _simulate_elapsed_days(int(technology_system.get_last_research_days()))
 func research_next_technology()->void:
     if technology_system==null:return
-    if not bool(_state_value("businesses","business_open",false)):
-        _set_state("company","message","Open an operating business before researching technology.")
-        return
+    if not bool(_state_value("businesses","business_open",false)):_set_state("company","message","Open an operating business before researching technology.");return
     if not technology_system.research_next():return
     _simulate_elapsed_days(int(technology_system.get_last_research_days()))
 func _simulate_elapsed_days(days:int)->bool:
     var count:=max(0,days)
     for _i in range(count):
-        var before_day:=int(_state_value("player","day",1))
-        advance_day()
-        var after_day:=int(_state_value("player","day",before_day))
-        if after_day <= before_day:
-            _set_state("company","message","Elapsed-day simulation stopped before completing the research period.")
-            return false
+        var before_day:=int(_state_value("player","day",1));advance_day();var after_day:=int(_state_value("player","day",before_day))
+        if after_day<=before_day:_set_state("company","message","Elapsed-day simulation stopped before completing the research period.");return false
     return true
-
 func _daily_transaction_participants()->Array:
-    return [
-        {"name":"game_state","node":get_node_or_null("/root/RenewGameState")},
-        {"name":"finance","node":get_node_or_null("/root/RenewFinanceSystem")},
-        {"name":"production","node":get_node_or_null("/root/RenewProductionSystem")},
-        {"name":"contracts","node":get_node_or_null("/root/RenewContractSystem")},
-        {"name":"rivals","node":relationship_system.rivals},
-        {"name":"economy","node":supply_system.economy},
-        {"name":"supply_chain","node":business_system.supply_chain},
-        {"name":"expansion","node":expansion_system.expansion},
-        {"name":"districts","node":expansion_system.districts},
-        {"name":"employees","node":employee_system},
-        {"name":"business","node":business_system},
-        {"name":"competitor_reactions","node":competitor_reactions},
-    ]
-
+    return [{"name":"game_state","node":get_node_or_null("/root/RenewGameState")},{"name":"finance","node":get_node_or_null("/root/RenewFinanceSystem")},{"name":"production","node":get_node_or_null("/root/RenewProductionSystem")},{"name":"contracts","node":get_node_or_null("/root/RenewContractSystem")},{"name":"rivals","node":relationship_system.rivals},{"name":"economy","node":supply_system.economy},{"name":"supply_chain","node":business_system.supply_chain},{"name":"expansion","node":expansion_system.expansion},{"name":"districts","node":expansion_system.districts},{"name":"employees","node":employee_system},{"name":"business","node":business_system},{"name":"competitor_reactions","node":competitor_reactions}]
 func _capture_daily_transaction()->Dictionary:
     var snapshot:Dictionary={"participants":{}}
     for participant in _daily_transaction_participants():
-        var node=participant.get("node")
-        var name:=str(participant.get("name","unknown"))
-        if node==null:
-            return {"ok":false,"message":"Daily transaction cannot start: %s is unavailable."%name}
-        if not node.has_method("capture_state") or not node.has_method("restore_state"):
-            return {"ok":false,"message":"Daily transaction cannot start: %s is not rollback-capable."%name}
+        var node=participant.get("node");var name:=str(participant.get("name","unknown"))
+        if node==null:return {"ok":false,"message":"Daily transaction cannot start: %s is unavailable."%name}
+        if not node.has_method("capture_state") or not node.has_method("restore_state"):return {"ok":false,"message":"Daily transaction cannot start: %s is not rollback-capable."%name}
         snapshot["participants"][name]=node.capture_state()
     return {"ok":true,"snapshot":snapshot}
-
 func _restore_daily_transaction(snapshot:Dictionary)->void:
     var participants:Dictionary=snapshot.get("participants",{})
     for participant in _daily_transaction_participants():
-        var node=participant.get("node")
-        var name:=str(participant.get("name","unknown"))
-        if node!=null and participants.get(name,null) is Dictionary:
-            node.restore_state(participants[name])
-
+        var node=participant.get("node");var name:=str(participant.get("name","unknown"))
+        if node!=null and participants.get(name,null) is Dictionary:node.restore_state(participants[name])
 func advance_day()->void:
     var simulation=get_node_or_null("/root/RenewSimulationSystem");if simulation==null:_set_state("company","message","SimulationSystem is unavailable.");return
     var transaction:=_capture_daily_transaction()
-    if not bool(transaction.get("ok",false)):
-        _set_state("company","message",str(transaction.get("message","Daily transaction could not start.")));return
+    if not bool(transaction.get("ok",false)):_set_state("company","message",str(transaction.get("message","Daily transaction could not start.")));return
     var context={"economy":supply_system.economy,"rivals":relationship_system.rivals,"events":_events(),"expansion":expansion_system.expansion,"districts":expansion_system.districts,"employee_system":employee_system,"business_system":business_system,"production":business_system.production,"contracts":get_node_or_null("/root/RenewContractSystem")}
     var result:Dictionary=simulation.advance_day(_simulation_state(),context)
-    if not bool(result.get("ok",false)):
-        _restore_daily_transaction(transaction["snapshot"])
-        _set_state("company","message",str(result.get("message","Unable to advance the day.")));return
+    if not bool(result.get("ok",false)):_restore_daily_transaction(transaction["snapshot"]);_set_state("company","message",str(result.get("message","Unable to advance the day.")));return
     _apply_simulation_state(result.get("state",{}));employee_system.sync_roster()
     if technology_system!=null:technology_system.add_daily_research_points(3)
     if competitor_reactions!=null:
@@ -193,9 +141,7 @@ func advance_day()->void:
     if units_sold>0:
         var demand_result:Dictionary=supply_system.economy.register_customer_demand("furniture",units_sold)
         if bool(demand_result.get("ok",false)):_log("MARKET: customers bought %d furniture; upstream resource demand increased."%units_sold)
-    if business_system.supply_chain.has_method("_sync_production_mirror"):
-        business_system.supply_chain._sync_production_mirror(business_system.supply_chain.warehouse.keys())
-
+    if business_system.supply_chain.has_method("_sync_production_mirror"):business_system.supply_chain._sync_production_mirror(business_system.supply_chain.warehouse.keys())
 func _events():
     if not has_meta("events_model"):set_meta("events_model",load("res://scripts/events.gd").new())
     return get_meta("events_model")
@@ -207,8 +153,7 @@ func _apply_simulation_state(state:Dictionary)->void:
     if state.get("log_lines",[]) is Array:_set_state("company","log_lines",state["log_lines"].duplicate(true))
 func save_game()->void:
     _set_state("supply_chain","resource_sites",business_system.supply_chain.warehouse_snapshot())
-    var state=get_node_or_null("/root/RenewGameState")
-    var snapshot=state.capture() if state!=null else {}
+    var state=get_node_or_null("/root/RenewGameState");var snapshot=state.capture() if state!=null else {}
     _set_state("company","message","Game saved." if SaveSystem.save_game(snapshot) else "Save failed.")
 func load_game()->void:
     var snapshot=SaveSystem.load_game();if snapshot.is_empty():_set_state("company","message","No save file found.");return
