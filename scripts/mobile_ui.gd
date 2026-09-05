@@ -121,6 +121,7 @@ func _update_panel_visibility() -> void:
         if world != null:
             _set_world_visible(world.get_node_or_null("WorldView"), active_tab == 3)
             _set_world_visible(world.get_node_or_null("PropertyVisual"), active_tab == 0)
+            _set_world_visible(world.get_node_or_null("RegionController"), active_tab == 3)
             # MainRenderer is a legacy world overlay and would duplicate the
             # current presentation, so keep it disabled while the modern UI is active.
             _set_world_visible(world.get_node_or_null("MainRenderer"), false)
@@ -172,4 +173,4 @@ func _update_goal_label() -> void:
     goal_label.text = goal
 func _show_feedback(text: String) -> void:
     feedback_label.text = text; feedback_panel.show(); feedback_timer = 5.0
-func _money(value: int) -> String: return String.num_int64(value)
+func _money(value: int)->String: return String.num_int64(value)
