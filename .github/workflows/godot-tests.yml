@@ -50,6 +50,8 @@ jobs:
         run: timeout 120s ./Godot_v4.5-stable_linux.x86_64 --headless --path . --script res://tests/test_ui_architecture.gd
       - name: Run targeted simulation architecture test
         run: timeout 60s ./Godot_v4.5-stable_linux.x86_64 --headless --path . --script res://tests/test_simulation_architecture.gd
+      - name: Run finance authority regression test
+        run: timeout 60s ./Godot_v4.5-stable_linux.x86_64 --headless --path . --script res://tests/test_production_finance_authority.gd
       - name: Run supply receipt atomicity regression
         run: timeout 60s ./Godot_v4.5-stable_linux.x86_64 --headless --path . --script res://tests/test_supply_receipt_atomicity.gd
       - name: Run production transaction boundary regression
