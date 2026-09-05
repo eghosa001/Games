@@ -31,7 +31,7 @@ func run() -> void:
     var chain = SupplyChain.new()
     chain.set_economy(economy)
 
-    check(chain.SYSTEM_VERSION == 4, "Supply chain system version is current")
+    check(chain.SYSTEM_VERSION == 5, "Supply chain system version is current")
     check(chain.RESOURCE_IDS.size() == 5, "Supply chain uses canonical V1 resources")
     for resource in ["timber", "iron", "energy", "food", "electronics"]:
         check(economy.resources.has(resource), "Economy exposes canonical resource: " + resource)
@@ -62,11 +62,18 @@ func run() -> void:
     check(bool(consumed.get("ok", false)), "Industry inputs are consumed")
     check(consumed.has("consumed"), "Input consumption reports consumed quantities")
 
-    chain.receive_product("furniture", 3)
-    check(chain.stock("furniture") == 3.0, "Finished furniture enters warehouse")
+    var received = chain.receive_product("furniture", 3)
+    check(bool(received.get("ok", false)), "Finished furniture enters warehouse")
+    check(chain.stock("furniture") == 3.0, "Finished furniture quantity is recorded")
     var sale = chain.sell_furniture(2, 220)
     check(bool(sale.get("ok", false)) and int(sale.get("sold", 0)) == 2, "Warehouse furniture can be sold")
     check(chain.stock("furniture") == 1.0, "Furniture sale reduces warehouse stock")
+    var invalid_sale = chain.sell_furniture(1, -1)
+    check(not bool(invalid_sale.get("ok", false)) and chain.stock("furniture") == 1.0, "Negative sale price is rejected without inventory loss")
+
+    var output_overflow = chain.receive_product("furniture", int(WAREHOUSE_LIMIT))
+    check(not bool(output_overflow.get("ok", false)) and output_overflow.get("reason", "") == "warehouse_capacity", "Produced goods cannot overflow warehouse")
+    check(chain.stock("furniture") == 1.0, "Rejected output overflow preserves inventory")
 
     var snapshot = chain.capture_state()
     var restored = SupplyChain.new()
