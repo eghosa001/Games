@@ -20,8 +20,9 @@ jobs:
         run: |
           set -euo pipefail
           GODOT_VERSION="4.5-stable"
+          GODOT_TEMPLATE_VERSION="4.5.stable"
           export XDG_DATA_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}"
-          TEMPLATES_DIR="$XDG_DATA_HOME/godot/export_templates/$GODOT_VERSION"
+          TEMPLATES_DIR="$XDG_DATA_HOME/godot/export_templates/$GODOT_TEMPLATE_VERSION"
           mkdir -p "$TEMPLATES_DIR" /tmp/godot_templates
           wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v4.5-stable_export_templates.tpz" -O /tmp/templates.tpz
           test -s /tmp/templates.tpz
