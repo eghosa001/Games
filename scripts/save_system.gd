@@ -173,7 +173,9 @@ static func _ownership_node():
         return node
     var scene = tree.get_current_scene()
     if scene:
-        return scene.get_node_or_null("OwnershipSystem")
+        node = scene.get_node_or_null("Systems/OwnershipSystem")
+        if node == null: node = scene.get_node_or_null("OwnershipSystem")
+        return node
     return null
 
 static func _sanitize_json_value(value):
