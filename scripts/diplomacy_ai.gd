@@ -4,9 +4,27 @@ extends Node
 ## NPCs can propose, accept, cancel and occasionally breach treaties based on
 ## relationships, strategic needs and risk tolerance.
 
+const CHECK_INTERVAL_SECONDS := 0.25
 var last_day: Variant = -1
+var _check_timer: Timer
 
-func _process(_delta: float) -> void:
+func _ready() -> void:
+    _check_timer = Timer.new()
+    _check_timer.wait_time = CHECK_INTERVAL_SECONDS
+    _check_timer.one_shot = false
+    _check_timer.timeout.connect(_check_current_day)
+    add_child(_check_timer)
+    _check_timer.start()
+    call_deferred("_check_current_day")
+
+func _exit_tree() -> void:
+    if _check_timer != null:
+        var callable := Callable(self, "_check_current_day")
+        if _check_timer.timeout.is_connected(callable):
+            _check_timer.timeout.disconnect(callable)
+        _check_timer.stop()
+
+func _check_current_day() -> void:
     var tree: Variant = Engine.get_main_loop()
     var scene = tree.get_current_scene() if tree != null else null
     if scene == null: return
