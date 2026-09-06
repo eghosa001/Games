@@ -2,10 +2,12 @@ extends Node
 
 # Milestone layer: gives the player long-term goals and memorable moments
 # without replacing the simulation's existing economy.
+const CHECK_INTERVAL_SECONDS := 0.25
 var parent
-var claimed: Variant = {}
+var claimed: Dictionary = {}
+var check_timer: Timer
 
-var milestones: Variant = [
+var milestones: Array[Dictionary] = [
     {"id":"acquired","title":"FIRST ASSET","rep":2,"cash":0,"text":"You own something the market had written off."},
     {"id":"restored","title":"REBUILDER","rep":4,"cash":0,"text":"The warehouse is fully restored. Neglect became productive capital."},
     {"id":"opened","title":"FIRST BUSINESS","rep":3,"cash":0,"text":"RENEW Goods is operating. You have entered the market."},
@@ -17,18 +19,29 @@ var milestones: Variant = [
 func _ready() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
     _load_state()
+    check_timer = Timer.new()
+    check_timer.name = "ProgressionCheckTimer"
+    check_timer.wait_time = CHECK_INTERVAL_SECONDS
+    check_timer.one_shot = false
+    check_timer.autostart = true
+    check_timer.timeout.connect(_check_milestones)
+    add_child(check_timer)
+    call_deferred("_check_milestones")
 
-func _process(_delta: float) -> void:
-    if parent == null:
-        return
-    _check_milestones()
+func _exit_tree() -> void:
+    if check_timer != null and is_instance_valid(check_timer):
+        if check_timer.timeout.is_connected(_check_milestones):
+            check_timer.timeout.disconnect(_check_milestones)
+        check_timer.stop()
 
 func _check_milestones() -> void:
+    if parent == null:
+        return
     for milestone in milestones:
-        var id: Variant = String(milestone["id"])
+        var id: String = String(milestone["id"])
         if bool(claimed.get(id, false)):
             continue
-        var reached: Variant = false
+        var reached := false
         match id:
             "acquired": reached = bool(parent.owned)
             "restored": reached = str(parent.stage) == "Operational"
@@ -39,7 +52,7 @@ func _check_milestones() -> void:
                 if region != null:
                     reached = int(region.regions.player_presence.count(1)) > 1
             "empire":
-                var owned_businesses: Variant = 0
+                var owned_businesses := 0
                 for p in parent.expansion.properties:
                     if bool(p.get("owned", false)): owned_businesses += 1
                 for site in parent.expansion.resource_sites:
@@ -49,7 +62,7 @@ func _check_milestones() -> void:
             _claim(milestone)
 
 func _claim(milestone: Dictionary) -> void:
-    var id: Variant = String(milestone["id"])
+    var id: String = String(milestone["id"])
     if bool(claimed.get(id, false)):
         return
     claimed[id] = true
