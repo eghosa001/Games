@@ -1,14 +1,33 @@
 extends Node
 
 ## Applies active treaty benefits to the real game systems once per game day.
-var last_day: Variant = -1
+const CHECK_INTERVAL_SECONDS := 0.25
+var last_day: int = -1
 var applied: Dictionary = {}
+var _day_check_timer: Timer
 
-func _process(_delta: float) -> void:
+func _ready() -> void:
+    _day_check_timer = Timer.new()
+    _day_check_timer.wait_time = CHECK_INTERVAL_SECONDS
+    _day_check_timer.one_shot = false
+    _day_check_timer.timeout.connect(_check_day)
+    add_child(_day_check_timer)
+    _day_check_timer.start()
+    call_deferred("_check_day")
+
+func _exit_tree() -> void:
+    if _day_check_timer != null:
+        if _day_check_timer.timeout.is_connected(_check_day):
+            _day_check_timer.timeout.disconnect(_check_day)
+        _day_check_timer.stop()
+        _day_check_timer.queue_free()
+        _day_check_timer = null
+
+func _check_day() -> void:
     var tree: Variant = Engine.get_main_loop()
     var scene = tree.get_current_scene() if tree != null else null
     if scene == null: return
-    var day: Variant = int(scene.get("day"))
+    var day: int = int(scene.get("day"))
     if day == last_day: return
     last_day = day
     var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
@@ -17,8 +36,8 @@ func _process(_delta: float) -> void:
         _apply(treaty, day)
 
 func _apply(treaty: Dictionary, day: int) -> void:
-    var id: Variant = str(treaty.get("id", ""))
-    var a: Variant = str(treaty.get("party_a", "")); var b := str(treaty.get("party_b", ""))
+    var id: String = str(treaty.get("id", ""))
+    var a: String = str(treaty.get("party_a", "")); var b := str(treaty.get("party_b", ""))
     if a != "player" and b != "player": return
     var benefits: Dictionary = treaty.get("benefits", {})
     var obligations: Dictionary = treaty.get("obligations", {})
@@ -30,7 +49,7 @@ func _apply(treaty: Dictionary, day: int) -> void:
             if finance != null: finance.receive(max(1, int(round(250.0 * float(benefits.get("trade_margin", 0.04))))), "treaty trade:%s" % id)
         "supply":
             if production != null:
-                var qty: Variant = max(1, int(obligations.get("minimum_supply", 5)))
+                var qty: int = max(1, int(obligations.get("minimum_supply", 5)))
                 production.add_inventory("materials", qty)
                 production.add_inventory("fuel", max(1, int(round(qty * 0.2))))
         "research":
@@ -43,8 +62,8 @@ func _apply(treaty: Dictionary, day: int) -> void:
                 _mark(id, "reputation_day", day)
         "investment":
             if finance != null:
-                var capital: Variant = float(obligations.get("capital_commitment", 5000.0))
-                var rate: Variant = float(benefits.get("investment_return", 0.08))
+                var capital: float = float(obligations.get("capital_commitment", 5000.0))
+                var rate: float = float(benefits.get("investment_return", 0.08))
                 finance.receive(max(1, int(round(capital * rate / 30.0))), "treaty investment:%s" % id)
         "infrastructure":
             if production != null and not bool(applied.get(id, {}).get("infrastructure", false)):
@@ -53,8 +72,8 @@ func _apply(treaty: Dictionary, day: int) -> void:
                 _mark(id, "infrastructure", true)
         "joint_venture":
             if finance != null:
-                var capital: Variant = float(obligations.get("joint_capital", 3000.0))
-                var share: Variant = float(benefits.get("joint_profit_share", 0.10))
+                var capital: float = float(obligations.get("joint_capital", 3000.0))
+                var share: float = float(benefits.get("joint_profit_share", 0.10))
                 finance.receive(max(1, int(round(capital * (0.10 + share) / 30.0))), "joint venture profit:%s" % id)
 
 func _mark(id: String, key: String, value) -> void:
