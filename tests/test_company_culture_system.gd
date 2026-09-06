@@ -32,6 +32,17 @@ func run() -> void:
         if not effects.has(key) or float(effects[key]) <= 0.0:
             failures.append("Culture effects missing or invalid: %s" % key)
 
+    var daily_first := system.daily_update(10)
+    var after_first := system.capture_state()
+    var daily_second := system.daily_update(10)
+    var after_second := system.capture_state()
+    if bool(daily_second.get("changed", true)):
+        failures.append("Company culture daily update must be idempotent for the same day")
+    if after_first.get("culture", {}) != after_second.get("culture", {}):
+        failures.append("Repeated same-day culture updates must not apply modifiers twice")
+    if int(after_first.get("last_day", 0)) != 10:
+        failures.append("Culture daily update must record the processed day")
+
     var snapshot := system.capture_state()
     var restored := CultureSystem.new()
     root.add_child(restored)
@@ -40,6 +51,8 @@ func run() -> void:
         failures.append("Culture must survive capture/restore")
     if restored.get_dimension("quality") != 100:
         failures.append("Restored culture must retain bounded values")
+    if int(restored.capture_state().get("last_day", 0)) != 10:
+        failures.append("Processed culture day must survive capture/restore")
 
     var invalid := restored.set_dimension("not_a_dimension", 50)
     if bool(invalid.get("ok", true)):
