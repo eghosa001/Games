@@ -4,17 +4,26 @@ extends Node
 ## The event is installed before the next simulation tick so economy and demand
 ## systems consume the event's modifiers during the actual day.
 const Events = preload("res://scripts/events.gd")
+const CHECK_INTERVAL_SECONDS := 0.25
 var event_model = Events.new()
-var prepared_day: Variant = -1
+var prepared_day: int = -1
+var check_timer: Timer
 
 func _ready() -> void:
-    set_process(true)
+    check_timer = Timer.new()
+    check_timer.name = "DynamicEventCheckTimer"
+    check_timer.wait_time = CHECK_INTERVAL_SECONDS
+    check_timer.one_shot = false
+    check_timer.autostart = true
+    check_timer.timeout.connect(_check_current_day)
+    add_child(check_timer)
+    call_deferred("_check_current_day")
 
-func _process(_delta:float) -> void:
+func _check_current_day() -> void:
     var state = get_node_or_null("/root/RenewGameState")
     if state == null:
         return
-    var day: Variant = int(state.get_value("player", "day", 1))
+    var day: int = int(state.get_value("player", "day", 1))
     if day == prepared_day:
         return
     var economy = _find_economy()
@@ -22,6 +31,12 @@ func _process(_delta:float) -> void:
         return
     event_model.begin_day(economy, state, day)
     prepared_day = day
+
+func _exit_tree() -> void:
+    if check_timer != null and is_instance_valid(check_timer):
+        if check_timer.timeout.is_connected(_check_current_day):
+            check_timer.timeout.disconnect(_check_current_day)
+        check_timer.stop()
 
 func _find_economy():
     var main = get_node_or_null("/root/Main")
