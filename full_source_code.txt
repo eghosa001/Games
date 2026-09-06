@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Sun Sep  6 08:55:22 UTC 2026
+// Generated on: Sun Sep  6 09:00:30 UTC 2026
 
-// Source snapshot commit: f02600b34b5fb92010efbfe6e10b19034be2ebb1
+// Source snapshot commit: ef4239163dd869c7fbd6d3813fdd367b32b6d7a4
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -8246,7 +8246,7 @@ func _layout() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/corporate.gd
-Lines: 394
+Lines: 393
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node2D
 
@@ -8255,6 +8255,7 @@ extends Node2D
 # board seats, dividends, investor confidence and takeover defense.
 
 const OwnershipSystem = preload("res://scripts/ownership_system.gd")
+const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 const COMPANY_ID := "renew_co"
 const FOUNDER_ID := "founder"
 const INVESTOR_ID := "fund_a"
@@ -8292,11 +8293,9 @@ var board_trust: int:
 
 func _ready() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
-    ownership = get_tree().root.get_node_or_null("Renew/Systems/OwnershipSystem")
-    if ownership == null:
-        ownership = OwnershipSystem.new()
-        ownership.name = "OwnershipSystem"
-        get_tree().root.get_node("Renew/Systems").add_child.call_deferred(ownership)
+    # OwnershipSystem is scene-owned in Main.tscn. Never instantiate a second
+    # stateful authority when the canonical dependency is temporarily absent.
+    ownership = RuntimeResolver.resolve("RenewOwnershipSystem", "Systems/OwnershipSystem")
     if parent != null: last_processed_day = parent.day
     _ensure_company()
     # Corporate state is persisted by the canonical GameState/save pipeline.
@@ -8604,7 +8603,7 @@ func get_summary() -> Dictionary:
     return {"valuation":valuation,"share_price":share_price,"founder":founder_stake,"investors":investor_stake,"treasury":treasury_shares,"control":control_score,"risk":takeover_risk,"defense":defense_level,"trust":board_trust,"influence":ownership.get_board_seats(COMPANY_ID, FOUNDER_ID),"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"dividends":dividends_paid,"milestone":milestone_level,"milestone_name":_milestone_target(milestone_level),"ownership_snapshot":snapshot}
 
 func save_state() -> Dictionary:
-    return {"ownership_state": ownership.save_state() if ownership != null else {}, "investor_cash_raised":investor_cash_raised,"dividends_paid":dividends_paid,"valuation":valuation,"share_price":share_price,"last_capital_raise":last_capital_raise,"takeover_cooldown":takeover_cooldown,"last_processed_day":last_processed_day,"board_influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"milestone_level":milestone_level}
+    return {"ownership_state": ownership.save_state() if ownership != null else {},"investor_cash_raised":investor_cash_raised,"dividends_paid":dividends_paid,"valuation":valuation,"share_price":share_price,"last_capital_raise":last_capital_raise,"takeover_cooldown":takeover_cooldown,"last_processed_day":last_processed_day,"board_influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"milestone_level":milestone_level}
 
 func load_state(state: Dictionary) -> void:
     if ownership != null and state.has("ownership_state") and state["ownership_state"] is Dictionary:
@@ -9946,7 +9945,7 @@ func _sync_finance_mirrors(finance) -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/dynamic_event_controller.gd
-Lines: 40
+Lines: 55
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 
@@ -9954,17 +9953,26 @@ extends Node
 ## The event is installed before the next simulation tick so economy and demand
 ## systems consume the event's modifiers during the actual day.
 const Events = preload("res://scripts/events.gd")
+const CHECK_INTERVAL_SECONDS := 0.25
 var event_model = Events.new()
-var prepared_day: Variant = -1
+var prepared_day: int = -1
+var check_timer: Timer
 
 func _ready() -> void:
-    set_process(true)
+    check_timer = Timer.new()
+    check_timer.name = "DynamicEventCheckTimer"
+    check_timer.wait_time = CHECK_INTERVAL_SECONDS
+    check_timer.one_shot = false
+    check_timer.autostart = true
+    check_timer.timeout.connect(_check_current_day)
+    add_child(check_timer)
+    call_deferred("_check_current_day")
 
-func _process(_delta:float) -> void:
+func _check_current_day() -> void:
     var state = get_node_or_null("/root/RenewGameState")
     if state == null:
         return
-    var day: Variant = int(state.get_value("player", "day", 1))
+    var day: int = int(state.get_value("player", "day", 1))
     if day == prepared_day:
         return
     var economy = _find_economy()
@@ -9972,6 +9980,12 @@ func _process(_delta:float) -> void:
         return
     event_model.begin_day(economy, state, day)
     prepared_day = day
+
+func _exit_tree() -> void:
+    if check_timer != null and is_instance_valid(check_timer):
+        if check_timer.timeout.is_connected(_check_current_day):
+            check_timer.timeout.disconnect(_check_current_day)
+        check_timer.stop()
 
 func _find_economy():
     var main = get_node_or_null("/root/Main")
@@ -12980,21 +12994,31 @@ func _layout() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/history_event_bridge.gd
-Lines: 97
+Lines: 112
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 
 ## Central gameplay-to-history adapter. UI code never creates history entries.
-var _snapshots:Dictionary={}
+const CHECK_INTERVAL_SECONDS := 0.25
+var _snapshots: Dictionary = {}
+var check_timer: Timer
 
-func _ready()->void:
-    set_process(true)
+func _ready() -> void:
+    check_timer = Timer.new()
+    check_timer.name = "HistoryEventCheckTimer"
+    check_timer.wait_time = CHECK_INTERVAL_SECONDS
+    check_timer.one_shot = false
+    check_timer.autostart = true
+    check_timer.timeout.connect(_check_state)
+    add_child(check_timer)
+    call_deferred("_check_state")
 
-func _process(_delta:float)->void:
-    var history=get_node_or_null("/root/RenewHistorySystem")
-    var state=get_node_or_null("/root/RenewGameState")
-    if history==null or state==null or not history.has_method("record"):return
-    var day:=int(state.get_value("player","day",1))
+func _check_state() -> void:
+    var history = get_node_or_null("/root/RenewHistorySystem")
+    var state = get_node_or_null("/root/RenewGameState")
+    if history == null or state == null or not history.has_method("record"):
+        return
+    var day := int(state.get_value("player", "day", 1))
     _transition(history,"property_acquired",bool(state.get_value("properties","owned",false)),day,"PROPERTY_ACQUIRED","Property acquired",{})
     _transition(history,"property_restored",str(state.get_value("properties","stage",""))=="Operational",day,"PROPERTY_RESTORED","Property fully restored",{})
     _transition(history,"business_opened",bool(state.get_value("businesses","business_open",false)),day,"BUSINESS_OPENED","Business opened",{"business":state.get_value("businesses","business_name","")})
@@ -13008,6 +13032,12 @@ func _process(_delta:float)->void:
     _project_events(history,state,day)
     _competitor_events(history,state,day)
     _major_events(history,state,day)
+
+func _exit_tree() -> void:
+    if check_timer != null and is_instance_valid(check_timer):
+        if check_timer.timeout.is_connected(_check_state):
+            check_timer.timeout.disconnect(_check_state)
+        check_timer.stop()
 
 func _transition(history,key:String,now:bool,day:int,event_name:String,title:String,details:Dictionary)->void:
     if not _snapshots.has(key):_snapshots[key]=now;return
@@ -13058,7 +13088,6 @@ func _alliance_events(history,state,day:int)->void:
     _counter(history,"projects_completed",completed,day,"PROJECT_COMPLETED","Cooperative project completed",{"count":completed})
 
 func _project_events(history,state,day:int)->void:
-    # Kept as a dedicated hook so future cooperative projects can expose a direct counter.
     var reputation=int(state.get_value("regions","regional_reputation",0))
     _counter(history,"regional_reputation",reputation,day,"PROJECT_COMPLETED","Regional cooperative project completed",{"regional_reputation":reputation})
 
@@ -16329,16 +16358,18 @@ func restore_state(snapshot:Dictionary)->void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/progression.gd
-Lines: 82
+Lines: 96
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 
 # Milestone layer: gives the player long-term goals and memorable moments
 # without replacing the simulation's existing economy.
+const CHECK_INTERVAL_SECONDS := 0.25
 var parent
-var claimed: Variant = {}
+var claimed: Dictionary = {}
+var check_timer: Timer
 
-var milestones: Variant = [
+var milestones: Array[Dictionary] = [
     {"id":"acquired","title":"FIRST ASSET","rep":2,"cash":0,"text":"You own something the market had written off."},
     {"id":"restored","title":"REBUILDER","rep":4,"cash":0,"text":"The warehouse is fully restored. Neglect became productive capital."},
     {"id":"opened","title":"FIRST BUSINESS","rep":3,"cash":0,"text":"RENEW Goods is operating. You have entered the market."},
@@ -16350,18 +16381,29 @@ var milestones: Variant = [
 func _ready() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
     _load_state()
+    check_timer = Timer.new()
+    check_timer.name = "ProgressionCheckTimer"
+    check_timer.wait_time = CHECK_INTERVAL_SECONDS
+    check_timer.one_shot = false
+    check_timer.autostart = true
+    check_timer.timeout.connect(_check_milestones)
+    add_child(check_timer)
+    call_deferred("_check_milestones")
 
-func _process(_delta: float) -> void:
-    if parent == null:
-        return
-    _check_milestones()
+func _exit_tree() -> void:
+    if check_timer != null and is_instance_valid(check_timer):
+        if check_timer.timeout.is_connected(_check_milestones):
+            check_timer.timeout.disconnect(_check_milestones)
+        check_timer.stop()
 
 func _check_milestones() -> void:
+    if parent == null:
+        return
     for milestone in milestones:
-        var id: Variant = String(milestone["id"])
+        var id: String = String(milestone["id"])
         if bool(claimed.get(id, false)):
             continue
-        var reached: Variant = false
+        var reached := false
         match id:
             "acquired": reached = bool(parent.owned)
             "restored": reached = str(parent.stage) == "Operational"
@@ -16372,7 +16414,7 @@ func _check_milestones() -> void:
                 if region != null:
                     reached = int(region.regions.player_presence.count(1)) > 1
             "empire":
-                var owned_businesses: Variant = 0
+                var owned_businesses := 0
                 for p in parent.expansion.properties:
                     if bool(p.get("owned", false)): owned_businesses += 1
                 for site in parent.expansion.resource_sites:
@@ -16382,7 +16424,7 @@ func _check_milestones() -> void:
             _claim(milestone)
 
 func _claim(milestone: Dictionary) -> void:
-    var id: Variant = String(milestone["id"])
+    var id: String = String(milestone["id"])
     if bool(claimed.get(id, false)):
         return
     claimed[id] = true
@@ -16414,6 +16456,7 @@ func _load_state() -> void:
         var saved = state.get_value("progression", "milestones", {})
         if saved is Dictionary and not saved.is_empty():
             claimed = saved.duplicate(true)
+
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/progression_system.gd
@@ -18381,7 +18424,7 @@ static func _game_state():
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/scarcity_system.gd
-Lines: 60
+Lines: 78
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 
@@ -18390,6 +18433,37 @@ const SYSTEM_VERSION := 1
 const MIN_PRICE_MULTIPLIER := 0.55
 const MAX_PRICE_MULTIPLIER := 2.50
 const MIN_PRODUCTION_FACTOR := 0.45
+const UPDATE_INTERVAL_SECONDS := 0.25
+var update_timer: Timer
+
+func _ready() -> void:
+    update_timer = Timer.new()
+    update_timer.name = "ScarcityUpdateTimer"
+    update_timer.wait_time = UPDATE_INTERVAL_SECONDS
+    update_timer.one_shot = false
+    update_timer.autostart = true
+    update_timer.timeout.connect(refresh)
+    add_child(update_timer)
+    call_deferred("refresh")
+
+func refresh() -> void:
+    var main := get_tree().current_scene
+    if main == null: return
+    var economy = main.get("economy")
+    if economy == null: return
+    apply_to_economy(economy)
+    var rivals = main.get("rivals")
+    if rivals == null: return
+    var multiplier := product_cost_multiplier(economy)
+    for rival in rivals.rivals:
+        if not rival.has("_scarcity_base_price"): rival["_scarcity_base_price"] = int(rival.get("price",110))
+        rival["price"] = clamp(int(round(float(rival["_scarcity_base_price"]) * multiplier)),50,300)
+
+func _exit_tree() -> void:
+    if update_timer != null and is_instance_valid(update_timer):
+        if update_timer.timeout.is_connected(refresh):
+            update_timer.timeout.disconnect(refresh)
+        update_timer.stop()
 
 func profile(resource:String,data:Dictionary)->Dictionary:
     var stock:=max(0.0,float(data.get("stock",0)))
@@ -18427,19 +18501,6 @@ func product_cost_multiplier(economy)->float:
 
 func product_market_price(economy,base_price:float=110.0)->float:
     return base_price*product_cost_multiplier(economy)
-
-func _process(_delta:float)->void:
-    var main:=get_tree().current_scene
-    if main==null: return
-    var economy=main.get("economy")
-    if economy==null: return
-    apply_to_economy(economy)
-    var rivals=main.get("rivals")
-    if rivals==null: return
-    var multiplier:=product_cost_multiplier(economy)
-    for rival in rivals.rivals:
-        if not rival.has("_scarcity_base_price"): rival["_scarcity_base_price"]=int(rival.get("price",110))
-        rival["price"]=clamp(int(round(float(rival["_scarcity_base_price"])*multiplier)),50,300)
 
 func capture_state(resources:Dictionary)->Dictionary:
     return {"system_version":SYSTEM_VERSION,"snapshot":snapshot(resources)}
