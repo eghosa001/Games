@@ -45,7 +45,7 @@ func settle_debt_day() -> Dictionary:
             due = int(round(accrued))
         else:
             # Re-amortize against the current principal and remaining term.
-            var rate_per_period := annual_rate / 365.0
+            var rate_per_period: float = annual_rate / 365.0
             if rate_per_period > 0.0:
                 due = int(round(principal * rate_per_period / max(0.0001, 1.0 - pow(1.0 + rate_per_period, -remaining_periods))))
             else:
@@ -92,7 +92,7 @@ func settle_debt_day() -> Dictionary:
                 var instrument_payment := min(remaining_cash_payment, due)
                 var interest_paid := min(instrument_payment, int(round(accrued)))
                 var principal_paid := min(instrument_payment - interest_paid, int(round(principal)))
-                var actual_payment := interest_paid + principal_paid
+                var actual_payment: int = interest_paid + principal_paid
                 if actual_payment <= 0:
                     continue
 
@@ -118,7 +118,7 @@ func settle_debt_day() -> Dictionary:
                     instrument["payment"] = int(round(principal + accrued))
                 financing[id] = instrument
 
-            var actual_payment := interest_paid_total + principal_paid_total
+            var actual_payment: int = interest_paid_total + principal_paid_total
             payment = actual_payment
             cash -= actual_payment
             debt = max(0, debt - principal_paid_total)
