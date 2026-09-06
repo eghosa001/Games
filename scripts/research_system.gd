@@ -1,5 +1,4 @@
 extends Node
-class_name RenewResearchSystem
 
 const STATUS_PROPOSED := "proposed"
 const STATUS_ACTIVE := "active"
