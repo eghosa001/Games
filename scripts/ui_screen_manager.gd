@@ -3,10 +3,12 @@ class_name RenewUIScreenManager
 
 ## Central presentation guard. Primary screens are mutually exclusive; screen
 ## scripts remain responsible for their own content and gameplay integration.
-const SCREEN_NAMES := ["ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "MarketPanel", "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel"]
+const SCREEN_NAMES := ["ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel"]
 const ROOT_SCREEN_NAMES := ["RenewDiplomacyUI", "CustomerSegmentsUI"]
+const SCREEN_ALIASES := {"MarketPanel": "CustomerSegmentsUI"}
 var _previous_visible: Dictionary = {}
 var _active_screen: Node = null
+var _active_screen_name := ""
 var _initializing := true
 var _suppress_hooks := false
 
@@ -29,6 +31,9 @@ func _try_initialize() -> void:
 func _ui_root() -> Node:
     var game_root := get_tree().root.get_node_or_null("Renew")
     return game_root.get_node_or_null("UI") if game_root != null else null
+
+func _canonical_screen_name(screen_name: String) -> String:
+    return String(SCREEN_ALIASES.get(screen_name, screen_name))
 
 func _root_screen_nodes() -> Array[Node]:
     var result: Array[Node] = []
@@ -89,6 +94,7 @@ func _set_node_visible(node: Node, value: bool) -> void:
 
 func hide_all_screens() -> void:
     _active_screen = null
+    _active_screen_name = ""
     for node in _screen_nodes():
         _set_node_visible(node, false)
         _previous_visible[node.name] = false
@@ -99,9 +105,12 @@ func _enforce_single_screen() -> void:
         var now := _is_node_visible(node); var was: bool = _previous_visible.get(node.name, false)
         if now and not was: newly_opened = node
         _previous_visible[node.name] = now
-    if newly_opened != null: _active_screen = newly_opened
+    if newly_opened != null:
+        _active_screen = newly_opened
+        _active_screen_name = newly_opened.name
     if _active_screen == null or not _is_node_visible(_active_screen):
         _active_screen = null
+        _active_screen_name = ""
         return
     for node in nodes:
         if node != _active_screen and _is_node_visible(node):
@@ -110,22 +119,27 @@ func _enforce_single_screen() -> void:
 
 func show_screen(screen_name: String) -> void:
     if _initializing: _try_initialize()
+    var canonical_name := _canonical_screen_name(screen_name)
     var target: Node = null; var ui := _ui_root()
-    if ui != null: target = ui.get_node_or_null(screen_name)
-    if target == null: target = get_tree().root.get_node_or_null("Renew/" + screen_name)
-    if target == null: target = get_tree().root.get_node_or_null(screen_name)
-    if target == null or not (SCREEN_NAMES.has(screen_name) or ROOT_SCREEN_NAMES.has(screen_name)):
+    if ui != null: target = ui.get_node_or_null(canonical_name)
+    if target == null: target = get_tree().root.get_node_or_null("Renew/" + canonical_name)
+    if target == null: target = get_tree().root.get_node_or_null(canonical_name)
+    if target == null or not (SCREEN_NAMES.has(canonical_name) or ROOT_SCREEN_NAMES.has(canonical_name)):
         push_warning("Unknown primary RENEW screen: %s" % screen_name); return
     _active_screen = target
+    _active_screen_name = canonical_name
     for node in _screen_nodes():
         var should_show := node == target
         _set_node_visible(node, should_show)
         _previous_visible[node.name] = should_show
 
 func get_active_screen_name() -> String:
-    return String(_active_screen.name) if _active_screen != null and is_instance_valid(_active_screen) else ""
+    if _active_screen != null and is_instance_valid(_active_screen):
+        return _active_screen_name if _active_screen_name != "" else String(_active_screen.name)
+    return ""
 
 func is_screen_open(screen_name: String) -> bool:
+    var canonical_name := _canonical_screen_name(screen_name)
     for node in _screen_nodes():
-        if node.name == screen_name: return _is_node_visible(node)
+        if node.name == canonical_name: return _is_node_visible(node)
     return false
