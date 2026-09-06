@@ -18,6 +18,7 @@ func run() -> void:
     test_economy_edges()
     test_production_edges()
     test_save_edges()
+    test_autosave_sentinel()
     await test_scene_edges()
     print("EDGE RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
@@ -52,6 +53,18 @@ func test_save_edges() -> void:
     var data = save.load_game()
     check(bool(data.get("edge", false)), "Save system reads boolean")
     check(bool(data.get("nested", {}).get("ok", false)), "Save system reads nested state")
+
+func test_autosave_sentinel() -> void:
+    var save = load("res://scripts/save_system.gd")
+    var state = get_root().get_node_or_null("RenewGameState")
+    check(state != null, "Autosave sentinel resolves GameState")
+    if save == null or state == null:
+        return
+    state.set_value("economy", "cash", 987654)
+    check(save.save_game({}), "Autosave sentinel saves successfully")
+    var data: Dictionary = save.load_game()
+    check(data.has("domains"), "Autosave sentinel persists domains")
+    check(int(data.get("domains", {}).get("economy", {}).get("cash", 0)) == 987654, "Autosave sentinel preserves live cash")
 
 func test_scene_edges() -> void:
     var scene = load("res://scenes/Main.tscn")
