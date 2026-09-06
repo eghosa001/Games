@@ -1,7 +1,7 @@
 extends Node
 
 ## Phase 21 — compact V1 technology tree.
-## Definitions are static; research progress and unlocked technologies live in GameState.
+## V2 adds Company Culture as a strategic modifier without changing base research costs.
 const DomainSystem = preload("res://scripts/domain_system.gd")
 const TECHNOLOGIES := {
     "efficient_production": {"name":"Efficient Production","tier":1,"cost_money":2500,"cost_points":10,"time_days":2,"prerequisites":[],"effects":{"production_multiplier":0.10}},
@@ -22,6 +22,11 @@ func _ready() -> void:
     add_child(state_adapter)
 func _state() -> Node:
     return get_node_or_null("/root/RenewGameState")
+func _culture_effect(effect_name: String, fallback: float) -> float:
+    var culture := get_node_or_null("/root/RenewCompanyCultureSystem")
+    if culture != null and culture.has_method("get_effects"):
+        return float(culture.get_effects().get(effect_name, fallback))
+    return fallback
 func get_technologies() -> Array:
     var result:Array=[]
     for id in TECHNOLOGIES.keys():
@@ -54,10 +59,16 @@ func research(id:String)->bool:
         state.set_value("company","message",str(spend.get("message","Technology research requires sufficient cash."))); return false
     state.set_value("technology","research_points",points-int(tech["cost_points"]))
     var unlocked:Dictionary=state.get_value("technology","technology",{}); unlocked=unlocked.duplicate(true); unlocked[id]=true; state.set_value("technology","technology",unlocked)
-    last_research_days = int(tech["time_days"])
+    last_research_days = get_research_time_days(id)
     state.set_value("company","message","Research complete: %s. %d day(s) will be simulated." % [tech["name"],last_research_days])
     var logs=state.get_value("company","log_lines",[]); if not logs is Array:logs=[]; logs=logs.duplicate(true); logs.append("TECHNOLOGY: %s researched (-$%d, -%d RP, %d days)." % [tech["name"],int(tech["cost_money"]),int(tech["cost_points"]),last_research_days]); if logs.size()>100:logs.pop_front(); state.set_value("company","log_lines",logs)
     return true
+func get_research_time_days(id:String)->int:
+    var tech:=get_technology(id)
+    if tech.is_empty(): return 0
+    var base_days:=max(1,int(tech.get("time_days",1)))
+    var multiplier:=max(0.50,_culture_effect("research_multiplier",1.0))
+    return max(1,int(ceil(float(base_days) / multiplier)))
 func get_last_research_days()->int:
     return last_research_days
 func research_next() -> bool:
