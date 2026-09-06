@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Sun Sep  6 09:19:09 UTC 2026
+// Generated on: Sun Sep  6 09:27:56 UTC 2026
 
-// Source snapshot commit: d3b6d43a3cce1401edb70e5cbf6579b446cd855b
+// Source snapshot commit: ae316b943724510f3c256ca5c0618ff254e9a60f
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -10915,7 +10915,7 @@ func _load_state() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/employee_command_system.gd
-Lines: 72
+Lines: 74
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 const DomainSystem = preload("res://scripts/domain_system.gd")
@@ -10926,6 +10926,12 @@ var employee_system = EmployeeSystem.new()
 
 func _ready() -> void:
     add_child(state_adapter); add_child(employee_system); sync_roster()
+func _culture(): return get_node_or_null("/root/RenewCompanyCultureSystem")
+func _culture_effect(name:String, default_value:float=1.0)->float:
+    var culture = _culture()
+    if culture != null and culture.has_method("get_effects"):
+        return float(culture.get_effects().get(name, default_value))
+    return default_value
 func get_active_employee_count()->int: return employee_system.get_active_employee_count()
 func get_roster()->Array[Dictionary]:
     var roster: Array[Dictionary] = []
@@ -10934,7 +10940,7 @@ func get_roster()->Array[Dictionary]:
     return roster
 func get_daily_wage_total()->int: return employee_system.get_daily_wage_total()
 func get_morale_multiplier()->float: return employee_system.get_morale_multiplier()
-func get_productivity_multiplier(assignment:String="factory_001")->float: return employee_system.get_productivity_multiplier(assignment)
+func get_productivity_multiplier(assignment:String="factory_001")->float: return employee_system.get_productivity_multiplier(assignment) * _culture_effect("productivity_multiplier")
 func hire_employee()->void:
     if not bool(state_adapter.get_value("businesses","business_open",false)): state_adapter.message("Open the business first."); return
     var day:=int(state_adapter.get_value("player","day",1)); var current_count:=employee_system.get_active_employee_count()
@@ -10942,23 +10948,19 @@ func hire_employee()->void:
     if candidates.is_empty(): employee_system.refresh_candidates(); candidates=employee_system.get_candidates()
     if candidates.is_empty(): state_adapter.message("No candidates are available right now."); return
     var candidate:Dictionary=candidates[0]
-    var recruitment_factor:=1.0+float(max(0,80-int(candidate.get("loyalty",50))))/200.0
+    var recruitment_factor:float=(1.0+float(max(0,80-int(candidate.get("loyalty",50))))/200.0) / _culture_effect("recruitment_multiplier")
     var preview_cost:=int(round((1200+current_count*250)*recruitment_factor))
     var cash:=int(state_adapter.get_value("economy","cash",25000))
     if cash<preview_cost: state_adapter.message("Hiring requires $%s."%state_adapter.money(preview_cost)); return
     var result=employee_system.hire_candidate(str(candidate.get("id","")),day)
     if not bool(result.get("ok",false)): state_adapter.message(str(result.get("message","Unable to hire employee."))); return
-    var actual_cost:=int(result.get("cost",preview_cost))
+    var actual_cost:=int(round(float(result.get("cost",preview_cost)) / _culture_effect("recruitment_multiplier")))
     if actual_cost != preview_cost:
-        employee_system.fire_employee(str(result["employee"]["id"]),day)
-        state_adapter.message("Hiring cost changed; the candidate was not hired.")
-        sync_roster()
-        return
+        employee_system.fire_employee(str(result["employee"]["id"]),day); state_adapter.message("Hiring cost changed; the candidate was not hired."); sync_roster(); return
     var spend:=state_adapter.spend(actual_cost,"employee hiring")
     if not bool(spend.get("ok",false)):
         employee_system.fire_employee(str(result["employee"]["id"]),day); state_adapter.message("Hiring cost changed and available cash is insufficient."); sync_roster(); return
-    sync_roster(); state_adapter.set_value("player","reputation",int(state_adapter.get_value("player","reputation",0))+1)
-    state_adapter.log_message("HIRING: employee %d joined (-$%s)."%[employee_system.get_active_employee_count(),state_adapter.money(actual_cost)]); state_adapter.message("Employee hired. More capacity, higher daily wages.")
+    sync_roster(); state_adapter.set_value("player","reputation",int(state_adapter.get_value("player","reputation",0))+1); state_adapter.log_message("HIRING: employee %d joined (-$%s)."%[employee_system.get_active_employee_count(),state_adapter.money(actual_cost)]); state_adapter.message("Employee hired. More capacity, higher daily wages.")
 func train_employee(employee_id:String)->void:
     var day:=int(state_adapter.get_value("player","day",1)); var cost:=900
     var cash:=int(state_adapter.get_value("economy","cash",25000))
@@ -10966,10 +10968,7 @@ func train_employee(employee_id:String)->void:
     var spend:=state_adapter.spend(cost,"employee training")
     if not bool(spend.get("ok",false)): state_adapter.message(str(spend.get("message","Training requires sufficient cash."))); return
     var result=employee_system.train_employee(employee_id,day,cost)
-    if not bool(result.get("ok",false)):
-        state_adapter.receive(cost,"employee training refund")
-        state_adapter.message(str(result.get("message","Training failed.")))
-        return
+    if not bool(result.get("ok",false)): state_adapter.receive(cost,"employee training refund"); state_adapter.message(str(result.get("message","Training failed."))); return
     sync_roster(); state_adapter.message("Employee training completed.")
 func promote_employee(employee_id:String)->void:
     var result=employee_system.promote_employee(employee_id,int(state_adapter.get_value("player","day",1)))
@@ -10984,7 +10983,10 @@ func fire_employee(employee_id:String)->void:
     if not bool(result.get("ok",false)): state_adapter.message(str(result.get("message","Dismissal failed."))); return
     sync_roster(); state_adapter.message(str(result.get("message","Employee dismissed.")))
 func daily_update(company_performance:int=0)->Dictionary:
-    var result:=employee_system.daily_update(int(state_adapter.get_value("player","day",1)),company_performance); sync_roster(); return result
+    var result:=employee_system.daily_update(int(state_adapter.get_value("player","day",1)),company_performance)
+    var culture = _culture()
+    if culture != null and culture.has_method("daily_update"): culture.daily_update(int(state_adapter.get_value("player","day",1)))
+    sync_roster(); return result
 func sync_roster()->void:
     var roster: Array[Dictionary] = []
     for employee in employee_system.employees:
@@ -12576,7 +12578,7 @@ func _ready() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/game_state.gd
-Lines: 111
+Lines: 117
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 
@@ -12585,8 +12587,8 @@ const RuntimeResolver := preload("res://scripts/runtime_dependency_resolver.gd")
 const SCHEMA_VERSION := 8
 const STATE_VERSION := 17
 const DOMAINS := ["player","company","properties","businesses","branches","employees","economy","resources","production","supply_chain","contracts","competitors","ownership","finance","alliances","diplomacy","regions","infrastructure","technology","events","progression","history","news","analytics","acquisition","bankruptcy"]
-const DOMAIN_KEYS := {"player":["day","reputation"],"company":["message","log_lines"],"properties":["owned","inspected","restoration","stage","selected_property","catalog"],"businesses":["business_open","business_id","business_name","business_type","business_purpose","industry_id","origin_property_id","origin_property_name","origin_property_type","capacity_level","marketing_level","player_price"],"branches":["selected_expansion","expansion"],"employees":["roster","employee_system"],"economy":["cash","last_sales","last_profit","total_profit"],"resources":["resources"],"production":["finished_goods","system"],"supply_chain":["supplier_choice","transport_level","transport_capacity","resource_sites","transport_cost_multiplier","resource_delivery_multiplier"],"contracts":["contract_days","contract_bonus","contract_system","system"],"competitors":["rivals","selected_rival","relationship","reaction_system"],"ownership":["acquisition_count","valuation","takeover_wins","system"],"finance":["debt","loan_payment","system"],"alliances":["alliances"],"diplomacy":["diplomacy"],"regions":["selected_district","districts","regional_reputation"],"infrastructure":["management_level","management_overhead"],"technology":["technology","research_points"],"events":["history","active","modifiers","seasonal","market_director"],"progression":["milestones","unlocks","xp","level","claimed_goals"],"history":["history_system"],"news":["news_system"],"analytics":["simulation_system"],"acquisition":["system"],"bankruptcy":["system"]}
-const DEFAULT_DOMAINS := {"player":{"day":1,"reputation":0},"company":{"message":"Inspect the abandoned warehouse. Your empire starts here.","log_lines":[]},"properties":{"owned":false,"inspected":false,"restoration":0,"stage":"Neglected","selected_property":0,"catalog":[]},"businesses":{"business_open":false,"business_id":"","business_name":"","business_type":"","business_purpose":"","industry_id":"","origin_property_id":"","origin_property_name":"","origin_property_type":"","capacity_level":1,"marketing_level":0,"player_price":110},"branches":{"selected_expansion":0,"expansion":{}},"employees":{"roster":[],"employee_system":{}},"economy":{"cash":35000,"last_sales":0,"last_profit":0,"total_profit":0},"resources":{"resources":{}},"production":{"finished_goods":0,"system":{}},"supply_chain":{"supplier_choice":0,"transport_level":1,"transport_capacity":40,"resource_sites":{},"transport_cost_multiplier":1.0,"resource_delivery_multiplier":1.0},"contracts":{"contract_days":0,"contract_bonus":0,"contract_system":{},"system":{}},"competitors":{"rivals":[],"selected_rival":0,"relationship":15,"reaction_system":{}},"ownership":{"acquisition_count":0,"valuation":25000,"takeover_wins":0,"system":{}},"finance":{"debt":0,"loan_payment":0,"system":{}},"alliances":{"alliances":{}},"diplomacy":{"diplomacy":{}},"regions":{"selected_district":0,"districts":{"renew_region":{"id":"renew_region","name":"Renew Region","cities":[],"resource_locations":[]}},"regional_reputation":0},"infrastructure":{"management_level":0,"management_overhead":0},"technology":{"technology":{},"research_points":20},"events":{"history":[],"active":{},"modifiers":{},"seasonal":{},"market_director":{}},"progression":{"milestones":[],"unlocks":[],"xp":0,"level":1,"claimed_goals":{}},"history":{"history_system":{}},"news":{"news_system":{}},"analytics":{"simulation_system":{}},"acquisition":{"system":{}},"bankruptcy":{"system":{}}}
+const DOMAIN_KEYS := {"player":["day","reputation"],"company":["message","log_lines","culture"],"properties":["owned","inspected","restoration","stage","selected_property","catalog"],"businesses":["business_open","business_id","business_name","business_type","business_purpose","industry_id","origin_property_id","origin_property_name","origin_property_type","capacity_level","marketing_level","player_price"],"branches":["selected_expansion","expansion"],"employees":["roster","employee_system"],"economy":["cash","last_sales","last_profit","total_profit"],"resources":["resources"],"production":["finished_goods","system"],"supply_chain":["supplier_choice","transport_level","transport_capacity","resource_sites","transport_cost_multiplier","resource_delivery_multiplier"],"contracts":["contract_days","contract_bonus","contract_system","system"],"competitors":["rivals","selected_rival","relationship","reaction_system"],"ownership":["acquisition_count","valuation","takeover_wins","system"],"finance":["debt","loan_payment","system"],"alliances":["alliances"],"diplomacy":["diplomacy"],"regions":["selected_district","districts","regional_reputation"],"infrastructure":["management_level","management_overhead"],"technology":["technology","research_points"],"events":["history","active","modifiers","seasonal","market_director"],"progression":["milestones","unlocks","xp","level","claimed_goals"],"history":["history_system"],"news":["news_system"],"analytics":["simulation_system"],"acquisition":["system"],"bankruptcy":["system"]}
+const DEFAULT_DOMAINS := {"player":{"day":1,"reputation":0},"company":{"message":"Inspect the abandoned warehouse. Your empire starts here.","log_lines":[],"culture":{}},"properties":{"owned":false,"inspected":false,"restoration":0,"stage":"Neglected","selected_property":0,"catalog":[]},"businesses":{"business_open":false,"business_id":"","business_name":"","business_type":"","business_purpose":"","industry_id":"","origin_property_id":"","origin_property_name":"","origin_property_type":"","capacity_level":1,"marketing_level":0,"player_price":110},"branches":{"selected_expansion":0,"expansion":{}},"employees":{"roster":[],"employee_system":{}},"economy":{"cash":35000,"last_sales":0,"last_profit":0,"total_profit":0},"resources":{"resources":{}},"production":{"finished_goods":0,"system":{}},"supply_chain":{"supplier_choice":0,"transport_level":1,"transport_capacity":40,"resource_sites":{},"transport_cost_multiplier":1.0,"resource_delivery_multiplier":1.0},"contracts":{"contract_days":0,"contract_bonus":0,"contract_system":{},"system":{}},"competitors":{"rivals":[],"selected_rival":0,"relationship":15,"reaction_system":{}},"ownership":{"acquisition_count":0,"valuation":25000,"takeover_wins":0,"system":{}},"finance":{"debt":0,"loan_payment":0,"system":{}},"alliances":{"alliances":{}},"diplomacy":{"diplomacy":{}},"regions":{"selected_district":0,"districts":{"renew_region":{"id":"renew_region","name":"Renew Region","cities":[],"resource_locations":[]}},"regional_reputation":0},"infrastructure":{"management_level":0,"management_overhead":0},"technology":{"technology":{},"research_points":20},"events":{"history":[],"active":{},"modifiers":{},"seasonal":{},"market_director":{}},"progression":{"milestones":[],"unlocks":[],"xp":0,"level":1,"claimed_goals":{}},"history":{"history_system":{}},"news":{"news_system":{}},"analytics":{"simulation_system":{}},"acquisition":{"system":{}},"bankruptcy":{"system":{}}}
 
 var domains: Dictionary = {}
 var data: Dictionary = {}
@@ -12635,6 +12637,9 @@ func _find_system(root_name: String, scene_path: String) -> Node:
     return RuntimeResolver.resolve(root_name, scene_path)
 
 func _capture_domain_systems() -> void:
+    var culture := _find_system("RenewCompanyCultureSystem", "Systems/CompanyCultureSystem")
+    if culture and culture.has_method("capture_state"):
+        domains["company"]["culture"] = culture.capture_state()
     var history := _find_system("RenewHistorySystem", "Systems/HistorySystem")
     if history and history.has_method("capture_state"): domains["history"]["history_system"] = history.capture_state()
     var news := _find_system("RenewNewsSystem", "Systems/NewsSystem")
@@ -12661,6 +12666,9 @@ func _capture_domain_systems() -> void:
     if reactions and reactions.has_method("capture_state"): domains["competitors"]["reaction_system"] = reactions.capture_state()
 
 func _restore_domain_systems() -> void:
+    var culture := _find_system("RenewCompanyCultureSystem", "Systems/CompanyCultureSystem")
+    if culture and culture.has_method("restore_state") and domains["company"].has("culture"):
+        culture.restore_state(domains["company"]["culture"])
     var history := _find_system("RenewHistorySystem", "Systems/HistorySystem")
     if history and history.has_method("restore_state") and domains["history"].has("history_system"): history.restore_state(domains["history"]["history_system"])
     var news := _find_system("RenewNewsSystem", "Systems/NewsSystem")
@@ -19842,12 +19850,12 @@ func load_snapshot(state:Dictionary)->void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/technology_system.gd
-Lines: 96
+Lines: 107
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 
 ## Phase 21 — compact V1 technology tree.
-## Definitions are static; research progress and unlocked technologies live in GameState.
+## V2 adds Company Culture as a strategic modifier without changing base research costs.
 const DomainSystem = preload("res://scripts/domain_system.gd")
 const TECHNOLOGIES := {
     "efficient_production": {"name":"Efficient Production","tier":1,"cost_money":2500,"cost_points":10,"time_days":2,"prerequisites":[],"effects":{"production_multiplier":0.10}},
@@ -19868,6 +19876,11 @@ func _ready() -> void:
     add_child(state_adapter)
 func _state() -> Node:
     return get_node_or_null("/root/RenewGameState")
+func _culture_effect(effect_name: String, fallback: float) -> float:
+    var culture := get_node_or_null("/root/RenewCompanyCultureSystem")
+    if culture != null and culture.has_method("get_effects"):
+        return float(culture.get_effects().get(effect_name, fallback))
+    return fallback
 func get_technologies() -> Array:
     var result:Array=[]
     for id in TECHNOLOGIES.keys():
@@ -19900,10 +19913,16 @@ func research(id:String)->bool:
         state.set_value("company","message",str(spend.get("message","Technology research requires sufficient cash."))); return false
     state.set_value("technology","research_points",points-int(tech["cost_points"]))
     var unlocked:Dictionary=state.get_value("technology","technology",{}); unlocked=unlocked.duplicate(true); unlocked[id]=true; state.set_value("technology","technology",unlocked)
-    last_research_days = int(tech["time_days"])
+    last_research_days = get_research_time_days(id)
     state.set_value("company","message","Research complete: %s. %d day(s) will be simulated." % [tech["name"],last_research_days])
     var logs=state.get_value("company","log_lines",[]); if not logs is Array:logs=[]; logs=logs.duplicate(true); logs.append("TECHNOLOGY: %s researched (-$%d, -%d RP, %d days)." % [tech["name"],int(tech["cost_money"]),int(tech["cost_points"]),last_research_days]); if logs.size()>100:logs.pop_front(); state.set_value("company","log_lines",logs)
     return true
+func get_research_time_days(id:String)->int:
+    var tech:=get_technology(id)
+    if tech.is_empty(): return 0
+    var base_days:=max(1,int(tech.get("time_days",1)))
+    var multiplier:=max(0.50,_culture_effect("research_multiplier",1.0))
+    return max(1,int(ceil(float(base_days) / multiplier)))
 func get_last_research_days()->int:
     return last_research_days
 func research_next() -> bool:
@@ -22853,7 +22872,7 @@ func test_scene_edges() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_employee_system.gd
-Lines: 49
+Lines: 58
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -22896,6 +22915,15 @@ func run() -> void:
     restored.daily_update(21, 1)
     if int(restored.get_employee(EmployeeSystem.JAMES_ID)["experience"]) <= 6: failures.append("Daily update should advance employee experience")
     if restored.total_salary() <= 0 or restored.total_productivity() <= 0.0: failures.append("Roster should drive salary and productivity totals")
+
+    var culture = root.get_node_or_null("RenewCompanyCultureSystem")
+    if culture != null and culture.has_method("set_dimension"):
+        var baseline := system.get_productivity_multiplier("factory_001")
+        culture.set_dimension("employee_welfare", 100, 21, "culture integration test")
+        var improved := system.get_productivity_multiplier("factory_001")
+        if improved <= baseline: failures.append("Employee productivity must respond to company culture")
+        culture.set_dimension("employee_welfare", 60, 21, "restore test baseline")
+
     var legacy = EmployeeSystem.new(); root.add_child(legacy); legacy.employees.clear(); legacy.migrate_legacy_count(5, 1)
     if legacy.get_active_employee_count() < 5: failures.append("Legacy employee count migration must preserve headcount")
     if legacy.get_employee(EmployeeSystem.JAMES_ID).is_empty(): failures.append("Legacy migration must restore James")
