@@ -18,6 +18,7 @@ jobs:
         test:
           - test_new_game_flow.gd
           - test_employee_system.gd
+          - test_company_culture_system.gd
           - test_history_system.gd
           - test_news_system.gd
           - test_runner.gd
