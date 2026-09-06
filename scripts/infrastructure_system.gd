@@ -190,11 +190,17 @@ func _register_ownership(asset_id: String, owner_id: String) -> void:
         ownership.issue_shares(entity_id, owner_id, 1000, ownership.VOTE_ORDINARY, "infrastructure ownership")
 
 func _ownership():
-    var root: Variant = get_tree().root
+    var tree = get_tree()
+    if tree == null: return null
+    var root: Variant = tree.root
+    if root == null: return null
     var node = root.get_node_or_null("RenewOwnershipSystem")
     if node != null: return node
-    var scene: Variant = get_tree().current_scene
-    return scene.get_node_or_null("OwnershipSystem") if scene != null else null
+    var scene: Variant = tree.current_scene
+    if scene == null: return null
+    node = scene.get_node_or_null("Systems/OwnershipSystem")
+    if node == null: node = scene.get_node_or_null("OwnershipSystem")
+    return node
 
 func cost_to_maintenance(cost: int) -> int: return max(100,int(round(float(cost)*0.01)))
 func _event(day: int, text: String) -> void:
