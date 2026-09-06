@@ -128,3 +128,35 @@ func _draw_research_center(o: Vector2) -> void:
 
 func _facility_label(pos: Vector2, text: String) -> void:
     draw_string(ThemeDB.fallback_font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, 180, 9, Color(MUTED.r, MUTED.g, MUTED.b, 0.82))
+
+func _draw_hq(w: float, h: float) -> void:
+    var o := Vector2(w * 0.50, minf(h * 0.43, 300.0))
+    draw_rect(Rect2(o.x - 76, o.y - 86, 152, 86), Color("1b3740"), true)
+    draw_rect(Rect2(o.x - 58, o.y - 68, 116, 50), Color("0c1b21"), true)
+    for i in range(6):
+        draw_rect(Rect2(o.x - 48 + i * 19, o.y - 58, 12, 30), Color(GLASS.r, GLASS.g, GLASS.b, 0.24 + 0.03 * sin(_time + i)), true)
+    draw_line(Vector2(o.x - 82, o.y), Vector2(o.x + 82, o.y), GOLD, 2.0)
+    _facility_label(o + Vector2(-50, 18), "HEADQUARTERS")
+
+func _draw_life(w: float, h: float) -> void:
+    var baseline := minf(h - 44.0, 0.86 * h)
+    for i in range(8):
+        var x := fmod(float(i) * w / 8.0 + _time * (8.0 + i), w)
+        var y := baseline - float((i * 17) % 30)
+        draw_circle(Vector2(x, y), 3.0, GREEN)
+        draw_line(Vector2(x, y + 3), Vector2(x, y + 13), Color(GREEN.r, GREEN.g, GREEN.b, 0.45), 2.0)
+        draw_line(Vector2(x, y + 13), Vector2(x + 7, y + 19), Color(GREEN.r, GREEN.g, GREEN.b, 0.30), 2.0)
+    draw_string(ThemeDB.fallback_font, Vector2(18, h - 20), "CITY NETWORK • PEOPLE • CAPITAL • COMMERCE", HORIZONTAL_ALIGNMENT_LEFT, minf(w - 36.0, 420.0), 9, Color(MUTED.r, MUTED.g, MUTED.b, 0.70))
+
+func _draw_region_map(w: float, h: float) -> void:
+    var map_rect := Rect2(maxf(12.0, w - 250.0), maxf(12.0, h - 150.0), minf(232.0, w - 24.0), 126.0)
+    draw_rect(map_rect, Color("0b181d", 0.88), true)
+    draw_rect(map_rect, Color("315057", 0.85), false, 1.0)
+    var center := map_rect.position + map_rect.size * 0.5
+    draw_circle(center, 30.0, Color("1a3941"))
+    for i in range(6):
+        var angle := float(i) * TAU / 6.0 + _time * 0.02
+        var p := center + Vector2(cos(angle), sin(angle)) * (34.0 + float(i % 2) * 14.0)
+        draw_line(center, p, Color(ROAD_EDGE.r, ROAD_EDGE.g, ROAD_EDGE.b, 0.70), 1.0)
+        draw_circle(p, 4.0, GOLD if i == 0 else GLASS)
+    draw_string(ThemeDB.fallback_font, map_rect.position + Vector2(12, 18), "REGIONAL NETWORK", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(MUTED.r, MUTED.g, MUTED.b, 0.80))
