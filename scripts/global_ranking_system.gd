@@ -129,7 +129,8 @@ func _derive_player_metrics(main) -> Dictionary:
     var infrastructure = get_node_or_null("/root/RenewInfrastructureSystem")
     var alliance = get_node_or_null("/root/RenewAllianceSystem")
     var employees = get_node_or_null("/root/RenewEmployeeSystem")
-    var ownership = main.get_node_or_null("OwnershipSystem")
+    var ownership = main.get_node_or_null("Systems/OwnershipSystem")
+    if ownership == null: ownership = main.get_node_or_null("OwnershipSystem")
     var cash: Variant = float(main.get("cash", 0.0))
     var reputation: Variant = float(main.get("reputation", 0.0))
     var revenue: Variant = float(main.get("revenue")) if main.get("revenue") != null else 0.0
