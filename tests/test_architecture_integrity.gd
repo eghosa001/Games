@@ -78,7 +78,7 @@ func audit_main_screen() -> void:
     await process_frame
     var world_nodes := ["MainRenderer","PropertyVisual","WorldView","EmpireController","Corporate","WorldMissions","RegionController","BranchController","SupplyChainController","RivalSupplyController"]
     var system_nodes := ["ScarcitySystem","GameBalance","RestorationStrategy","Progression","MarketDirector","EmpireGoals","FinanceSystem","OwnershipSystem","AcquisitionSystem","BankruptcySystem"]
-    var ui_nodes := ["MainHUD","StrategyHUD","TutorialOverlay","V1Celebration","TechnologyPanel","HistoryPanel","NewsPanel","AlliancePanel","HeadquartersPanel","CollectionPanel","LiveOpsPanel","MarketPanel","ContractPanel","EmployeePanel"]
+    var ui_nodes := ["MainHUD","StrategyHUD","TutorialOverlay","V1Celebration","TechnologyPanel","HistoryPanel","NewsPanel","AlliancePanel","HeadquartersPanel","CollectionPanel","LiveOpsPanel","CustomerSegmentsUI","ContractPanel","EmployeePanel"]
     for node_name in world_nodes: check(game.get_node_or_null("World/" + node_name) != null, "World node: " + node_name)
     for node_name in system_nodes: check(game.get_node_or_null("Systems/" + node_name) != null, "System node: " + node_name)
     for node_name in ui_nodes: check(game.get_node_or_null("UI/" + node_name) != null, "UI node: " + node_name)
