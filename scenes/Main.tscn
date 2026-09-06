@@ -153,8 +153,8 @@ layer = 30
 [node name="V1Celebration" type="CanvasLayer" parent="UI"]
 script = ExtResource("19")
 layer = 35
-[node name="TechnologyPanel" type="Node2D" parent="UI"]
-z_index = 100
+[node name="TechnologyPanel" type="CanvasLayer" parent="UI"]
+layer = 59
 script = ExtResource("35")
 [node name="HistoryPanel" type="CanvasLayer" parent="UI"]
 script = ExtResource("20")
