@@ -4,21 +4,36 @@ class_name RenewWorldPowerSystem
 const DIMENSIONS := ["economic", "resource", "industrial", "technology", "logistics", "diplomatic", "alliance", "cultural_reputation"]
 const WEIGHTS := {"economic": 0.18, "resource": 0.12, "industrial": 0.14, "technology": 0.14, "logistics": 0.10, "diplomatic": 0.10, "alliance": 0.10, "cultural_reputation": 0.12}
 const MAX_HISTORY := 365
+const CHECK_INTERVAL_SECONDS := 0.25
 
 var entities: Dictionary = {}
 var snapshots: Array = []
 var history: Dictionary = {}
-var last_day: Variant = -1
+var last_day: int = -1
+var _day_check_timer: Timer
 
 func _ready() -> void:
+    _day_check_timer = Timer.new()
+    _day_check_timer.wait_time = CHECK_INTERVAL_SECONDS
+    _day_check_timer.one_shot = false
+    _day_check_timer.timeout.connect(_check_day)
+    add_child(_day_check_timer)
+    _day_check_timer.start()
+    call_deferred("_check_day")
+
+func _exit_tree() -> void:
+    if _day_check_timer != null:
+        if _day_check_timer.timeout.is_connected(_check_day):
+            _day_check_timer.timeout.disconnect(_check_day)
+        _day_check_timer.stop()
+        _day_check_timer.queue_free()
+        _day_check_timer = null
+
+func _check_day() -> void:
     process_day(_current_day())
 
-func _process(_delta: float) -> void:
-    var day: Variant = _current_day()
-    if day != last_day: process_day(day)
-
 func register_entity(entity_id: String, name: String = "", region: String = "global") -> Dictionary:
-    var id: Variant = str(entity_id)
+    var id: String = str(entity_id)
     if not entities.has(id): entities[id] = {"id": id, "name": name if name != "" else id, "region": region, "dimensions": {}, "score": 0.0}
     else:
         if name != "": entities[id]["name"] = name
@@ -38,13 +53,13 @@ func update_entity(entity_id: String, dimensions: Dictionary) -> Dictionary:
 func process_day(day: int) -> void:
     if day == last_day and not snapshots.is_empty(): return
     _discover_entities()
-    var rankings: Variant = _build_rankings()
-    var snapshot: Variant = {"day": day, "rankings": rankings}
+    var rankings: Array = _build_rankings()
+    var snapshot: Dictionary = {"day": day, "rankings": rankings}
     snapshots.append(snapshot)
     if snapshots.size() > MAX_HISTORY: snapshots.pop_front()
     history[str(day)] = rankings.duplicate(true)
     if history.size() > MAX_HISTORY:
-        var oldest: Variant = str(snapshots[0].get("day", day))
+        var oldest: String = str(snapshots[0].get("day", day))
         history.erase(oldest)
     last_day = day
 
@@ -54,9 +69,9 @@ func get_world_power(entity_id: String) -> float:
 func get_breakdown(entity_id: String) -> Dictionary:
     var entry: Dictionary = entities.get(entity_id, {})
     var values: Dictionary = entry.get("dimensions", {})
-    var result: Variant = {}
+    var result: Dictionary = {}
     for dimension in DIMENSIONS:
-        var value: Variant = float(values.get(dimension, 0.0))
+        var value: float = float(values.get(dimension, 0.0))
         result[dimension] = {"score": value, "weight": WEIGHTS[dimension], "weighted": value * float(WEIGHTS[dimension])}
     result["total"] = float(entry.get("score", _calculate_score(values)))
     return result
@@ -89,7 +104,7 @@ func _build_rankings() -> Array:
     return rows
 
 func _calculate_score(values: Dictionary) -> float:
-    var total: Variant = 0.0
+    var total: float = 0.0
     for dimension in DIMENSIONS: total += clamp(float(values.get(dimension, 0.0)), 0.0, 100.0) * float(WEIGHTS[dimension])
     return clamp(total, 0.0, 100.0)
 
@@ -101,7 +116,7 @@ func _discover_entities() -> void:
     var ranking = tree.get_root().get_node_or_null("RenewGlobalRankingSystem")
     if ranking != null:
         for row in ranking.get_ranking("valuation", 1000):
-            var id: Variant = str(row.get("id", ""))
+            var id: String = str(row.get("id", ""))
             if id == "": continue
             register_entity(id, str(row.get("name", id)), str(row.get("region", "global")))
             var metrics: Dictionary = ranking.companies.get(id, {}).get("metrics", {})
@@ -120,7 +135,7 @@ func _dimensions_from_metrics(metrics: Dictionary) -> Dictionary:
     }
 
 func _normalize_dimension(values: Array) -> float:
-    var total: Variant = 0.0
+    var total: float = 0.0
     for value in values: total += _normalize_value(value)
     return total / max(1.0, float(values.size()))
 
