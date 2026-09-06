@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Sun Sep  6 09:27:56 UTC 2026
+// Generated on: Sun Sep  6 09:39:55 UTC 2026
 
-// Source snapshot commit: ae316b943724510f3c256ca5c0618ff254e9a60f
+// Source snapshot commit: 035a5c973ef413e9ecf74a57eb19e379082db670
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -227,7 +227,7 @@ jobs:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: .github/workflows/individual-godot-tests.yml
-Lines: 49
+Lines: 50
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 name: RENEW Individual Godot Tests
 
@@ -250,6 +250,7 @@ jobs:
           - test_new_game_flow.gd
           - test_employee_system.gd
           - test_company_culture_system.gd
+          - test_demand_culture_integration.gd
           - test_history_system.gd
           - test_news_system.gd
           - test_runner.gd
@@ -7234,7 +7235,7 @@ func _money(value: int) -> String:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/company_culture_system.gd
-Lines: 169
+Lines: 174
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 class_name RenewCompanyCultureSystem
@@ -7294,7 +7295,6 @@ func _check_day() -> void:
     var day := _day()
     if day <= 0 or day == _last_day:
         return
-    _last_day = day
     daily_update(day)
 
 func _normalize() -> void:
@@ -7323,6 +7323,12 @@ func adjust_dimension(dimension: String, amount: int, day: int = 0, reason: Stri
     return set_dimension(dimension, get_dimension(dimension) + amount, day, reason)
 
 func daily_update(day: int) -> Dictionary:
+    var resolved_day := int(day)
+    if resolved_day <= 0:
+        return {"day": resolved_day, "changed": false, "profile": get_profile()}
+    if resolved_day == _last_day:
+        return {"day": resolved_day, "changed": false, "profile": get_profile()}
+    _last_day = resolved_day
     var before := get_profile()
     var employee_system := get_node_or_null("/root/RenewEmployeeSystem")
     if employee_system != null:
@@ -7333,7 +7339,7 @@ func daily_update(day: int) -> Dictionary:
         _nudge("employee_welfare", welfare_target, 2)
         _nudge("discipline", 55, 1)
     _sync_state()
-    return {"day": day, "changed": before != culture, "profile": get_profile()}
+    return {"day": resolved_day, "changed": before != culture, "profile": get_profile()}
 
 func get_effects() -> Dictionary:
     _normalize()
@@ -9415,7 +9421,7 @@ func _close() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/demand_model.gd
-Lines: 36
+Lines: 41
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 class_name RenewDemandModel
@@ -9428,15 +9434,20 @@ func get_customer_segments()->Dictionary:return customer_segments.get_segments()
 func calculate(product:String,player_price:float,competitor_price:float,reputation:int,quality:int,marketing_level:int,contract_bonus:int,employee_productivity:float,district_multiplier:float,district_pressure:float,alliance_sales:float,deal_sales:float)->Dictionary:
     var resolved_product:String=product
     if resolved_product=="consumer_goods":resolved_product="furniture"
+    var tree=get_tree() if is_inside_tree() else (Engine.get_main_loop() as SceneTree)
+    var tech_root=tree.root if tree!=null else null
+    var culture:Node=tech_root.get_node_or_null("RenewCompanyCultureSystem") if tech_root!=null else null
+    var culture_quality:float=1.0
+    if culture!=null and culture.has_method("get_effects"):
+        var culture_effects:Dictionary=culture.get_effects()
+        culture_quality=clampf(float(culture_effects.get("quality_multiplier",1.0)),0.75,1.25)
+    var effective_quality:int=clampi(int(round(float(quality)*culture_quality)),0,100)
     var effective_district:float=clampf(district_multiplier*(1.0-district_pressure),0.60,1.40)
-    var segment_result:Dictionary=customer_segments.calculate(resolved_product,player_price,competitor_price,quality,reputation,marketing_level,effective_district)
+    var segment_result:Dictionary=customer_segments.calculate(resolved_product,player_price,competitor_price,effective_quality,reputation,marketing_level,effective_district)
     if not bool(segment_result.get("ok",false)):return {"ok":false,"demand":0,"modifiers":{}}
     var employee_modifier:float=clampf(employee_productivity,0.45,1.55)
     var relationship_modifier:float=clampf(1.0+alliance_sales*0.45+deal_sales*0.50,0.50,1.90)
     var demand_float:float=float(segment_result.get("raw_demand",0.0))*employee_modifier*relationship_modifier
-    var tree=get_tree() if is_inside_tree() else (Engine.get_main_loop() as SceneTree)
-    var tech_root=tree.root if tree!=null else null
-    var tech:Node=tech_root.get_node_or_null("RenewTechnologySystem") if tech_root!=null else null
     var market_multiplier:float=tech.market_demand_multiplier() if tech!=null else 1.0
     var event_multiplier:float=1.0
     var state:Node=tech_root.get_node_or_null("RenewGameState") if tech_root!=null else null
@@ -9452,7 +9463,7 @@ func calculate(product:String,player_price:float,competitor_price:float,reputati
         detail["final_demand"]=int(round(float(detail.get("demand",0))*employee_modifier*relationship_modifier*market_multiplier*event_multiplier));segment_details[segment]=detail
     var relative_price:float=1.0 if player_price<=0.0 else float(competitor_price)/player_price
     var price_strength:float=float(config.get("price_strength",1.15));var price_modifier:float=clampf(pow(maxf(0.01,relative_price),price_strength),0.20,1.80)
-    return {"ok":true,"product":resolved_product,"requested_product":product,"demand":demand,"raw_demand":demand_float,"relative_price":relative_price,"segments":segment_details,"segment_count":int(segment_result.get("segment_count",0)),"modifiers":{"price":price_modifier,"employee_productivity":employee_modifier,"relationships":relationship_modifier,"district":effective_district,"market_analysis":market_multiplier,"dynamic_event":event_multiplier,"segments":segment_details}}
+    return {"ok":true,"product":resolved_product,"requested_product":product,"demand":demand,"raw_demand":demand_float,"relative_price":relative_price,"segments":segment_details,"segment_count":int(segment_result.get("segment_count",0)),"modifiers":{"price":price_modifier,"employee_productivity":employee_modifier,"relationships":relationship_modifier,"district":effective_district,"quality":effective_quality,"culture_quality":culture_quality,"market_analysis":market_multiplier,"dynamic_event":event_multiplier,"segments":segment_details}}
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -22534,7 +22545,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_company_culture_system.gd
-Lines: 54
+Lines: 67
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -22570,6 +22581,17 @@ func run() -> void:
         if not effects.has(key) or float(effects[key]) <= 0.0:
             failures.append("Culture effects missing or invalid: %s" % key)
 
+    var daily_first := system.daily_update(10)
+    var after_first := system.capture_state()
+    var daily_second := system.daily_update(10)
+    var after_second := system.capture_state()
+    if bool(daily_second.get("changed", true)):
+        failures.append("Company culture daily update must be idempotent for the same day")
+    if after_first.get("culture", {}) != after_second.get("culture", {}):
+        failures.append("Repeated same-day culture updates must not apply modifiers twice")
+    if int(after_first.get("last_day", 0)) != 10:
+        failures.append("Culture daily update must record the processed day")
+
     var snapshot := system.capture_state()
     var restored := CultureSystem.new()
     root.add_child(restored)
@@ -22578,6 +22600,8 @@ func run() -> void:
         failures.append("Culture must survive capture/restore")
     if restored.get_dimension("quality") != 100:
         failures.append("Restored culture must retain bounded values")
+    if int(restored.capture_state().get("last_day", 0)) != 10:
+        failures.append("Processed culture day must survive capture/restore")
 
     var invalid := restored.set_dimension("not_a_dimension", 50)
     if bool(invalid.get("ok", true)):
@@ -22717,6 +22741,46 @@ func run() -> void:
 
     print("CONTRACT SYSTEM RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: tests/test_demand_culture_integration.gd
+Lines: 34
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+extends SceneTree
+
+const DemandModel = preload("res://scripts/demand_model.gd")
+
+func _init() -> void:
+    call_deferred("run")
+
+func run() -> void:
+    var failures: Array[String] = []
+    var culture = root.get_node_or_null("RenewCompanyCultureSystem")
+    if culture == null or not culture.has_method("set_dimension"):
+        failures.append("Company Culture System must be available for demand integration")
+    else:
+        var model = DemandModel.new()
+        root.add_child(model)
+        await process_frame
+        culture.set_dimension("quality", 40, 1, "demand integration baseline")
+        var low: Dictionary = model.calculate("furniture", 110.0, 120.0, 10, 75, 0, 0, 1.0, 1.0, 0.0, 0.0, 0.0)
+        culture.set_dimension("quality", 100, 1, "demand integration improvement")
+        var high: Dictionary = model.calculate("furniture", 110.0, 120.0, 10, 75, 0, 0, 1.0, 1.0, 0.0, 0.0, 0.0)
+        if not bool(low.get("ok", false)) or not bool(high.get("ok", false)):
+            failures.append("Demand model must remain operational with culture integration")
+        if int(high.get("demand", 0)) <= int(low.get("demand", 0)):
+            failures.append("Higher company culture quality must improve customer demand")
+        var modifiers: Dictionary = high.get("modifiers", {})
+        if not modifiers.has("culture_quality") or not modifiers.has("quality"):
+            failures.append("Demand result must expose effective culture quality modifiers")
+        culture.set_dimension("quality", 55, 1, "restore demand integration baseline")
+
+    if failures.is_empty(): print("DEMAND CULTURE INTEGRATION TESTS PASSED")
+    else:
+        for failure in failures: push_error(failure)
+        print("DEMAND CULTURE INTEGRATION TESTS FAILED: %d" % failures.size())
+    quit(0 if failures.is_empty() else 1)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
