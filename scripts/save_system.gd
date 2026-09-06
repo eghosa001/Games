@@ -13,14 +13,15 @@ const REQUIRED_DOMAINS := ["player", "company", "properties", "economy", "busine
 
 static func save_game(_state: Dictionary) -> bool:
     var game_state = _game_state()
-    var payload = game_state.capture() if game_state and _state.is_empty() else _state.duplicate(true)
+    var payload: Dictionary = game_state.capture() if game_state != null and _state.is_empty() else _state.duplicate(true)
     payload["schema_version"] = CURRENT_VERSION
     _capture_runtime_ownership(payload)
     if payload.has("domains") and not validate_save(payload):
         return false
+
     payload = _sanitize_json_value(payload)
-    var json = JSON.stringify(payload)
-    var temp = FileAccess.open(TEMP_PATH, FileAccess.WRITE)
+    var json := JSON.stringify(payload)
+    var temp := FileAccess.open(TEMP_PATH, FileAccess.WRITE)
     if temp == null:
         return false
     temp.store_string(json)
@@ -28,34 +29,55 @@ static func save_game(_state: Dictionary) -> bool:
     temp = null
 
     var had_primary := FileAccess.file_exists(SAVE_PATH)
+    var save_absolute := ProjectSettings.globalize_path(SAVE_PATH)
+    var temp_absolute := ProjectSettings.globalize_path(TEMP_PATH)
+    var backup_absolute := ProjectSettings.globalize_path(BACKUP_PATH)
+    var backup_temp_absolute := ProjectSettings.globalize_path(BACKUP_TEMP_PATH)
+
+    # Keep a verified copy of the last committed save before replacing it.
+    # The previous implementation deleted the primary before renaming the new
+    # file, creating an avoidable no-primary window during a crash.
     if had_primary:
         if FileAccess.file_exists(BACKUP_TEMP_PATH):
-            var stale_backup_temp_error := DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP_TEMP_PATH))
-            if stale_backup_temp_error != OK:
+            if DirAccess.remove_absolute(backup_temp_absolute) != OK:
+                _cleanup_temp_files()
                 return false
-        var backup_temp_error := DirAccess.copy_absolute(ProjectSettings.globalize_path(SAVE_PATH), ProjectSettings.globalize_path(BACKUP_TEMP_PATH))
-        if backup_temp_error != OK:
+        if DirAccess.copy_absolute(save_absolute, backup_temp_absolute) != OK:
+            _cleanup_temp_files()
             return false
 
-    if had_primary:
-        var remove_save_error := DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
-        if remove_save_error != OK:
-            return false
-    var rename_error := DirAccess.rename_absolute(ProjectSettings.globalize_path(TEMP_PATH), ProjectSettings.globalize_path(SAVE_PATH))
+    # Godot's rename overwrites an existing writable destination, so this is
+    # the single replacement step. There is no explicit delete of SAVE_PATH.
+    var rename_error := DirAccess.rename_absolute(temp_absolute, save_absolute)
     if rename_error != OK:
         if had_primary and FileAccess.file_exists(BACKUP_TEMP_PATH):
-            DirAccess.copy_absolute(ProjectSettings.globalize_path(BACKUP_TEMP_PATH), ProjectSettings.globalize_path(SAVE_PATH))
+            DirAccess.copy_absolute(backup_temp_absolute, save_absolute)
+        _cleanup_temp_files()
         return false
 
     if had_primary:
+        # Install the previous primary as the new backup only after the new
+        # primary is safely in place. If rotation fails, the primary remains a
+        # valid committed save; keep the backup temp for recovery instead of
+        # reporting a false save failure.
         if FileAccess.file_exists(BACKUP_PATH):
-            var remove_backup_error := DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP_PATH))
+            var remove_backup_error := DirAccess.remove_absolute(backup_absolute)
             if remove_backup_error != OK:
-                return false
-        var install_backup_error := DirAccess.rename_absolute(ProjectSettings.globalize_path(BACKUP_TEMP_PATH), ProjectSettings.globalize_path(BACKUP_PATH))
+                _cleanup_temp_files(false)
+                return true
+        var install_backup_error := DirAccess.rename_absolute(backup_temp_absolute, backup_absolute)
         if install_backup_error != OK:
-            return false
+            _cleanup_temp_files(false)
+            return true
+
+    _cleanup_temp_files()
     return true
+
+static func _cleanup_temp_files(remove_backup_temp: bool = true) -> void:
+    if FileAccess.file_exists(TEMP_PATH):
+        DirAccess.remove_absolute(ProjectSettings.globalize_path(TEMP_PATH))
+    if remove_backup_temp and FileAccess.file_exists(BACKUP_TEMP_PATH):
+        DirAccess.remove_absolute(ProjectSettings.globalize_path(BACKUP_TEMP_PATH))
 
 static func load_game() -> Dictionary:
     var candidates: Array[String] = [SAVE_PATH, BACKUP_PATH]
@@ -99,7 +121,7 @@ static func validate_save(data: Dictionary) -> bool:
     return true
 
 static func migrate(data: Dictionary, version: int) -> Dictionary:
-    var result = data.duplicate(true)
+    var result: Dictionary = data.duplicate(true)
     match version:
         1: result["schema_version"] = 2
         2: result["schema_version"] = 3
@@ -123,7 +145,7 @@ static func _ensure_required_domains(data: Dictionary) -> Dictionary:
 
 static func _migrate_v7_to_v8(data: Dictionary) -> Dictionary:
     data = _ensure_required_domains(data)
-    var domains = data["domains"]
+    var domains: Dictionary = data["domains"]
     if domains.has("competitors") and domains["competitors"] is Dictionary and not domains["competitors"].has("reaction_system"):
         domains["competitors"]["reaction_system"] = {}
     data["domains"] = domains
@@ -174,7 +196,8 @@ static func _ownership_node():
     var scene = tree.get_current_scene()
     if scene:
         node = scene.get_node_or_null("Systems/OwnershipSystem")
-        if node == null: node = scene.get_node_or_null("OwnershipSystem")
+        if node == null:
+            node = scene.get_node_or_null("OwnershipSystem")
         return node
     return null
 
@@ -204,11 +227,14 @@ static func _read_dictionary(path: String) -> Dictionary:
 
 static func _game_state():
     var tree = Engine.get_main_loop()
-    if not tree: return null
+    if not tree:
+        return null
     var root = tree.get_root()
-    if not root: return null
+    if not root:
+        return null
     var node = root.get_node_or_null("RenewGameState")
-    if node: return node
+    if node:
+        return node
     var scene = tree.get_current_scene()
     if scene:
         return scene.get_node_or_null("RenewGameState")
