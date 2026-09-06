@@ -15,6 +15,47 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Generate current full source dump
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "// ===== GAMES PROJECT - COMPLETE SOURCE ====="
+            echo "// Generated on: $(date -u '+%a %b %e %H:%M:%S UTC %Y')"
+            echo
+            echo "// Source snapshot commit: $(git rev-parse HEAD)"
+            echo
+            find . -type f \
+              ! -path './.git/*' \
+              ! -path './build/*' \
+              ! -path './full_source_code.txt' \
+              \( -name '*.gd' -o -name '*.tscn' -o -name '*.tres' -o -name '*.godot' -o -name '*.cfg' -o -name '*.json' -o -name '*.md' -o -name '*.yml' -o -name '*.yaml' -o -name '*.txt' -o -name '*.svg' -o -name '*.css' -o -name '*.html' -o -name '*.js' \) \
+              -print | sort | while IFS= read -r file; do
+                echo
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                echo "File: ${file#./}"
+                echo "Lines: $(wc -l < "$file")"
+                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                cat "$file"
+                echo
+              done
+          } > full_source_code.txt
+          test -s full_source_code.txt
+
+      - name: Commit current full source dump
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add full_source_code.txt
+          if git diff --cached --quiet; then
+            echo "Source dump is already current."
+          else
+            git commit -m "chore: update full source code snapshot"
+            git push origin HEAD:main
+          fi
+
       - name: Install Godot export templates
         shell: bash
         run: |
