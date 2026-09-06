@@ -9,15 +9,20 @@ func get_customer_segments()->Dictionary:return customer_segments.get_segments()
 func calculate(product:String,player_price:float,competitor_price:float,reputation:int,quality:int,marketing_level:int,contract_bonus:int,employee_productivity:float,district_multiplier:float,district_pressure:float,alliance_sales:float,deal_sales:float)->Dictionary:
     var resolved_product:String=product
     if resolved_product=="consumer_goods":resolved_product="furniture"
+    var tree=get_tree() if is_inside_tree() else (Engine.get_main_loop() as SceneTree)
+    var tech_root=tree.root if tree!=null else null
+    var culture:Node=tech_root.get_node_or_null("RenewCompanyCultureSystem") if tech_root!=null else null
+    var culture_quality:float=1.0
+    if culture!=null and culture.has_method("get_effects"):
+        var culture_effects:Dictionary=culture.get_effects()
+        culture_quality=clampf(float(culture_effects.get("quality_multiplier",1.0)),0.75,1.25)
+    var effective_quality:int=clampi(int(round(float(quality)*culture_quality)),0,100)
     var effective_district:float=clampf(district_multiplier*(1.0-district_pressure),0.60,1.40)
-    var segment_result:Dictionary=customer_segments.calculate(resolved_product,player_price,competitor_price,quality,reputation,marketing_level,effective_district)
+    var segment_result:Dictionary=customer_segments.calculate(resolved_product,player_price,competitor_price,effective_quality,reputation,marketing_level,effective_district)
     if not bool(segment_result.get("ok",false)):return {"ok":false,"demand":0,"modifiers":{}}
     var employee_modifier:float=clampf(employee_productivity,0.45,1.55)
     var relationship_modifier:float=clampf(1.0+alliance_sales*0.45+deal_sales*0.50,0.50,1.90)
     var demand_float:float=float(segment_result.get("raw_demand",0.0))*employee_modifier*relationship_modifier
-    var tree=get_tree() if is_inside_tree() else (Engine.get_main_loop() as SceneTree)
-    var tech_root=tree.root if tree!=null else null
-    var tech:Node=tech_root.get_node_or_null("RenewTechnologySystem") if tech_root!=null else null
     var market_multiplier:float=tech.market_demand_multiplier() if tech!=null else 1.0
     var event_multiplier:float=1.0
     var state:Node=tech_root.get_node_or_null("RenewGameState") if tech_root!=null else null
@@ -33,4 +38,4 @@ func calculate(product:String,player_price:float,competitor_price:float,reputati
         detail["final_demand"]=int(round(float(detail.get("demand",0))*employee_modifier*relationship_modifier*market_multiplier*event_multiplier));segment_details[segment]=detail
     var relative_price:float=1.0 if player_price<=0.0 else float(competitor_price)/player_price
     var price_strength:float=float(config.get("price_strength",1.15));var price_modifier:float=clampf(pow(maxf(0.01,relative_price),price_strength),0.20,1.80)
-    return {"ok":true,"product":resolved_product,"requested_product":product,"demand":demand,"raw_demand":demand_float,"relative_price":relative_price,"segments":segment_details,"segment_count":int(segment_result.get("segment_count",0)),"modifiers":{"price":price_modifier,"employee_productivity":employee_modifier,"relationships":relationship_modifier,"district":effective_district,"market_analysis":market_multiplier,"dynamic_event":event_multiplier,"segments":segment_details}}
+    return {"ok":true,"product":resolved_product,"requested_product":product,"demand":demand,"raw_demand":demand_float,"relative_price":relative_price,"segments":segment_details,"segment_count":int(segment_result.get("segment_count",0)),"modifiers":{"price":price_modifier,"employee_productivity":employee_modifier,"relationships":relationship_modifier,"district":effective_district,"quality":effective_quality,"culture_quality":culture_quality,"market_analysis":market_multiplier,"dynamic_event":event_multiplier,"segments":segment_details}}
