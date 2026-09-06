@@ -13,7 +13,7 @@ const REQUIRED_DOMAINS := ["player", "company", "properties", "economy", "busine
 
 static func save_game(_state: Dictionary) -> bool:
     var game_state = _game_state()
-    var payload = game_state.capture() if game_state and _state.has("domains") else _state.duplicate(true)
+    var payload = game_state.capture() if game_state and _state.is_empty() else _state.duplicate(true)
     payload["schema_version"] = CURRENT_VERSION
     _capture_runtime_ownership(payload)
     if payload.has("domains") and not validate_save(payload):
