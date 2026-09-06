@@ -56,7 +56,6 @@ func _check_day() -> void:
     var day := _day()
     if day <= 0 or day == _last_day:
         return
-    _last_day = day
     daily_update(day)
 
 func _normalize() -> void:
@@ -85,6 +84,12 @@ func adjust_dimension(dimension: String, amount: int, day: int = 0, reason: Stri
     return set_dimension(dimension, get_dimension(dimension) + amount, day, reason)
 
 func daily_update(day: int) -> Dictionary:
+    var resolved_day := int(day)
+    if resolved_day <= 0:
+        return {"day": resolved_day, "changed": false, "profile": get_profile()}
+    if resolved_day == _last_day:
+        return {"day": resolved_day, "changed": false, "profile": get_profile()}
+    _last_day = resolved_day
     var before := get_profile()
     var employee_system := get_node_or_null("/root/RenewEmployeeSystem")
     if employee_system != null:
@@ -95,7 +100,7 @@ func daily_update(day: int) -> Dictionary:
         _nudge("employee_welfare", welfare_target, 2)
         _nudge("discipline", 55, 1)
     _sync_state()
-    return {"day": day, "changed": before != culture, "profile": get_profile()}
+    return {"day": resolved_day, "changed": before != culture, "profile": get_profile()}
 
 func get_effects() -> Dictionary:
     _normalize()
