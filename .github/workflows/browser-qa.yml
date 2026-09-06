@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       url:
-        description: 'Deployed RENEW URL'
+        description: 'Deployed RENEW URL (leave empty to use this repository GitHub Pages URL)'
         required: false
-        default: 'https://eghosa001.github.io/Games/'
+        default: ''
         type: string
   push:
     branches: [main]
@@ -16,6 +16,12 @@ on:
   workflow_run:
     workflows: ["Godot Web Export"]
     types: [completed]
+
+permissions:
+  contents: read
+
+env:
+  DEFAULT_RENEW_BROWSER_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
 
 jobs:
   browser-qa:
@@ -41,10 +47,33 @@ jobs:
         if: github.event_name == 'workflow_run'
         run: sleep 30
 
+      - name: Resolve deployment URL
+        id: url
+        env:
+          INPUT_URL: ${{ inputs.url }}
+        run: |
+          set -euo pipefail
+          url="${INPUT_URL:-${DEFAULT_RENEW_BROWSER_URL}}"
+          case "$url" in
+            http://*|https://*) ;;
+            *) echo "ERROR: deployment URL must start with http:// or https://"; exit 1 ;;
+          esac
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Testing $url"
+
       - name: Run live browser QA
         env:
-          RENEW_BROWSER_URL: ${{ inputs.url || 'https://eghosa001.github.io/Games/' }}
+          RENEW_BROWSER_URL: ${{ steps.url.outputs.url }}
         run: bash scripts/browser-qa.sh
+
+      - name: Verify browser QA diagnostics exist
+        if: always()
+        run: |
+          set -euo pipefail
+          test -d artifacts/browser-qa
+          files=$(find artifacts/browser-qa -type f -print | wc -l)
+          echo "Browser QA produced $files diagnostic file(s)."
+          test "$files" -gt 0
 
       - name: Upload screenshots and diagnostics
         if: always()
@@ -52,5 +81,5 @@ jobs:
         with:
           name: renew-browser-qa
           path: artifacts/browser-qa/
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 14
