@@ -33,6 +33,7 @@ RenewAnalyticsSystem="*res://scripts/analytics_system.gd"
 RenewCompetitorStateBridge="*res://scripts/competitor_state_bridge.gd"
 RenewCompetitorReactionSystem="*res://scripts/competitor_reaction_system.gd"
 RenewTechnologySystem="*res://scripts/technology_system.gd"
+RenewResearchSystem="*res://scripts/research_system.gd"
 RenewProgressionSystem="*res://scripts/progression_system.gd"
 RenewRegionSystem="*res://scripts/region_system.gd"
 RenewDynamicEventController="*res://scripts/dynamic_event_controller.gd"
@@ -60,7 +61,6 @@ gdscript/warnings/inference_on_variant=0
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 environment/defaults/default_clear_color=Color(0.03, 0.05, 0.06, 1)
-textures/vram_compression/import_etc2_astc=true
 
 [input]
 action_restore={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":82)]}
