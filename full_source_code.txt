@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Sun Sep  6 09:05:18 UTC 2026
+// Generated on: Sun Sep  6 09:12:22 UTC 2026
 
-// Source snapshot commit: 348ecd1c626a32cfcc23b6367696818715f0f09a
+// Source snapshot commit: 3f46d4ad9655b9f76f5ddfb734db5083fe4a2c3c
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4632,19 +4632,38 @@ func execute_coup(alliance_id: String, challenger_id: String, support_ratio: flo
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/alliance_coup_ai.gd
-Lines: 81
+Lines: 100
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 
 ## Independent leadership-coup pass. Runs after normal alliance politics and
 ## converts sustained NPC governance dominance into real Chairman transfer.
 
-var _last_day: Variant = 0
+const CHECK_INTERVAL_SECONDS := 0.25
+var _last_day: int = 0
+var _day_check_timer: Timer
 
-func _process(_delta: float) -> void:
+func _ready() -> void:
+    _day_check_timer = Timer.new()
+    _day_check_timer.wait_time = CHECK_INTERVAL_SECONDS
+    _day_check_timer.one_shot = false
+    _day_check_timer.timeout.connect(_check_current_day)
+    add_child(_day_check_timer)
+    _day_check_timer.start()
+    call_deferred("_check_current_day")
+
+func _exit_tree() -> void:
+    if _day_check_timer != null:
+        if _day_check_timer.timeout.is_connected(_check_current_day):
+            _day_check_timer.timeout.disconnect(_check_current_day)
+        _day_check_timer.stop()
+        _day_check_timer.queue_free()
+        _day_check_timer = null
+
+func _check_current_day() -> void:
     var game: Variant = get_tree().current_scene
     if game == null or not "day" in game: return
-    var day: Variant = int(game.day)
+    var day: int = int(game.day)
     if day <= 0 or day == _last_day or day % 6 != 0: return
     _last_day = day
     var rivals = game.get("rivals")
@@ -4658,40 +4677,40 @@ func _consider_alliance(system: Node, control: Node, alliance: Dictionary, npcs:
     if str(alliance.get("status", "")) != "active": return
     var members: Dictionary = alliance.get("members", {})
     if members.size() < 3: return
-    var chairman_id: Variant = str(alliance.get("founder_id", ""))
-    var chairman: Variant = _find(npcs, chairman_id)
-    var chairman_rel: Variant = int(chairman.get("relationship", 0))
-    var chairman_contribution: Variant = int(members.get(chairman_id, {}).get("contributed", 0))
-    var challenger_id: Variant = ""
-    var best_score: Variant = -999999.0
-    var support: Variant = 0
+    var chairman_id: String = str(alliance.get("founder_id", ""))
+    var chairman: Dictionary = _find(npcs, chairman_id)
+    var chairman_rel: int = int(chairman.get("relationship", 0))
+    var chairman_contribution: int = int(members.get(chairman_id, {}).get("contributed", 0))
+    var challenger_id: String = ""
+    var best_score: float = -999999.0
+    var support: int = 0
     for member_id in members.keys():
-        var id: Variant = str(member_id)
+        var id: String = str(member_id)
         if id == chairman_id: continue
-        var npc: Variant = _find(npcs, id)
+        var npc: Dictionary = _find(npcs, id)
         if npc.is_empty(): continue
-        var contribution: Variant = int(members[id].get("contributed", 0))
-        var relationship: Variant = int(npc.get("relationship", 0))
-        var role: Variant = str(members[id].get("role", ""))
+        var contribution: int = int(members[id].get("contributed", 0))
+        var relationship: int = int(npc.get("relationship", 0))
+        var role: String = str(members[id].get("role", ""))
         if role != "director": continue
         if contribution <= max(1, chairman_contribution) * 1.25: continue
-        var score: Variant = float(contribution) + float(relationship) * 500.0
+        var score: float = float(contribution) + float(relationship) * 500.0
         if score > best_score:
             best_score = score
             challenger_id = id
     if challenger_id.is_empty(): return
-    var challenger: Variant = _find(npcs, challenger_id)
+    var challenger: Dictionary = _find(npcs, challenger_id)
     for member_id in members.keys():
-        var voter_id: Variant = str(member_id)
+        var voter_id: String = str(member_id)
         if voter_id == challenger_id:
             support += 1
             continue
-        var voter: Variant = _find(npcs, voter_id)
+        var voter: Dictionary = _find(npcs, voter_id)
         if voter.is_empty(): continue
-        var relationship: Variant = int(voter.get("relationship", 0))
+        var relationship: int = int(voter.get("relationship", 0))
         if relationship >= 15: support += 1
         elif relationship >= 5 and chairman_rel < 0: support += 1
-    var support_ratio: Variant = float(support) / float(members.size())
+    var support_ratio: float = float(support) / float(members.size())
     if support_ratio < 0.67: return
     # A coup is only allowed when the challenger has stronger contribution and
     # the Chairman has lost political confidence, preventing constant coups.
@@ -10592,15 +10611,17 @@ func _draw()->void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/empire_goals.gd
-Lines: 105
+Lines: 121
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 
 # Long-term company objectives. These create a reason to keep playing after the
 # first business is profitable and turn the simulation into a visible campaign.
+const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
+const CHECK_INTERVAL_SECONDS := 0.25
 var game: Node
-var claimed: Variant = {}
-var goals: Variant = [
+var claimed: Dictionary = {}
+var goals: Array = [
     {"id":"restore","title":"SAVE THE WAREHOUSE","cash":500,"rep":2,"text":"Complete the first restoration."},
     {"id":"profit10","title":"TEN THOUSAND PROFIT","cash":1500,"rep":3,"text":"Reach $10,000 total operating profit."},
     {"id":"team","title":"BUILD A TEAM","cash":1000,"rep":2,"text":"Grow the core company to 5 employees."},
@@ -10610,16 +10631,32 @@ var goals: Variant = [
     {"id":"regional","title":"ENTER A NEW REGION","cash":3000,"rep":5,"text":"Establish a second regional foothold."},
     {"id":"empire","title":"CONNECTED EMPIRE","cash":5000,"rep":8,"text":"Own at least three expansion/resource assets."}
 ]
+var _goal_check_timer: Timer
 
 func _ready() -> void:
     game = get_tree().root.get_node_or_null("Renew")
     _load_state()
+    _goal_check_timer = Timer.new()
+    _goal_check_timer.wait_time = CHECK_INTERVAL_SECONDS
+    _goal_check_timer.one_shot = false
+    _goal_check_timer.timeout.connect(_check_goals)
+    add_child(_goal_check_timer)
+    _goal_check_timer.start()
+    call_deferred("_check_goals")
 
-func _process(_delta: float) -> void:
+func _exit_tree() -> void:
+    if _goal_check_timer != null:
+        if _goal_check_timer.timeout.is_connected(_check_goals):
+            _goal_check_timer.timeout.disconnect(_check_goals)
+        _goal_check_timer.stop()
+        _goal_check_timer.queue_free()
+        _goal_check_timer = null
+
+func _check_goals() -> void:
     if game == null:
         return
     for goal in goals:
-        var id: Variant = String(goal["id"])
+        var id: String = str(goal["id"])
         if bool(claimed.get(id, false)):
             continue
         if _reached(id):
@@ -10650,7 +10687,7 @@ func _reached(id: String) -> bool:
             if region != null:
                 return int(region.regions.player_presence.count(1)) > 1
         "empire":
-            var count: Variant = 0
+            var count: int = 0
             for item in game.expansion.properties:
                 if bool(item.get("owned", false)): count += 1
             for item in game.expansion.resource_sites:
@@ -10659,14 +10696,12 @@ func _reached(id: String) -> bool:
     return false
 
 func _claim(goal: Dictionary) -> void:
-    var id: Variant = String(goal["id"])
-    var reward := int(goal.get("cash", 0))
-    var finance = game.get_node_or_null("FinanceSystem")
-    if finance == null:
-        finance = get_node_or_null("/root/Renew/FinanceSystem")
+    var id: String = str(goal["id"])
+    var reward: int = int(goal.get("cash", 0))
+    var finance = RuntimeResolver.resolve("RenewFinanceSystem", "Systems/FinanceSystem")
     if finance == null:
         return
-    var result: Dictionary = finance.record_equity(reward, "company goal: %s" % String(goal["title"]))
+    var result: Dictionary = finance.record_equity(reward, "company goal: %s" % str(goal["title"]))
     if not bool(result.get("ok", false)):
         return
     claimed[id] = true
@@ -10677,14 +10712,14 @@ func _claim(goal: Dictionary) -> void:
 
 func current_goal() -> Dictionary:
     for goal in goals:
-        if not bool(claimed.get(String(goal["id"]), false)):
+        if not bool(claimed.get(str(goal["id"]), false)):
             return goal
     return {"title":"EMPIRE MASTERED","text":"Every V1 company objective is complete."}
 
 func completed_count() -> int:
-    var count: Variant = 0
+    var count: int = 0
     for goal in goals:
-        if bool(claimed.get(String(goal["id"]), false)):
+        if bool(claimed.get(str(goal["id"]), false)):
             count += 1
     return count
 
@@ -10698,7 +10733,7 @@ func _load_state() -> void:
     if state != null:
         var saved = state.get_value("progression", "claimed_goals", {})
         if saved is Dictionary and not saved.is_empty():
-            claimed = saved
+            claimed = saved.duplicate(true)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -13768,20 +13803,22 @@ func _draw() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/liveops_system.gd
-Lines: 109
+Lines: 131
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 class_name RenewLiveOpsSystem
 
 const SEASON_LENGTH := 30
-var current_season: Variant = 1
-var season_start_day: Variant = 1
+const CHECK_INTERVAL_SECONDS := 0.25
+var current_season: int = 1
+var season_start_day: int = 1
 var offers: Dictionary = {}
 var challenges: Dictionary = {}
-var community_goal: Variant = {"id":"community_goal","title":"World Recovery Fund","target":100000.0,"progress":0.0,"reward":{"cash":15000.0,"reputation":8}}
-var last_day: Variant = -1
+var community_goal: Dictionary = {"id":"community_goal","title":"World Recovery Fund","target":100000.0,"progress":0.0,"reward":{"cash":15000.0,"reputation":8}}
+var last_day: int = -1
+var _day_check_timer: Timer
 
-var seasonal_catalog: Variant = [
+var seasonal_catalog: Array = [
     {"id":"industrial_festival","title":"Industrial Renaissance","duration":10,"reward":{"production":1.10,"reputation":5}},
     {"id":"global_trade_week","title":"Global Trade Week","duration":7,"reward":{"sales":1.15,"logistics":0.90}},
     {"id":"innovation_month","title":"Innovation Drive","duration":14,"reward":{"research":1.25,"technology":1.10}}
@@ -13789,9 +13826,24 @@ var seasonal_catalog: Variant = [
 
 func _ready() -> void:
     _ensure_content(_day())
+    _day_check_timer = Timer.new()
+    _day_check_timer.wait_time = CHECK_INTERVAL_SECONDS
+    _day_check_timer.one_shot = false
+    _day_check_timer.timeout.connect(_check_day)
+    add_child(_day_check_timer)
+    _day_check_timer.start()
+    call_deferred("_check_day")
 
-func _process(_delta: float) -> void:
-    var day: Variant = _day()
+func _exit_tree() -> void:
+    if _day_check_timer != null:
+        if _day_check_timer.timeout.is_connected(_check_day):
+            _day_check_timer.timeout.disconnect(_check_day)
+        _day_check_timer.stop()
+        _day_check_timer.queue_free()
+        _day_check_timer = null
+
+func _check_day() -> void:
+    var day: int = _day()
     if day == last_day: return
     last_day = day
     process_day(day)
@@ -13811,16 +13863,16 @@ func process_day(day: int) -> void:
 func _ensure_content(day: int) -> void:
     var world = get_node_or_null("/root/RenewWorldEventSystem")
     if world == null: return
-    var catalog_index: Variant = (current_season - 1) % seasonal_catalog.size()
+    var catalog_index: int = (current_season - 1) % seasonal_catalog.size()
     var season_def: Dictionary = seasonal_catalog[catalog_index]
-    var event_id: Variant = "season_%d_%s" % [current_season, season_def["id"]]
+    var event_id: String = "season_%d_%s" % [current_season, season_def["id"]]
     if world.events.has(event_id): return
-    var def: Variant = {"id":event_id,"category":"seasonal","duration":int(season_def["duration"]),"scope":"global","causes":["season_rotation"],"effects":season_def["reward"].duplicate(true),"choices":[{"id":"participate","label":"Participate","effects":{"reputation":2}}],"follow_up_events":[]}
+    var def: Dictionary = {"id":event_id,"category":"seasonal","duration":int(season_def["duration"]),"scope":"global","causes":["season_rotation"],"effects":season_def["reward"].duplicate(true),"choices":[{"id":"participate","label":"Participate","effects":{"reputation":2}}],"follow_up_events":[]}
     world.register_event(def)
     world.trigger(event_id, {"season":current_season,"liveops":true}, day)
     offers["seasonal"] = {"id":event_id,"title":season_def["title"],"expires_day":day + int(season_def["duration"])}
     offers["limited_opportunity"] = {"id":"limited_opportunity_%d" % current_season,"title":"Limited Strategic Opportunity","expires_day":day + 5,"reward":{"cash":5000.0,"reputation":3}}
-    challenges["challenge_%d" % current_season] = {"title":"Seasonal Expansion Challenge","target":2,"progress":0,"reward":{"cash":10000.0,"reputation":5},"expires_day":season_start_day + SEASON_LENGTH}
+    challenges["challenge_%d" % current_season] = {"title":"Seasonal Expansion Challenge","target":2,"progress":0,"reward":{"cash":10000.0,"reputation":5},"expires_day":season_start_day + SEASON_LENGTH,"completed":false}
 
 func _expire_content(day: int) -> void:
     for key in offers.keys():
@@ -13830,18 +13882,18 @@ func _expire_content(day: int) -> void:
 
 func _apply_reward(reward: Dictionary, reason: String) -> void:
     var finance = get_node_or_null("/root/RenewFinanceSystem")
-    var cash_reward := int(round(float(reward.get("cash", 0.0))))
+    var cash_reward: int = int(round(float(reward.get("cash", 0.0))))
     if finance != null and cash_reward > 0:
         finance.receive(cash_reward, reason)
     var state = get_node_or_null("/root/RenewGameState")
-    var reputation_reward := int(reward.get("reputation", 0))
+    var reputation_reward: int = int(reward.get("reputation", 0))
     if state != null and reputation_reward != 0:
-        var reputation := int(state.get_value("player", "reputation", 0))
+        var reputation: int = int(state.get_value("player", "reputation", 0))
         state.set_value("player", "reputation", reputation + reputation_reward)
 
 func _advance_community_goal(day: int) -> void:
     var finance = get_node_or_null("/root/RenewFinanceSystem")
-    var contribution: Variant = 0.0
+    var contribution: float = 0.0
     if finance != null:
         contribution = max(0.0, float(finance.get("cash"))) * 0.001
     community_goal["progress"] = min(float(community_goal["target"]), float(community_goal["progress"]) + contribution)
@@ -13850,11 +13902,15 @@ func _advance_community_goal(day: int) -> void:
         community_goal["progress"] = 0.0
         _track("liveops_community_goal_completed", {"day":day})
 
-func complete_challenge(challenge_id: String, progress := 1) -> Dictionary:
+func complete_challenge(challenge_id: String, progress: int = 1) -> Dictionary:
     if not challenges.has(challenge_id): return {"ok":false,"error":"challenge_not_found"}
     var c: Dictionary = challenges[challenge_id]
+    if bool(c.get("completed", false)):
+        return {"ok":false,"error":"challenge_already_completed","challenge":c.duplicate(true)}
     c["progress"] = int(c.get("progress",0)) + int(progress)
     if int(c["progress"]) >= int(c.get("target",1)):
+        c["progress"] = int(c.get("target",1))
+        c["completed"] = true
         _apply_reward(c.get("reward", {}), "LiveOps challenge reward")
         _track("liveops_challenge_completed", {"id":challenge_id})
     challenges[challenge_id] = c
@@ -13880,6 +13936,7 @@ func _track(name: String, data: Dictionary) -> void:
 func _day() -> int:
     var state = get_node_or_null("/root/RenewGameState")
     return int(state.get_value("player", "day", 1)) if state != null else 1
+
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/liveops_ui.gd
