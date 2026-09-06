@@ -39,6 +39,15 @@ func run() -> void:
     restored.daily_update(21, 1)
     if int(restored.get_employee(EmployeeSystem.JAMES_ID)["experience"]) <= 6: failures.append("Daily update should advance employee experience")
     if restored.total_salary() <= 0 or restored.total_productivity() <= 0.0: failures.append("Roster should drive salary and productivity totals")
+
+    var culture = root.get_node_or_null("RenewCompanyCultureSystem")
+    if culture != null and culture.has_method("set_dimension"):
+        var baseline := system.get_productivity_multiplier("factory_001")
+        culture.set_dimension("employee_welfare", 100, 21, "culture integration test")
+        var improved := system.get_productivity_multiplier("factory_001")
+        if improved <= baseline: failures.append("Employee productivity must respond to company culture")
+        culture.set_dimension("employee_welfare", 60, 21, "restore test baseline")
+
     var legacy = EmployeeSystem.new(); root.add_child(legacy); legacy.employees.clear(); legacy.migrate_legacy_count(5, 1)
     if legacy.get_active_employee_count() < 5: failures.append("Legacy employee count migration must preserve headcount")
     if legacy.get_employee(EmployeeSystem.JAMES_ID).is_empty(): failures.append("Legacy migration must restore James")
