@@ -1,6 +1,7 @@
 extends Node
 
 ## Canonical persistent state boundary. V1+ authoritative.
+const RuntimeResolver := preload("res://scripts/runtime_dependency_resolver.gd")
 const SCHEMA_VERSION := 8
 const STATE_VERSION := 17
 const DOMAINS := ["player","company","properties","businesses","branches","employees","economy","resources","production","supply_chain","contracts","competitors","ownership","finance","alliances","diplomacy","regions","infrastructure","technology","events","progression","history","news","analytics","acquisition","bankruptcy"]
@@ -44,18 +45,14 @@ func restore(snapshot: Dictionary) -> bool:
     var version := int(snapshot["schema_version"])
     if version < 1 or version > SCHEMA_VERSION: return false
     if snapshot.has("domains") and snapshot["domains"] is Dictionary:
-        domains = snapshot["domains"].duplicate(true); _ensure_defaults(); _restore_domain_systems(); return true
+        domains = snapshot["domains"].duplicate(true)
+        _ensure_defaults()
+        _restore_domain_systems()
+        return true
     return false
 
 func _find_system(root_name: String, scene_path: String) -> Node:
-    var root := get_tree().root
-    var node := root.get_node_or_null(root_name)
-    if node != null: return node
-    var scene := get_tree().current_scene
-    if scene != null:
-        node = scene.get_node_or_null(scene_path)
-        if node != null: return node
-    return null
+    return RuntimeResolver.resolve(root_name, scene_path)
 
 func _capture_domain_systems() -> void:
     var history := _find_system("RenewHistorySystem", "Systems/HistorySystem")
@@ -110,4 +107,5 @@ func _restore_domain_systems() -> void:
     if reactions and reactions.has_method("restore_state") and domains["competitors"].has("reaction_system"): reactions.restore_state(domains["competitors"]["reaction_system"])
 
 func clear() -> void:
-    domains.clear(); _ensure_defaults()
+    domains.clear()
+    _ensure_defaults()
