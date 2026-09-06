@@ -23,7 +23,7 @@ func _layout_responsive() -> void:
     # edge or collide with the mode tabs on short phone screens.
     mode_rail.visible = true
     mode_rail.position = Vector2(8, 64)
-    mode_rail.size = Vector2(w - 16, 42)
+    mode_rail.size = Vector2(w - 16, 44)
 
     var dock_height := clampf(h * 0.40, 218.0, 250.0)
     var dock_top := maxf(114.0, h - dock_height - 8.0)
