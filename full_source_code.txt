@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Sun Sep  6 08:51:11 UTC 2026
+// Generated on: Sun Sep  6 08:51:55 UTC 2026
 
-// Source snapshot commit: 4896d900d0ca1fc70a905c7206f509c56ae83fa1
+// Source snapshot commit: eaeca8c746c1e94b8cc68ac57afc6c8f3d75ab84
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -12280,11 +12280,12 @@ func _ready() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/game_state.gd
-Lines: 112
+Lines: 111
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 
 ## Canonical persistent state boundary. V1+ authoritative.
+const RuntimeResolver := preload("res://scripts/runtime_dependency_resolver.gd")
 const SCHEMA_VERSION := 8
 const STATE_VERSION := 17
 const DOMAINS := ["player","company","properties","businesses","branches","employees","economy","resources","production","supply_chain","contracts","competitors","ownership","finance","alliances","diplomacy","regions","infrastructure","technology","events","progression","history","news","analytics","acquisition","bankruptcy"]
@@ -12328,18 +12329,14 @@ func restore(snapshot: Dictionary) -> bool:
     var version := int(snapshot["schema_version"])
     if version < 1 or version > SCHEMA_VERSION: return false
     if snapshot.has("domains") and snapshot["domains"] is Dictionary:
-        domains = snapshot["domains"].duplicate(true); _ensure_defaults(); _restore_domain_systems(); return true
+        domains = snapshot["domains"].duplicate(true)
+        _ensure_defaults()
+        _restore_domain_systems()
+        return true
     return false
 
 func _find_system(root_name: String, scene_path: String) -> Node:
-    var root := get_tree().root
-    var node := root.get_node_or_null(root_name)
-    if node != null: return node
-    var scene := get_tree().current_scene
-    if scene != null:
-        node = scene.get_node_or_null(scene_path)
-        if node != null: return node
-    return null
+    return RuntimeResolver.resolve(root_name, scene_path)
 
 func _capture_domain_systems() -> void:
     var history := _find_system("RenewHistorySystem", "Systems/HistorySystem")
@@ -12394,7 +12391,9 @@ func _restore_domain_systems() -> void:
     if reactions and reactions.has_method("restore_state") and domains["competitors"].has("reaction_system"): reactions.restore_state(domains["competitors"]["reaction_system"])
 
 func clear() -> void:
-    domains.clear(); _ensure_defaults()
+    domains.clear()
+    _ensure_defaults()
+
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/gameplay_command_system.gd
@@ -24665,6 +24664,62 @@ func test_main_command_integration() -> void:
 
     game.free()
     await process_frame
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: tests/test_runtime_dependency_resolution.gd
+Lines: 50
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+extends SceneTree
+
+var failures: Array[String] = []
+var checks := 0
+const Resolver := preload("res://scripts/runtime_dependency_resolver.gd")
+
+func _initialize() -> void:
+    call_deferred("_run")
+
+func _run() -> void:
+    var packed := load("res://scenes/Main.tscn") as PackedScene
+    check("Main scene loads", packed != null)
+    if packed == null:
+        _finish()
+        return
+
+    var scene := packed.instantiate()
+    root.add_child(scene)
+    current_scene = scene
+    await process_frame
+    await process_frame
+
+    check("scene-local OwnershipSystem resolves through canonical path", Resolver.resolve("MissingOwnershipAutoload", "Systems/OwnershipSystem") == scene.get_node_or_null("Systems/OwnershipSystem"))
+    check("scene-local InfrastructureSystem resolves through canonical path", Resolver.resolve("MissingInfrastructureAutoload", "Systems/InfrastructureSystem") == scene.get_node_or_null("Systems/InfrastructureSystem"))
+    check("missing dependency returns null instead of creating a duplicate", Resolver.resolve("MissingDependency", "Missing/System") == null)
+
+    var game_state := root.get_node_or_null("RenewGameState")
+    check("GameState autoload resolves", game_state != null)
+    if game_state != null:
+        check("GameState is the canonical autoload instance", Resolver.resolve("RenewGameState", "GameState") == game_state)
+
+    _finish()
+
+func check(label: String, condition: bool) -> void:
+    checks += 1
+    if condition:
+        print("PASS: %s" % label)
+    else:
+        failures.append(label)
+        print("FAIL: %s" % label)
+
+func _finish() -> void:
+    print("--- RUNTIME DEPENDENCY SUMMARY ---")
+    print("Checks: %d | Failures: %d" % [checks, failures.size()])
+    if not failures.is_empty():
+        for failure in failures:
+            print("FAILED: %s" % failure)
+        quit(1)
+    print("RUNTIME DEPENDENCY TEST: PASS")
+    quit(0)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
