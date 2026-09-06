@@ -4,9 +4,27 @@ extends Node
 ## NPCs can join/form alliances, contribute, vote, sanction, defect and contest
 ## leadership. Successful control challenges can replace the Chairman.
 
+const CHECK_INTERVAL_SECONDS := 0.25
 var _last_day: Variant = 0
+var _check_timer: Timer
 
-func _process(_delta: float) -> void:
+func _ready() -> void:
+    _check_timer = Timer.new()
+    _check_timer.wait_time = CHECK_INTERVAL_SECONDS
+    _check_timer.one_shot = false
+    _check_timer.timeout.connect(_check_current_day)
+    add_child(_check_timer)
+    _check_timer.start()
+    call_deferred("_check_current_day")
+
+func _exit_tree() -> void:
+    if _check_timer != null:
+        var callable := Callable(self, "_check_current_day")
+        if _check_timer.timeout.is_connected(callable):
+            _check_timer.timeout.disconnect(callable)
+        _check_timer.stop()
+
+func _check_current_day() -> void:
     var game: Variant = get_tree().current_scene
     if game == null or not "day" in game: return
     var day: Variant = int(game.day)
