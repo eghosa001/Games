@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Sun Sep  6 09:01:58 UTC 2026
+// Generated on: Sun Sep  6 09:03:44 UTC 2026
 
-// Source snapshot commit: 1bb8d18cb1982cb3436acc23e88e7abac20652ee
+// Source snapshot commit: 5284b184803caaefa521dfe4bd3091229785f842
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4413,7 +4413,7 @@ func _record_transaction(method: String, acquirer_id: String, target_id: String,
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/alliance_ai.gd
-Lines: 149
+Lines: 167
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 
@@ -4421,9 +4421,27 @@ extends Node
 ## NPCs can join/form alliances, contribute, vote, sanction, defect and contest
 ## leadership. Successful control challenges can replace the Chairman.
 
+const CHECK_INTERVAL_SECONDS := 0.25
 var _last_day: Variant = 0
+var _check_timer: Timer
 
-func _process(_delta: float) -> void:
+func _ready() -> void:
+    _check_timer = Timer.new()
+    _check_timer.wait_time = CHECK_INTERVAL_SECONDS
+    _check_timer.one_shot = false
+    _check_timer.timeout.connect(_check_current_day)
+    add_child(_check_timer)
+    _check_timer.start()
+    call_deferred("_check_current_day")
+
+func _exit_tree() -> void:
+    if _check_timer != null:
+        var callable := Callable(self, "_check_current_day")
+        if _check_timer.timeout.is_connected(callable):
+            _check_timer.timeout.disconnect(callable)
+        _check_timer.stop()
+
+func _check_current_day() -> void:
     var game: Variant = get_tree().current_scene
     if game == null or not "day" in game: return
     var day: Variant = int(game.day)
@@ -9243,7 +9261,7 @@ func calculate(product:String,player_price:float,competitor_price:float,reputati
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/diplomacy_ai.gd
-Lines: 75
+Lines: 94
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 
@@ -9251,9 +9269,27 @@ extends Node
 ## NPCs can propose, accept, cancel and occasionally breach treaties based on
 ## relationships, strategic needs and risk tolerance.
 
+const CHECK_INTERVAL_SECONDS := 0.25
 var last_day: Variant = -1
+var _check_timer: Timer
 
-func _process(_delta: float) -> void:
+func _ready() -> void:
+    _check_timer = Timer.new()
+    _check_timer.wait_time = CHECK_INTERVAL_SECONDS
+    _check_timer.one_shot = false
+    _check_timer.timeout.connect(_check_current_day)
+    add_child(_check_timer)
+    _check_timer.start()
+    call_deferred("_check_current_day")
+
+func _exit_tree() -> void:
+    if _check_timer != null:
+        var callable := Callable(self, "_check_current_day")
+        if _check_timer.timeout.is_connected(callable):
+            _check_timer.timeout.disconnect(callable)
+        _check_timer.stop()
+
+func _check_current_day() -> void:
     var tree: Variant = Engine.get_main_loop()
     var scene = tree.get_current_scene() if tree != null else null
     if scene == null: return
@@ -9321,6 +9357,7 @@ func _terms_for(r: Dictionary, type: String) -> Dictionary:
         "infrastructure": base["obligations"] = {"shared_infrastructure": true}; base["benefits"] = {"logistics_bonus": 0.10, "trust_per_day": 0.10}
         "joint_venture": base["obligations"] = {"joint_capital": 3000}; base["benefits"] = {"joint_profit_share": 0.10, "trust_per_day": 0.12}
     return base
+
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/diplomacy_control_bridge.gd
