@@ -9,7 +9,7 @@ const BACKUP_PATH := "user://renew_save.backup.json"
 const TEMP_PATH := "user://renew_save.tmp.json"
 const BACKUP_TEMP_PATH := "user://renew_save.backup.tmp.json"
 const CURRENT_VERSION := 8
-const REQUIRED_DOMAINS := ["player", "company", "properties", "economy", "businesses", "branches", "employees", "resources", "production", "supply_chain", "contracts", "competitors", "finance", "alliances", "diplomacy", "regions", "infrastructure", "technology", "events", "progression", "history", "news", "analytics", "acquisition", "bankruptcy"]
+const REQUIRED_DOMAINS := ["player", "company", "properties", "economy", "businesses", "branches", "employees", "resources", "production", "supply_chain", "contracts", "competitors", "finance", "alliances", "diplomacy", "regions", "infrastructure", "technology", "events", "progression", "history", "news", "analytics", "acquisition", "ownership", "bankruptcy"]
 
 static func save_game(_state: Dictionary) -> bool:
     var game_state = _game_state()
