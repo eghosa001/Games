@@ -1,16 +1,26 @@
 extends Node
 
 ## Central gameplay-to-history adapter. UI code never creates history entries.
-var _snapshots:Dictionary={}
+const CHECK_INTERVAL_SECONDS := 0.25
+var _snapshots: Dictionary = {}
+var check_timer: Timer
 
-func _ready()->void:
-    set_process(true)
+func _ready() -> void:
+    check_timer = Timer.new()
+    check_timer.name = "HistoryEventCheckTimer"
+    check_timer.wait_time = CHECK_INTERVAL_SECONDS
+    check_timer.one_shot = false
+    check_timer.autostart = true
+    check_timer.timeout.connect(_check_state)
+    add_child(check_timer)
+    call_deferred("_check_state")
 
-func _process(_delta:float)->void:
-    var history=get_node_or_null("/root/RenewHistorySystem")
-    var state=get_node_or_null("/root/RenewGameState")
-    if history==null or state==null or not history.has_method("record"):return
-    var day:=int(state.get_value("player","day",1))
+func _check_state() -> void:
+    var history = get_node_or_null("/root/RenewHistorySystem")
+    var state = get_node_or_null("/root/RenewGameState")
+    if history == null or state == null or not history.has_method("record"):
+        return
+    var day := int(state.get_value("player", "day", 1))
     _transition(history,"property_acquired",bool(state.get_value("properties","owned",false)),day,"PROPERTY_ACQUIRED","Property acquired",{})
     _transition(history,"property_restored",str(state.get_value("properties","stage",""))=="Operational",day,"PROPERTY_RESTORED","Property fully restored",{})
     _transition(history,"business_opened",bool(state.get_value("businesses","business_open",false)),day,"BUSINESS_OPENED","Business opened",{"business":state.get_value("businesses","business_name","")})
@@ -24,6 +34,12 @@ func _process(_delta:float)->void:
     _project_events(history,state,day)
     _competitor_events(history,state,day)
     _major_events(history,state,day)
+
+func _exit_tree() -> void:
+    if check_timer != null and is_instance_valid(check_timer):
+        if check_timer.timeout.is_connected(_check_state):
+            check_timer.timeout.disconnect(_check_state)
+        check_timer.stop()
 
 func _transition(history,key:String,now:bool,day:int,event_name:String,title:String,details:Dictionary)->void:
     if not _snapshots.has(key):_snapshots[key]=now;return
@@ -74,7 +90,6 @@ func _alliance_events(history,state,day:int)->void:
     _counter(history,"projects_completed",completed,day,"PROJECT_COMPLETED","Cooperative project completed",{"count":completed})
 
 func _project_events(history,state,day:int)->void:
-    # Kept as a dedicated hook so future cooperative projects can expose a direct counter.
     var reputation=int(state.get_value("regions","regional_reputation",0))
     _counter(history,"regional_reputation",reputation,day,"PROJECT_COMPLETED","Regional cooperative project completed",{"regional_reputation":reputation})
 
