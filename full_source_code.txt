@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Sun Sep  6 08:49:28 UTC 2026
+// Generated on: Sun Sep  6 08:51:11 UTC 2026
 
-// Source snapshot commit: e5bd3e46819290e06e9025e113885fed1465793b
+// Source snapshot commit: 4896d900d0ca1fc70a905c7206f509c56ae83fa1
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -18098,6 +18098,39 @@ func _draw() -> void:
     var supply = parent.get_node_or_null("SupplyChainController")
     var pressure: Variant = int(supply.supply.competitor_pressure) if supply != null else 0
     draw_string(ThemeDB.fallback_font, Vector2(865, 587), "Market pressure: %d | %s" % [pressure, control_summary()], HORIZONTAL_ALIGNMENT_LEFT, 375, 11, Color("f2d27a"))
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: scripts/runtime_dependency_resolver.gd
+Lines: 27
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+extends RefCounted
+class_name RenewRuntimeDependencyResolver
+
+## Resolves runtime services without allowing a failed scene lookup to create a
+## second authority. Autoloads are preferred; scene-local systems are fallback.
+static func resolve(autoload_name: String, scene_path: String = "") -> Node:
+    var tree := Engine.get_main_loop() as SceneTree
+    if tree == null:
+        return null
+    var root := tree.root
+    if root == null:
+        return null
+
+    var node := root.get_node_or_null(autoload_name)
+    if node != null and is_instance_valid(node):
+        return node
+
+    var scene := tree.current_scene
+    if scene != null and scene_path != "":
+        node = scene.get_node_or_null(scene_path)
+        if node != null and is_instance_valid(node):
+            return node
+
+    return null
+
+static func resolve_autoload_or_scene(autoload_name: String, scene_path: String = "") -> Node:
+    return resolve(autoload_name, scene_path)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
