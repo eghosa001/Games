@@ -7,6 +7,12 @@ var employee_system = EmployeeSystem.new()
 
 func _ready() -> void:
     add_child(state_adapter); add_child(employee_system); sync_roster()
+func _culture(): return get_node_or_null("/root/RenewCompanyCultureSystem")
+func _culture_effect(name:String, default_value:float=1.0)->float:
+    var culture = _culture()
+    if culture != null and culture.has_method("get_effects"):
+        return float(culture.get_effects().get(name, default_value))
+    return default_value
 func get_active_employee_count()->int: return employee_system.get_active_employee_count()
 func get_roster()->Array[Dictionary]:
     var roster: Array[Dictionary] = []
@@ -15,7 +21,7 @@ func get_roster()->Array[Dictionary]:
     return roster
 func get_daily_wage_total()->int: return employee_system.get_daily_wage_total()
 func get_morale_multiplier()->float: return employee_system.get_morale_multiplier()
-func get_productivity_multiplier(assignment:String="factory_001")->float: return employee_system.get_productivity_multiplier(assignment)
+func get_productivity_multiplier(assignment:String="factory_001")->float: return employee_system.get_productivity_multiplier(assignment) * _culture_effect("productivity_multiplier")
 func hire_employee()->void:
     if not bool(state_adapter.get_value("businesses","business_open",false)): state_adapter.message("Open the business first."); return
     var day:=int(state_adapter.get_value("player","day",1)); var current_count:=employee_system.get_active_employee_count()
@@ -23,23 +29,19 @@ func hire_employee()->void:
     if candidates.is_empty(): employee_system.refresh_candidates(); candidates=employee_system.get_candidates()
     if candidates.is_empty(): state_adapter.message("No candidates are available right now."); return
     var candidate:Dictionary=candidates[0]
-    var recruitment_factor:=1.0+float(max(0,80-int(candidate.get("loyalty",50))))/200.0
+    var recruitment_factor:float=(1.0+float(max(0,80-int(candidate.get("loyalty",50))))/200.0) / _culture_effect("recruitment_multiplier")
     var preview_cost:=int(round((1200+current_count*250)*recruitment_factor))
     var cash:=int(state_adapter.get_value("economy","cash",25000))
     if cash<preview_cost: state_adapter.message("Hiring requires $%s."%state_adapter.money(preview_cost)); return
     var result=employee_system.hire_candidate(str(candidate.get("id","")),day)
     if not bool(result.get("ok",false)): state_adapter.message(str(result.get("message","Unable to hire employee."))); return
-    var actual_cost:=int(result.get("cost",preview_cost))
+    var actual_cost:=int(round(float(result.get("cost",preview_cost)) / _culture_effect("recruitment_multiplier")))
     if actual_cost != preview_cost:
-        employee_system.fire_employee(str(result["employee"]["id"]),day)
-        state_adapter.message("Hiring cost changed; the candidate was not hired.")
-        sync_roster()
-        return
+        employee_system.fire_employee(str(result["employee"]["id"]),day); state_adapter.message("Hiring cost changed; the candidate was not hired."); sync_roster(); return
     var spend:=state_adapter.spend(actual_cost,"employee hiring")
     if not bool(spend.get("ok",false)):
         employee_system.fire_employee(str(result["employee"]["id"]),day); state_adapter.message("Hiring cost changed and available cash is insufficient."); sync_roster(); return
-    sync_roster(); state_adapter.set_value("player","reputation",int(state_adapter.get_value("player","reputation",0))+1)
-    state_adapter.log_message("HIRING: employee %d joined (-$%s)."%[employee_system.get_active_employee_count(),state_adapter.money(actual_cost)]); state_adapter.message("Employee hired. More capacity, higher daily wages.")
+    sync_roster(); state_adapter.set_value("player","reputation",int(state_adapter.get_value("player","reputation",0))+1); state_adapter.log_message("HIRING: employee %d joined (-$%s)."%[employee_system.get_active_employee_count(),state_adapter.money(actual_cost)]); state_adapter.message("Employee hired. More capacity, higher daily wages.")
 func train_employee(employee_id:String)->void:
     var day:=int(state_adapter.get_value("player","day",1)); var cost:=900
     var cash:=int(state_adapter.get_value("economy","cash",25000))
@@ -47,10 +49,7 @@ func train_employee(employee_id:String)->void:
     var spend:=state_adapter.spend(cost,"employee training")
     if not bool(spend.get("ok",false)): state_adapter.message(str(spend.get("message","Training requires sufficient cash."))); return
     var result=employee_system.train_employee(employee_id,day,cost)
-    if not bool(result.get("ok",false)):
-        state_adapter.receive(cost,"employee training refund")
-        state_adapter.message(str(result.get("message","Training failed.")))
-        return
+    if not bool(result.get("ok",false)): state_adapter.receive(cost,"employee training refund"); state_adapter.message(str(result.get("message","Training failed."))); return
     sync_roster(); state_adapter.message("Employee training completed.")
 func promote_employee(employee_id:String)->void:
     var result=employee_system.promote_employee(employee_id,int(state_adapter.get_value("player","day",1)))
@@ -65,7 +64,10 @@ func fire_employee(employee_id:String)->void:
     if not bool(result.get("ok",false)): state_adapter.message(str(result.get("message","Dismissal failed."))); return
     sync_roster(); state_adapter.message(str(result.get("message","Employee dismissed.")))
 func daily_update(company_performance:int=0)->Dictionary:
-    var result:=employee_system.daily_update(int(state_adapter.get_value("player","day",1)),company_performance); sync_roster(); return result
+    var result:=employee_system.daily_update(int(state_adapter.get_value("player","day",1)),company_performance)
+    var culture = _culture()
+    if culture != null and culture.has_method("daily_update"): culture.daily_update(int(state_adapter.get_value("player","day",1)))
+    sync_roster(); return result
 func sync_roster()->void:
     var roster: Array[Dictionary] = []
     for employee in employee_system.employees:
