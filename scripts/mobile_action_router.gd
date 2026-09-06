@@ -56,6 +56,6 @@ func _process(_delta: float) -> void:
             _wired.erase(button)
 
 func _proxy_pressed(source: Button) -> void:
-    if source == null or not is_instance_valid(source) or not source.visible:
+    if source == null or not is_instance_valid(source):
         return
     source.emit_signal("pressed")
