@@ -24,7 +24,10 @@ func _ownership():
     if root != null: return root
     var tree: Variant = Engine.get_main_loop()
     var scene = tree.get_current_scene() if tree != null else null
-    return scene.get_node_or_null("OwnershipSystem") if scene != null else null
+    if scene == null: return null
+    var ownership = scene.get_node_or_null("Systems/OwnershipSystem")
+    if ownership == null: ownership = scene.get_node_or_null("OwnershipSystem")
+    return ownership
 
 func _finance():
     var root = get_node_or_null("/root/RenewFinanceSystem")
