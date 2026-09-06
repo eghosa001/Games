@@ -143,11 +143,10 @@ func _derive_player_metrics(main) -> Dictionary:
         revenue = max(revenue, float(finance.get("revenue")) if finance.get("revenue") != null else revenue)
         profit = max(profit, float(finance.get("profit")) if finance.get("profit") != null else profit)
     var infra_score: Variant = 0.0
-    if infrastructure != null:
-        if infrastructure.has_method("total_capacity_all"):
-            infra_score = float(infrastructure.total_capacity_all())
-        elif infrastructure.has_method("total_capacity"):
-            infra_score = float(infrastructure.total_capacity(0))
+    if infrastructure != null and infrastructure.has_method("list_assets"):
+        for asset in infrastructure.list_assets():
+            if asset is Dictionary and str(asset.get("status", "")) == "active":
+                infra_score += float(asset.get("capacity", 0.0))
     var employee_count: Variant = float(employees.active_count()) if employees != null else float(main.get("employees")) if main.get("employees") != null else 0.0
     var alliance_score: Variant = 0.0
     if alliance != null:
