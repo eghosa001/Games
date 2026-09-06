@@ -29,8 +29,8 @@ func _run() -> void:
 
     var expected_screens: Array[String] = [
         "ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel",
-        "MarketPanel", "EmployeePanel", "CollectionPanel", "LiveOpsPanel",
-        "HistoryPanel", "NewsPanel", "RenewDiplomacyUI", "CustomerSegmentsUI"
+        "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel",
+        "NewsPanel", "RenewDiplomacyUI", "CustomerSegmentsUI"
     ]
     for screen_name in expected_screens:
         check("screen node resolves: %s" % screen_name, _find_screen(scene, screen_name) != null)
@@ -46,6 +46,13 @@ func _run() -> void:
         await process_frame
         check("active screen is %s" % screen_name, manager.get_active_screen_name() == screen_name)
         check("only one managed screen visible after %s" % screen_name, _visible_screen_count(manager) == 1)
+
+    # Legacy MarketPanel is intentionally retained only as a routing alias for
+    # CustomerSegmentsUI so old callers cannot silently break during migration.
+    manager.show_screen("MarketPanel")
+    await process_frame
+    check("legacy MarketPanel alias resolves to CustomerSegmentsUI", manager.get_active_screen_name() == "CustomerSegmentsUI")
+    check("only one managed screen visible after MarketPanel alias", _visible_screen_count(manager) == 1)
 
     manager.hide_all_screens()
     await process_frame
