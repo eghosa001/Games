@@ -8,9 +8,14 @@ on:
 permissions:
   contents: write
 
+env:
+  GODOT_VERSION: 4.7.2
+  GODOT_TEMPLATE_VERSION: 4.7.2.stable
+
 jobs:
   export-web:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,12 +65,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          GODOT_VERSION="4.5-stable"
-          GODOT_TEMPLATE_VERSION="4.5.stable"
           export XDG_DATA_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}"
           TEMPLATES_DIR="$XDG_DATA_HOME/godot/export_templates/$GODOT_TEMPLATE_VERSION"
           mkdir -p "$TEMPLATES_DIR" /tmp/godot_templates
-          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot-builds/releases/download/${GODOT_VERSION}/Godot_v4.5-stable_export_templates.tpz" -O /tmp/templates.tpz
+          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -O /tmp/templates.tpz
           test -s /tmp/templates.tpz
           7z x /tmp/templates.tpz -o/tmp/godot_templates >/dev/null
           for template in web_nothreads_debug.zip web_nothreads_release.zip; do
@@ -83,22 +86,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot-builds/releases/download/4.5-stable/Godot_v4.5-stable_linux.x86_64.zip" -O /tmp/godot.zip
+          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O /tmp/godot.zip
           rm -rf "$HOME/godot"
           mkdir -p "$HOME/godot"
           7z x /tmp/godot.zip -o"$HOME/godot" >/dev/null
-          chmod +x "$HOME/godot/Godot_v4.5-stable_linux.x86_64"
-          "$HOME/godot/Godot_v4.5-stable_linux.x86_64" --version
+          chmod +x "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
 
-      - name: Normalize Godot 4.5 build-only compatibility issues
+      - name: Validate project before export
         shell: bash
         run: |
           set -euo pipefail
-          for file in scripts/production_system.gd scripts/infrastructure_system.gd scripts/collection_system.gd scripts/liveops_system.gd scripts/headquarters_system.gd scripts/employee_system.gd scripts/global_ranking_system.gd scripts/world_event_system.gd scripts/analytics_system.gd scripts/ui_screen_manager.gd; do
-            [ -f "$file" ] && sed -i '/^class_name Renew\(ProductionSystem\|InfrastructureSystem\|CollectionSystem\|LiveOpsSystem\|HeadquartersSystem\|EmployeeSystem\|GlobalRankingSystem\|WorldEventSystem\|AnalyticsSystem\|UIScreenManager\)$/d' "$file"
-          done
-          find scripts -type f -name '*.gd' -print0 | xargs -0 sed -i -e 's/var spend:=/var spend: Dictionary =/g' -e 's/var spend :=/var spend: Dictionary =/g' -e 's/var production_spend :=/var production_spend: Dictionary =/g' -e 's/var resources_before :=/var resources_before: Dictionary =/g'
-          sed -i -e 's/func _origin_property_type() -> String:/func _origin_property_type():/' -e 's/func _origin_property_name() -> String:/func _origin_property_name():/' -e 's/func _technology_multiplier() -> float:/func _technology_multiplier():/' scripts/business_system.gd
+          timeout 120s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
 
       - name: Export Web build
         shell: bash
@@ -106,8 +105,7 @@ jobs:
           set -euo pipefail
           rm -rf build/web
           mkdir -p build/web
-          "$HOME/godot/Godot_v4.5-stable_linux.x86_64" --headless --path . --editor --quit
-          "$HOME/godot/Godot_v4.5-stable_linux.x86_64" --headless --path . --export-release "Web" build/web/index.html
+          timeout 600s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --export-release "Web" build/web/index.html
           test -s build/web/index.html
 
       - name: Verify single-threaded Web export
