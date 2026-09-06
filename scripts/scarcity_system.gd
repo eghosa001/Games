@@ -5,6 +5,37 @@ const SYSTEM_VERSION := 1
 const MIN_PRICE_MULTIPLIER := 0.55
 const MAX_PRICE_MULTIPLIER := 2.50
 const MIN_PRODUCTION_FACTOR := 0.45
+const UPDATE_INTERVAL_SECONDS := 0.25
+var update_timer: Timer
+
+func _ready() -> void:
+    update_timer = Timer.new()
+    update_timer.name = "ScarcityUpdateTimer"
+    update_timer.wait_time = UPDATE_INTERVAL_SECONDS
+    update_timer.one_shot = false
+    update_timer.autostart = true
+    update_timer.timeout.connect(refresh)
+    add_child(update_timer)
+    call_deferred("refresh")
+
+func refresh() -> void:
+    var main := get_tree().current_scene
+    if main == null: return
+    var economy = main.get("economy")
+    if economy == null: return
+    apply_to_economy(economy)
+    var rivals = main.get("rivals")
+    if rivals == null: return
+    var multiplier := product_cost_multiplier(economy)
+    for rival in rivals.rivals:
+        if not rival.has("_scarcity_base_price"): rival["_scarcity_base_price"] = int(rival.get("price",110))
+        rival["price"] = clamp(int(round(float(rival["_scarcity_base_price"]) * multiplier)),50,300)
+
+func _exit_tree() -> void:
+    if update_timer != null and is_instance_valid(update_timer):
+        if update_timer.timeout.is_connected(refresh):
+            update_timer.timeout.disconnect(refresh)
+        update_timer.stop()
 
 func profile(resource:String,data:Dictionary)->Dictionary:
     var stock:=max(0.0,float(data.get("stock",0)))
@@ -42,19 +73,6 @@ func product_cost_multiplier(economy)->float:
 
 func product_market_price(economy,base_price:float=110.0)->float:
     return base_price*product_cost_multiplier(economy)
-
-func _process(_delta:float)->void:
-    var main:=get_tree().current_scene
-    if main==null: return
-    var economy=main.get("economy")
-    if economy==null: return
-    apply_to_economy(economy)
-    var rivals=main.get("rivals")
-    if rivals==null: return
-    var multiplier:=product_cost_multiplier(economy)
-    for rival in rivals.rivals:
-        if not rival.has("_scarcity_base_price"): rival["_scarcity_base_price"]=int(rival.get("price",110))
-        rival["price"]=clamp(int(round(float(rival["_scarcity_base_price"])*multiplier)),50,300)
 
 func capture_state(resources:Dictionary)->Dictionary:
     return {"system_version":SYSTEM_VERSION,"snapshot":snapshot(resources)}
