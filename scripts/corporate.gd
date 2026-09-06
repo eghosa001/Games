@@ -5,6 +5,7 @@ extends Node2D
 # board seats, dividends, investor confidence and takeover defense.
 
 const OwnershipSystem = preload("res://scripts/ownership_system.gd")
+const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 const COMPANY_ID := "renew_co"
 const FOUNDER_ID := "founder"
 const INVESTOR_ID := "fund_a"
@@ -42,11 +43,9 @@ var board_trust: int:
 
 func _ready() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
-    ownership = get_tree().root.get_node_or_null("Renew/Systems/OwnershipSystem")
-    if ownership == null:
-        ownership = OwnershipSystem.new()
-        ownership.name = "OwnershipSystem"
-        get_tree().root.get_node("Renew/Systems").add_child.call_deferred(ownership)
+    # OwnershipSystem is scene-owned in Main.tscn. Never instantiate a second
+    # stateful authority when the canonical dependency is temporarily absent.
+    ownership = RuntimeResolver.resolve("RenewOwnershipSystem", "Systems/OwnershipSystem")
     if parent != null: last_processed_day = parent.day
     _ensure_company()
     # Corporate state is persisted by the canonical GameState/save pipeline.
@@ -354,7 +353,7 @@ func get_summary() -> Dictionary:
     return {"valuation":valuation,"share_price":share_price,"founder":founder_stake,"investors":investor_stake,"treasury":treasury_shares,"control":control_score,"risk":takeover_risk,"defense":defense_level,"trust":board_trust,"influence":ownership.get_board_seats(COMPANY_ID, FOUNDER_ID),"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"dividends":dividends_paid,"milestone":milestone_level,"milestone_name":_milestone_target(milestone_level),"ownership_snapshot":snapshot}
 
 func save_state() -> Dictionary:
-    return {"ownership_state": ownership.save_state() if ownership != null else {}, "investor_cash_raised":investor_cash_raised,"dividends_paid":dividends_paid,"valuation":valuation,"share_price":share_price,"last_capital_raise":last_capital_raise,"takeover_cooldown":takeover_cooldown,"last_processed_day":last_processed_day,"board_influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"milestone_level":milestone_level}
+    return {"ownership_state": ownership.save_state() if ownership != null else {},"investor_cash_raised":investor_cash_raised,"dividends_paid":dividends_paid,"valuation":valuation,"share_price":share_price,"last_capital_raise":last_capital_raise,"takeover_cooldown":takeover_cooldown,"last_processed_day":last_processed_day,"board_influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"milestone_level":milestone_level}
 
 func load_state(state: Dictionary) -> void:
     if ownership != null and state.has("ownership_state") and state["ownership_state"] is Dictionary:
