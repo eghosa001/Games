@@ -174,7 +174,7 @@ layer = 61
 [node name="LiveOpsPanel" type="CanvasLayer" parent="UI"]
 script = ExtResource("31")
 layer = 62
-[node name="MarketPanel" type="CanvasLayer" parent="UI"]
+[node name="CustomerSegmentsUI" type="CanvasLayer" parent="UI"]
 script = ExtResource("32")
 layer = 56
 [node name="ContractPanel" type="CanvasLayer" parent="UI"]
