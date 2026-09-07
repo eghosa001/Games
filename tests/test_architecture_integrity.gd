@@ -76,7 +76,7 @@ func audit_main_screen() -> void:
     if game == null: return
     root.add_child(game)
     await process_frame
-    var world_nodes := ["MainRenderer","PropertyVisual","WorldView","EmpireController","Corporate","WorldMissions","RegionController","BranchController","SupplyChainController","RivalSupplyController"]
+    var world_nodes := ["PropertyVisual","WorldView","EmpireController","Corporate","WorldMissions","RegionController","BranchController","SupplyChainController","RivalSupplyController"]
     var system_nodes := ["ScarcitySystem","GameBalance","RestorationStrategy","Progression","MarketDirector","EmpireGoals","FinanceSystem","OwnershipSystem","AcquisitionSystem","BankruptcySystem"]
     var ui_nodes := ["MainHUD","StrategyHUD","TutorialOverlay","V1Celebration","TechnologyPanel","HistoryPanel","NewsPanel","AlliancePanel","HeadquartersPanel","CollectionPanel","LiveOpsPanel","CustomerSegmentsUI","ContractPanel","EmployeePanel","InfrastructurePanel"]
     for node_name in world_nodes: check(game.get_node_or_null("World/" + node_name) != null, "World node: " + node_name)

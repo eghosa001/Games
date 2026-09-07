@@ -1,4 +1,4 @@
-[gd_scene load_steps=49 format=3]
+[gd_scene load_steps=48 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -21,7 +21,6 @@
 [ext_resource path="res://scripts/history_museum_ui.gd" type="Script" id="20"]
 [ext_resource path="res://scripts/news_ui.gd" type="Script" id="21"]
 [ext_resource path="res://scripts/scarcity_system.gd" type="Script" id="22"]
-[ext_resource path="res://scripts/main_renderer.gd" type="Script" id="23"]
 [ext_resource path="res://scripts/ownership_system.gd" type="Script" id="24"]
 [ext_resource path="res://scripts/acquisition_system.gd" type="Script" id="25"]
 [ext_resource path="res://scripts/finance_scene_bridge.gd" type="Script" id="26"]
@@ -90,9 +89,6 @@ texture = ExtResource("40")
 position = Vector2(1060, 485)
 z_index = -23
 visible = false
-[node name="MainRenderer" type="Node2D" parent="World"]
-z_index = -10
-script = ExtResource("23")
 [node name="PropertyVisual" type="Node2D" parent="World"]
 z_index = -5
 script = ExtResource("34")
