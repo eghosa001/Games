@@ -24,7 +24,7 @@ func _process(_delta:float)->void:
         var income:int = apply_branch_income()
         if income>0: parent._log("REGIONAL REVENUE: $%s from established operations."%_money(income))
         last_day=parent.day
-    queue_redraw()
+        queue_redraw()
 
 func _input(event:InputEvent)->void:
     if not event is InputEventKey or not event.pressed or event.echo: return

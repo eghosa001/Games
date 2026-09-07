@@ -1,7 +1,12 @@
 extends Node2D
 
-func _process(_delta: float) -> void:
-    queue_redraw()
+var _accum := 0.0
+
+func _process(delta: float) -> void:
+    _accum += delta
+    if _accum >= 0.16:
+        _accum = 0.0
+        queue_redraw()
 
 func _draw() -> void:
     var main: Node = get_parent().get_parent()
