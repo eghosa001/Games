@@ -20,7 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install Godot dependencies
-        run: sudo apt-get update && sudo apt-get install -y unzip wget xvfb
+        run: sudo apt-get update && sudo apt-get install -y unzip wget
       - name: Install Godot
         run: |
           set -euo pipefail
@@ -32,11 +32,6 @@ jobs:
         run: timeout 120s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
       - name: Run master game-plan coverage gate
         run: timeout 900s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_master_game_plan_coverage.gd
-      - name: Run display-server suites under Xvfb
-        run: |
-          set -euo pipefail
-          timeout 600s xvfb-run -a "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --path . --script res://tests/test_quality_gate.gd
-          timeout 600s xvfb-run -a "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --path . --script res://tests/test_responsive_ui_shell.gd
       - name: Run mobile QA automation
         run: timeout 300s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/mobile_qa_test.gd
       - name: Run full fast suite (every test except soaks)
