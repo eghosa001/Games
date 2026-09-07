@@ -2,6 +2,7 @@ extends SceneTree
 
 const PRESET_PATH := "res://export_presets.cfg"
 var failures: Array[String] = []
+var failed := 0
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -34,7 +35,7 @@ func _run() -> void:
     if failures.size() > 0:
         quit(1)
     print("ANDROID RELEASE CONFIG: PASS")
-    quit(0)
+    quit(1 if failed > 0 else 0)
 
 func _contains_network_analytics() -> bool:
     var dir := DirAccess.open("res://scripts")
@@ -57,4 +58,5 @@ func check(label: String, condition: bool) -> void:
         print("PASS: %s" % label)
     else:
         failures.append(label)
+        failed += 1
         print("FAIL: %s" % label)

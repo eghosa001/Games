@@ -3,7 +3,7 @@ var passed:=0
 var failed:=0
 func check(ok:bool,label:String)->void:
     if ok:passed+=1;print("PASS: "+label)
-    else:failed+=1;push_error("FAIL: "+label)
+    else:failed += 1;push_error("FAIL: "+label)
 func _init()->void:call_deferred("run")
 func run()->void:
     var State=load("res://scripts/game_state.gd");var Tech=load("res://scripts/technology_system.gd")
@@ -44,4 +44,4 @@ func run()->void:
     tech.add_daily_research_points(3)
     check(int(state.get_value("technology","research_points",0))==8,"Daily research points are awarded")
     if temp_tech and is_instance_valid(tech): tech.queue_free()
-    print("PHASE 21 RESULT: %d passed, %d failed"%[passed,failed]);quit(1 if failed>0 else 0)
+    print("PHASE 21 RESULT: %d passed, %d failed"%[passed,failed]);quit(1 if failed > 0 else 0)
