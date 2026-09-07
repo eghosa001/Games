@@ -86,7 +86,6 @@ func run() -> void:
     var stored: Dictionary = victory.stored_victory()
     check(not str(stored).is_empty() or not bool(mono.get("ok", false)), "Victory state readable")
     if str(stored.get("path", "")) == "monopolist":
-        check(true, "Monopolist path wins on 50 shares")
         var again: Dictionary = victory.check_victory()
         check(bool(again.get("already", false)), "Victory fires exactly once")
         check(str(state.get_value("company", "message", "")).find("VICTORY") >= 0, "Victory announced")
