@@ -1,9 +1,9 @@
 extends Node
-class_name RenewUIScreenManager
+## class_name removed: "RenewUIScreenManager" conflicts with project.godot autoload.
 
 ## Central presentation guard. Primary screens are mutually exclusive; screen
 ## scripts remain responsible for their own content and gameplay integration.
-const SCREEN_NAMES := ["ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel"]
+const SCREEN_NAMES := ["ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel", "InfrastructurePanel", "DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel"]
 const ROOT_SCREEN_NAMES := ["RenewDiplomacyUI", "CustomerSegmentsUI"]
 const SCREEN_ALIASES := {"MarketPanel": "CustomerSegmentsUI"}
 var _previous_visible: Dictionary = {}
@@ -37,8 +37,12 @@ func _canonical_screen_name(screen_name: String) -> String:
 
 func _root_screen_nodes() -> Array[Node]:
     var result: Array[Node] = []
+    var ui := _ui_root()
     for screen_name in ROOT_SCREEN_NAMES:
-        var node := get_tree().root.get_node_or_null("Renew/" + screen_name)
+        var node: Node = null
+        if ui != null:
+            node = ui.get_node_or_null(screen_name)
+        if node == null: node = get_tree().root.get_node_or_null("Renew/" + screen_name)
         if node == null: node = get_tree().root.get_node_or_null(screen_name)
         if node != null: result.append(node)
     return result

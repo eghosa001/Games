@@ -13,9 +13,9 @@ env:
   GODOT_VERSION: 4.7.2
 
 jobs:
-  test:
+  test-fast:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,19 +30,39 @@ jobs:
           "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
       - name: Import project
         run: timeout 120s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
-      - name: Run Android release configuration test
-        run: timeout 60s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_android_release_config.gd
       - name: Run mobile QA automation
-        run: timeout 120s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/mobile_qa_test.gd
-      - name: Run UI architecture regression test
-        run: timeout 120s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_ui_architecture.gd
-      - name: Run targeted simulation architecture test
-        run: timeout 60s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_simulation_architecture.gd
-      - name: Run finance authority regression test
-        run: timeout 60s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_production_finance_authority.gd
-      - name: Run supply receipt atomicity regression
-        run: timeout 60s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_supply_receipt_atomicity.gd
-      - name: Run production transaction boundary regression
-        run: timeout 60s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_production_transaction_boundary.gd
-      - name: Run regression tests
-        run: timeout 600s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_runner.gd
+        run: timeout 300s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/mobile_qa_test.gd
+      - name: Run full fast suite (every test except soaks)
+        run: |
+          set -euo pipefail
+          for t in tests/test_*.gd tests/integration/test_*.gd tests/release/test_*.gd; do
+            case "$t" in
+              tests/test_long_soak.gd|tests/test_extreme_soak.gd) continue;;
+            esac
+            echo "=== $t ==="
+            timeout 600s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script "res://$t"
+          done
+
+  test-slow:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Godot dependencies
+        run: sudo apt-get update && sudo apt-get install -y unzip wget
+      - name: Install Godot
+        run: |
+          set -euo pipefail
+          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O /tmp/godot.zip
+          unzip -q /tmp/godot.zip
+          chmod +x "Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
+      - name: Import project
+        run: timeout 120s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+      - name: Run long-running balance suite
+        run: timeout 1800s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/long_running/test_30_60_180_365_day_balance.gd
+      - name: Run long soak suite
+        run: timeout 1800s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_long_soak.gd
+      - name: Run extreme soak suite
+        run: timeout 3600s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_extreme_soak.gd

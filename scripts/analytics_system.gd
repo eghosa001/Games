@@ -1,5 +1,5 @@
 extends Node
-class_name RenewAnalyticsSystem
+## class_name removed: "RenewAnalyticsSystem" conflicts with project.godot autoload.
 
 const MAX_EVENTS := 5000
 const FUNNEL_STEPS := ["new_game", "first_restoration", "first_business", "first_profit", "first_expansion", "first_major_strategic_decision"]
@@ -22,7 +22,7 @@ func _process(_delta: float) -> void:
         last_day = day
         _scan_game_state(day)
 
-func track(event_name: String, properties: Dictionary = {}, funnel_event := false) -> Dictionary:
+func track(event_name: String, properties: Dictionary = {}, funnel_event = false) -> Dictionary:
     var day: Variant = _day()
     var record: Variant = {"id": "%s_%s_%s" % [event_name, day, events.size() + 1], "event": event_name, "day": day, "timestamp": Time.get_unix_time_from_system(), "properties": properties.duplicate(true)}
     events.append(record)

@@ -9,6 +9,7 @@ const WAREHOUSE_LIMIT := 500.0
 const FURNITURE_INPUTS := {"timber": 1.0, "metal": 0.5, "energy": 2.0}
 const METAL_RECIPE := {"iron": 2.0, "energy": 0.5, "metal": 1.0}
 var economy = null
+var competitor_pressure: int = 0
 var warehouse: Dictionary = {"timber": 0.0, "iron": 0.0, "metal": 0.0, "energy": 0.0, "food": 0.0, "electronics": 0.0, "goods": 0.0, "consumer_goods": 0.0, "furniture": 0.0, "construction_materials": 0.0, "consumer_electronics": 0.0}
 var total_freight_cost: int = 0
 var last_operation: Dictionary = {}
@@ -44,12 +45,34 @@ func _transport_capacity(level: int) -> float:
     if tech != null: return base * tech.transport_capacity_multiplier()
     return base
 
+func _infra_logistics() -> float:
+    if not is_inside_tree():
+        return 1.0
+    var infra = get_node_or_null("/root/RenewInfrastructureSystem")
+    if infra == null or not infra.has_method("founder_modifiers"):
+        return 1.0
+    return clampf(float(infra.founder_modifiers().get("logistics", 1.0)), 0.5, 1.0)
+
+func _effective_warehouse_limit() -> float:
+    var mult := 1.0
+    if is_inside_tree():
+        var infra = get_node_or_null("/root/RenewInfrastructureSystem")
+        if infra != null and infra.has_method("founder_modifiers"):
+            mult = max(1.0, float(infra.founder_modifiers().get("storage", 1.0)))
+        mult *= _world_modifier("infrastructure_capacity")
+    return WAREHOUSE_LIMIT * mult
+func _world_modifier(key: String) -> float:
+    if not is_inside_tree(): return 1.0
+    var game = get_node_or_null("/root/RenewGameState")
+    if game == null or not game.has_method("get_world_modifier"): return 1.0
+    return clampf(float(game.get_world_modifier(key, 1.0)), 0.5, 3.0)
+
 func _freight_cost(resource: String, amount: float, level: int) -> int:
     var distance_factor: float = 1.0
     if economy != null and economy.resources.has(resource): distance_factor = 1.0 + float(str(economy.resources[resource].get("region", "Unknown")).length() % 4) * 0.05
     var base_cost: float = amount * (2.0 + float(max(0, 3 - level))) * distance_factor
     var effects = _railway_effects()
-    return int(round(base_cost * float(effects.get("transport_cost_multiplier", 1.0))))
+    return int(round(base_cost * float(effects.get("transport_cost_multiplier", 1.0)) * _infra_logistics() * _world_modifier("logistics") * _world_modifier("logistics_cost")))
 
 func procure(resource: String, amount: float, cash: int, transport_level: int = 1) -> Dictionary:
     if economy == null or not economy.resources.has(resource) or amount <= 0: return {"ok": false, "reason": "invalid_resource"}
@@ -58,8 +81,9 @@ func procure(resource: String, amount: float, cash: int, transport_level: int = 
     var delivery_multiplier: float = float(effects.get("resource_delivery_multiplier", 1.0))
     var delivered_amount: float = amount * delivery_multiplier
     if amount > capacity: return {"ok": false, "reason": "transport_capacity", "capacity": capacity, "requested": amount}
-    var warehouse_room: float = WAREHOUSE_LIMIT - stock(resource)
-    if delivered_amount > warehouse_room + 0.000001: return {"ok": false, "reason": "warehouse_capacity", "capacity": WAREHOUSE_LIMIT, "available": max(0.0, warehouse_room), "requested": delivered_amount}
+    var limit := _effective_warehouse_limit()
+    var warehouse_room: float = limit - stock(resource)
+    if delivered_amount > warehouse_room + 0.000001: return {"ok": false, "reason": "warehouse_capacity", "capacity": limit, "available": max(0.0, warehouse_room), "requested": delivered_amount}
     var available: float = float(economy.resources[resource].get("stock", 0.0))
     if available < amount: return {"ok": false, "reason": "market_stock", "available": available, "requested": amount}
     var unit_price: float = float(economy.current_price(resource))
@@ -84,11 +108,11 @@ func procure_bundle(orders: Array, cash: int, transport_level: int = 1) -> Dicti
         if economy == null or not economy.resources.has(resource): return {"ok": false, "reason": "invalid_resource", "resource": resource}
         if amount <= 0.0: return {"ok": false, "reason": "invalid_amount", "resource": resource}
         var effects = _railway_effects(); var delivery_multiplier: float = float(effects.get("resource_delivery_multiplier", 1.0)); var delivered_amount: float = amount * delivery_multiplier
-        if delivered_amount > WAREHOUSE_LIMIT - stock(resource) + 0.000001: return {"ok": false, "reason": "warehouse_capacity", "resource": resource, "capacity": WAREHOUSE_LIMIT, "available": max(0.0, WAREHOUSE_LIMIT - stock(resource)), "requested": delivered_amount}
+        if delivered_amount > _effective_warehouse_limit() - stock(resource) + 0.000001: return {"ok": false, "reason": "warehouse_capacity", "resource": resource, "capacity": _effective_warehouse_limit(), "available": max(0.0, _effective_warehouse_limit() - stock(resource)), "requested": delivered_amount}
         if float(economy.resources[resource].get("stock", 0.0)) < amount: return {"ok": false, "reason": "market_stock", "resource": resource}
         total_cost += int(round(economy.current_price(resource) * amount)) + _freight_cost(resource, amount, transport_level)
     if cash < total_cost: return {"ok": false, "reason": "cash", "cost": total_cost}
-    var warehouse_before := warehouse.duplicate(true); var resources_before := economy.resources.duplicate(true); var freight_before := total_freight_cost; var operation_before := last_operation.duplicate(true); var delivered: Array = []; var remaining_cash: int = cash
+    var warehouse_before: Dictionary = warehouse.duplicate(true); var resources_before: Dictionary = economy.resources.duplicate(true); var freight_before := total_freight_cost; var operation_before := last_operation.duplicate(true); var delivered: Array = []; var remaining_cash: int = cash
     for order in orders:
         var result: Dictionary = procure(str(order["resource"]), float(order["amount"]), remaining_cash, transport_level)
         if not bool(result.get("ok", false)):
@@ -102,7 +126,7 @@ func process_iron_to_metal(cycles: int = 1) -> Dictionary:
     possible = min(possible, int(floor(stock("iron") / METAL_RECIPE["iron"]))); possible = min(possible, int(floor(stock("energy") / METAL_RECIPE["energy"])))
     if possible <= 0: return {"ok": false, "reason": "insufficient_iron_or_energy", "cycles": 0}
     var output: float = METAL_RECIPE["metal"] * possible
-    if output > WAREHOUSE_LIMIT - stock("metal") + 0.000001: return {"ok": false, "reason": "warehouse_capacity", "resource": "metal", "capacity": WAREHOUSE_LIMIT, "available": max(0.0, WAREHOUSE_LIMIT - stock("metal")), "requested": output}
+    if output > _effective_warehouse_limit() - stock("metal") + 0.000001: return {"ok": false, "reason": "warehouse_capacity", "resource": "metal", "capacity": _effective_warehouse_limit(), "available": max(0.0, _effective_warehouse_limit() - stock("metal")), "requested": output}
     warehouse["iron"] -= METAL_RECIPE["iron"] * possible; warehouse["energy"] -= METAL_RECIPE["energy"] * possible; warehouse["metal"] += output
     _sync_production_mirror(["iron", "energy", "metal"])
     last_operation = {"type": "metal_processing", "cycles": possible, "iron_consumed": METAL_RECIPE["iron"] * possible, "energy_consumed": METAL_RECIPE["energy"] * possible, "metal_output": output}
@@ -157,9 +181,9 @@ func _sync_production_mirror(resources: Array) -> void:
 func receive_product(product: String, amount: int) -> Dictionary:
     _ensure_warehouse()
     if product.is_empty() or amount <= 0: return {"ok": false, "reason": "invalid_product"}
-    var available_room: float = WAREHOUSE_LIMIT - stock(product)
+    var available_room: float = _effective_warehouse_limit() - stock(product)
     if float(amount) > available_room + 0.000001:
-        return {"ok": false, "reason": "warehouse_capacity", "product": product, "capacity": WAREHOUSE_LIMIT, "available": max(0.0, available_room), "requested": amount}
+        return {"ok": false, "reason": "warehouse_capacity", "product": product, "capacity": _effective_warehouse_limit(), "available": max(0.0, available_room), "requested": amount}
     warehouse[product] = stock(product) + amount
     _sync_production_mirror([product])
     last_operation = {"type": "receive_product", "product": product, "amount": amount}
@@ -184,8 +208,8 @@ func sell_furniture(amount: int, price: int) -> Dictionary:
     return sell_product("furniture", amount, price)
 
 func capture_state() -> Dictionary:
-    return {"system_version": SYSTEM_VERSION, "warehouse": warehouse_snapshot(), "total_freight_cost": total_freight_cost, "last_operation": last_operation.duplicate(true)}
+    return {"system_version": SYSTEM_VERSION, "warehouse": warehouse_snapshot(), "total_freight_cost": total_freight_cost, "competitor_pressure": competitor_pressure, "last_operation": last_operation.duplicate(true)}
 
 func restore_state(snapshot: Dictionary) -> void:
     if snapshot.is_empty(): return
-    warehouse = snapshot.get("warehouse", warehouse).duplicate(true); total_freight_cost = int(snapshot.get("total_freight_cost", 0)); last_operation = snapshot.get("last_operation", {}).duplicate(true); _ensure_warehouse(); _sync_production_mirror(warehouse.keys())
+    warehouse = snapshot.get("warehouse", warehouse).duplicate(true); total_freight_cost = int(snapshot.get("total_freight_cost", 0)); competitor_pressure = clamp(int(snapshot.get("competitor_pressure", 0)), 0, 20); last_operation = snapshot.get("last_operation", {}).duplicate(true); _ensure_warehouse(); _sync_production_mirror(warehouse.keys())

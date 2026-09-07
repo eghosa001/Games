@@ -1,11 +1,12 @@
 extends Node
-class_name RenewGlobalRankingSystem
+## class_name removed: "RenewGlobalRankingSystem" conflicts with project.godot autoload.
 
 const CATEGORIES := [
     "valuation", "revenue", "profit", "assets", "market_share", "employees",
     "technology", "infrastructure", "regional_presence", "reputation",
     "resource_control", "alliance_influence"
 ]
+const POWER_WEIGHTS := {"economic": 0.18, "resource": 0.12, "industrial": 0.14, "technology": 0.14, "logistics": 0.10, "diplomatic": 0.10, "alliance": 0.10, "cultural": 0.12}
 const SNAPSHOT_DAILY := "daily"
 const SNAPSHOT_WEEKLY := "weekly"
 const MAX_HISTORY := 365
@@ -87,7 +88,62 @@ func get_historical_ranking(category: String, snapshot_day: int = -1, limit: int
 func get_daily_snapshots() -> Array: return daily_snapshots.duplicate(true)
 func get_weekly_snapshots() -> Array: return weekly_snapshots.duplicate(true)
 func get_snapshot(day: int) -> Dictionary: return historical.get(str(day), {}).duplicate(true)
-
+func world_power() -> Dictionary:
+    var game = get_node_or_null("/root/RenewGameState")
+    var finance = get_node_or_null("/root/RenewFinanceSystem")
+    var alliance = get_node_or_null("/root/RenewAllianceSystem")
+    var infra = get_node_or_null("/root/RenewInfrastructureSystem")
+    var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
+    var worth := 0.0
+    if finance != null and finance.has_method("valuation"):
+        worth = maxf(0.0, float(finance.call("valuation")))
+    var rep := 0
+    var tech_count := 0
+    var members := 0
+    var treasury := 0.0
+    var transport := 1
+    var regions := 1
+    if game != null:
+        rep = int(game.get_value("player", "reputation", 0))
+        var tech: Variant = game.get_value("technology", "technology", {})
+        if tech is Dictionary:
+            for key in (tech as Dictionary).keys():
+                var entry: Variant = (tech as Dictionary)[key]
+                if (entry is Dictionary and bool((entry as Dictionary).get("researched", false))) or (entry is bool and bool(entry)):
+                    tech_count += 1
+        transport = int(game.get_value("supply_chain", "transport_level", 1))
+        regions = maxi(1, int(game.get_value("regions", "selected_district", 0)) + 1)
+    if alliance != null and alliance.has_method("get_member_alliance"):
+        var pact: Dictionary = alliance.get_member_alliance("player")
+        if not pact.is_empty():
+            members = (pact.get("members", {}) as Dictionary).size()
+            treasury = float(pact.get("treasury", 0.0))
+    var treaties := 0
+    if diplomacy != null and diplomacy.has_method("list_treaties"):
+        treaties = (diplomacy.list_treaties() as Array).size()
+    var infra_score := 0.0
+    if infra != null and infra.has_method("list_assets"):
+        for asset in infra.list_assets():
+            if asset is Dictionary and str((asset as Dictionary).get("status", "")) == "active":
+                infra_score += 1.0
+    var dims := {
+        "economic": clampf(worth / 1000000.0 * 100.0, 0.0, 100.0),
+        "resource": clampf(float(regions) / 3.0 * 100.0, 0.0, 100.0),
+        "industrial": clampf((float(transport) / 5.0 * 50.0) + minf(50.0, worth / 20000.0), 0.0, 100.0),
+        "technology": clampf(float(tech_count) / 6.0 * 100.0, 0.0, 100.0),
+        "logistics": clampf(float(transport) / 5.0 * 100.0, 0.0, 100.0),
+        "diplomatic": clampf(float(treaties) / 4.0 * 100.0, 0.0, 100.0),
+        "alliance": clampf(minf(60.0, float(members) / 5.0 * 60.0) + minf(40.0, treasury / 25000.0), 0.0, 100.0),
+        "cultural": clampf(float(rep), 0.0, 100.0),
+    }
+    var total := 0.0
+    for key in (POWER_WEIGHTS as Dictionary).keys():
+        total += float(dims.get(key, 0.0)) * float((POWER_WEIGHTS as Dictionary)[key])
+    dims["total"] = clampf(total, 0.0, 100.0)
+    return dims
+func world_power_text() -> String:
+    var power := world_power()
+    return "WORLD POWER %.0f — Econ %.0f Res %.0f Ind %.0f Tech %.0f Log %.0f Dip %.0f Ally %.0f Cult %.0f." % [float(power.get("total", 0.0)), float(power.get("economic", 0.0)), float(power.get("resource", 0.0)), float(power.get("industrial", 0.0)), float(power.get("technology", 0.0)), float(power.get("logistics", 0.0)), float(power.get("diplomatic", 0.0)), float(power.get("alliance", 0.0)), float(power.get("cultural", 0.0))]
 func _build_snapshot(day: int) -> Dictionary:
     var snapshot: Variant = {"day": day, "timestamp": Time.get_unix_time_from_system(), "rankings": {}}
     for category in CATEGORIES: snapshot["rankings"][category] = get_ranking(category, companies.size())

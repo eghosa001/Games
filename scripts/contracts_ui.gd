@@ -82,7 +82,7 @@ func _refresh(force: bool = false) -> void:
 
 func _add_contract_row(contract: Dictionary) -> void:
     var id := str(contract.get("id", "")); var customer := str(contract.get("customer_id", "Customer")); var product := str(contract.get("resource_product", "product")).replace("_", " ").capitalize(); var delivered := int(contract.get("quantity_delivered", 0)); var quantity := max(1, int(contract.get("quantity", 0))); var days_elapsed := int(contract.get("days_elapsed", 0)); var schedule: Dictionary = contract.get("delivery_schedule", {}); var duration := max(1, int(schedule.get("duration_days", 1))); var days_left := max(0, duration - days_elapsed); var expected: float = float(quantity) * minf(1.0, float(days_elapsed) / float(duration)); var progress := clampf(float(delivered) / float(quantity), 0.0, 1.0); var status: Array = _delivery_status(delivered, expected, days_left, quantity)
-    var button := Button.new(); button.text = "%s  •  %s\n%d / %d  •  %d%%  •  %s" % [customer, product, delivered, quantity, roundi(progress * 100.0), status[0]]; button.alignment = HORIZONTAL_ALIGNMENT_LEFT; button.custom_minimum_size = Vector2(0, 58); button.focus_mode = Control.FOCUS_NONE; button.add_theme_stylebox_override("normal", _button_style(SURFACE_2)); button.add_theme_stylebox_override("hover", _button_style(Color("17343d"))); button.add_theme_stylebox_override("pressed", _button_style(Color("1b3d46"))); button.add_theme_color_override("font_color", TEXT); button.pressed.connect(_select_contract.bind(id)); contract_list.add_child(button)
+    var button := Button.new(); var kind_tag := ""; var kind := str(contract.get("kind", "standard")); kind_tag = "" if kind == "standard" else (" [%s]" % kind.to_upper()); button.text = "%s  •  %s%s\n%d / %d  •  %d%%  •  %s" % [customer, product, kind_tag, delivered, quantity, roundi(progress * 100.0), status[0]]; button.alignment = HORIZONTAL_ALIGNMENT_LEFT; button.custom_minimum_size = Vector2(0, 58); button.focus_mode = Control.FOCUS_NONE; button.add_theme_stylebox_override("normal", _button_style(SURFACE_2)); button.add_theme_stylebox_override("hover", _button_style(Color("17343d"))); button.add_theme_stylebox_override("pressed", _button_style(Color("1b3d46"))); button.add_theme_color_override("font_color", TEXT); button.pressed.connect(_select_contract.bind(id)); contract_list.add_child(button)
 
 func _delivery_status(delivered: int, expected: float, days_left: int, quantity: int) -> Array:
     if days_left <= 0: return ["ON TRACK • COMPLETE", STATUS_GREEN] if delivered >= quantity else ["OVERDUE • ACTION NEEDED", STATUS_RED]
@@ -111,7 +111,9 @@ func _show_detail(contract: Dictionary) -> void:
         detail_label.text = ""
         return
     var customer := str(contract.get("customer_id", "Customer"))
-    var product := str(contract.get("resource_product", "product")).replace("_", " ").capitalize()
+    var kind := str(contract.get("kind", "standard"))
+    var kind_tag := "" if kind == "standard" else (" [%s]" % kind.to_upper())
+    var product := str(contract.get("resource_product", "product")).replace("_", " ").capitalize() + kind_tag
     var quantity := max(1, int(contract.get("quantity", 0)))
     var delivered := int(contract.get("quantity_delivered", 0))
     var due := int(contract.get("quantity_due", 0))

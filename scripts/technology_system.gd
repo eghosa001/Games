@@ -37,6 +37,7 @@ func is_unlocked(id:String)->bool:
     var state=_state(); if state==null:return false
     var unlocked=state.get_value("technology","technology",{})
     return unlocked is Dictionary and bool(unlocked.get(id,false))
+func get_unlocked(id:String)->bool: return is_unlocked(id)
 func can_research(id:String)->Dictionary:
     var tech:=get_technology(id)
     if tech.is_empty():return {"ok":false,"reason":"unknown_technology"}
@@ -54,14 +55,30 @@ func research(id:String)->bool:
     if not bool(check.get("ok",false)):
         state.set_value("company","message",_research_error(id,check)); return false
     var tech:=get_technology(id); var points:=int(state.get_value("technology","research_points",20))
-    var spend:=state_adapter.spend(int(tech["cost_money"]),"technology research: %s" % str(tech["name"]))
-    if not bool(spend.get("ok",false)):
-        state.set_value("company","message",str(spend.get("message","Technology research requires sufficient cash."))); return false
+    var spent: bool = false
+    var finance := get_node_or_null("/root/RenewFinanceSystem")
+    if finance != null and finance.has_method("spend"):
+        var spend_result: Dictionary = finance.spend(int(tech["cost_money"]),"technology research: %s" % str(tech["name"]))
+        spent = bool(spend_result.get("ok", false))
+        if spent:
+            state_adapter._sync_finance_mirrors(finance)
+    elif int(state.get_value("economy","cash",0)) >= int(tech["cost_money"]):
+        state.set_value("economy","cash",int(state.get_value("economy","cash",0))-int(tech["cost_money"]))
+        spent = true
+    if not spent:
+        state.set_value("company","message","Technology research requires sufficient cash."); return false
     state.set_value("technology","research_points",points-int(tech["cost_points"]))
     var unlocked:Dictionary=state.get_value("technology","technology",{}); unlocked=unlocked.duplicate(true); unlocked[id]=true; state.set_value("technology","technology",unlocked)
     last_research_days = get_research_time_days(id)
     state.set_value("company","message","Research complete: %s. %d day(s) will be simulated." % [tech["name"],last_research_days])
-    var logs=state.get_value("company","log_lines",[]); if not logs is Array:logs=[]; logs=logs.duplicate(true); logs.append("TECHNOLOGY: %s researched (-$%d, -%d RP, %d days)." % [tech["name"],int(tech["cost_money"]),int(tech["cost_points"]),last_research_days]); if logs.size()>100:logs.pop_front(); state.set_value("company","log_lines",logs)
+    var logs=state.get_value("company","log_lines",[])
+    if not logs is Array:
+        logs=[]
+    logs=logs.duplicate(true)
+    logs.append("TECHNOLOGY: %s researched (-$%d, -%d RP, %d days)." % [tech["name"],int(tech["cost_money"]),int(tech["cost_points"]),last_research_days])
+    if logs.size()>100:
+        logs.pop_front()
+    state.set_value("company","log_lines",logs)
     return true
 func get_research_time_days(id:String)->int:
     var tech:=get_technology(id)
@@ -82,7 +99,11 @@ func research_next() -> bool:
     return false
 func add_daily_research_points(amount:int=3)->void:
     var state=_state(); if state==null:return
-    state.set_value("technology","research_points",int(state.get_value("technology","research_points",20))+max(0,amount))
+    var credited:=max(0,int(round(float(max(0,amount))*state_adapter.executive_bonus("research")*max(1.0,state_adapter.infra_modifier("technology"))*_world_modifier("research"))))
+    state.set_value("technology","research_points",int(state.get_value("technology","research_points",20))+credited)
+func _world_modifier(key:String)->float:
+    var state=_state(); if state==null or not state.has_method("get_world_modifier"):return 1.0
+    return clampf(float(state.get_world_modifier(key,1.0)),0.5,3.0)
 func effect(name:String,default_value:float=0.0)->float:
     var total:=default_value; var state=_state(); if state==null:return total
     var unlocked=state.get_value("technology","technology",{}); if not unlocked is Dictionary:return total

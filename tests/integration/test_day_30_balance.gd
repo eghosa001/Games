@@ -26,7 +26,7 @@ func run() -> void:
     await process_frame
     await process_frame
 
-    var state = get_node_or_null("/root/RenewGameState")
+    var state = root.get_node_or_null("RenewGameState")
     check(state != null, "GameState is available")
     if state == null:
         game.free()

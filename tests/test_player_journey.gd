@@ -34,6 +34,15 @@ func run() -> void:
     game.stage = "Operational"
     game.restoration = 100
     game.business_open = true
+    var boot = root.get_node_or_null("/root/RenewGameState")
+    if boot != null:
+        boot.set_value("businesses", "business_purpose", "furniture_factory")
+        boot.set_value("businesses", "industry_id", "furniture")
+        boot.set_value("businesses", "business_name", "Furniture Factory")
+        boot.set_value("businesses", "business_type", "Factory")
+        boot.set_value("businesses", "origin_property_id", "warehouse_001")
+        boot.set_value("businesses", "origin_property_name", "Riverside Warehouse")
+        boot.set_value("businesses", "origin_property_type", "Warehouse")
     game.economy.resources["timber"]["stock"] = 100
     game.economy.resources["iron"]["stock"] = 100
     game.economy.resources["energy"]["stock"] = 100

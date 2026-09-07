@@ -203,6 +203,7 @@ var log_lines: Array:
 
 func _ready():
     command_system = GameplayCommandSystem.new()
+    command_system.name = "GameplayCommandSystem"
     add_child(command_system)
     command_system.initialize()
     refresh_ui()
@@ -216,32 +217,118 @@ func refresh_ui():
 func inspect_property() -> void: command_system.inspect_property()
 func acquire_property() -> void: command_system.acquire_property()
 func restore_property() -> void: command_system.restore_property()
+func sell_property() -> void: command_system.sell_property()
+func lease_property() -> void: command_system.lease_property()
 func open_business() -> void: command_system.open_business()
 func choose_business_purpose(index: int) -> void: command_system.choose_business_purpose(index)
 func create_business() -> void: command_system.create_business()
 func get_business_purposes() -> Array: return command_system.business_system.get_business_purposes()
 func buy_inputs() -> void: command_system.buy_inputs()
 func produce_goods() -> void: command_system.produce_goods()
-func hire_employee() -> void: command_system.hire_employee()
+func hire_employee() -> Dictionary: return command_system.hire_employee()
+func train_employee(employee_id: String) -> void: command_system.train_employee(employee_id)
+func promote_employee(employee_id: String) -> void: command_system.promote_employee(employee_id)
+func assign_employee(employee_id: String, assignment: String) -> void: command_system.assign_employee(employee_id, assignment)
+func fire_employee(employee_id: String) -> void: command_system.fire_employee(employee_id)
+func appoint_executive(employee_id: String) -> Dictionary: return command_system.appoint_executive(employee_id)
 func upgrade_business() -> void: command_system.upgrade_business()
 func marketing_campaign() -> void: command_system.marketing_campaign()
 func change_price() -> void: command_system.change_price()
 func cycle_supplier() -> void: command_system.cycle_supplier()
 func sign_contract() -> void: command_system.sign_contract()
+func haggle_contract() -> void: command_system.haggle_contract()
+func sign_exclusive_contract() -> void: command_system.sign_exclusive_contract()
+func sign_construction_contract() -> void: command_system.sign_construction_contract()
+func sign_government_contract() -> void: command_system.sign_government_contract()
+func sign_export_contract() -> void: command_system.sign_export_contract()
+func buy_international() -> void: command_system.buy_international()
 func cancel_active_contract(reason: String = "player cancelled") -> void: command_system.cancel_active_contract(reason)
 func take_loan() -> void: command_system.take_loan()
 func repay_loan() -> void: command_system.repay_loan()
+func request_investment() -> void: command_system.request_investment()
+func accept_investment() -> void: command_system.accept_investment()
+func decline_investment() -> void: command_system.decline_investment()
+func invest_term() -> void: command_system.invest_term()
+func pay_dividend() -> void:
+    var corporate = get_node_or_null("World/Corporate")
+    if corporate != null and corporate.has_method("pay_dividend"):
+        corporate.pay_dividend()
+func go_public() -> void:
+    var corporate = get_node_or_null("World/Corporate")
+    if corporate != null and corporate.has_method("go_public"):
+        corporate.go_public()
+func cap_table() -> void:
+    var corporate = get_node_or_null("World/Corporate")
+    if corporate != null and corporate.has_method("cap_table_text"):
+        message = str(corporate.cap_table_text())
 func select_rival(index: int) -> void: command_system.select_rival(index)
 func select_expansion(index: int) -> void: command_system.select_expansion(index)
 func select_district(index: int) -> void: command_system.select_district(index)
 func improve_alliance() -> void: command_system.improve_alliance()
+func send_envoy_gift() -> void: command_system.send_envoy_gift()
 func make_alliance_offer() -> void: command_system.make_alliance_offer()
+func compete_alliance() -> void: command_system.compete_alliance()
+func victory_progress() -> void: command_system.victory_progress()
+func found_new_company() -> void: command_system.found_new_company()
+func identity_status() -> void: command_system.identity_status()
+func reputation_status() -> void: command_system.reputation_status()
+func world_power() -> void: command_system.world_power()
+func check_notifications() -> void: command_system.check_notifications()
 func propose_supply_deal() -> void: command_system.propose_supply_deal()
 func propose_customer_partnership() -> void: command_system.propose_customer_partnership()
 func negotiate_selected_acquisition() -> void: command_system.negotiate_selected_acquisition()
+func buy_rival_shares() -> void: command_system.buy_rival_shares()
+func sell_rival_shares() -> void: command_system.sell_rival_shares()
+func start_acquisition_battle() -> void: command_system.start_acquisition_battle()
+func raise_acquisition_bid() -> void: command_system.raise_acquisition_bid()
+func walk_away_acquisition() -> void: command_system.walk_away_acquisition()
 func reject_selected_acquisition() -> void: command_system.reject_selected_acquisition()
 func buy_expansion() -> void: command_system.buy_expansion()
 func upgrade_transport() -> Dictionary: return command_system.upgrade_transport()
+func next_region() -> void:
+    var controller = get_node_or_null("World/RegionController")
+    if controller != null and controller.has_method("next_region"):
+        controller.next_region()
+func previous_region() -> void:
+    var controller = get_node_or_null("World/RegionController")
+    if controller != null and controller.has_method("previous_region"):
+        controller.previous_region()
+func establish_region() -> void:
+    var controller = get_node_or_null("World/RegionController")
+    if controller != null and controller.has_method("establish_region"):
+        controller.establish_region()
+func upgrade_regional_infrastructure() -> void:
+    var controller = get_node_or_null("World/RegionController")
+    if controller != null and controller.has_method("upgrade_infrastructure"):
+        controller.upgrade_infrastructure()
+func establish_trade_route() -> void:
+    var controller = get_node_or_null("World/RegionController")
+    if controller != null and controller.has_method("establish_trade_route"):
+        controller.establish_trade_route()
+func dispatch_goods() -> void:
+    var controller = get_node_or_null("World/RegionController")
+    if controller != null and controller.has_method("dispatch_goods"):
+        controller.dispatch_goods()
+func charter_basin() -> void:
+    var controller = get_node_or_null("World/RegionController")
+    if controller != null and controller.has_method("charter_basin"):
+        controller.charter_basin()
+func charter_valley() -> void:
+    var controller = get_node_or_null("World/RegionController")
+    if controller != null and controller.has_method("charter_valley"):
+        controller.charter_valley()
+func infra_build() -> void:
+    var panel = get_node_or_null("UI/InfrastructurePanel")
+    if panel != null and panel.has_method("build_selected"):
+        panel.build_selected()
+func infra_type() -> void:
+    var panel = get_node_or_null("UI/InfrastructurePanel")
+    if panel != null and panel.has_method("cycle_type"):
+        panel.cycle_type()
+func infra_repair() -> void:
+    var panel = get_node_or_null("UI/InfrastructurePanel")
+    if panel != null and panel.has_method("repair_damaged"):
+        panel.repair_damaged()
 func upgrade_expansion() -> void: command_system.upgrade_expansion()
 func acquire_rival_asset() -> void: command_system.acquire_rival_asset()
 func advance_day() -> void: command_system.advance_day()
@@ -302,6 +389,9 @@ func _input(event: InputEvent) -> void:
         KEY_M: marketing_campaign()
         KEY_L: improve_alliance()
         KEY_C: make_alliance_offer()
+        KEY_F: compete_alliance()
+        KEY_G: victory_progress()
+        KEY_D: found_new_company()
         KEY_E: buy_expansion()
         KEY_Q: upgrade_expansion()
         KEY_K: sign_contract()

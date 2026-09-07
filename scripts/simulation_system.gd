@@ -176,7 +176,7 @@ func _advance_day_impl(state: Dictionary, context: Dictionary) -> Dictionary:
     var demand_result = demand_model.calculate(active_product, float(player_price), float(rival_price), reputation, quality, marketing_level, contract_bonus, employee_productivity, district_mult, pressure, float(alliance.get("sales", 0)), float(deal.get("sales", 0)))
     if not bool(demand_result.get("ok", false)):
         return {"ok": false, "message": "Demand model failed."}
-    var customer_demand = int(demand_result["demand"])
+    var customer_demand = maxi(0, int(float(demand_result["demand"]) * _world_modifier("sales") * _world_modifier("cycle_" + active_product)))
     var available_inventory := _warehouse_stock(active_product)
     var units_requested = min(customer_demand, int(floor(available_inventory)))
     var sales_result := _sell_inventory(active_product, units_requested, player_price)
@@ -200,7 +200,8 @@ func _advance_day_impl(state: Dictionary, context: Dictionary) -> Dictionary:
 
     var wages = int(employee_system.get_daily_wage_total())
     var capacity_level = int(state.get("capacity_level", 1))
-    var administrative_overhead = 650 + capacity_level * 100
+    # Headquarters overhead is stored as a monthly rate like salaries.
+    var administrative_overhead = int(round(float(650 + capacity_level * 100) / 30.0))
 
     var settlement = finance.settle_sales(sales, wages, administrative_overhead + contract_penalty, contract_income)
     if not bool(settlement.get("ok", false)):
@@ -223,11 +224,14 @@ func _advance_day_impl(state: Dictionary, context: Dictionary) -> Dictionary:
         state["reputation"] = max(0, int(state["reputation"]) - 2)
     elif int(debt_result.get("interest", 0)) > 0:
         _append_log(state, "BANK: $%s interest charged." % _money(int(debt_result["interest"])) )
+    for matured in debt_result.get("matured_investments", []):
+        if matured is Dictionary:
+            _append_log(state, "BANK: term deposit matured +$%s (incl. $%s interest)." % [_money(int(matured.get("total", 0))), _money(int(matured.get("interest", 0)))])
 
     state["day"] = int(state.get("day", 1)) + 1
 
     for news in rivals.daily_update(int(state["day"])):
-        _append_log(state, "RIVAL: " + news)
+        _append_log(state, str(news) if str(news).begins_with("CORPORATE WAR:") or str(news).begins_with("EVENT:") else "RIVAL: " + news)
     var ai_player_state = state.duplicate(true)
     ai_player_state["selected_rival"] = int(state.get("selected_rival", 0))
     ai_player_state["selected_district"] = int(state.get("selected_district", 0))
@@ -251,6 +255,12 @@ func _advance_day_impl(state: Dictionary, context: Dictionary) -> Dictionary:
 
     expansion.unlock_from_reputation(int(state["reputation"]))
     districts.update_unlocks(int(state["reputation"]))
+
+    var share_dividend := _settle_share_dividends(state, rivals)
+    if share_dividend < 0:
+        return {"ok": false, "message": "Share dividend settlement failed."}
+    if share_dividend > 0:
+        _append_log(state, "DIVIDEND: rival shareholdings paid $%s." % _money(share_dividend))
 
     state["message"] = "Day %d closed. %d/%d demand sold at $%s; profit $%s; empire profit $%s." % [int(state["day"]), units_sold, customer_demand, _money(player_price), _money(profit), _money(empire_profit)]
 
@@ -291,11 +301,14 @@ func _active_product() -> String:
     return "consumer_goods"
 
 func _supply_chain() -> Node:
-    var scene = get_tree().current_scene
+    var tree = get_tree()
+    var scene = tree.current_scene if tree != null else null
+    if scene == null and tree != null and tree.root != null:
+        scene = tree.root.get_node_or_null("Renew")
     if scene != null:
         var command_system = scene.get_node_or_null("GameplayCommandSystem")
-        if command_system != null and command_system.supply_system != null:
-            var chain = command_system.supply_system.get("supply_chain")
+        if command_system != null and command_system.business_system != null:
+            var chain = command_system.business_system.get("supply_chain")
             if chain != null:
                 return chain
     return null
@@ -361,6 +374,35 @@ func _append_log(state: Dictionary, text: String) -> void:
         if logs.size() > 100: logs.pop_front()
         state["log_lines"] = logs
 
+func _settle_share_dividends(state: Dictionary, rivals) -> int:
+    var game_state = _game_state()
+    if game_state == null or rivals == null:
+        return 0
+    var holdings = game_state.get_value("ownership", "holdings", [])
+    if not holdings is Array or holdings.is_empty():
+        return 0
+    var total := 0
+    for holding in holdings:
+        if not holding is Dictionary:
+            continue
+        var shares := int(holding.get("shares", 0))
+        if shares <= 0:
+            continue
+        var index := -1
+        for i in range(rivals.rivals.size()):
+            if str(rivals.rivals[i].get("id", "")) == str(holding.get("rival_id", "")):
+                index = i
+                break
+        if index < 0 or not rivals.has_method("share_price"):
+            continue
+        var dividend := int(round(float(shares) * float(rivals.share_price(index)) * 0.002))
+        total += max(0, dividend)
+    if total <= 0:
+        return 0
+    if not _apply_cash_delta(state, total, "rival share dividends"):
+        return -1
+    return total
+
 func _money(value: int) -> String: return str(value)
 
 func end_day(args: Dictionary = {}) -> Dictionary:
@@ -386,6 +428,10 @@ func restore_state(snapshot: Dictionary) -> void:
 
 func _finance() -> Node: return get_node_or_null("/root/RenewFinanceSystem")
 func _game_state() -> Node: return get_node_or_null("/root/RenewGameState")
+func _world_modifier(key: String) -> float:
+    var game_state = _game_state()
+    if game_state == null or not game_state.has_method("get_world_modifier"): return 1.0
+    return clampf(float(game_state.get_world_modifier(key, 1.0)), 0.5, 3.0)
 
 func _economy():
     var scene = get_tree().current_scene

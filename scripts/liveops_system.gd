@@ -1,5 +1,5 @@
 extends Node
-class_name RenewLiveOpsSystem
+## class_name removed: "RenewLiveOpsSystem" conflicts with project.godot autoload.
 
 const SEASON_LENGTH := 30
 const CHECK_INTERVAL_SECONDS := 0.25

@@ -42,7 +42,6 @@ func run() -> void:
 
 func test_interest_is_accrual_not_immediate_cash_outflow() -> void:
     var finance = _finance()
-    finance.cash = 50000
     var loan = finance.create_loan(15000, 0.10, 365)
     check(bool(loan.get("ok", false)), "loan created for accrual test")
     _disable_scheduled_payments(finance)
@@ -58,7 +57,6 @@ func test_interest_is_accrual_not_immediate_cash_outflow() -> void:
 
 func test_accrued_interest_is_not_cash_flow_until_paid() -> void:
     var finance = _finance()
-    finance.cash = 50000
     var loan = finance.create_loan(15000, 0.10, 365)
     check(bool(loan.get("ok", false)), "loan created for cash-flow accrual test")
     _disable_scheduled_payments(finance)
@@ -94,7 +92,7 @@ func test_repayment_rejects_non_positive_amount() -> void:
 func test_settlement_rejects_negative_inputs() -> void:
     var finance = _finance()
     finance.cash = 25000
-    var before := finance.capture_state()
+    var before: Dictionary = finance.capture_state()
     var cases := [
         [-1, 0, 0, 0],
         [0, -1, 0, 0],
@@ -102,7 +100,7 @@ func test_settlement_rejects_negative_inputs() -> void:
         [0, 0, 0, -1]
     ]
     for values in cases:
-        var result := finance.settle_sales(values[0], values[1], values[2], values[3])
+        var result: Dictionary = finance.settle_sales(values[0], values[1], values[2], values[3])
         check(not bool(result.get("ok", false)), "negative settlement input rejected")
         check(finance.cash == int(before["cash"]) and finance.revenue == float(before["revenue"]) and finance.operating_expenses == float(before["operating_expenses"]), "rejected settlement leaves ledger unchanged")
     finance.free()

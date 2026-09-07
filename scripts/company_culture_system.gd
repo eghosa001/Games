@@ -1,5 +1,5 @@
 extends Node
-class_name RenewCompanyCultureSystem
+## class_name removed: "RenewCompanyCultureSystem" conflicts with project.godot autoload.
 
 ## V2: persistent company culture profile.
 ## Culture is a strategic modifier built from leadership choices and employee conditions.
@@ -140,7 +140,7 @@ func restore_state(snapshot: Dictionary) -> void:
 func _restore_from_state() -> void:
     var state := _state()
     if state != null:
-        var saved := state.get_value("company", "culture", {})
+        var saved: Dictionary = state.get_value("company", "culture", {}) as Dictionary
         if saved is Dictionary:
             for dimension in DIMENSIONS:
                 if saved.has(dimension):

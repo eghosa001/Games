@@ -50,8 +50,8 @@ func _apply(treaty: Dictionary, day: int) -> void:
         "supply":
             if production != null:
                 var qty: int = max(1, int(obligations.get("minimum_supply", 5)))
-                production.add_inventory("materials", qty)
-                production.add_inventory("fuel", max(1, int(round(qty * 0.2))))
+                production.add_inventory("iron", qty)
+                production.add_inventory("energy", max(1, int(round(qty * 0.2))))
         "research":
             if production != null and int(applied.get(id, {}).get("research_day", -1)) != day:
                 production.unlock_technology("logistics", max(1, int(production.technologies.get("logistics", 0)) + 1))
@@ -71,10 +71,7 @@ func _apply(treaty: Dictionary, day: int) -> void:
                     if production.machines.has(machine_id): production.machines[machine_id]["capacity"] = int(production.machines[machine_id].get("capacity", 1)) + 1
                 _mark(id, "infrastructure", true)
         "joint_venture":
-            if finance != null:
-                var capital: float = float(obligations.get("joint_capital", 3000.0))
-                var share: float = float(benefits.get("joint_profit_share", 0.10))
-                finance.receive(max(1, int(round(capital * (0.10 + share) / 30.0))), "joint venture profit:%s" % id)
+            pass
 
 func _mark(id: String, key: String, value) -> void:
     if not applied.has(id): applied[id] = {}

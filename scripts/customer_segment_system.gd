@@ -10,31 +10,31 @@ const SEGMENT_CONFIG := {
         "price_sensitivity": 1.35,
         "quality_requirement": 45,
         "demand": 28.0,
-        "preferred_products": {"consumer_goods": 1.00, "furniture": 0.75, "appliance": 0.45}
+        "preferred_products": {"consumer_goods": 1.00, "furniture": 0.75, "appliance": 0.45, "construction_materials": 0.90, "consumer_electronics": 0.50}
     },
     "standard": {
         "price_sensitivity": 1.00,
         "quality_requirement": 60,
         "demand": 32.0,
-        "preferred_products": {"consumer_goods": 1.00, "furniture": 1.00, "appliance": 0.80}
+        "preferred_products": {"consumer_goods": 1.00, "furniture": 1.00, "appliance": 0.80, "construction_materials": 1.10, "consumer_electronics": 0.90}
     },
     "premium": {
         "price_sensitivity": 0.70,
         "quality_requirement": 80,
         "demand": 18.0,
-        "preferred_products": {"consumer_goods": 0.65, "furniture": 1.20, "appliance": 1.35}
+        "preferred_products": {"consumer_goods": 0.65, "furniture": 1.20, "appliance": 1.35, "construction_materials": 0.80, "consumer_electronics": 1.40}
     },
     "industrial": {
         "price_sensitivity": 0.85,
         "quality_requirement": 70,
         "demand": 14.0,
-        "preferred_products": {"consumer_goods": 0.55, "furniture": 1.15, "appliance": 1.25}
+        "preferred_products": {"consumer_goods": 0.55, "furniture": 1.15, "appliance": 1.25, "construction_materials": 1.45, "consumer_electronics": 1.20}
     },
     "government": {
         "price_sensitivity": 0.90,
         "quality_requirement": 65,
         "demand": 10.0,
-        "preferred_products": {"consumer_goods": 0.80, "furniture": 1.30, "appliance": 1.10}
+        "preferred_products": {"consumer_goods": 0.80, "furniture": 1.30, "appliance": 1.10, "construction_materials": 1.35, "consumer_electronics": 1.00}
     }
 }
 

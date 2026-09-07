@@ -14,6 +14,21 @@ func check(ok: bool, label: String) -> void:
         failed += 1
         push_error("FAIL: " + label)
 
+func _reset_ledger(finance: Node, state: Node, cash: int) -> void:
+    finance.financing = {}
+    finance.debt = 0
+    finance.loan_payment = 0
+    finance.revenue = 0.0
+    finance.operating_expenses = 0.0
+    finance.interest_expense = 0.0
+    finance.taxes = 0.0
+    finance.retained_earnings = 0.0
+    finance.equity_contributed = float(max(0, cash))
+    finance.cash = max(0, cash)
+    state.set_value("economy", "cash", int(finance.get("cash")))
+    state.set_value("finance", "debt", 0)
+    state.set_value("finance", "loan_payment", 0)
+
 func run() -> void:
     var scene = load("res://scenes/Main.tscn")
     check(scene != null, "Main scene loads")
@@ -77,13 +92,8 @@ func run() -> void:
         check(state.get_domain("properties") is Dictionary, "Properties domain exists")
         check(state.get_domain("employees") is Dictionary, "Employees domain exists")
         check(state.get_domain("production") is Dictionary, "Production domain exists")
-        finance.cash = 25000
-        state.set_value("economy", "cash", 25000)
+        _reset_ledger(finance, state, 25000)
         check(int(finance.get("cash")) == 25000, "Finance fixture uses authoritative cash")
-        finance.debt = 0
-        finance.loan_payment = 0
-        state.set_value("finance", "debt", 0)
-        state.set_value("finance", "loan_payment", 0)
 
     game.command_system.finance_system.take_loan()
     check(int(finance.get("debt")) > 0, "Loan command updates canonical finance debt")
@@ -93,15 +103,13 @@ func run() -> void:
     check(int(finance.get("debt")) < debt_before_repay, "Repayment command reduces canonical debt")
     check(int(finance.get("cash")) == int(state.get_value("economy", "cash", 0)), "Repayment cash mirror matches finance ledger")
 
-    finance.cash = 0
-    state.set_value("economy", "cash", 0)
+    _reset_ledger(finance, state, 0)
     var james_before: Dictionary = game.command_system.employee_system.employee_system.get_employee("emp_james_001").duplicate(true)
     game.command_system.employee_system.train_employee("emp_james_001")
     var james_after: Dictionary = game.command_system.employee_system.employee_system.get_employee("emp_james_001")
     check(james_after == james_before, "Unaffordable employee training does not mutate employee state")
 
-    finance.cash = 25000
-    state.set_value("economy", "cash", 25000)
+    _reset_ledger(finance, state, 25000)
     state.set_value("technology", "research_points", 20)
     state.set_value("technology", "technology", {})
     state.set_value("player", "day", 10)
@@ -117,8 +125,7 @@ func run() -> void:
         check(int(state.get_value("player", "day", 0)) == 10, "Technology system does not bypass the day simulation")
         state.set_value("technology", "technology", {})
         state.set_value("technology", "research_points", 20)
-        finance.cash = 25000
-        state.set_value("economy", "cash", 25000)
+        _reset_ledger(finance, state, 25000)
         state.set_value("businesses", "business_open", false)
         state.set_value("player", "day", 10)
         var blocked_cash_before: int = int(finance.get("cash"))
@@ -127,14 +134,16 @@ func run() -> void:
         check(int(state.get_value("player", "day", 0)) == 10, "Blocked research does not advance time")
         check(int(finance.get("cash")) == blocked_cash_before, "Blocked research does not charge cash")
         state.set_value("businesses", "business_open", true)
+        state.set_value("businesses", "business_purpose", "furniture_factory")
+        state.set_value("businesses", "industry_id", "furniture")
+        state.set_value("businesses", "business_name", "Furniture Factory")
         game.command_system.research_technology("efficient_production")
         var research_days: int = int(tech_system.get_last_research_days())
         check(research_days == 2, "Technology reports its elapsed research duration")
         check(int(state.get_value("player", "day", 0)) == 12, "Research command runs elapsed days through canonical simulation")
         check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Research elapsed-day simulation keeps finance and GameState synchronized")
 
-    finance.cash = 25000
-    state.set_value("economy", "cash", 25000)
+    _reset_ledger(finance, state, 25000)
     state.set_value("properties", "owned", true)
     state.set_value("properties", "stage", "Operational")
     state.set_value("properties", "catalog", [{"id":"property_test","name":"Test Property","type":"Warehouse"}])
@@ -144,7 +153,7 @@ func run() -> void:
     var business = game.command_system.business_system
     business.choose_business_purpose(0)
     check(bool(state.get_value("businesses", "business_open", false)), "Business launch succeeds")
-    check(int(finance.get("cash")) == 22500, "Business launch charges canonical finance")
+    check(int(finance.get("cash")) == 22000, "Business launch charges canonical finance")
     check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Business launch cash mirror matches finance")
     var business_cash_before_upgrade := int(finance.get("cash"))
     business.upgrade_business()
@@ -158,15 +167,13 @@ func run() -> void:
     game.add_child(acquisition)
     await process_frame
     acquisition.register_target("target_regression", "Regression Target", [{"id":"asset_1","value":12000}], 0.0, 0, [], 0.0, 0.0)
-    finance.cash = 1000
-    state.set_value("economy", "cash", 1000)
+    _reset_ledger(finance, state, 1000)
     var acquisition_before: Dictionary = acquisition.get_target("target_regression")
     var failed_acquisition: Dictionary = acquisition.acquire_company("player", "target_regression", 5000)
     check(not bool(failed_acquisition.get("ok", false)), "Unaffordable acquisition is rejected")
     check(acquisition.get_target("target_regression") == acquisition_before, "Unaffordable acquisition leaves target unchanged")
     check(int(state.get_value("economy", "cash", 0)) == 1000, "Unaffordable acquisition leaves cash unchanged")
-    finance.cash = 10000
-    state.set_value("economy", "cash", 10000)
+    _reset_ledger(finance, state, 10000)
     var funded_before: int = int(finance.get("cash"))
     var funded_acquisition: Dictionary = acquisition.acquire_company("player", "target_regression", 5000)
     check(bool(funded_acquisition.get("ok", false)), "Funded acquisition succeeds")
@@ -178,8 +185,7 @@ func run() -> void:
     await process_frame
     infrastructure.assets["infra_regression"] = {"id":"infra_regression","type":"road","name":"Regression Road","region":0,"owner_id":"founder","status":"active","level":1,"capacity":80.0,"utilization":0.5,"maintenance":100,"created_day":0}
     infrastructure.last_day = 0
-    finance.cash = 1000
-    state.set_value("economy", "cash", 1000)
+    _reset_ledger(finance, state, 1000)
     var maintenance_before: int = int(finance.get("cash"))
     var maintenance_result: Dictionary = infrastructure.process_day(1)
     check(bool(maintenance_result.get("maintenance_spend", {}).get("ok", false)), "Infrastructure maintenance is paid through finance")
@@ -205,6 +211,8 @@ func run() -> void:
     finance_fixture.cash = 50000
     finance_fixture.debt = 15000
     finance_fixture.loan_payment = 0
+    finance_fixture.equity_contributed = 35000.0
+    finance_fixture.retained_earnings = 0.0
     finance_fixture.financing = {
         "loan_a": {"balance": 10000.0, "principal": 10000.0, "annual_rate": 0.12, "payment": 0},
         "loan_b": {"balance": 5000.0, "principal": 5000.0, "annual_rate": 0.08, "payment": 0}

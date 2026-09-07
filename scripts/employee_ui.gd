@@ -84,6 +84,7 @@ func _build_ui() -> void:
     root.add_child(_actions)
     _add_action(_actions, "Train", "train")
     _add_action(_actions, "Promote", "promote")
+    _add_action(_actions, "Appoint", "appoint")
     _add_action(_actions, "Assign", "assign")
     _add_action(_actions, "Transfer", "transfer")
     _add_action(_actions, "Fire", "fire")
@@ -155,7 +156,9 @@ func _update_details(roster: Array) -> void:
         detail_label.text = "No employee selected."
         return
     var productivity: Variant = int(round(float(employee.get("productivity", 0.0)) * 100.0))
-    detail_label.text = "%s\n%s\n────────────────\nProductivity %d%%  •  Experience %d\nMorale %d  •  Loyalty %d\nSalary $%d/day\nSpecialization: %s" % [str(employee.get("name", "Employee")), str(employee.get("role", "Worker")), productivity, int(employee.get("experience", 0)), int(employee.get("morale", 0)), int(employee.get("loyalty", 0)), int(employee.get("salary", 0)), str(employee.get("specialization", "general")).capitalize()]
+    var seat := str(employee.get("executive_seat", ""))
+    var seat_line := ("C-suite: %s" % seat) if seat != "" else ("Level %d" % int(employee.get("level", 1)))
+    detail_label.text = "%s\n%s [%s]\n────────────────\nProductivity %d%%  •  Experience %d\nMorale %d  •  Loyalty %d\nSalary $%d/day\nSpecialization: %s" % [str(employee.get("name", "Employee")), str(employee.get("role", "Worker")), seat_line, productivity, int(employee.get("experience", 0)), int(employee.get("morale", 0)), int(employee.get("loyalty", 0)), int(employee.get("salary", 0)), str(employee.get("specialization", "general")).capitalize()]
 
 func _select(employee_id: String) -> void:
     selected_id = employee_id
@@ -170,6 +173,7 @@ func _action(action: String) -> void:
     match action:
         "train": command.train_employee(selected_id)
         "promote": command.promote_employee(selected_id)
+        "appoint": command.appoint_executive(selected_id)
         "assign": command.assign_employee(selected_id, "factory_001")
         "transfer": command.assign_employee(selected_id, "regional_001")
         "fire": command.fire_employee(selected_id)

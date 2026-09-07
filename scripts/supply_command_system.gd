@@ -25,7 +25,10 @@ func _sync_cash(finance: Node) -> int:
     if finance == null:
         return int(state_adapter.get_value("economy", "cash", 25000))
     var cash: int = int(finance.get("cash"))
-    state_adapter.set_value("economy", "cash", cash)
+    # economy.cash is a read-only FinanceSystem mirror; sync it directly.
+    var state = state_adapter.game_state()
+    if state != null:
+        state.set_value("economy", "cash", cash)
     return cash
 
 func set_chain(value) -> void:
@@ -78,6 +81,53 @@ func buy_inputs() -> void:
     _sync_cash(finance)
     state_adapter.message("Inputs delivered to the warehouse.")
     state_adapter.log_message("INPUTS: timber, iron and energy delivered (-$%d)." % procurement_cost)
+
+func buy_international() -> void:
+    var finance := _finance()
+    if finance == null:
+        state_adapter.message("Finance system unavailable.")
+        return
+    if int(state_adapter.get_value("player", "reputation", 0)) < 15:
+        state_adapter.message("Overseas suppliers need 15 reputation before clearing customs for you.")
+        return
+    var cash: int = _sync_cash(finance)
+    var transport_level: int = int(state_adapter.get_value("supply_chain", "transport_level", 1))
+    var pick := ""
+    var lowest := 1e30
+    for resource in ["timber", "iron", "energy", "food", "electronics"]:
+        var have: float = chain.stock(resource)
+        if have < lowest:
+            lowest = have
+            pick = resource
+    if pick.is_empty():
+        state_adapter.message("No importable resource found.")
+        return
+    var finance_before: Dictionary = finance.capture_state()
+    var chain_before: Dictionary = chain.capture_state()
+    var result: Dictionary = chain.procure(pick, 20.0, cash, transport_level)
+    if not bool(result.get("ok", false)):
+        state_adapter.message("Overseas shipment failed (%s)." % str(result.get("reason", "unknown")))
+        return
+    var tariff := int(round(float(result.get("material_cost", result.get("cost", 0))) * 0.12))
+    var landed_cost: int = int(result.get("cost", 0)) + tariff
+    var spend_result: Dictionary = finance.spend(landed_cost, "international procurement with tariff")
+    if not bool(spend_result.get("ok", false)):
+        chain.restore_state(chain_before)
+        finance.restore_state(finance_before)
+        _sync_cash(finance)
+        state_adapter.message(str(spend_result.get("message", "Overseas shipment could not be funded.")))
+        return
+    var spoiled := 0.0
+    if randi_range(1, 100) > 70:
+        spoiled = float(result.get("delivered_amount", 20.0)) * 0.25
+        chain.warehouse[pick] = max(0.0, chain.stock(pick) - spoiled)
+    _sync_cash(finance)
+    if spoiled > 0.0:
+        state_adapter.message("Overseas %s arrived with customs spoilage (-$%d, tariff $%d)." % [pick, landed_cost, tariff])
+        state_adapter.log_message("IMPORT: %s via Overseas Exchange, %.0f spoiled (-$%d)." % [pick, spoiled, landed_cost])
+    else:
+        state_adapter.message("Overseas %s cleared customs (-$%d, tariff $%d)." % [pick, landed_cost, tariff])
+        state_adapter.log_message("IMPORT: %s via Overseas Exchange (-$%d)." % [pick, landed_cost])
 
 func process_iron_to_metal(cycles: int = 1) -> Dictionary:
     return chain.process_iron_to_metal(cycles)

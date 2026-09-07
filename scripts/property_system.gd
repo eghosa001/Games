@@ -63,7 +63,7 @@ func acquire_property() -> void:
     if not bool(state_adapter.get_value("properties", "inspected", false)): state_adapter.message("Inspect the property first."); return
     if bool(state_adapter.get_value("properties", "owned", false)): state_adapter.message("You already own a property."); return
     var property: Variant = get_selected_property(); var purchase_price := 5000
-    var spend:=state_adapter.spend(purchase_price,"property acquisition")
+    var spend: Dictionary = state_adapter.spend(purchase_price,"property acquisition")
     if not bool(spend.get("ok",false)): state_adapter.message(str(spend.get("message","Not enough cash."))); return
     state_adapter.set_value("properties", "owned", true)
     state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + 2)
@@ -77,7 +77,7 @@ func restore_step(step: String, property_id: String = "") -> Dictionary:
     if required_step.is_empty(): return {"ok":false,"reason":"restoration_complete","property":property}
     if step != required_step: return {"ok":false,"reason":"step_locked","required_step":required_step,"property":property}
     var progress: Variant = int(property.get(step, 0)); if progress >= 100: return {"ok":false,"reason":"step_complete","property":property}
-    var cost: Variant = int(STEP_COSTS[step]); var spend:=state_adapter.spend(cost,"property restoration: %s" % step)
+    var cost: Variant = int(STEP_COSTS[step]); var spend: Dictionary = state_adapter.spend(cost,"property restoration: %s" % step)
     if not bool(spend.get("ok",false)): return {"ok":false,"reason":"insufficient_cash","cost":cost,"cash":int(state_adapter.get_value("economy","cash",0))}
     progress = mini(100, progress + int(STEP_GAIN[step])); property[step] = progress; property["condition"] = mini(100, int(property.get("condition", 0)) + (5 if step == "repair" else 2)); catalog[index] = property
     state_adapter.set_value("properties", "catalog", catalog); state_adapter.set_value("properties", "selected_property", index); _sync_legacy_fields()
@@ -85,9 +85,11 @@ func restore_step(step: String, property_id: String = "") -> Dictionary:
     if is_operational(property):
         state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + 8); state_adapter.message("RESTORATION COMPLETE. Your neglected property is now productive capital.")
     else: state_adapter.message("%s %d%% complete: the property is visibly changing." % [step.capitalize(), progress])
+    var _rs=get_node_or_null("/root/RenewReputationSystem");if step == "cleaning" and _rs!=null and _rs.has_method("adjust"):_rs.adjust("environmental",2)
     return {"ok":true,"property":property.duplicate(true),"step":step,"cost":cost}
 func restore_property() -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)): state_adapter.message("Acquire the property first."); return
+    if int(get_selected_property().get("lease_until", 0)) > int(state_adapter.get_value("player", "day", 1)): state_adapter.message("Tenants occupy the property until day %d." % int(get_selected_property().get("lease_until", 0))); return
     var property: Variant = get_selected_property(); var step: Variant = _next_restoration_step(property)
     if step.is_empty(): state_adapter.message("Restoration is complete. The property is Operational."); return
     restore_step(step)
@@ -119,3 +121,34 @@ func _sync_legacy_fields() -> void:
     average = int(round(float(average) / float(RESTORATION_STEPS.size())))
     var owned: Variant = bool(state_adapter.get_value("properties", "owned", false)); var operational: Variant = is_operational(property)
     state_adapter.set_value("properties", "restoration", average); state_adapter.set_value("properties", "stage", _visual_stage(property, owned) if not operational else "Operational")
+func sale_value(property: Dictionary) -> int:
+    var improved := 0.30 + 0.70 * float(int(property.get("condition", 0))) / 100.0
+    return maxi(1000, int(round(float(property.get("value", 0)) * clampf(improved, 0.3, 1.0))))
+func lease_terms(property: Dictionary) -> Dictionary:
+    var rent := maxi(500, int(round(float(sale_value(property)) * 0.05)))
+    return {"rent": rent, "days": 7}
+func sell_property() -> void:
+    if not bool(state_adapter.get_value("properties", "owned", false)): state_adapter.message("You own no property to sell."); return
+    if bool(state_adapter.get_value("businesses", "business_open", false)): state_adapter.message("Close the operating business before selling its home."); return
+    var catalog: Variant = list_properties(); var index: Variant = clampi(int(state_adapter.get_value("properties", "selected_property", 0)), 0, catalog.size() - 1)
+    var property: Dictionary = catalog[index] if index < catalog.size() else {}
+    if property.is_empty(): state_adapter.message("No property selected."); return
+    if int(property.get("lease_until", 0)) > int(state_adapter.get_value("player", "day", 1)): state_adapter.message("The lease runs until day %d; selling must wait." % int(property.get("lease_until", 0))); return
+    var price := sale_value(property)
+    var proceeds: Dictionary = state_adapter.receive(price, "property sale: %s" % str(property.get("name", "property")))
+    if not bool(proceeds.get("ok", false)): state_adapter.message(str(proceeds.get("message", "Sale could not complete."))); return
+    state_adapter.set_value("properties", "owned", false)
+    _sync_legacy_fields(); state_adapter.message("Sold %s for $%s." % [str(property.get("name", "property")), state_adapter.money(price)]); state_adapter.log_message("SOLD: %s for $%s." % [str(property.get("name", "property")), state_adapter.money(price)])
+func lease_property() -> void:
+    if not bool(state_adapter.get_value("properties", "owned", false)): state_adapter.message("You own no property to lease."); return
+    var day := int(state_adapter.get_value("player", "day", 1))
+    var catalog: Variant = list_properties(); var index: Variant = clampi(int(state_adapter.get_value("properties", "selected_property", 0)), 0, catalog.size() - 1)
+    var property: Dictionary = catalog[index] if index < catalog.size() else {}
+    if property.is_empty(): state_adapter.message("No property selected."); return
+    if int(property.get("lease_until", 0)) > day: state_adapter.message("Already leased until day %d." % int(property.get("lease_until", 0))); return
+    var terms := lease_terms(property)
+    var rent: Dictionary = state_adapter.receive(int(terms["rent"]), "property lease: %s" % str(property.get("name", "property")))
+    if not bool(rent.get("ok", false)): state_adapter.message(str(rent.get("message", "Lease could not complete."))); return
+    property["lease_until"] = day + int(terms["days"]); catalog[index] = property
+    state_adapter.set_value("properties", "catalog", catalog)
+    _sync_legacy_fields(); state_adapter.message("Leased %s for %d days (+$%s upfront)." % [str(property.get("name", "property")), int(terms["days"]), state_adapter.money(int(terms["rent"]))]); state_adapter.log_message("LEASED: %s until day %d (+$%s)." % [str(property.get("name", "property")), day + int(terms["days"]), state_adapter.money(int(terms["rent"]))])

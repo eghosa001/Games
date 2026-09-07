@@ -43,6 +43,46 @@ func select_region(index:int)->void:
     var result=regions.select(index,parent.reputation)
     message=result["message"]
     if result["ok"]: parent._log("REGION: "+message)
+func next_region()->void: select_region(regions.selected+1)
+func previous_region()->void: select_region(regions.selected-1)
+func charter_basin()->void:
+    var catalog = get_node_or_null("/root/RenewRegionSystem")
+    if catalog == null:
+        var scene = get_tree().current_scene if get_tree() != null else null
+        catalog = scene.get_node_or_null("Systems/RegionSystem") if scene != null else null
+    if catalog == null or not catalog.has_method("charter_basin"):
+        message = "Regional survey office is unavailable."
+        return
+    var check: Dictionary = catalog.charter_basin(parent.reputation)
+    if not bool(check.get("ok", false)):
+        message = str(check.get("message", "The Iron Basin cannot be chartered yet."))
+        return
+    var spend=state_adapter.spend(int(check.get("cost", 15000)),"iron basin charter")
+    if not bool(spend.get("ok",false)):
+        message=str(spend.get("message","The basin charter payment failed."))
+        return
+    parent.reputation+=5
+    message=str(check.get("message","Iron Basin chartered."))
+    parent._log("REGIONAL EXPANSION: Iron Basin chartered (-$%s, +5 reputation)." % _money(int(check.get("cost", 15000))))
+func charter_valley()->void:
+    var catalog = get_node_or_null("/root/RenewRegionSystem")
+    if catalog == null:
+        var scene = get_tree().current_scene if get_tree() != null else null
+        catalog = scene.get_node_or_null("Systems/RegionSystem") if scene != null else null
+    if catalog == null or not catalog.has_method("charter_valley"):
+        message = "Regional survey office is unavailable."
+        return
+    var check: Dictionary = catalog.charter_valley(parent.reputation)
+    if not bool(check.get("ok", false)):
+        message = str(check.get("message", "Energy Valley cannot be chartered yet."))
+        return
+    var spend=state_adapter.spend(int(check.get("cost", 25000)),"energy valley charter")
+    if not bool(spend.get("ok",false)):
+        message=str(spend.get("message","The valley charter payment failed."))
+        return
+    parent.reputation+=5
+    message=str(check.get("message","Energy Valley chartered."))
+    parent._log("REGIONAL EXPANSION: Energy Valley chartered (-$%s, +5 reputation)." % _money(int(check.get("cost", 25000))))
 
 func establish_region()->void:
     var before_presence=regions.player_presence.duplicate(true)

@@ -62,7 +62,6 @@ func accept_treaty(treaty_id: String, accepting_party: String) -> Dictionary:
     treaty["history"].append({"day": start, "event": "accepted", "party": accepting_party})
     treaties[treaty_id] = treaty
     _adjust_trust(str(treaty["party_a"]), str(treaty["party_b"]), float(treaty["trust_effect"]))
-    _adjust_trust(str(treaty["party_b"]), str(treaty["party_a"]), float(treaty["trust_effect"]))
     _event("treaty_activated", "Treaty %s activated." % treaty_id, {"treaty_id": treaty_id})
     return {"ok": true, "treaty": get_treaty(treaty_id), "message": "Treaty is now active."}
 
@@ -96,7 +95,6 @@ func breach_treaty(treaty_id: String, breaching_party: String, reason: String = 
     treaties[treaty_id] = treaty
     var other: Variant = _other_party(treaty, breaching_party)
     _adjust_trust(breaching_party, other, -max(5.0, float(treaty["penalties"].get("trust_damage", 8.0))))
-    _adjust_trust(other, breaching_party, -max(5.0, float(treaty["penalties"].get("trust_damage", 8.0))))
     _apply_penalty(treaty, breaching_party, "breach")
     _event("treaty_breached", "Treaty %s breached by %s: %s" % [treaty_id, breaching_party, reason], {"treaty_id": treaty_id})
     return {"ok": true, "treaty": get_treaty(treaty_id), "message": "Treaty breached; penalties applied."}

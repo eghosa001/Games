@@ -43,7 +43,7 @@ func _refresh() -> void:
     var state := get_node_or_null("/root/RenewGameState"); var tech := get_node_or_null("/root/RenewTechnologySystem")
     if panel == null or state == null or tech == null: return
     var rp := int(state.get_value("technology", "research_points", 20)); var cash := int(state.get_value("economy", "cash", 25000))
-    summary_label.text = "RESEARCH %d RP   •   CASH $%s\nPrerequisites, cash and research points are validated by the authoritative technology system." % [rp, "%,d" % cash]
+    summary_label.text = "RESEARCH %d RP   •   CASH $%s\nPrerequisites, cash and research points are validated by the authoritative technology system." % [rp, str(cash)]
     var signature := "%d:%d" % [rp, cash]
     for item in tech.get_technologies():
         var id := str(item.id); var researched := bool(tech.is_unlocked(id)); var can: Dictionary = tech.can_research(id)

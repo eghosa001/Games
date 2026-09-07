@@ -13,21 +13,30 @@ var cash_label: Label
 var rep_label: Label
 var day_label: Label
 var mode_rail: Panel
+var tabs: HBoxContainer
+var mode_buttons: Array = []
 var left_rail: Panel
 var selected_card: Panel
 var selected_title: Label
 var selected_meta: Label
 var objective_card: Panel
+var right_card: Panel
 var objective_text: Label
 var action_dock: Panel
 var action_title: Label
 var action_subtitle: Label
 var action_grid: GridContainer
+var actions: GridContainer
 var action_scroll: ScrollContainer
 var network_strip: Panel
 var bottom_mobile: Panel
 var mobile_actions: GridContainer
 var mobile_objective: Label
+var status_label: Label
+var goal_label: Label
+var feedback_panel: Panel
+var feedback_label: Label
+var feedback_timer: float = 0.0
 var narrow: bool = false
 
 const BG := Color("071217")
@@ -73,13 +82,17 @@ func _build_ui() -> void:
     var mode_row := HBoxContainer.new()
     mode_row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     mode_rail.add_child(mode_row)
+    tabs = mode_row
+    mode_buttons.clear()
     for i in range(4):
         var b := Button.new()
         b.text = ["LIVE", "BUSINESS", "EMPIRE", "WORLD"][i]
         b.focus_mode = Control.FOCUS_NONE
+        b.custom_minimum_size = Vector2(44, 44)
         b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         b.pressed.connect(_set_tab.bind(i))
         mode_row.add_child(b)
+        mode_buttons.append(b)
 
     left_rail = Panel.new()
     left_rail.add_theme_stylebox_override("panel", _style(PANEL, BORDER_SOFT, 10))
@@ -106,10 +119,15 @@ func _build_ui() -> void:
     action_title = _label("LIVE COMMANDS", 12, TEXT); action_subtitle = _label("Choose an action.", 9, MUTED); action_dock.add_child(action_title); action_dock.add_child(action_subtitle)
     action_scroll = ScrollContainer.new(); action_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; action_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; action_dock.add_child(action_scroll)
     action_grid = GridContainer.new(); action_grid.columns = 3; action_grid.add_theme_constant_override("h_separation", 7); action_grid.add_theme_constant_override("v_separation", 7); action_scroll.add_child(action_grid)
+    actions = action_grid
 
     network_strip = Panel.new(); network_strip.add_theme_stylebox_override("panel", _style(PANEL, BORDER_SOFT, 12)); root.add_child(network_strip)
 
     bottom_mobile = Panel.new(); bottom_mobile.visible = false; root.add_child(bottom_mobile)
+    status_label = _label("", 10, TEXT); status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(status_label)
+    feedback_panel = Panel.new(); feedback_panel.add_theme_stylebox_override("panel", _style(PANEL, BORDER, 10)); feedback_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE; feedback_panel.visible = false; root.add_child(feedback_panel)
+    feedback_label = _label("", 10, TEXT); feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; feedback_label.mouse_filter = Control.MOUSE_FILTER_IGNORE; feedback_panel.add_child(feedback_label)
+    goal_label = _label("", 10, MUTED); goal_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; goal_label.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(goal_label)
     mobile_actions = GridContainer.new(); mobile_objective = _label("", 10, TEXT); bottom_mobile.add_child(mobile_actions); bottom_mobile.add_child(mobile_objective)
 
 func _label(text: String, size: int, color: Color) -> Label:
@@ -148,6 +166,16 @@ func _layout_responsive() -> void:
     action_subtitle.position = Vector2(10, 28); action_subtitle.size = Vector2(action_dock.size.x - 20, 20)
     action_scroll.position = Vector2(8, 50); action_scroll.size = Vector2(action_dock.size.x - 16, action_dock.size.y - 58)
     action_grid.columns = 2 if narrow else 3
+    if narrow:
+        status_label.position = Vector2(8, 108); status_label.size = Vector2(w - 16, 22)
+        feedback_panel.position = Vector2(8, 134); feedback_panel.size = Vector2(w - 16, 56)
+        feedback_label.position = Vector2(10, 8); feedback_label.size = Vector2(maxf(40.0, w - 52.0), 40)
+        goal_label.position = Vector2(8, 194); goal_label.size = Vector2(w - 16, 40)
+    else:
+        status_label.position = Vector2(8, 344); status_label.size = Vector2(240, 24)
+        feedback_panel.position = Vector2(8, 372); feedback_panel.size = Vector2(300, 80)
+        feedback_label.position = Vector2(10, 8); feedback_label.size = Vector2(280, 64)
+        goal_label.position = Vector2(8, 456); goal_label.size = Vector2(300, 44)
 
 func _set_tab(index: int) -> void:
     active_tab = clampi(index, 0, 3); _refresh()
@@ -164,7 +192,21 @@ func _run_action(label: String, callback: Callable) -> void:
     if parent == null or not callback.is_valid(): return
     var result = callback.call()
     if result is Dictionary and result.has("message"): parent.message = str(result["message"])
+    if str(parent.message) != "": show_feedback(str(parent.message))
     _refresh()
+
+func show_feedback(text: String) -> void:
+    if feedback_label == null or feedback_panel == null: return
+    feedback_label.text = text
+    feedback_panel.show()
+    feedback_timer = 7.0
+
+func _goal_text() -> String:
+    if parent == null: return "GOAL: Build your restoration empire."
+    if not bool(parent.owned): return "GOAL: Inspect and acquire the abandoned property."
+    if str(parent.stage) != "Operational": return "GOAL: Restore the property (%d%% complete)." % int(parent.restoration)
+    if not bool(parent.business_open): return "GOAL: Choose a purpose and open your first business."
+    return "GOAL: Produce, sell and expand your empire."
 
 func _open_screen(screen_name: String) -> void:
     var manager := get_node_or_null("/root/RenewUIScreenManager")
@@ -194,19 +236,27 @@ func _refresh() -> void:
     action_title.text = titles[active_tab]
     match active_tab:
         0:
-            _action("INSPECT", parent.inspect_property); _action("ACQUIRE", parent.acquire_property); _action("RESTORE", parent.restore_property); _action("OPEN BUSINESS", parent.open_business); _action("END DAY", parent.advance_day)
+            _action("INSPECT", parent.inspect_property); _action("ACQUIRE", parent.acquire_property); _action("RESTORE", parent.restore_property); _action("SELL", parent.sell_property); _action("LEASE", parent.lease_property); _action("OPEN BUSINESS", parent.open_business); _action("DASHBOARD", Callable(self, "_open_screen").bind("DashboardPanel")); _action("ASSETS", Callable(self, "_open_screen").bind("PortfolioPanel")); _action("END DAY", parent.advance_day)
         1:
-            _action("BUY INPUTS", parent.buy_inputs); _action("PRODUCE", parent.produce_goods); _action("HIRE", parent.hire_employee); _action("UPGRADE", parent.upgrade_business); _action("MARKETING", parent.marketing_campaign); _action("PRICE", parent.change_price); _action("CONTRACT", parent.sign_contract); _action("END DAY", parent.advance_day)
+            _action("BUY INPUTS", parent.buy_inputs); _action("IMPORT", parent.buy_international); _action("PRODUCE", parent.produce_goods); _action("HIRE", parent.hire_employee); _action("UPGRADE", parent.upgrade_business); _action("MARKETING", parent.marketing_campaign); _action("PRICE", parent.change_price); _action("CONTRACT", parent.sign_contract); _action("HAGGLE", parent.haggle_contract); _action("EXCLUSIVE", parent.sign_exclusive_contract); _action("GOVT DEAL", parent.sign_government_contract); _action("BUILD DEAL", parent.sign_construction_contract); _action("EXPORT DEAL", parent.sign_export_contract); _action("FINANCE", Callable(self, "_open_screen").bind("FinancePanel")); _action("DEALS", Callable(self, "_open_screen").bind("ContractPanel")); _action("STAFF", Callable(self, "_open_screen").bind("EmployeePanel")); _action("END DAY", parent.advance_day)
         2:
-            _action("NEXT RIVAL", _next_rival); _action("ALLIANCE", parent.make_alliance_offer); _action("RELATION", parent.improve_alliance); _action("SUPPLY DEAL", parent.propose_supply_deal); _action("ACQUIRE", parent.negotiate_selected_acquisition); _action("LOAN", parent.take_loan); _action("REPAY", parent.repay_loan); _action("END DAY", parent.advance_day)
+            _action("NEXT RIVAL", _next_rival); _action("ALLIANCE", parent.make_alliance_offer); _action("RELATION", parent.improve_alliance); _action("COMPETE", parent.compete_alliance); _action("GOALS", parent.victory_progress); _action("REPUTE", parent.reputation_status); _action("SUPPLY DEAL", parent.propose_supply_deal); _action("ACQUIRE", parent.negotiate_selected_acquisition); _action("BID BATTLE", parent.start_acquisition_battle); _action("RAISE BID", parent.raise_acquisition_bid); _action("WALK AWAY", parent.walk_away_acquisition); _action("BUY SHARES", parent.buy_rival_shares); _action("SELL SHARES", parent.sell_rival_shares); _action("LOAN", parent.take_loan); _action("REPAY", parent.repay_loan); _action("INVESTOR", parent.request_investment); _action("ACCEPT DEAL", parent.accept_investment); _action("DECLINE DEAL", parent.decline_investment); _action("INVEST BILL", parent.invest_term); _action("DIVIDEND", parent.pay_dividend); _action("GO PUBLIC", parent.go_public); _action("CAP TABLE", parent.cap_table); _action("POWER", parent.world_power); _action("NETWORK", Callable(self, "_open_screen").bind("CorporationsPanel")); _action("PACT", Callable(self, "_open_screen").bind("AlliancePanel")); _action("END DAY", parent.advance_day)
         3:
-            _action("EXPANSION", parent.buy_expansion); _action("UPGRADE", parent.upgrade_expansion); _action("TRANSPORT", parent.upgrade_transport); _action("SAVE", parent.save_game); _action("LOAD", parent.load_game); _action("END DAY", parent.advance_day)
+            _action("EXPANSION", parent.buy_expansion); _action("UPGRADE", parent.upgrade_expansion); _action("TRANSPORT", parent.upgrade_transport); _action("NEXT REGION", parent.next_region); _action("ESTABLISH", parent.establish_region); _action("CHARTER BASIN", parent.charter_basin); _action("CHARTER VALLEY", parent.charter_valley); _action("TRADE ROUTE", parent.establish_trade_route); _action("DISPATCH", parent.dispatch_goods); _action("INFRA BUILD", parent.infra_build); _action("INFRA TYPE", parent.infra_type); _action("INFRA REPAIR", parent.infra_repair); _action("SAVE", parent.save_game); _action("LOAD", parent.load_game); _action("NEW COMPANY", parent.found_new_company); _action("IDENTITY", parent.identity_status); _action("NOTICES", parent.check_notifications); _action("TECH", Callable(self, "_open_screen").bind("TechnologyPanel")); _action("WORLD", Callable(self, "_open_screen").bind("NewsPanel")); _action("PAST", Callable(self, "_open_screen").bind("HistoryPanel")); _action("END DAY", parent.advance_day)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
     if parent == null: return
     cash_label.text = "$%s" % _money(int(parent.cash))
     rep_label.text = "REP %d" % int(parent.reputation)
     day_label.text = "DAY %d" % int(parent.day)
+    if status_label != null:
+        status_label.text = "CASH $%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day)]
+    if goal_label != null:
+        goal_label.text = _goal_text()
+    if feedback_timer > 0.0:
+        feedback_timer -= delta
+        if feedback_timer <= 0.0 and feedback_panel != null:
+            feedback_panel.hide()
 
 func _money(value: int) -> String:
     return String.num_int64(value)

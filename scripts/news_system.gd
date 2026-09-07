@@ -57,6 +57,38 @@ func get_issue(day:int)->Dictionary:
     for issue in archive:
         if int(issue.get("day",-1))==day:return issue.duplicate(true)
     return {}
+func _seen_keys() -> Dictionary:
+    var state=get_node_or_null("/root/RenewGameState")
+    if state==null:return {}
+    var table=state.get_value("progression","claimed_goals",{})
+    if table is Dictionary and (table as Dictionary).get("notifications_seen") is Array:
+        var out := {}
+        for key in ((table as Dictionary)["notifications_seen"] as Array):out[str(key)]=true
+        return out
+    return {}
+func unread_notifications()->Dictionary:
+    var seen:=_seen_keys()
+    var sections:Dictionary={}
+    for issue in archive:
+        for story in issue.get("stories",[]):
+            if story is Dictionary and not str((story as Dictionary).get("source_key","")).is_empty() and not seen.has(str((story as Dictionary).get("source_key",""))):
+                var section:=str((story as Dictionary).get("section","Your Company"));sections[section]=int(sections.get(section,0))+1
+    return {"ok":true,"unread":sections.values().reduce(func(a,b):return int(a)+int(b),0) if not sections.is_empty() else 0,"sections":sections}
+func read_notifications()->Dictionary:
+    var result:=unread_notifications()
+    var state=get_node_or_null("/root/RenewGameState")
+    if state!=null:
+        var table=state.get_value("progression","claimed_goals",{})
+        var claimed:Dictionary=(table as Dictionary).duplicate(true) if table is Dictionary else {}
+        var keys:Array=((claimed.get("notifications_seen",[]) as Array).duplicate(true)) if claimed.get("notifications_seen",[]) is Array else []
+        for issue in archive:
+            for story in issue.get("stories",[]):
+                if story is Dictionary:
+                    var key:=str((story as Dictionary).get("source_key",""));if not key.is_empty() and not keys.has(key):keys.append(key)
+        while keys.size()>500:keys.pop_front()
+        claimed["notifications_seen"]=keys
+        state.set_value("progression","claimed_goals",claimed)
+    return result
 func capture_state()->Dictionary:return {"system_version":SYSTEM_VERSION,"archive":archive.duplicate(true),"current_issue":current_issue.duplicate(true),"last_day":_last_day}
 func restore_state(snapshot:Dictionary)->void:
     archive.clear()
@@ -69,10 +101,11 @@ func restore_state(snapshot:Dictionary)->void:
     if current_issue.is_empty() and not archive.is_empty():current_issue=archive.back().duplicate(true)
 func _collect_events(day:int)->Array[Dictionary]:
     var result:Array[Dictionary]=[];var main=_main();var history=get_node_or_null("/root/RenewHistorySystem");var employees=get_node_or_null("/root/RenewEmployeeSystem")
+    var covered:Dictionary={}
     if history!=null:
         for event in history.get_timeline("",120):
             var event_day:=int(event.get("day",1));if event_day>day or day-event_day>7:continue
-            var story:=_history_story(event,day,day-event_day);if not story.is_empty():result.append(story)
+            var story:=_history_story(event,day,day-event_day);if not story.is_empty():result.append(story);covered[str(event.get("title",""))]=true
     if employees!=null:
         var employee_history=employees.get("history")
         if employee_history is Array:
@@ -83,13 +116,14 @@ func _collect_events(day:int)->Array[Dictionary]:
         var logs=main.get("log_lines")
         if logs is Array:
             for i in range(max(0,logs.size()-25),logs.size()):
+                if covered.has(str(logs[i])):continue
                 var story:=_log_story(str(logs[i]),day);if not story.is_empty():result.append(story)
     return result
 func _history_story(event:Dictionary,day:int,age:int)->Dictionary:
     var kind:=str(event.get("type","general"));var gameplay_event:=str(event.get("details",{}).get("gameplay_event",""));var title:=str(event.get("title","Historic event"));var details:Dictionary=event.get("details",{});var section:="Corporate History";var score:=int(event.get("importance",1))*15+(25 if age==0 else 10)
     if not gameplay_event.is_empty():
         match gameplay_event:
-            "FOUNDING","PROPERTY_RESTORED","BUSINESS_OPENED","FIRST_PRODUCTION","FIRST_SALE","FIRST_PROFIT":section="Your Company"
+            "FOUNDING","PROPERTY_RESTORED","BUSINESS_OPENED","FIRST_PRODUCTION","FIRST_SALE","FIRST_PROFIT","ACQUISITION":section="Your Company"
             "PROPERTY_ACQUIRED":section="Regions"
             "EMPLOYEE_HIRED","EMPLOYEE_PROMOTED":section="People"
             "CONTRACT_SIGNED","CONTRACT_FULFILLED":section="Contracts"
@@ -136,7 +170,7 @@ func _kicker(gameplay_event:String,kind:String)->String:
         match gameplay_event:
             "FOUNDING":return "Company desk"
             "PROPERTY_ACQUIRED","PROPERTY_RESTORED":return "Property desk"
-            "BUSINESS_OPENED","FIRST_PRODUCTION","FIRST_SALE","FIRST_PROFIT":return "Business desk"
+            "BUSINESS_OPENED","FIRST_PRODUCTION","FIRST_SALE","FIRST_PROFIT","ACQUISITION":return "Business desk"
             "EMPLOYEE_HIRED","EMPLOYEE_PROMOTED":return "People desk"
             "CONTRACT_SIGNED","CONTRACT_FULFILLED":return "Contracts desk"
             "TECHNOLOGY_RESEARCHED":return "Industry desk"

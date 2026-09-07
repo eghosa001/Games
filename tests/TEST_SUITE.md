@@ -9,6 +9,57 @@ The suite is organized by test purpose. Existing focused tests remain at `tests/
 - `test_contract_system.gd`
 - `test_competitor_ai.gd`
 - `test_game_state.gd`
+- `test_v15_industries.gd`
+- `test_v15_acquisitions.gd`
+- `test_v15_executives.gd`
+- `test_v15_regions.gd`
+- `test_v15_alliances.gd`
+- `test_v15_ownership_finance.gd`
+
+## V2 workstreams
+- `test_v21_investment.gd`
+- `test_v22_shares.gd`
+- `test_v23_diplomacy.gd`
+- `test_v24_joint_ventures.gd`
+- `test_v25_contracts.gd`
+- `test_v26_trade.gd`
+- `test_v27_infrastructure.gd`
+- `test_v28_corporations.gd`
+- `test_v29_alliance_competitions.gd`
+
+## V3 endgame
+- `test_v31_victory.gd`
+- `test_v32_corporate_wars.gd`
+- `test_v33_endgame_crises.gd`
+- `test_v34_prestige.gd`
+
+## V4 living world
+- `test_v41_world_events.gd`
+- `test_v42_event_effects.gd`
+- `test_v43_seasonal_arc.gd`
+- `test_v44_verified_news.gd`
+
+## V5 UX parity
+- `test_v51_ux_parity.gd`
+
+## V6/V7 cleanup and recovery
+- `test_v72_save_repair.gd`
+
+## V8 endgame completion
+- `test_v81_share_pricing.gd`
+- `test_v82_property_market.gd`
+- `test_v83_identities.gd`
+- `test_v84_notifications.gd`
+- `test_v85_listing.gd`
+- `test_v86_haggling.gd`
+- `test_v87_reputation.gd`
+- `test_v88_motions.gd`
+- `test_v89_cycles.gd`
+- `test_v810_power.gd`
+- `test_v811_valley.gd`
+
+## V9 screens
+- `test_v9x_panels.gd`
 
 ## Integration
 - `test_new_game_flow.gd`

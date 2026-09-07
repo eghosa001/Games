@@ -39,8 +39,12 @@ func _sync(diplomacy, day: int) -> void:
         var id: Variant = str(treaty.get("id", ""))
         active_ids[id] = true
         _apply_treaty(treaty, day)
+    var statuses: Dictionary = {}
+    for treaty in diplomacy.list_treaties(""):
+        statuses[str(treaty.get("id", ""))] = str(treaty.get("status", ""))
     for id in applied.keys():
-        if not active_ids.has(id): applied.erase(id)
+        if not active_ids.has(id) and str(statuses.get(id, "expired")) == "expired":
+            applied.erase(id)
     defense_pacts.clear()
     for treaty in diplomacy.list_treaties("active"):
         if str(treaty.get("type", "")) != "defense": continue
@@ -89,7 +93,9 @@ func _apply_territory(treaty: Dictionary, state: Dictionary) -> void:
     state["materialized"] = true
 
 func _apply_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
-    if bool(state.get("materialized", false)): return
+    if bool(state.get("materialized", false)):
+        _settle_joint_venture(treaty, state)
+        return
     var ownership = _ownership()
     if ownership == null: return
     var terms: Dictionary = treaty.get("terms", {})
@@ -109,6 +115,11 @@ func _apply_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
         var asset_created: Variant = ownership.register_entity(asset_id, ownership.ENTITY_ASSET, 1000000, 1.0)
         if bool(asset_created.get("ok", false)):
             ownership.issue_shares(asset_id, venture_id, 1000000, ownership.VOTE_ORDINARY, "joint venture asset capitalization")
+    state["funded"] = bool(state.get("funded", false))
+    if not state["funded"]:
+        _fund_joint_venture(treaty, state)
+    else:
+        _settle_joint_venture(treaty, state)
     state["venture_id"] = venture_id
     state["venture_name"] = venture_name
     state["asset_id"] = asset_id
@@ -117,6 +128,66 @@ func _apply_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
     state["party_b_ownership"] = ownership.get_ownership_percent(venture_id, str(treaty.get("party_b", "")))
     state["control_party"] = str(treaty.get("party_a", "")) if state["party_a_ownership"] >= state["party_b_ownership"] else str(treaty.get("party_b", ""))
     state["materialized"] = true
+
+func _fund_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
+    var finance = _finance()
+    if finance == null:
+        return
+    var terms: Dictionary = treaty.get("terms", {})
+    var total := max(0, int(round(float(terms.get("joint_capital", 3000.0)))))
+    if total <= 0:
+        return
+    var player_pct := _party_percent(treaty, "player")
+    var player_amount := int(round(float(total) * player_pct / 100.0))
+    var paid: Dictionary = finance.spend(player_amount, "joint venture capital:%s" % treaty.get("id", ""))
+    if not bool(paid.get("ok", false)):
+        state["funding_blocked"] = true
+        return
+    state["funding_blocked"] = false
+    var scene = _scene()
+    if scene != null and scene.get("rivals") != null:
+        for rival in scene.get("rivals").rivals:
+            if rival is Dictionary and str(rival.get("id", "")) != "player" and (str(rival.get("id", "")) == str(treaty.get("party_a", "")) or str(rival.get("id", "")) == str(treaty.get("party_b", ""))):
+                rival["cash"] = max(0, int(rival.get("cash", 0)) - max(0, total - player_amount))
+    state["funded"] = true
+    state["funded_capital"] = total
+    state["last_payout_day"] = -1
+
+func _settle_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
+    if not bool(state.get("funded", false)):
+        return
+    var scene = _scene()
+    var day := -1
+    if scene != null:
+        day = int(scene.get("day"))
+    if day >= 0 and int(state.get("last_payout_day", -1)) == day:
+        return
+    var finance = _finance()
+    if finance == null:
+        return
+    var profit := int(round(float(state.get("funded_capital", 0)) * 0.015))
+    if profit <= 0:
+        return
+    var player_pct := _party_percent(treaty, "player")
+    var player_share := int(round(float(profit) * player_pct / 100.0))
+    if player_share > 0:
+        finance.receive(player_share, "joint venture profit:%s" % treaty.get("id", ""))
+    if scene != null and scene.get("rivals") != null:
+        for rival in scene.get("rivals").rivals:
+            if rival is Dictionary and (str(rival.get("id", "")) == str(treaty.get("party_a", "")) or str(rival.get("id", "")) == str(treaty.get("party_b", ""))) and str(rival.get("id", "")) != "player":
+                rival["cash"] = max(0, int(rival.get("cash", 0)) + max(0, profit - player_share))
+    state["last_payout_day"] = day
+    state["total_paid_out"] = int(state.get("total_paid_out", 0)) + profit
+
+func _party_percent(treaty: Dictionary, party_id: String) -> float:
+    var terms: Dictionary = treaty.get("terms", {})
+    if str(treaty.get("party_a", "")) == party_id:
+        return clampf(float(terms.get("party_a_percent", 50.0)), 0.0, 100.0)
+    return clampf(float(terms.get("party_b_percent", 50.0)), 0.0, 100.0)
+
+func _scene():
+    var tree: Variant = Engine.get_main_loop()
+    return tree.get_current_scene() if tree != null else null
 
 func has_defense_treaty(party_a: String, party_b: String) -> bool:
     return defense_pacts.has(_defense_key(party_a, party_b))

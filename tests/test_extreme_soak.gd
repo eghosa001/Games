@@ -18,7 +18,10 @@ func run() -> void:
     var start_day := int(state.get_value("player", "day", 1))
     # advance_day requires an operating business; use a deterministic funded
     # fixture so this stress test exercises the real day-transition path.
-    game.cash = 500000
+    # Funded to survive 1,000 unmanaged days of idle burn: this suite measures
+    # engine stability over time, not economic balance (dedicated suites cover
+    # balance). A lone starting workshop is not expected to be profitable idle.
+    game.cash = 2500000
     game.inspect_property()
     game.acquire_property()
     for _i in range(5):

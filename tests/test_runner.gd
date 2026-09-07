@@ -125,8 +125,10 @@ func test_main_command_integration() -> void:
 
     game.sign_contract()
     check(not contracts.active_contract().is_empty(), "integration second contract can be signed after cancellation")
-    while game.finished_goods < 5:
+    var _produce_guard := 0
+    while game.finished_goods < 5 and _produce_guard < 25:
         game.produce_goods()
+        _produce_guard += 1
     var old_day = game.day
     var old_profit = game.total_profit
     game.advance_day()

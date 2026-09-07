@@ -146,6 +146,9 @@ func _refresh() -> void:
         return
 
     var product: Variant = "furniture"
+    var active_industry := str(state.get_value("businesses", "industry_id", ""))
+    if active_industry in ["furniture", "construction_materials", "consumer_electronics"]:
+        product = active_industry
     var player_price: Variant = int(state.get_value("businesses", "player_price", 220))
     var rival_price: Variant = 120
     var reputation: Variant = int(state.get_value("player", "reputation", 0))

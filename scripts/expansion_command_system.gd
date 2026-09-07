@@ -57,7 +57,27 @@ func select_district(index: int) -> void:
         state_adapter.set_value("regions", "selected_district", index)
         state_adapter.log_message("DISTRICT: %s selected." % districts.current()["name"])
 
+func management_capacity() -> Dictionary:
+    var headquarters = get_node_or_null("/root/RenewHeadquartersSystem")
+    var office_capacity := 0
+    if headquarters != null and headquarters.has_method("executive_capacity"):
+        office_capacity = int(headquarters.executive_capacity())
+    var executive_count := state_adapter.executive_seats().size()
+    var capacity := 2 + office_capacity + executive_count * 2
+    var used := 0
+    for item in expansion.properties:
+        if item is Dictionary and bool(item.get("owned", false)):
+            used += 1
+    for item in expansion.resource_sites:
+        if item is Dictionary and bool(item.get("owned", false)):
+            used += 1
+    return {"capacity": capacity, "used": used, "executives": executive_count, "office_capacity": office_capacity, "ok": used < capacity}
+
 func buy_expansion() -> void:
+    var capacity_check := management_capacity()
+    if not bool(capacity_check.get("ok", false)):
+        state_adapter.message("Management is overstretched (%d/%d). Appoint executives or expand headquarters offices to manage more assets." % [int(capacity_check.get("used", 0)), int(capacity_check.get("capacity", 0))])
+        return
     var reputation: Variant = int(state_adapter.get_value("player", "reputation", 0))
     expansion.unlock_from_reputation(reputation)
     var selected: Variant = int(state_adapter.get_value("branches", "selected_expansion", 0))
@@ -67,7 +87,7 @@ func buy_expansion() -> void:
     var expansion_rep_before: int = int(expansion.reputation)
     var result = expansion.buy(selected, cash)
     if not result["ok"]: state_adapter.message(result["message"]); return
-    var spend:=state_adapter.spend(int(result["cost"]),"expansion purchase")
+    var spend: Dictionary = state_adapter.spend(int(result["cost"]),"expansion purchase")
     if not bool(spend.get("ok",false)):
         expansion.properties = properties_before
         expansion.restored_count = restored_before
@@ -86,7 +106,7 @@ func upgrade_expansion() -> void:
     var expansion_rep_before: int = int(expansion.reputation)
     var result = expansion.upgrade(selected, cash)
     if not result["ok"]: state_adapter.message(result["message"]); return
-    var spend:=state_adapter.spend(int(result["cost"]),"expansion upgrade")
+    var spend: Dictionary = state_adapter.spend(int(result["cost"]),"expansion upgrade")
     if not bool(spend.get("ok",false)):
         expansion.properties = properties_before
         expansion.management_level = management_before

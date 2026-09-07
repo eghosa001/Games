@@ -1,5 +1,5 @@
 extends Node
-class_name RenewInfrastructureSystem
+## class_name removed: "RenewInfrastructureSystem" conflicts with project.godot autoload.
 
 ## Physical infrastructure layer: construction, capacity, maintenance, ownership,
 ## utilization, location, upgrades and disruptions for regional assets.
@@ -203,6 +203,36 @@ func _ownership():
     return node
 
 func cost_to_maintenance(cost: int) -> int: return max(100,int(round(float(cost)*0.01)))
+func founder_modifiers(owner_id: String = "founder") -> Dictionary:
+    var result := {"logistics": 1.0, "production": 1.0, "energy": 1.0, "storage": 1.0, "technology": 1.0}
+    var regions: Dictionary = {}
+    for asset in assets.values():
+        if not asset is Dictionary:
+            continue
+        if str(asset.get("owner_id", "")) != owner_id:
+            continue
+        if str(asset.get("status", "")) != ACTIVE:
+            continue
+        regions[int(asset.get("region", 0))] = true
+    if regions.is_empty():
+        return result
+    var first := true
+    for region in regions.keys():
+        var mod := regional_modifier(int(region))
+        if first:
+            result["logistics"] = float(mod.get("logistics", 1.0))
+            result["production"] = float(mod.get("production", 1.0))
+            result["energy"] = float(mod.get("energy", 1.0))
+            result["storage"] = float(mod.get("storage", 1.0))
+            result["technology"] = float(mod.get("technology", 1.0))
+            first = false
+        else:
+            result["logistics"] = min(float(result["logistics"]), float(mod.get("logistics", 1.0)))
+            result["production"] = max(float(result["production"]), float(mod.get("production", 1.0)))
+            result["energy"] = max(float(result["energy"]), float(mod.get("energy", 1.0)))
+            result["storage"] = max(float(result["storage"]), float(mod.get("storage", 1.0)))
+            result["technology"] = max(float(result["technology"]), float(mod.get("technology", 1.0)))
+    return result
 func _event(day: int, text: String) -> void:
     events.append({"day":day,"text":text})
     if events.size() > 100: events.pop_front()
