@@ -30,6 +30,8 @@ jobs:
           "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
       - name: Import project
         run: timeout 120s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+      - name: Run master game-plan coverage gate
+        run: timeout 900s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_master_game_plan_coverage.gd
       - name: Run strict Godot quality gate
         run: timeout 600s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_quality_gate.gd
       - name: Run mobile QA automation
@@ -40,9 +42,7 @@ jobs:
           for t in tests/test_*.gd tests/integration/test_*.gd tests/release/test_*.gd; do
             case "$t" in
               tests/test_long_soak.gd|tests/test_extreme_soak.gd) continue;;
-              # Strict quality gate needs a real renderer for its frame
-              # checkpoint; it runs in browser QA, not headless CI.
-              tests/test_quality_gate.gd) continue;;
+              tests/test_quality_gate.gd|tests/test_master_game_plan_coverage.gd) continue;;
             esac
             echo "=== $t ==="
             timeout 600s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script "res://$t"
