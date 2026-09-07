@@ -60,6 +60,9 @@ The suite is organized by test purpose. Existing focused tests remain at `tests/
 
 ## V9 screens
 - `test_v9x_panels.gd`
+- `test_v95_containment.gd`
+- `test_v97_modal_focus.gd`
+- `test_v98_performance.gd`
 
 ## Integration
 - `test_new_game_flow.gd`
