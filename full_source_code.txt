@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 08:00:37 UTC 2026
+// Generated on: Mon Sep  7 08:47:25 UTC 2026
 
-// Source snapshot commit: afc68fe5b21022a970cc68a52fe94abcebfa1472
+// Source snapshot commit: c00ac2b4861720737326648f68e44f0b8cd5b173
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -173,7 +173,7 @@ jobs:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: .github/workflows/godot-tests.yml
-Lines: 81
+Lines: 85
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 name: RENEW Godot Tests
 
@@ -197,7 +197,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Install Godot dependencies
-        run: sudo apt-get update && sudo apt-get install -y unzip wget
+        run: sudo apt-get update && sudo apt-get install -y unzip wget xvfb
       - name: Install Godot
         run: |
           set -euo pipefail
@@ -209,8 +209,11 @@ jobs:
         run: timeout 120s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
       - name: Run master game-plan coverage gate
         run: timeout 900s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_master_game_plan_coverage.gd
-      - name: Run strict Godot quality gate
-        run: timeout 600s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_quality_gate.gd
+      - name: Run display-server suites under Xvfb
+        run: |
+          set -euo pipefail
+          timeout 600s xvfb-run -a "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --path . --script res://tests/test_quality_gate.gd
+          timeout 600s xvfb-run -a "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --path . --script res://tests/test_responsive_ui_shell.gd
       - name: Run mobile QA automation
         run: timeout 300s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/mobile_qa_test.gd
       - name: Run full fast suite (every test except soaks)
@@ -220,6 +223,7 @@ jobs:
             case "$t" in
               tests/test_long_soak.gd|tests/test_extreme_soak.gd) continue;;
               tests/test_quality_gate.gd|tests/test_master_game_plan_coverage.gd) continue;;
+              tests/test_responsive_ui_shell.gd) continue;;
             esac
             echo "=== $t ==="
             timeout 600s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script "res://$t"
@@ -11450,7 +11454,7 @@ func _day() -> int:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/diplomacy_ui.gd
-Lines: 131
+Lines: 137
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 
@@ -11480,8 +11484,14 @@ func _ready() -> void:
     var gift: Variant = Button.new(); gift.text = "Send Envoy Gift"; gift.pressed.connect(_send_gift); box.add_child(gift)
     var cancel: Variant = Button.new(); cancel.text = "Cancel Active Treaty"; cancel.pressed.connect(_cancel_active); box.add_child(cancel)
     var refresh: Variant = Button.new(); refresh.text = "Refresh Treaty Ledger"; refresh.pressed.connect(_refresh); box.add_child(refresh)
+    var close: Variant = Button.new(); close.name = "CloseButton"; close.text = "CLOSE"; close.custom_minimum_size = Vector2(0, 44); close.focus_mode = Control.FOCUS_NONE; close.pressed.connect(_close); box.add_child(close)
     summary = Label.new(); summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; box.add_child(summary)
     _refresh()
+
+func _close() -> void:
+    var manager = get_node_or_null("/root/RenewUIScreenManager")
+    if manager != null and manager.has_method("hide_all_screens"):
+        manager.hide_all_screens()
 
 func _main():
     var tree: Variant = Engine.get_main_loop()
@@ -12875,7 +12885,7 @@ func sync_roster_to_state()->void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/employee_ui.gd
-Lines: 203
+Lines: 217
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 class_name RenewEmployeeUI
@@ -12967,6 +12977,20 @@ func _build_ui() -> void:
     _add_action(_actions, "Assign", "assign")
     _add_action(_actions, "Transfer", "transfer")
     _add_action(_actions, "Fire", "fire")
+    var close_button := Button.new()
+    close_button.text = "Close"
+    close_button.custom_minimum_size = Vector2(0, 44)
+    close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    close_button.focus_mode = Control.FOCUS_NONE
+    close_button.pressed.connect(_close)
+    _actions.add_child(close_button)
+
+func _close() -> void:
+    var manager = get_node_or_null("/root/RenewUIScreenManager")
+    if manager != null and manager.has_method("hide_all_screens"):
+        manager.hide_all_screens()
+    else:
+        panel.visible = false
 
 func _add_action(parent_node: GridContainer, text: String, action: String) -> void:
     var button := Button.new()
@@ -15634,7 +15658,7 @@ func _build_ui() -> void:
     var header: Variant = HBoxContainer.new(); root.add_child(header)
     var title: Variant = Label.new(); title.text = "RENEW CORPORATE MUSEUM"; title.add_theme_font_size_override("font_size", 28); header.add_child(title)
     var spacer: Variant = Control.new(); spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL; header.add_child(spacer)
-    var close: Variant = Button.new(); close.text = "Close [Esc]"; close.pressed.connect(close_screen); header.add_child(close)
+    var close: Variant = Button.new(); close.name = "CloseButton"; close.text = "Close [Esc]"; close.pressed.connect(close_screen); header.add_child(close)
     summary_label = Label.new(); summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; root.add_child(summary_label)
     tabs = HBoxContainer.new(); root.add_child(tabs)
     for id in TABS.keys(): _add_tab(id, TABS[id])
@@ -16262,7 +16286,7 @@ func restore_state(state: Dictionary) -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/infrastructure_ui.gd
-Lines: 174
+Lines: 189
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Control
 
@@ -16279,7 +16303,22 @@ func _ready() -> void:
     parent = get_tree().current_scene
     add_child(state_adapter)
     z_index = 57
+    var close_button := Button.new()
+    close_button.name = "CloseButton"
+    close_button.text = "CLOSE"
+    close_button.position = Vector2(1159, 424)
+    close_button.size = Vector2(88, 44)
+    close_button.focus_mode = Control.FOCUS_NONE
+    close_button.pressed.connect(_close)
+    add_child(close_button)
     queue_redraw()
+
+func _close() -> void:
+    var manager = get_node_or_null("/root/RenewUIScreenManager")
+    if manager != null and manager.has_method("hide_all_screens"):
+        manager.hide_all_screens()
+    else:
+        visible = false
 
 func _process(_delta: float) -> void:
     if parent == null: parent = get_tree().current_scene
@@ -24817,7 +24856,7 @@ The separate browser QA workflow remains responsible for testing the deployed we
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/TEST_SUITE.md
-Lines: 95
+Lines: 96
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # RENEW test suite
 
@@ -24905,16 +24944,17 @@ The suite is organized by test purpose. Existing focused tests remain at `tests/
 
 ## Release
 - `release/test_full_new_game_flow.gd`
+- `release/test_release_smoke.gd`
 - `test_release_smoke.gd`
 - `test_architecture_integrity.gd`
 - `test_quality_gate.gd`
 
 ## CI policy
-
-The main Godot workflow runs every `tests/test_*.gd`, every integration test and every release test, excluding only the explicitly slow soak tests from the fast job. The strict quality gate is therefore included automatically in the fast CI suite and should remain a required release check.
-
-Tests must never manufacture a passing result by skipping a required assertion. Missing systems, missing assets, broken references, failed state transitions and invalid rendered output are failures.
-
+The main Godot workflow runs every `tests/test_*.gd`, every integration test and every
+release test, excluding only the explicitly slow soak tests from the fast job. Suites that
+need a real display server (the strict quality gate's frame checkpoint, real mouse/touch
+dispatch in the responsive shell) run under Xvfb instead of headless. Tests must never
+manufacture a passing result by skipping a required assertion. Missing systems, missing assets, broken references, failed state transitions and invalid rendered output are failures.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/fake_game.gd
@@ -25932,6 +25972,83 @@ func run() -> void:
     print("FULL NEW GAME FLOW RESULT: %d passed, %d failed" % [passed, failed])
     game.free()
     await process_frame
+    quit(1 if failed > 0 else 0)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: tests/release/test_release_smoke.gd
+Lines: 71
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+extends SceneTree
+
+## Release-gate smoke inside tests/release: boot, first operating day,
+## save/load round-trip and schema contract. All assertions execute real
+## gameplay through Main; any failure exits non-zero.
+var passed := 0
+var failed := 0
+
+func _init() -> void:
+    call_deferred("run")
+
+func check(ok: bool, label: String) -> void:
+    if ok:
+        passed += 1
+        print("PASS: " + label)
+    else:
+        failed += 1
+        push_error("FAIL: " + label)
+
+func run() -> void:
+    var packed := load("res://scenes/Main.tscn") as PackedScene
+    check(packed != null, "Release loads the main scene")
+    if packed == null:
+        quit(1)
+        return
+    var game := packed.instantiate()
+    root.add_child(game)
+    current_scene = game
+    await process_frame
+    await process_frame
+    var state = root.get_node_or_null("RenewGameState")
+    check(state != null, "Release boots canonical state")
+    if state == null:
+        game.free()
+        quit(1)
+        return
+    check(int(state.get_value("player", "day", 0)) >= 1, "Release starts on day one")
+    game.cash = 250000
+    game.day = 1
+    game.inspect_property()
+    game.acquire_property()
+    check(bool(state.get_value("properties", "owned", false)), "Release acquires property")
+    var guard := 0
+    while str(state.get_value("properties", "stage", "")) != "Operational" and guard < 20:
+        game.restore_property()
+        guard += 1
+        await process_frame
+    check(str(state.get_value("properties", "stage", "")) == "Operational", "Release restores property")
+    game.choose_business_purpose(0)
+    game.open_business()
+    check(bool(state.get_value("businesses", "business_open", false)), "Release opens business")
+    game.hire_employee()
+    game.buy_inputs()
+    game.produce_goods()
+    check(int(state.get_value("production", "finished_goods", 0)) > 0, "Release produces goods")
+    var day_before := int(state.get_value("player", "day", 1))
+    game.advance_day()
+    await process_frame
+    check(int(state.get_value("player", "day", 0)) == day_before + 1, "Release advances days")
+    game.save_game()
+    var cash_saved := int(state.get_value("economy", "cash", 0))
+    state.set_value("economy", "cash", 1)
+    game.load_game()
+    await process_frame
+    check(int(state.get_value("economy", "cash", 0)) == cash_saved, "Release save/load round-trips")
+    var snapshot: Dictionary = state.capture()
+    check(int(snapshot.get("schema_version", 0)) == 8, "Release save uses schema 8")
+    game.free()
+    await process_frame
+    print("RELEASE SMOKE RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
 
 
@@ -29488,7 +29605,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_responsive_ui_shell.gd
-Lines: 185
+Lines: 187
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -29553,8 +29670,9 @@ func _run() -> void:
                 # Exercise the touch route too when a mouse route did not close
                 # it. This is real InputEventScreenTouch dispatch, not a signal
                 # shortcut, so the test covers the reported interception bug.
-                await _touch_at(close_button.get_global_rect().get_center())
-                check("real touch closes screen: %s" % screen_name, not manager.is_screen_open(screen_name))
+                if close_button != null:
+                    await _touch_at(close_button.get_global_rect().get_center())
+                check("real touch closes screen: %s" % screen_name, close_button != null and not manager.is_screen_open(screen_name))
             check("screen is closed after real input: %s" % screen_name, not manager.is_screen_open(screen_name))
 
         # ESC must close the currently active primary screen as a second,
@@ -29585,6 +29703,7 @@ func _check_layout_contract(scene: Node, hud: Node) -> void:
 
     for viewport_size in [Vector2(390, 844), Vector2(320, 568), Vector2(1280, 720)]:
         root_control.size = viewport_size
+        hud._layout_responsive()
         await process_frame
         var tutorial := scene.get_node_or_null("UI/TutorialOverlay")
         var strategy := scene.get_node_or_null("UI/StrategyHUD")
