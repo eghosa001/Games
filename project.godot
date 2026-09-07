@@ -56,8 +56,8 @@ window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
 [debug]
-gdscript/warnings/enable=false
-gdscript/warnings/inference_on_variant=0
+gdscript/warnings/enable=true
+gdscript/warnings/inference_on_variant=1
 
 [rendering]
 renderer/rendering_method="gl_compatibility"
