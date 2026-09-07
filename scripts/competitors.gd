@@ -703,4 +703,10 @@ func restore_state(snapshot: Dictionary) -> void:
         _normalize()
 
 func _money(value: int) -> String:
-    return "%,d" % value
+    var negative := value < 0
+    var digits := str(absi(value))
+    var out := ""
+    while digits.length() > 3:
+        out = "," + digits.substr(digits.length() - 3, 3) + out
+        digits = digits.substr(0, digits.length() - 3)
+    return ("-" if negative else "") + digits + out

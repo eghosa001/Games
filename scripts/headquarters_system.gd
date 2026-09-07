@@ -115,4 +115,11 @@ func restore_state(state: Dictionary) -> void:
         for area_id in AREA_SPECS.keys(): owned_areas[area_id] = bool(saved_areas.get(area_id, false))
     var saved_levels = state.get("area_levels", {}); if saved_levels is Dictionary:
         for area_id in AREA_SPECS.keys(): area_levels[area_id] = max(0, int(saved_levels.get(area_id, 0)))
-func _money(value: int) -> String: return "%,d" % value
+func _money(value: int) -> String:
+    var negative := value < 0
+    var digits := str(absi(value))
+    var out := ""
+    while digits.length() > 3:
+        out = "," + digits.substr(digits.length() - 3, 3) + out
+        digits = digits.substr(0, digits.length() - 3)
+    return ("-" if negative else "") + digits + out

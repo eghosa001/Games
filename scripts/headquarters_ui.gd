@@ -95,7 +95,14 @@ func _built_count() -> int:
     for area_id in area_ids:
         if system.has_area(area_id): count += 1
     return count
-func _money(value: int) -> String: return "%,d" % value
+func _money(value: int) -> String:
+    var negative := value < 0
+    var digits := str(absi(value))
+    var out := ""
+    while digits.length() > 3:
+        out = "," + digits.substr(digits.length() - 3, 3) + out
+        digits = digits.substr(0, digits.length() - 3)
+    return ("-" if negative else "") + digits + out
 func _layout() -> void:
     if panel == null: return
     var size := get_viewport().get_visible_rect().size; var narrow := size.x < 760.0; var width := maxf(304.0, size.x - 16.0) if narrow else 460.0; var height := maxf(390.0, size.y - 90.0) if narrow else minf(610.0, size.y - 120.0)
