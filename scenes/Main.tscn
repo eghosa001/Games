@@ -74,7 +74,6 @@ visible = true
 modulate = Color(1, 1, 1, 0.98)
 [node name="RichWorldScenery" type="Node2D" parent="World"]
 z_index = -25
-visible = false
 script = ExtResource("42")
 [node name="SkylineArt" type="Sprite2D" parent="World"]
 texture = ExtResource("38")

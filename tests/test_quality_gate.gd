@@ -188,11 +188,11 @@ func test_gameplay_contract() -> void:
 
     game.choose_business_purpose(0)
     check(game.business_open, "Business opens after restoration")
-    var roster_before := state.get_value("employees", "roster", [])
-    var before_count := roster_before.size() if roster_before is Array else 0
+    var roster_before: Variant = state.get_value("employees", "roster", [])
+    var before_count: int = roster_before.size() if roster_before is Array else 0
     game.hire_employee()
-    var roster_after := state.get_value("employees", "roster", [])
-    var after_count := roster_after.size() if roster_after is Array else 0
+    var roster_after: Variant = state.get_value("employees", "roster", [])
+    var after_count: int = roster_after.size() if roster_after is Array else 0
     check(after_count > before_count, "Hiring changes employee state exactly through command boundary")
 
     var before_goods := int(state.get_value("production", "finished_goods", 0))
@@ -201,7 +201,7 @@ func test_gameplay_contract() -> void:
     var after_goods := int(state.get_value("production", "finished_goods", 0))
     check(after_goods > before_goods, "Production creates finished goods")
 
-    var day_before := game.day
+    var day_before: int = int(game.day)
     game.advance_day()
     check(game.day == day_before + 1, "Advance day increments exactly once")
     check(int(state.get_value("economy", "last_sales", 0)) >= 0, "Daily sales state remains valid")
