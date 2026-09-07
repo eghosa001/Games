@@ -2,8 +2,8 @@ extends SceneTree
 
 ## Meta-test for the test suite itself. This catches tests that can silently
 ## report success because assertions are compiled out, exit successfully after
-## failures, retry random behavior until a pass occurs, or assert an operation
-## succeeded without inspecting any result.
+## failures, retry random behavior until a pass occurs, assert an operation
+## succeeded without inspecting any result, or depend on arbitrary timing.
 
 var passed := 0
 var failed := 0
@@ -38,10 +38,20 @@ func run() -> void:
 
         var assert_token := "ass" + "ert("
         var tautology_token := "check(" + "true,"
+        var falsehood_token := "check(" + "false,"
         check(not source.contains(assert_token), "No assert()-only test assertions: " + path)
         check(not source.contains("quit()"), "No unconditional bare quit(): " + path)
         check(not source.contains("for attempt in range(20)"), "No 20-attempt retry masking randomness: " + path)
         check(not source.contains(tautology_token), "No tautological check(true, ...) assertions: " + path)
+        check(not source.contains(falsehood_token), "No unconditional check(false, ...) assertions: " + path)
+
+        # Tests must be event/frame driven. Arbitrary wall-clock sleeps make
+        # CI timing-dependent and can turn a race into a false pass/fail.
+        check(not source.contains("OS.delay_msec("), "No millisecond wall-clock sleeps in tests: " + path)
+        check(not source.contains("OS.delay_usec("), "No microsecond wall-clock sleeps in tests: " + path)
+        check(not source.contains("Thread.sleep("), "No thread sleeps in tests: " + path)
+        check(not source.contains("await get_tree().create_timer("), "No arbitrary timer sleeps in tests: " + path)
+        check(not source.contains("await get_tree().create_timer("), "No arbitrary SceneTree timer waits in tests: " + path)
 
         if source.contains("extends SceneTree"):
             check(source.contains("quit(1 if failed > 0 else 0)"), "SceneTree test has failure-aware exit status: " + path)
