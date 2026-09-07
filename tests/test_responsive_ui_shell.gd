@@ -46,8 +46,6 @@ func _run() -> void:
         for screen_name in screen_names:
             check("startup screen hidden: %s" % screen_name, not manager.is_screen_open(screen_name))
 
-        # Every primary screen must be openable, have a real close action, and
-        # release the UI back to the primary page after that action.
         for screen_name in screen_names:
             manager.show_screen(screen_name)
             await process_frame
@@ -57,9 +55,15 @@ func _run() -> void:
             check("has usable close button: %s" % screen_name, close_button != null and close_button.visible and close_button.size.x > 0.0 and close_button.size.y > 0.0)
             if close_button != null:
                 check("close button accepts mouse/touch: %s" % screen_name, close_button.mouse_filter != Control.MOUSE_FILTER_IGNORE)
-                close_button.emit_signal("pressed")
-                await process_frame
-            check("closes screen: %s" % screen_name, not manager.is_screen_open(screen_name))
+                await _click_at(close_button.get_global_rect().get_center())
+                check("real mouse click closes screen: %s" % screen_name, not manager.is_screen_open(screen_name))
+            if manager.is_screen_open(screen_name):
+                # Exercise the touch route too when a mouse route did not close
+                # it. This is real InputEventScreenTouch dispatch, not a signal
+                # shortcut, so the test covers the reported interception bug.
+                await _touch_at(close_button.get_global_rect().get_center())
+                check("real touch closes screen: %s" % screen_name, not manager.is_screen_open(screen_name))
+            check("screen is closed after real input: %s" % screen_name, not manager.is_screen_open(screen_name))
 
         # ESC must close the currently active primary screen as a second,
         # independent escape path.
@@ -73,7 +77,70 @@ func _run() -> void:
         await process_frame
         check("ESC closes active screen", not manager.is_screen_open("NewsPanel"))
 
+    # Validate the actual geometry contract at representative desktop/mobile
+    # sizes. These checks target the root cause: independent CanvasLayers must
+    # not paint their auxiliary cards over the primary command sheet.
+    await _check_layout_contract(scene, hud)
     _finish()
+
+func _check_layout_contract(scene: Node, hud: Node) -> void:
+    var root_control := hud.get("root") as Control
+    var action_dock := hud.get("action_dock") as Control
+    check("HUD root is a Control", root_control != null)
+    check("action dock resolves", action_dock != null)
+    if root_control == null or action_dock == null:
+        return
+
+    for viewport_size in [Vector2(390, 844), Vector2(320, 568), Vector2(1280, 720)]:
+        root_control.size = viewport_size
+        await process_frame
+        var tutorial := scene.get_node_or_null("UI/TutorialOverlay")
+        var strategy := scene.get_node_or_null("UI/StrategyHUD")
+        var tutorial_panel := tutorial.get("panel") as Control if tutorial != null else null
+        var strategy_panel := strategy.get("panel") as Control if strategy != null else null
+        if viewport_size.x < 700.0:
+            check("mobile action dock stays inside viewport %s" % viewport_size, _inside_viewport(action_dock, viewport_size))
+            if tutorial_panel != null and tutorial_panel.visible:
+                check("mobile tutorial avoids action dock %s" % viewport_size, not tutorial_panel.get_global_rect().intersects(action_dock.get_global_rect()))
+            check("mobile strategy HUD yields to primary shell %s" % viewport_size, strategy_panel == null or not strategy_panel.visible)
+        else:
+            if tutorial_panel != null and tutorial_panel.visible:
+                check("desktop tutorial avoids action dock", not tutorial_panel.get_global_rect().intersects(action_dock.get_global_rect()))
+            if strategy_panel != null and strategy_panel.visible:
+                check("desktop strategy HUD avoids action dock", not strategy_panel.get_global_rect().intersects(action_dock.get_global_rect()))
+
+func _inside_viewport(control: Control, size: Vector2) -> bool:
+    var rect := control.get_global_rect()
+    var viewport_rect := Rect2(Vector2.ZERO, size)
+    return viewport_rect.encloses(rect)
+
+func _click_at(position: Vector2) -> void:
+    var down := InputEventMouseButton.new()
+    down.button_index = MOUSE_BUTTON_LEFT
+    down.position = position
+    down.pressed = true
+    Input.parse_input_event(down)
+    await process_frame
+    var up := InputEventMouseButton.new()
+    up.button_index = MOUSE_BUTTON_LEFT
+    up.position = position
+    up.pressed = false
+    Input.parse_input_event(up)
+    await process_frame
+
+func _touch_at(position: Vector2) -> void:
+    var down := InputEventScreenTouch.new()
+    down.index = 1
+    down.position = position
+    down.pressed = true
+    Input.parse_input_event(down)
+    await process_frame
+    var up := InputEventScreenTouch.new()
+    up.index = 1
+    up.position = position
+    up.pressed = false
+    Input.parse_input_event(up)
+    await process_frame
 
 func _find_screen(manager: Node, screen_name: String) -> Node:
     var ui := get_root().get_node_or_null("Renew/UI")
@@ -86,10 +153,14 @@ func _find_screen(manager: Node, screen_name: String) -> Node:
 func _find_close_button(node: Node) -> Button:
     if node == null:
         return null
-    for child in node.get_children():
+    var children := node.get_children()
+    for i in range(children.size() - 1, -1, -1):
+        var child := children[i]
         var button := child as Button
-        if button != null and (button.text.to_upper() == "CLOSE" or button.name.to_lower().contains("close")):
-            return button
+        if button != null:
+            var label := button.text.strip_edges().to_upper()
+            if label == "CLOSE" or label == "X" or label == "×" or button.name.to_lower().contains("close"):
+                return button
         var nested := _find_close_button(child)
         if nested != null:
             return nested

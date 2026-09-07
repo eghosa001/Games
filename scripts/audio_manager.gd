@@ -29,6 +29,7 @@ func _ready() -> void:
     for i: int in range(MAX_SFX_PLAYERS):
         var player: AudioStreamPlayer = AudioStreamPlayer.new()
         player.bus = "Master"
+        player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
         add_child(player)
         _sfx_players.append(player)
     call_deferred("_hook_ui")
@@ -37,6 +38,7 @@ func _ready() -> void:
 func _setup_music() -> void:
     _music_player = AudioStreamPlayer.new()
     _music_player.name = "RenewAdaptiveMusic"
+    _music_player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
     var stream: AudioStreamGenerator = AudioStreamGenerator.new()
     stream.mix_rate = SAMPLE_RATE
     stream.buffer_length = 2.0
@@ -165,6 +167,7 @@ func _begin_sfx(duration: float) -> AudioStreamGeneratorPlayback:
     _sfx_cursor = (_sfx_cursor + 1) % _sfx_players.size()
     player.stream = _sfx_stream(duration)
     player.volume_db = 0.0
+    player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
     player.play()
     if not player.is_playing():
         return null

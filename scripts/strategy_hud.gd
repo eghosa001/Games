@@ -1,7 +1,7 @@
 extends CanvasLayer
 
-# Non-blocking CEO dashboard. Keep it clear of the primary touch controls on
-# both desktop and narrow mobile layouts.
+# Non-blocking CEO dashboard. Keep it clear of the primary touch controls and
+# tutorial surface instead of assuming a fixed screen coordinate is safe.
 var game: Node
 var root: Control
 var panel: Panel
@@ -31,22 +31,32 @@ func _ready() -> void:
 func _layout_responsive() -> void:
     if root == null or panel == null or label == null:
         return
-    var w: Variant = maxf(root.size.x, 320.0)
-    var h: Variant = maxf(root.size.y, 480.0)
-    if w < 700.0:
-        panel.position = Vector2(12, minf(418.0, h - 150.0))
-        panel.size = Vector2(w - 24.0, 86.0)
-        label.size = Vector2(panel.size.x - 28.0, panel.size.y - 20.0)
-        label.add_theme_font_size_override("font_size", 11)
-    else:
-        panel.position = Vector2(maxf(845.0, w - 435.0), minf(594.0, h - 100.0))
-        panel.size = Vector2(minf(410.0, w - panel.position.x - 18.0), 82.0)
-        label.size = Vector2(panel.size.x - 28.0, 62.0)
-        label.add_theme_font_size_override("font_size", 13)
+    var w: float = maxf(root.size.x, 320.0)
+    var h: float = maxf(root.size.y, 480.0)
+    # The compact action sheet owns the lower mobile viewport. The strategy
+    # summary is useful there but not essential, so remove it rather than
+    # competing for the same pixels as the command surface.
+    if w < 1000.0:
+        panel.hide()
+        return
+
+    var tutorial_layer := get_parent().get_node_or_null("TutorialOverlay")
+    var tutorial_panel := tutorial_layer.get("panel") if tutorial_layer != null else null
+    if tutorial_panel is Panel and tutorial_panel.visible:
+        # Tutorial owns the upper-right presentation slot until dismissed.
+        panel.hide()
+        return
+
+    panel.show()
+    panel.position = Vector2(w - 425.0, 116.0)
+    panel.size = Vector2(410.0, 82.0)
+    label.size = Vector2(panel.size.x - 28.0, 62.0)
+    label.add_theme_font_size_override("font_size", 13)
 
 func _process(_delta: float) -> void:
     if game == null or label == null:
         return
+    _layout_responsive()
     var market = game.get_node_or_null("Systems/MarketDirector")
     var goals = game.get_node_or_null("Systems/EmpireGoals")
     var market_text: Variant = "MARKET: stable"

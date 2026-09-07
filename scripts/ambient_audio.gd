@@ -23,6 +23,7 @@ func _ready() -> void:
     _seed = randf() * 100.0
     _player = AudioStreamPlayer.new()
     _player.name = "RenewWorldSoundscape"
+    _player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
     var stream: AudioStreamGenerator = AudioStreamGenerator.new()
     stream.mix_rate = SAMPLE_RATE
     stream.buffer_length = BUFFER_SECONDS
