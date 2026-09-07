@@ -12,6 +12,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/browser-qa.sh'
+      - 'scripts/visual_assertions.py'
       - '.github/workflows/browser-qa.yml'
   workflow_run:
     workflows: ["Godot Web Export"]
@@ -42,6 +43,11 @@ jobs:
           npm install -g agent-browser
           agent-browser install --with-deps
           agent-browser --version
+
+      - name: Install Python + Pillow
+        run: |
+          sudo apt-get update && sudo apt-get install -y python3-pip
+          pip3 install Pillow --break-system-packages
 
       - name: Allow deployment to settle
         if: github.event_name == 'workflow_run'

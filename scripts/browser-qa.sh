@@ -48,6 +48,34 @@ if grep -Eiq 'uncaught|exception|failed to load|webassembly|wasm|fatal|ERROR: St
   exit 1
 fi
 
+# ── Visual pixel assertions ──────────────────────────────────────────────────
+# Requires Python 3 + Pillow (pip install Pillow).  Fails the job if any
+# region shows ghost-text bleed-through or if the world backdrop never renders.
+assert_png() {
+  local png="$1" vw="$2" vh="$3" label="$4"
+  python scripts/visual_assertions.py "$png" "$vw" "$vh" \
+    || { echo "VISUAL ASSERTION FAILED: $label ($png)" >&2; return 1; }
+}
+
+# Desktop startup screenshot (full-width capture from GitHub Pages).
+if [ -f "$OUT/startup.png" ]; then
+  SW=$(python -c "from PIL import Image; img=Image.open('$OUT/startup.png'); print(img.size[0])" 2>/dev/null || echo 1280)
+  SH=$(python -c "from PIL import Image; img=Image.open('$OUT/startup.png'); print(img.size[1])" 2>/dev/null || echo 720)
+  assert_png "$OUT/startup.png" "$SW" "$SH" "desktop-startup" || exit 1
+fi
+
+# Opening-loop screenshot (after key presses, same viewport).
+if [ -f "$OUT/opening-loop.png" ]; then
+  OW=$(python -c "from PIL import Image; img=Image.open('$OUT/opening-loop.png'); print(img.size[0])" 2>/dev/null || echo 1280)
+  OH=$(python -c "from PIL import Image; img=Image.open('$OUT/opening-loop.png'); print(img.size[1])" 2>/dev/null || echo 720)
+  assert_png "$OUT/opening-loop.png" "$OW" "$OH" "opening-loop" || exit 1
+fi
+
+# Mobile phone-sized capture — runs the same mobile-specific assertions.
+assert_png "$OUT/mobile-startup.png" 390 844 "mobile-startup" || exit 1
+
+echo "Visual assertions passed. Artifacts are in $OUT."
+
 # The phone screenshot is expected to be a real 390x844 capture, proving the
 # browser actually exercised the compact layout rather than only desktop CSS.
 if command -v file >/dev/null 2>&1 && ! file "$OUT/mobile-startup.png" | grep -q '390 x 844'; then
