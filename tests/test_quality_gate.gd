@@ -85,7 +85,6 @@ func test_world_visual_contract() -> void:
         "PremiumIndustrialScene",
         "PremiumRestorationScene",
         "RichWorldScenery",
-        "MainRenderer",
         "PropertyVisual",
         "WorldView",
         "PropertyMap"

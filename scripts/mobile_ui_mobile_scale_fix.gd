@@ -46,7 +46,7 @@ func _hide_legacy_mobile_layers(mobile: bool) -> void:
     if renew == null:
         return
     var legacy_paths := [
-        "World/MainRenderer", "World/PropertyVisual", "World/WorldView",
+        "World/PropertyVisual", "World/WorldView",
         "World/EmpireController", "World/Corporate", "World/WorldMissions",
         "World/RegionController", "World/BranchController", "World/RivalSupplyController"
     ]
