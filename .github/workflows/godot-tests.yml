@@ -40,6 +40,9 @@ jobs:
           for t in tests/test_*.gd tests/integration/test_*.gd tests/release/test_*.gd; do
             case "$t" in
               tests/test_long_soak.gd|tests/test_extreme_soak.gd) continue;;
+              # Strict quality gate needs a real renderer for its frame
+              # checkpoint; it runs in browser QA, not headless CI.
+              tests/test_quality_gate.gd) continue;;
             esac
             echo "=== $t ==="
             timeout 600s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script "res://$t"

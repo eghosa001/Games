@@ -29,6 +29,23 @@ Implemented systems now include:
 - save/load persistence for the expanded empire state
 - autosave protection for long mobile sessions and application pause/close
 - responsive mobile touch controls with contextual feedback and milestones
+- alliance competitions, challenge victories and corporate rivalry wars
+- victory paths (Tycoon, Monopolist, Hegemon) with prestige/New Game+ dynasties
+- world events, seasonal liveops, economic cycles and a verified news pipeline
+- player identities, five-dimension reputation, contract haggling and IPO listings
+- dashboard, finance, portfolio and corporation screens plus a clickable district property map
+
+### Test suites
+
+```text
+godot --headless --path . --script res://tests/test_runner.gd
+```
+
+The full suite lives in `tests/` (`tests/TEST_SUITE.md` indexes every file) and runs in CI
+(`.github/workflows/godot-tests.yml`: fast suites + slow soaks). The strict release gate
+(`tests/test_quality_gate.gd`, protocol in `tests/QUALITY_TEST_PROTOCOL.md`) additionally
+requires a real renderer for its frame checkpoint, so it runs in browser QA rather than
+headless CI.
 
 ### Run it
 
@@ -102,6 +119,12 @@ It checks the five target viewport sizes, 44×44 touch-target minimums, control 
 - **CTRL+F12** — raise branch price
 
 The branch controls use **CTRL** deliberately so F6/F7/F8 remain dedicated to world-region actions and F9 remains dedicated to loading the game.
+
+### Corporate controls
+
+- **F** — enter an alliance challenge
+- **G** — show victory-path goals
+- **D** — found a new company after victory
 
 ## Development roadmap
 
