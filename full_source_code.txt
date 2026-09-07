@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 06:49:51 UTC 2026
+// Generated on: Mon Sep  7 06:55:37 UTC 2026
 
-// Source snapshot commit: 37c80eeb1e649e72bceaa05ec2205c179ed53297
+// Source snapshot commit: abbdc2a6a7d70eb86634315c8cfda948ba65bdc3
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -24225,7 +24225,7 @@ func _draw_network(w: float, h: float) -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/TEST_SUITE.md
-Lines: 79
+Lines: 82
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # RENEW test suite
 
@@ -24289,6 +24289,9 @@ The suite is organized by test purpose. Existing focused tests remain at `tests/
 
 ## V9 screens
 - `test_v9x_panels.gd`
+- `test_v95_containment.gd`
+- `test_v97_modal_focus.gd`
+- `test_v98_performance.gd`
 
 ## Integration
 - `test_new_game_flow.gd`
@@ -32927,6 +32930,169 @@ func run() -> void:
     game.free()
     await process_frame
     print("V96 PROPERTY MAP RESULT: %d passed, %d failed" % [passed, failed])
+    quit(1 if failed > 0 else 0)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: tests/test_v97_modal_focus.gd
+Lines: 84
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+extends SceneTree
+
+## Modal/input/focus audit. Screens stay exclusive, ESC closes, grids
+## rebuild stably, and unknown screens never crash.
+var passed := 0
+var failed := 0
+
+func _init() -> void:
+    call_deferred("run")
+
+func check(ok: bool, label: String) -> void:
+    if ok:
+        passed += 1
+        print("PASS: " + label)
+    else:
+        failed += 1
+        push_error("FAIL: " + label)
+
+func _esc(manager: Node) -> void:
+    var ev := InputEventKey.new()
+    ev.keycode = KEY_ESCAPE
+    ev.pressed = true
+    manager._unhandled_input(ev)
+
+func run() -> void:
+    var scene = load("res://scenes/Main.tscn")
+    check(scene != null, "Main scene loads for modal audit")
+    if scene == null:
+        quit(1)
+        return
+    var game = scene.instantiate()
+    root.add_child(game)
+    current_scene = game
+    await process_frame
+    await process_frame
+    var manager = root.get_node_or_null("RenewUIScreenManager")
+    check(manager != null, "Screen manager available")
+    if manager == null:
+        game.free()
+        quit(1)
+        return
+    var names := ["DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel", "AlliancePanel", "ContractPanel", "NewsPanel", "HistoryPanel"]
+    for screen_name in names:
+        manager.show_screen(screen_name)
+        await process_frame
+        check(str(manager.get_active_screen_name()) == screen_name, screen_name + " takes focus")
+    manager.show_screen("NoSuchScreen")
+    await process_frame
+    check(str(manager.get_active_screen_name()) == "HistoryPanel", "Unknown screens ignored safely")
+    _esc(manager)
+    await process_frame
+    var any_open := false
+    for screen_name in names:
+        if bool(manager.is_screen_open(screen_name)):
+            any_open = true
+    check(not any_open, "ESC clears every screen")
+    var hud: Node = game.get_node_or_null("UI/MainHUD")
+    check(hud != null, "Action grid found")
+    hud._set_tab(2)
+    await process_frame
+    await process_frame
+    var grid: Node = hud.get("action_grid")
+    var first_count := (grid as Node).get_child_count()
+    var stable := true
+    for i in range(30):
+        hud._refresh()
+        await process_frame
+        if (grid as Node).get_child_count() != first_count:
+            stable = false
+    check(stable, "Grid rebuilds stably")
+    var valid := true
+    for child in (grid as Node).get_children():
+        if child is Button:
+            var found := false
+            for connection in (child as Button).pressed.get_connections():
+                if (connection.get("callable", Callable()) as Callable).is_valid():
+                    found = true
+            if not found:
+                valid = false
+    check(valid, "Rebuilt buttons stay connected")
+    game.free()
+    await process_frame
+    print("V97 MODAL FOCUS RESULT: %d passed, %d failed" % [passed, failed])
+    quit(1 if failed > 0 else 0)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: tests/test_v98_performance.gd
+Lines: 67
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+extends SceneTree
+
+## Performance budgets. Grid rebuilds, panel refreshes and day advances
+## must stay far inside generous headless budgets on every run.
+var passed := 0
+var failed := 0
+
+func _init() -> void:
+    call_deferred("run")
+
+func check(ok: bool, label: String) -> void:
+    if ok:
+        passed += 1
+        print("PASS: " + label)
+    else:
+        failed += 1
+        push_error("FAIL: " + label)
+
+func run() -> void:
+    var scene = load("res://scenes/Main.tscn")
+    check(scene != null, "Main scene loads for profiling")
+    if scene == null:
+        quit(1)
+        return
+    var game = scene.instantiate()
+    root.add_child(game)
+    current_scene = game
+    await process_frame
+    await process_frame
+    var hud: Node = game.get_node_or_null("UI/MainHUD")
+    var start := Time.get_ticks_msec()
+    for i in range(20):
+        hud._set_tab(i % 4)
+    var grid_ms := float(Time.get_ticks_msec() - start) / 20.0
+    check(grid_ms < 1000.0, "Grid rebuild averages under budget")
+    var manager = root.get_node_or_null("RenewUIScreenManager")
+    var panels := ["DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel"]
+    start = Time.get_ticks_msec()
+    for screen_name in panels:
+        var panel: Node = game.get_node_or_null("UI/" + screen_name)
+        for i in range(10):
+            panel._refresh(true)
+    var panel_ms := float(Time.get_ticks_msec() - start) / 40.0
+    check(panel_ms < 1000.0, "Panel refresh averages under budget")
+    var state = root.get_node_or_null("RenewGameState")
+    game.cash = 250000
+    game.day = 1
+    game.inspect_property()
+    game.acquire_property()
+    var guard := 0
+    while str(state.get_value("properties", "stage", "")) != "Operational" and guard < 20:
+        game.restore_property()
+        guard += 1
+        await process_frame
+    game.choose_business_purpose(0)
+    game.open_business()
+    start = Time.get_ticks_msec()
+    for i in range(10):
+        game.advance_day()
+        await process_frame
+    var day_ms := float(Time.get_ticks_msec() - start) / 10.0
+    check(day_ms < 30000.0, "Day advance averages under budget")
+    print("PERF grid=%.1fms panel=%.1fms day=%.1fms" % [grid_ms, panel_ms, day_ms])
+    game.free()
+    await process_frame
+    print("V98 PERFORMANCE RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
 
 
