@@ -60,7 +60,7 @@ func _run() -> void:
         if button is Button:
             check(button.size.y >= 44.0, "Mode button %d meets 44px touch target" % (index + 1))
         else:
-            check(false, "Mode button %d is a Button" % (index + 1))
+            check(button is Button, "Mode button %d is a Button" % (index + 1))
     var action_index := 0
     for child in action_grid.get_children():
         if child is Button:
