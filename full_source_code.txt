@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 05:55:45 UTC 2026
+// Generated on: Mon Sep  7 06:12:14 UTC 2026
 
-// Source snapshot commit: 5e2d9e7bf300e28e819f9ff2d64e652bc9ee220f
+// Source snapshot commit: 8d895f7a4ab48060df8c1a3606e6fbf4766f082a
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4482,179 +4482,6 @@ func _record_transaction(method: String, acquirer_id: String, target_id: String,
     return {"ok": true, "acquisition": entry.duplicate(true)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: scripts/alliance_ai.gd
-Lines: 167
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-extends Node
-
-## Autonomous NPC corporate politics for AllianceSystem.
-## NPCs can join/form alliances, contribute, vote, sanction, defect and contest
-## leadership. Successful control challenges can replace the Chairman.
-
-const CHECK_INTERVAL_SECONDS := 0.25
-var _last_day: Variant = 0
-var _check_timer: Timer
-
-func _ready() -> void:
-    _check_timer = Timer.new()
-    _check_timer.wait_time = CHECK_INTERVAL_SECONDS
-    _check_timer.one_shot = false
-    _check_timer.timeout.connect(_check_current_day)
-    add_child(_check_timer)
-    _check_timer.start()
-    call_deferred("_check_current_day")
-
-func _exit_tree() -> void:
-    if _check_timer != null:
-        var callable := Callable(self, "_check_current_day")
-        if _check_timer.timeout.is_connected(callable):
-            _check_timer.timeout.disconnect(callable)
-        _check_timer.stop()
-
-func _check_current_day() -> void:
-    var game: Variant = get_tree().current_scene
-    if game == null or not "day" in game: return
-    var day: Variant = int(game.day)
-    if day <= 0 or day == _last_day: return
-    _last_day = day
-    var rivals = game.get("rivals")
-    var system = get_node_or_null("/root/RenewAllianceSystem")
-    if rivals == null or system == null or not "rivals" in rivals: return
-    simulate_day(system, rivals.rivals, day)
-
-func simulate_day(system: Node, npcs: Array, day: int) -> Array[String]:
-    var news: Array[String] = []
-    for npc in npcs:
-        if not npc is Dictionary: continue
-        var id: Variant = str(npc.get("id", ""))
-        if id.is_empty(): continue
-        var alliance: Dictionary = system.get_member_alliance(id)
-        if alliance.is_empty():
-            var event: Variant = _seek_or_found(system, npc, day)
-            if not event.is_empty(): news.append(event)
-            alliance = system.get_member_alliance(id)
-        if alliance.is_empty(): continue
-        if _should_defect(npc, alliance, day):
-            var left: Variant = system.leave_alliance(id)
-            if bool(left.get("ok", false)):
-                news.append("%s betrayed %s and withdrew from the alliance." % [npc.get("name", id), alliance.get("name", "the alliance")])
-            continue
-        _contribute(system, npc, alliance, day, news)
-        _vote(system, npc, alliance, news)
-        _sanction(system, npc, alliance, npcs, day, news)
-        _contest_governance(system, npc, alliance, day, news)
-    return news
-
-func _seek_or_found(system: Node, npc: Dictionary, day: int) -> String:
-    var id: Variant = str(npc.get("id", ""))
-    var relationship: Variant = int(npc.get("relationship", 0))
-    var priorities: Array = npc.get("strategic_priorities", [])
-    var best_id: Variant = ""
-    var best_score: Variant = -999999.0
-    for alliance in system.list_alliances():
-        if str(alliance.get("status", "active")) != "active": continue
-        if alliance.get("members", {}).has(id): continue
-        var score: Variant = float(alliance.get("reputation", 25.0)) + float(alliance.get("trust", 50.0)) * 0.5 + float(relationship) * 0.8
-        if "alliances" in priorities: score += 18.0
-        if int(alliance.get("treasury", 0)) >= 15000: score += 8.0
-        if score > best_score: best_score = score; best_id = str(alliance.get("id", ""))
-    if not best_id.is_empty() and (relationship >= 15 or "alliances" in priorities):
-        var result: Variant = system.join_alliance(best_id, id)
-        if bool(result.get("ok", false)): return "%s joined %s." % [npc.get("name", id), result["alliance"]["name"]]
-    var cash: Variant = int(npc.get("cash", 0))
-    if cash >= 35000 and day % 7 == 0 and relationship >= 0:
-        var seed: Variant = min(20000, int(cash * 0.10))
-        var created: Variant = system.create_alliance(id, "%s Business Coalition" % npc.get("name", id), seed)
-        if bool(created.get("ok", false)):
-            npc["cash"] = cash - seed
-            return "%s founded %s." % [npc.get("name", id), created["alliance"]["name"]]
-    return ""
-
-func _contribute(system: Node, npc: Dictionary, alliance: Dictionary, day: int, news: Array[String]) -> void:
-    if day % 2 != 0: return
-    var id: Variant = str(npc.get("id", ""))
-    var cash: Variant = int(npc.get("cash", 0))
-    if cash < 20000: return
-    var relationship: Variant = int(npc.get("relationship", 0))
-    var rate: Variant = 0.02
-    if relationship >= 25: rate += 0.025
-    if float(alliance.get("trust", 50)) >= 70: rate += 0.02
-    if "alliances" in npc.get("strategic_priorities", []): rate += 0.015
-    var amount: Variant = int(clamp(float(cash) * rate, 500.0, 10000.0))
-    var result: Variant = system.contribute(id, amount)
-    if bool(result.get("ok", false)):
-        npc["cash"] = cash - amount
-        news.append("%s contributed $%d to %s." % [npc.get("name", id), amount, alliance.get("name", "the alliance")])
-
-func _vote(system: Node, npc: Dictionary, alliance: Dictionary, news: Array[String]) -> void:
-    for motion_id in alliance.get("votes", {}).keys():
-        var motion: Dictionary = alliance["votes"][motion_id]
-        if str(motion.get("status", "open")) != "open": continue
-        var relationship: Variant = int(npc.get("relationship", 0))
-        var text: Variant = str(motion.get("motion", "")).to_lower()
-        var choice: Variant = relationship >= 0
-        if text.contains("sanction") or text.contains("expel"): choice = relationship < -10
-        if text.contains("director") or text.contains("governance") or text.contains("chairman") or text.contains("control"): choice = relationship >= 10
-        var result: Variant = system.vote(str(alliance["id"]), str(npc.get("id", "")), str(motion_id), choice)
-        if bool(result.get("ok", false)) and str(result.get("status", "")) == "passed":
-            news.append("%s helped pass '%s' in %s." % [npc.get("name", "corporation"), motion.get("motion", motion_id), alliance.get("name", "the alliance")])
-
-func _sanction(system: Node, npc: Dictionary, alliance: Dictionary, npcs: Array, day: int, news: Array[String]) -> void:
-    if day % 5 != 0: return
-    var relationship: Variant = int(npc.get("relationship", 0))
-    if relationship > -20: return
-    var id: Variant = str(npc.get("id", ""))
-    for member_id in alliance.get("members", {}).keys():
-        var target_id: Variant = str(member_id)
-        if target_id == id: continue
-        var target: Variant = _find(npcs, target_id)
-        if target.is_empty() or int(target.get("relationship", 0)) >= relationship: continue
-        var result: Variant = system.sanction(str(alliance["id"]), target_id, "Corporate conflict and breach of alliance interests.")
-        if bool(result.get("ok", false)): news.append("%s sanctioned %s inside %s." % [npc.get("name", id), target.get("name", target_id), alliance.get("name", "the alliance")])
-        return
-
-func _should_defect(npc: Dictionary, alliance: Dictionary, day: int) -> bool:
-    var id: Variant = str(npc.get("id", ""))
-    if str(alliance.get("founder_id", "")) == id: return false
-    var relationship: Variant = int(npc.get("relationship", 0))
-    var trust: Variant = float(alliance.get("trust", 50))
-    var retaliation: Variant = int(npc.get("retaliation", 0))
-    if trust < 20 and relationship < 0: return true
-    return retaliation > 0 and relationship < -35 and day % 3 == 0
-
-func _contest_governance(system: Node, npc: Dictionary, alliance: Dictionary, day: int, news: Array[String]) -> void:
-    if day % 6 != 0: return
-    var id: Variant = str(npc.get("id", ""))
-    if str(alliance.get("founder_id", "")) == id: return
-    var member: Dictionary = alliance.get("members", {}).get(id, {})
-    var contribution: Variant = int(member.get("contributed", 0))
-    var chairman_id: Variant = str(alliance.get("founder_id", ""))
-    var chairman: Dictionary = alliance.get("members", {}).get(chairman_id, {})
-    var chairman_contribution: Variant = int(chairman.get("contributed", 0))
-    if contribution <= max(1, chairman_contribution) * 1.25: return
-    if int(npc.get("relationship", 0)) < 10: return
-    var control: Variant = get_node_or_null("/root/RenewAllianceControl")
-    if control == null: return
-    var motion_id: Variant = "control_%s_%d" % [id, day]
-    var opened: Variant = system.open_vote(str(alliance["id"]), id, motion_id, "%s control challenge against Chairman" % id)
-    if not bool(opened.get("ok", false)): return
-    # The challenger votes first; other NPC votes are processed on their turns.
-    var result: Variant = system.vote(str(alliance["id"]), id, motion_id, true)
-    if not bool(result.get("ok", false)): return
-    if str(result.get("status", "")) != "passed": return
-    var support: Variant = float(result.get("yes_percent", 0.0)) / 100.0
-    if support < 0.67: return
-    var coup: Variant = control.execute_coup(str(alliance["id"]), id, support, "NPC governance coup")
-    if bool(coup.get("ok", false)):
-        news.append("%s seized control of %s and became Chairman." % [npc.get("name", id), alliance.get("name", "the alliance")])
-
-func _find(npcs: Array, id: String) -> Dictionary:
-    for npc in npcs:
-        if npc is Dictionary and str(npc.get("id", "")) == id: return npc
-    return {}
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/alliance_control_system.gd
 Lines: 40
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4698,112 +4525,6 @@ func execute_coup(alliance_id: String, challenger_id: String, support_ratio: flo
     var challenger_role: Variant = str(members[challenger_id].get("role", ""))
     if challenger_role != ROLE_DIRECTOR: return {"ok": false, "message": "Only a Director can lead a control challenge."}
     return transfer_chairman(alliance_id, chairman_id, challenger_id, reason)
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: scripts/alliance_coup_ai.gd
-Lines: 100
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-extends Node
-
-## Independent leadership-coup pass. Runs after normal alliance politics and
-## converts sustained NPC governance dominance into real Chairman transfer.
-
-const CHECK_INTERVAL_SECONDS := 0.25
-var _last_day: int = 0
-var _day_check_timer: Timer
-
-func _ready() -> void:
-    _day_check_timer = Timer.new()
-    _day_check_timer.wait_time = CHECK_INTERVAL_SECONDS
-    _day_check_timer.one_shot = false
-    _day_check_timer.timeout.connect(_check_current_day)
-    add_child(_day_check_timer)
-    _day_check_timer.start()
-    call_deferred("_check_current_day")
-
-func _exit_tree() -> void:
-    if _day_check_timer != null:
-        if _day_check_timer.timeout.is_connected(_check_current_day):
-            _day_check_timer.timeout.disconnect(_check_current_day)
-        _day_check_timer.stop()
-        _day_check_timer.queue_free()
-        _day_check_timer = null
-
-func _check_current_day() -> void:
-    var game: Variant = get_tree().current_scene
-    if game == null or not "day" in game: return
-    var day: int = int(game.day)
-    if day <= 0 or day == _last_day or day % 6 != 0: return
-    _last_day = day
-    var rivals = game.get("rivals")
-    var system = get_node_or_null("/root/RenewAllianceSystem")
-    var control = get_node_or_null("/root/RenewAllianceControl")
-    if rivals == null or system == null or control == null or not "rivals" in rivals: return
-    for alliance in system.list_alliances():
-        _consider_alliance(system, control, alliance, rivals.rivals, day)
-
-func _consider_alliance(system: Node, control: Node, alliance: Dictionary, npcs: Array, day: int) -> void:
-    if str(alliance.get("status", "")) != "active": return
-    var members: Dictionary = alliance.get("members", {})
-    if members.size() < 3: return
-    var chairman_id: String = str(alliance.get("founder_id", ""))
-    var chairman: Dictionary = _find(npcs, chairman_id)
-    var chairman_rel: int = int(chairman.get("relationship", 0))
-    var chairman_contribution: int = int(members.get(chairman_id, {}).get("contributed", 0))
-    var challenger_id: String = ""
-    var best_score: float = -999999.0
-    var support: int = 0
-    for member_id in members.keys():
-        var id: String = str(member_id)
-        if id == chairman_id: continue
-        var npc: Dictionary = _find(npcs, id)
-        if npc.is_empty(): continue
-        var contribution: int = int(members[id].get("contributed", 0))
-        var relationship: int = int(npc.get("relationship", 0))
-        var role: String = str(members[id].get("role", ""))
-        if role != "director": continue
-        if contribution <= max(1, chairman_contribution) * 1.25: continue
-        var score: float = float(contribution) + float(relationship) * 500.0
-        if score > best_score:
-            best_score = score
-            challenger_id = id
-    if challenger_id.is_empty(): return
-    var challenger: Dictionary = _find(npcs, challenger_id)
-    for member_id in members.keys():
-        var voter_id: String = str(member_id)
-        if voter_id == challenger_id:
-            support += 1
-            continue
-        var voter: Dictionary = _find(npcs, voter_id)
-        if voter.is_empty(): continue
-        var relationship: int = int(voter.get("relationship", 0))
-        if relationship >= 15: support += 1
-        elif relationship >= 5 and chairman_rel < 0: support += 1
-    var support_ratio: float = float(support) / float(members.size())
-    if support_ratio < 0.67: return
-    # A coup is only allowed when the challenger has stronger contribution and
-    # the Chairman has lost political confidence, preventing constant coups.
-    if int(challenger.get("relationship", 0)) < 15: return
-    if chairman_rel >= 30 and float(alliance.get("trust", 50.0)) >= 55.0: return
-    var result: Variant = control.execute_coup(str(alliance["id"]), challenger_id, support_ratio, "NPC coalition coup")
-    if bool(result.get("ok", false)):
-        _publish_news(game_news(), "%s seized control of %s with %d%% support." % [challenger.get("name", challenger_id), alliance.get("name", "the alliance"), int(support_ratio * 100.0)])
-
-func _find(npcs: Array, id: String) -> Dictionary:
-    for npc in npcs:
-        if npc is Dictionary and str(npc.get("id", "")) == id: return npc
-    return {}
-
-func game_news() -> Node:
-    return get_node_or_null("/root/RenewNewsSystem")
-
-func _publish_news(news_system: Node, text: String) -> void:
-    if news_system == null: return
-    if news_system.has_method("publish"):
-        news_system.publish(text)
-    elif news_system.has_method("add_news"):
-        news_system.add_news(text)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -5735,7 +5456,7 @@ func _execute_motion(alliances: Dictionary, id: String, motion_index: int) -> Di
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/ambient_audio.gd
-Lines: 87
+Lines: 92
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 ## RENEW premium world soundscape.
@@ -5797,8 +5518,13 @@ func _refresh_state() -> void:
     _city_level = lerpf(_city_level, target_city, 0.06)
 
 func _feed(delta: float) -> void:
-    if _playback == null:
-        return
+    if _playback == null or not _player.is_playing():
+        _player.play()
+        if not _player.is_playing():
+            return
+        _playback = _player.get_stream_playback() as AudioStreamGeneratorPlayback
+        if _playback == null:
+            return
     var frames: int = _playback.get_frames_available()
     var target: int = int(SAMPLE_RATE * clampf(delta, 0.04, 0.12))
     var count: int = mini(frames, target)
@@ -5939,7 +5665,7 @@ func _day() -> int:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/audio_manager.gd
-Lines: 225
+Lines: 236
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 ## RENEW premium adaptive audio system.
@@ -5995,8 +5721,13 @@ func _process(delta: float) -> void:
     _watch_game_state()
 
 func _feed_music(delta: float) -> void:
-    if _music_playback == null:
-        return
+    if _music_playback == null or not _music_player.is_playing():
+        _music_player.play()
+        if not _music_player.is_playing():
+            return
+        _music_playback = _music_player.get_stream_playback() as AudioStreamGeneratorPlayback
+        if _music_playback == null:
+            return
     var frames: int = _music_playback.get_frames_available()
     var target: int = int(SAMPLE_RATE * clampf(delta, 0.04, 0.12))
     var count: int = mini(frames, target)
@@ -6104,10 +5835,14 @@ func _begin_sfx(duration: float) -> AudioStreamGeneratorPlayback:
     player.stream = _sfx_stream(duration)
     player.volume_db = 0.0
     player.play()
+    if not player.is_playing():
+        return null
     return player.get_stream_playback() as AudioStreamGeneratorPlayback
 
 func _render_sequence(notes: Array, total_duration: float, amplitude: float, harmonic: float = 0.15, spacing: float = 0.055) -> void:
     var playback: AudioStreamGeneratorPlayback = _begin_sfx(total_duration)
+    if playback == null:
+        return
     var total_frames: int = mini(playback.get_frames_available(), int(SAMPLE_RATE * total_duration))
     var spacing_frames: int = int(SAMPLE_RATE * spacing)
     var note_frames: int = int(SAMPLE_RATE * minf(0.16, total_duration))
@@ -6126,6 +5861,8 @@ func _render_sequence(notes: Array, total_duration: float, amplitude: float, har
         playback.push_frame(Vector2(sample * (1.0 - maxf(pan, 0.0)), sample * (1.0 + minf(pan, 0.0))))
 
 func _tone(playback: AudioStreamGeneratorPlayback, duration: float, frequency: float, amplitude: float, slide: float = 0.0, harmonic: float = 0.0, noise: float = 0.0, pan: float = 0.0) -> void:
+    if playback == null:
+        return
     var frames: int = mini(playback.get_frames_available(), int(SAMPLE_RATE * duration))
     for i: int in range(frames):
         var p: float = float(i) / float(maxi(frames, 1))
@@ -7431,7 +7168,7 @@ func _day() -> int:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/collection_ui.gd
-Lines: 255
+Lines: 263
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 
@@ -7687,7 +7424,15 @@ func _dict_text(data: Dictionary) -> String:
     return " • ".join(parts) if not parts.is_empty() else "No additional details"
 
 func _money(value: int) -> String:
-    return "%,d" % value
+    return _grouped(value)
+func _grouped(value: int) -> String:
+    var negative := value < 0
+    var digits := str(absi(value))
+    var out := ""
+    while digits.length() > 3:
+        out = "," + digits.substr(digits.length() - 3, 3) + out
+        digits = digits.substr(0, digits.length() - 3)
+    return ("-" if negative else "") + digits + out
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -8045,7 +7790,7 @@ func _signature(value) -> String:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/competitors.gd
-Lines: 706
+Lines: 712
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends RefCounted
 class_name RenewCompetitors
@@ -8752,7 +8497,13 @@ func restore_state(snapshot: Dictionary) -> void:
         _normalize()
 
 func _money(value: int) -> String:
-    return "%,d" % value
+    var negative := value < 0
+    var digits := str(absi(value))
+    var out := ""
+    while digits.length() > 3:
+        out = "," + digits.substr(digits.length() - 3, 3) + out
+        digits = digits.substr(0, digits.length() - 3)
+    return ("-" if negative else "") + digits + out
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -8910,105 +8661,6 @@ func cancel_active_contract(reason: String = "player cancelled") -> void:
     state_adapter.set_value("contracts", "contract_bonus", 0)
     state_adapter.message("Contract cancelled. The $%s cancellation fee was paid." % state_adapter.money(fee))
     state_adapter.log_message("CONTRACT: cancelled %s (-$%s)." % [str(active.get("id", "")), state_adapter.money(fee)])
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: scripts/contract_controller.gd
-Lines: 93
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-extends Node
-
-var contract_system = null
-var observed_day: Variant = -1
-var observed_contract_id: Variant = ""
-
-func _ready() -> void:
-    contract_system = get_node_or_null("/root/RenewContractSystem")
-    observed_day = _main_day()
-    if contract_system != null:
-        var existing: Variant = contract_system.active_contract()
-        if not existing.is_empty(): observed_contract_id = str(existing.get("id", ""))
-
-func _process(_delta: float) -> void:
-    var main = get_parent()
-    if main == null or contract_system == null: return
-    var legacy_days: Variant = int(main.get("contract_days"))
-    if legacy_days > 0 and observed_contract_id.is_empty():
-        var existing: Variant = contract_system.active_contract()
-        if not existing.is_empty():
-            observed_contract_id = str(existing.get("id", ""))
-        else:
-            var created: Variant = contract_system.create_default_customer_contract(_main_day(), int(main.get("reputation")))
-            if bool(created.get("ok", false)):
-                observed_contract_id = str(created["contract"]["id"])
-        if not observed_contract_id.is_empty():
-            # Legacy fields are retained only as a compatibility signal; ContractSystem owns terms/execution.
-            main.set("contract_bonus", 0)
-            observed_day = _main_day()
-    if observed_contract_id.is_empty(): return
-    var current_day: Variant = _main_day()
-    if current_day == observed_day: return
-    if current_day < observed_day:
-        observed_day = current_day
-        return
-    var contract: Variant = contract_system.active_contract(observed_contract_id)
-    if contract.is_empty():
-        observed_contract_id = ""
-        observed_day = current_day
-        return
-    var production_quality: Variant = _quality()
-    var available: Variant = int(main.get("finished_goods"))
-    var result: Variant = contract_system.execute_day(observed_contract_id, available, production_quality, current_day)
-    if not bool(result.get("ok", false)):
-        observed_day = current_day
-        return
-    var delivered: Variant = int(result.get("delivered", 0))
-    var revenue: Variant = int(result.get("revenue", 0))
-    var penalty: Variant = int(result.get("penalty", 0))
-    if delivered > 0: main.set("finished_goods", max(0, available - delivered))
-    main.set("cash", int(main.get("cash")) + revenue - penalty)
-    if int(result.get("shortfall", 0)) == 0 and bool(result.get("quality_ok", false)):
-        main.set("reputation", int(main.get("reputation")) + 1)
-    elif int(result.get("shortfall", 0)) > 0:
-        main.set("reputation", max(0, int(main.get("reputation")) - 1))
-    if penalty > 0:
-        _log(main, "CONTRACT: delivered %d; penalty $%s." % [delivered, _money(penalty)])
-    else:
-        _log(main, "CONTRACT: delivered %d; revenue $%s." % [delivered, _money(revenue)])
-    if bool(result.get("finished", false)):
-        var final_contract: Dictionary = result["contract"]
-        var status: Variant = str(final_contract.get("execution_status", "breached"))
-        var due: Variant = max(1.0, float(final_contract["quantity_due"]))
-        var fulfilment_pct: Variant = int(round(float(final_contract["quantity_delivered"]) / due * 100.0))
-        _log(main, "CONTRACT %s: %s (%d%% fulfilled)." % [final_contract["id"], status.to_upper(), fulfilment_pct])
-        main.set("contract_days", 0)
-        main.set("contract_bonus", 0)
-        var impact: Dictionary = final_contract.get("reputation_impact", {})
-        var rep_change: Variant = int(impact.get("on_fulfilled", 0)) if status == "fulfilled" else int(impact.get("on_failed", 0))
-        main.set("reputation", max(0, int(main.get("reputation")) + rep_change))
-        observed_contract_id = ""
-    observed_day = current_day
-
-func _main_day() -> int:
-    var main = get_parent()
-    return int(main.get("day")) if main != null else 1
-
-func _quality() -> int:
-    var production = get_node_or_null("/root/RenewProductionSystem")
-    if production != null:
-        var snapshot: Dictionary = production.capture_state()
-        var last_run: Dictionary = snapshot.get("last_run", {})
-        if last_run.has("quality"): return int(last_run["quality"])
-    return 75
-
-func _money(value: int) -> String:
-    return "%d" % value
-
-func _log(main, text: String) -> void:
-    var logs = main.get("log_lines")
-    if logs is Array:
-        logs.append(text)
-        if logs.size() > 100: logs.pop_front()
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -11704,115 +11356,6 @@ func current_event() -> Dictionary:
         return {}
     var active = state.get_value("events", "active", {})
     return active.duplicate(true) if active is Dictionary else {}
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: scripts/economic_cycle_system.gd
-Lines: 103
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-extends Node
-class_name RenewEconomicCycleSystem
-const BOOM := "boom"
-const EXPANSION := "expansion"
-const OVERHEATING := "overheating"
-const RECESSION := "recession"
-const RECOVERY := "recovery"
-var phase: String = EXPANSION
-var phase_strength: float = 0.0
-var phase_start_day: int = 1
-var cycle_index: int = 0
-var indicators: Dictionary = {"demand":1.0,"credit":1.0,"investment":1.0,"employment":1.0,"inflation":1.0}
-var industry_profiles: Dictionary = {"consumer":{"boom":1.20,"expansion":1.10,"overheating":0.98,"recession":0.72,"recovery":1.05},"construction":{"boom":1.25,"expansion":1.18,"overheating":1.02,"recession":0.60,"recovery":1.15},"manufacturing":{"boom":1.18,"expansion":1.12,"overheating":1.00,"recession":0.78,"recovery":1.08},"energy":{"boom":1.10,"expansion":1.08,"overheating":1.18,"recession":0.95,"recovery":1.12},"logistics":{"boom":1.16,"expansion":1.12,"overheating":1.04,"recession":0.76,"recovery":1.10},"technology":{"boom":1.28,"expansion":1.20,"overheating":1.08,"recession":0.88,"recovery":1.25},"finance":{"boom":1.22,"expansion":1.14,"overheating":0.90,"recession":0.68,"recovery":1.12},"healthcare":{"boom":1.06,"expansion":1.05,"overheating":1.04,"recession":0.98,"recovery":1.04}}
-var phase_targets: Dictionary = {"boom":1.20,"expansion":1.10,"overheating":1.02,"recession":0.76,"recovery":1.05}
-var last_day: int = -1
-var history: Array = []
-func process_day(day: int, context: Dictionary = {}) -> Dictionary:
-    if day == last_day:
-        return snapshot()
-    last_day = day
-    var economic_signal: float = _economic_signal(context)
-    _advance_phase(economic_signal, day)
-    _update_indicators()
-    var result: Dictionary = snapshot()
-    result["industry_multipliers"] = industry_multipliers()
-    history.append(result.duplicate(true))
-    if history.size() > 180:
-        history.pop_front()
-    return result
-func industry_multiplier(industry: String) -> float:
-    var profile: Dictionary = industry_profiles.get(industry.to_lower(), industry_profiles["consumer"])
-    return float(profile.get(phase, 1.0)) * (0.90 + 0.10 * phase_strength)
-func industry_multipliers() -> Dictionary:
-    var result: Dictionary = {}
-    for industry in industry_profiles.keys():
-        result[industry] = industry_multiplier(str(industry))
-    return result
-func get_phase() -> String:
-    return phase
-func get_indicators() -> Dictionary:
-    return indicators.duplicate(true)
-func snapshot() -> Dictionary:
-    return {"phase":phase,"phase_strength":phase_strength,"phase_start_day":phase_start_day,"cycle_index":cycle_index,"indicators":indicators.duplicate(true)}
-func force_phase(new_phase: String, day: int = -1) -> bool:
-    if not phase_targets.has(new_phase):
-        return false
-    phase = new_phase
-    phase_start_day = _day() if day < 0 else day
-    phase_strength = 0.5
-    return true
-func _advance_phase(economic_signal: float, day: int) -> void:
-    var duration: int = day - phase_start_day
-    var next_phase: String = phase
-    match phase:
-        BOOM:
-            if duration >= 10 or economic_signal > 1.28:
-                next_phase = OVERHEATING
-        EXPANSION:
-            if duration >= 8 and economic_signal > 1.08:
-                next_phase = BOOM
-        OVERHEATING:
-            if duration >= 6 or economic_signal < 0.92:
-                next_phase = RECESSION
-        RECESSION:
-            if duration >= 8 and economic_signal > 0.96:
-                next_phase = RECOVERY
-        RECOVERY:
-            if duration >= 7 and economic_signal > 1.08:
-                next_phase = EXPANSION
-    if next_phase != phase:
-        phase = next_phase
-        phase_start_day = day
-        cycle_index += 1
-func _economic_signal(context: Dictionary) -> float:
-    var demand: float = float(context.get("demand", 1.0))
-    var credit: float = float(context.get("credit", 1.0))
-    var investment: float = float(context.get("investment", 1.0))
-    return demand * 0.5 + credit * 0.2 + investment * 0.3
-func _update_indicators() -> void:
-    var target: float = float(phase_targets.get(phase, 1.0))
-    phase_strength = clamp(phase_strength + 0.05, 0.0, 1.0)
-    indicators["demand"] = lerp(float(indicators.get("demand", 1.0)), target, 0.08)
-    indicators["credit"] = lerp(float(indicators.get("credit", 1.0)), target, 0.05)
-    indicators["investment"] = lerp(float(indicators.get("investment", 1.0)), target, 0.07)
-    indicators["employment"] = lerp(float(indicators.get("employment", 1.0)), target, 0.04)
-    indicators["inflation"] = lerp(float(indicators.get("inflation", 1.0)), 2.0 - target, 0.04)
-func _day() -> int:
-    var state = get_node_or_null("/root/RenewGameState")
-    if state != null and state.has_method("get_value"):
-        return int(state.get_value("player", "day", 1))
-    return max(1, last_day)
-func capture_state() -> Dictionary:
-    return {"phase":phase,"phase_strength":phase_strength,"phase_start_day":phase_start_day,"cycle_index":cycle_index,"indicators":indicators.duplicate(true),"last_day":last_day,"history":history.duplicate(true)}
-func restore_state(snapshot_data: Dictionary) -> void:
-    if snapshot_data.is_empty():
-        return
-    phase = str(snapshot_data.get("phase", EXPANSION))
-    phase_strength = float(snapshot_data.get("phase_strength", 0.0))
-    phase_start_day = int(snapshot_data.get("phase_start_day", 1))
-    cycle_index = int(snapshot_data.get("cycle_index", 0))
-    indicators = snapshot_data.get("indicators", indicators).duplicate(true)
-    last_day = int(snapshot_data.get("last_day", -1))
-    history = snapshot_data.get("history", []).duplicate(true)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -15159,7 +14702,7 @@ func _current_day() -> int:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/headquarters_system.gd
-Lines: 118
+Lines: 125
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 ## class_name removed: "RenewHeadquartersSystem" conflicts with project.godot autoload.
@@ -15278,12 +14821,19 @@ func restore_state(state: Dictionary) -> void:
         for area_id in AREA_SPECS.keys(): owned_areas[area_id] = bool(saved_areas.get(area_id, false))
     var saved_levels = state.get("area_levels", {}); if saved_levels is Dictionary:
         for area_id in AREA_SPECS.keys(): area_levels[area_id] = max(0, int(saved_levels.get(area_id, 0)))
-func _money(value: int) -> String: return "%,d" % value
+func _money(value: int) -> String:
+    var negative := value < 0
+    var digits := str(absi(value))
+    var out := ""
+    while digits.length() > 3:
+        out = "," + digits.substr(digits.length() - 3, 3) + out
+        digits = digits.substr(0, digits.length() - 3)
+    return ("-" if negative else "") + digits + out
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/headquarters_ui.gd
-Lines: 101
+Lines: 108
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 
@@ -15382,7 +14932,14 @@ func _built_count() -> int:
     for area_id in area_ids:
         if system.has_area(area_id): count += 1
     return count
-func _money(value: int) -> String: return "%,d" % value
+func _money(value: int) -> String:
+    var negative := value < 0
+    var digits := str(absi(value))
+    var out := ""
+    while digits.length() > 3:
+        out = "," + digits.substr(digits.length() - 3, 3) + out
+        digits = digits.substr(0, digits.length() - 3)
+    return ("-" if negative else "") + digits + out
 func _layout() -> void:
     if panel == null: return
     var size := get_viewport().get_visible_rect().size; var narrow := size.x < 760.0; var width := maxf(304.0, size.x - 16.0) if narrow else 460.0; var height := maxf(390.0, size.y - 90.0) if narrow else minf(610.0, size.y - 120.0)
@@ -17522,281 +17079,6 @@ func _load_state() -> void:
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: scripts/migrate_cleanup.gd
-Lines: 16
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-extends Node
-
-func _ready():
-    var files = [
-        "user://renew_corporate.json",
-        "user://renew_market.json",
-        "user://renew_goals.json",
-        "user://renew_milestones.json",
-        "user://renew_save.backup.json"
-    ]
-    for path in files:
-        if FileAccess.file_exists(path):
-            DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
-            print("Removed legacy file: ", path)
-    print("Legacy cleanup complete. Restart the game.")
-    queue_free()
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: scripts/mobile_action_router.gd
-Lines: 61
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-extends Node
-
-## Runtime bridge for the responsive mobile command grid.
-##
-## The mobile HUD mirrors desktop action buttons. The desktop buttons already
-## own the authoritative gameplay callbacks, so mobile buttons must proxy the
-## desktop button's `pressed` signal instead of trying to reconstruct a bound
-## Callable from Signal.get_connections().
-##
-## This also makes the bridge resilient to `_refresh()` rebuilding the action
-## grid: newly-created mobile buttons are repaired automatically.
-
-var _wired: Dictionary = {}
-
-func _process(_delta: float) -> void:
-    var hud := get_tree().root.get_node_or_null("Renew/UI/MainHUD")
-    if hud == null:
-        return
-    var mobile_actions: Node = hud.get("mobile_actions")
-    var action_grid: Node = hud.get("action_grid")
-    if mobile_actions == null or action_grid == null:
-        return
-
-    var sources: Dictionary = {}
-    for child in action_grid.get_children():
-        if child is Button:
-            sources[String(child.text)] = child
-
-    var live_buttons: Dictionary = {}
-    for child in mobile_actions.get_children():
-        if not child is Button:
-            continue
-        var button := child as Button
-        var source: Button = sources.get(String(button.text)) as Button
-        if source == null:
-            continue
-        live_buttons[button] = true
-        var previous: Variant = _wired.get(button)
-        if previous == source:
-            button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 46.0)
-            continue
-
-        # These mobile buttons are generated by renew_sims_ui.gd and may carry
-        # its legacy/broken callback. Remove those connections before installing
-        # the authoritative desktop-action proxy.
-        for connection in button.pressed.get_connections():
-            var callable: Callable = connection.get("callable", Callable())
-            if callable.is_valid():
-                button.pressed.disconnect(callable)
-        button.pressed.connect(_proxy_pressed.bind(source))
-        button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 46.0)
-        _wired[button] = source
-
-    for button in _wired.keys():
-        if not is_instance_valid(button) or not live_buttons.has(button):
-            _wired.erase(button)
-
-func _proxy_pressed(source: Button) -> void:
-    if source == null or not is_instance_valid(source):
-        return
-    source.emit_signal("pressed")
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: scripts/mobile_ui.gd
-Lines: 180
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-extends CanvasLayer
-
-# Primary mobile control surface. Main/gameplay commands are the authoritative
-# action boundary; screen presentation is delegated to RenewUIScreenManager.
-var parent: Node
-var active_tab: int = 0
-var root: Control
-var tabs: HBoxContainer
-var actions: GridContainer
-var action_scroll: ScrollContainer
-var status_label: Label
-var goal_label: Label
-var feedback_panel: Panel
-var feedback_label: Label
-var feedback_timer := 0.0
-var last_seen_day := 1
-var observed_milestones: Dictionary = {}
-var tab_names: Array[String] = ["RESTORE", "BUSINESS", "EMPIRE", "WORLD"]
-
-func _ready() -> void:
-    parent = get_tree().root.get_node_or_null("Renew")
-    _build_ui()
-    call_deferred("_initialize")
-
-func _initialize() -> void:
-    parent = get_tree().root.get_node_or_null("Renew")
-    if parent == null: return
-    root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    _layout_responsive(); _refresh(); last_seen_day = int(parent.day); _seed_milestones()
-    if not get_viewport().size_changed.is_connected(_layout_responsive): get_viewport().size_changed.connect(_layout_responsive)
-    _update_panel_visibility()
-
-func _process(delta: float) -> void:
-    if parent == null: return
-    status_label.text = "$%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day)]
-    _update_goal_label(); _detect_milestones()
-    if int(parent.day) != last_seen_day: last_seen_day = int(parent.day); _show_day_report()
-    if feedback_timer > 0.0:
-        feedback_timer -= delta
-        if feedback_timer <= 0.0: feedback_panel.hide()
-
-func _build_ui() -> void:
-    root = Control.new(); root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); root.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(root)
-    var top := ColorRect.new(); top.color = Color("101820"); top.set_anchors_preset(Control.PRESET_TOP_WIDE); top.position.y = 8; top.size.y = 54; top.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(top)
-    tabs = HBoxContainer.new(); tabs.position = Vector2(12, 12); tabs.size = Vector2(700, 46); tabs.add_theme_constant_override("separation", 8); tabs.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(tabs)
-    for i in range(tab_names.size()):
-        var b := Button.new(); b.text = tab_names[i]; b.custom_minimum_size = Vector2(150, 44); b.focus_mode = Control.FOCUS_NONE; b.mouse_filter = Control.MOUSE_FILTER_STOP; b.pressed.connect(_set_tab.bind(i)); tabs.add_child(b)
-    status_label = Label.new(); status_label.position = Vector2(760, 17); status_label.size = Vector2(500, 44); status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT; status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(status_label)
-    action_scroll = ScrollContainer.new(); action_scroll.position = Vector2(18, 72); action_scroll.size = Vector2(1240, 160); action_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; action_scroll.focus_mode = Control.FOCUS_NONE; action_scroll.mouse_filter = Control.MOUSE_FILTER_STOP; root.add_child(action_scroll)
-    actions = GridContainer.new(); actions.columns = 3; actions.add_theme_constant_override("h_separation", 10); actions.add_theme_constant_override("v_separation", 8); action_scroll.add_child(actions)
-    feedback_panel = Panel.new(); feedback_panel.position = Vector2(24, 245); feedback_panel.size = Vector2(720, 92); feedback_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE; feedback_panel.hide(); root.add_child(feedback_panel)
-    feedback_label = Label.new(); feedback_label.position = Vector2(16, 10); feedback_label.size = Vector2(688, 72); feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; feedback_label.mouse_filter = Control.MOUSE_FILTER_IGNORE; feedback_panel.add_child(feedback_label)
-    goal_label = Label.new(); goal_label.position = Vector2(24, 348); goal_label.size = Vector2(900, 48); goal_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; goal_label.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(goal_label)
-
-func _layout_responsive() -> void:
-    if root == null: return
-    var w := maxf(root.size.x, 320.0); var narrow := w < 700.0
-    tabs.size = Vector2(w - 24.0, 46)
-    for child in tabs.get_children():
-        var b := child as Button
-        if b != null: b.custom_minimum_size = Vector2(maxf(70.0, (w - 48.0) / 4.0), 44)
-    if narrow:
-        status_label.position = Vector2(12, 60); status_label.size = Vector2(w - 24.0, 30); status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT; action_scroll.position = Vector2(12, 94); action_scroll.size = Vector2(w - 24.0, 150); actions.columns = 2; feedback_panel.position = Vector2(12, 252); feedback_panel.size = Vector2(w - 24.0, 96); feedback_label.size = Vector2(w - 56.0, 76); goal_label.position = Vector2(12, 354); goal_label.size = Vector2(w - 24.0, 58)
-    else:
-        status_label.position = Vector2(maxf(730.0, w - 520.0), 17); status_label.size = Vector2(minf(500.0, w - 742.0), 44); status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT; action_scroll.position = Vector2(18, 72); action_scroll.size = Vector2(w - 36.0, 160); actions.columns = 3; feedback_panel.position = Vector2(24, 245); feedback_panel.size = Vector2(minf(720.0, w - 48.0), 92); feedback_label.size = Vector2(feedback_panel.size.x - 32.0, 72); goal_label.position = Vector2(24, 348); goal_label.size = Vector2(minf(900.0, w - 48.0), 48)
-
-func _set_tab(index: int) -> void:
-    active_tab = clampi(index, 0, tab_names.size() - 1); action_scroll.scroll_vertical = 0; _refresh(); _show_feedback("TAB: %s\nChoose an action below." % tab_names[active_tab]); _update_panel_visibility()
-
-func _button(text: String, callback: Callable) -> void:
-    if not callback.is_valid(): return
-    var b := Button.new(); b.text = text; b.custom_minimum_size = Vector2(225, 48); b.focus_mode = Control.FOCUS_NONE; b.mouse_filter = Control.MOUSE_FILTER_STOP; b.pressed.connect(_run_action.bind(text, callback)); actions.add_child(b)
-
-func _button_if_method(text: String, node: Node, method_name: String) -> void:
-    if node != null and node.has_method(method_name): _button(text, Callable(node, method_name))
-
-func _screen_button(text: String, screen_name: String) -> void:
-    _button(text, Callable(self, "_open_screen").bind(screen_name))
-
-func _open_screen(screen_name: String) -> void:
-    var manager := get_node_or_null("/root/RenewUIScreenManager")
-    if manager != null and manager.has_method("show_screen"):
-        manager.show_screen(screen_name)
-        _show_feedback("OPENED: %s" % screen_name.replace("Panel", "").replace("UI", ""))
-    else:
-        _show_feedback("Screen manager is unavailable.")
-
-func _run_action(label: String, callback: Callable) -> void:
-    if parent == null or not callback.is_valid(): _show_feedback("%s\nAction is unavailable." % label); return
-    var before_cash := int(parent.cash); var before_rep := int(parent.reputation); var before_day := int(parent.day); var before_goods := int(parent.finished_goods); var before_message := String(parent.message); var result: Variant = callback.call(); var message := ""
-    if result is Dictionary and result.has("message"): message = String(result["message"])
-    if message.is_empty() and String(parent.message) != before_message: message = String(parent.message)
-    if message.is_empty(): message = "%s completed." % label
-    var changes: Array[String] = []; var cash_change := int(parent.cash) - before_cash; var rep_change := int(parent.reputation) - before_rep; var goods_change := int(parent.finished_goods) - before_goods
-    if cash_change != 0: changes.append("Cash %s$%s" % [("+" if cash_change > 0 else "-"), _money(abs(cash_change))])
-    if rep_change != 0: changes.append("REP %s%d" % [("+" if rep_change > 0 else ""), rep_change])
-    if goods_change != 0: changes.append("Goods %s%d" % [("+" if goods_change > 0 else ""), goods_change])
-    if int(parent.day) != before_day: changes.append("Day %d" % int(parent.day))
-    if not changes.is_empty(): message += "\n" + "  |  ".join(changes)
-    _show_feedback(message); _refresh(); _detect_milestones()
-
-func _set_world_visible(node: Node, value: bool) -> void:
-    if node == null: return
-    if node is CanvasItem:
-        node.visible = value
-    else:
-        for child in node.get_children(): _set_world_visible(child, value)
-
-func _update_panel_visibility() -> void:
-    var manager := get_node_or_null("/root/RenewUIScreenManager")
-    if manager != null and manager.has_method("hide_all_screens"):
-        manager.hide_all_screens()
-        match active_tab:
-            1: manager.show_screen("CustomerSegmentsUI")
-            2: manager.show_screen("AlliancePanel")
-            3: manager.show_screen("CollectionPanel")
-
-    var renew := get_tree().root.get_node_or_null("Renew")
-    if renew != null:
-        var world := renew.get_node_or_null("World")
-        if world != null:
-            _set_world_visible(world.get_node_or_null("WorldView"), active_tab == 3)
-            _set_world_visible(world.get_node_or_null("PropertyVisual"), active_tab == 0)
-            _set_world_visible(world.get_node_or_null("RegionController"), active_tab == 3)
-            _set_world_visible(world.get_node_or_null("EmpireController"), active_tab == 2)
-            _set_world_visible(world.get_node_or_null("Corporate"), active_tab == 2)
-            _set_world_visible(world.get_node_or_null("WorldMissions"), active_tab == 3)
-            _set_world_visible(world.get_node_or_null("RivalSupplyController"), active_tab == 3)
-            _set_world_visible(world.get_node_or_null("BranchController"), active_tab in [1, 3])
-            # MainRenderer is a legacy world overlay and would duplicate the
-            # current presentation, so keep it disabled while the modern UI is active.
-            _set_world_visible(world.get_node_or_null("MainRenderer"), false)
-
-func _clear_actions() -> void:
-    for child in actions.get_children(): child.queue_free()
-
-func _refresh() -> void:
-    if parent == null or actions == null: return
-    _clear_actions()
-    match active_tab:
-        0:
-            _button("INSPECT", parent.inspect_property); _button("ACQUIRE", parent.acquire_property); _button("RESTORE", parent.restore_property); _button("OPEN BUSINESS", parent.open_business); _button("END DAY", parent.advance_day)
-            _screen_button("HEADQUARTERS", "HeadquartersPanel")
-        1:
-            _button("BUY INPUTS", parent.buy_inputs); _button("PRODUCE", parent.produce_goods); _button("HIRE", parent.hire_employee); _button("UPGRADE", parent.upgrade_business); _button("MARKETING", parent.marketing_campaign); _button("PRICE", parent.change_price); _button("SUPPLIER", parent.cycle_supplier); _button("CONTRACT", parent.sign_contract); _button("END DAY", parent.advance_day)
-            _screen_button("CUSTOMERS", "CustomerSegmentsUI"); _screen_button("CONTRACTS", "ContractPanel"); _screen_button("EMPLOYEES", "EmployeePanel"); _screen_button("HEADQUARTERS", "HeadquartersPanel")
-        2:
-            _button("NEXT RIVAL", _next_rival); _button("NEXT ASSET", _next_asset); _button("EXPANSION", parent.buy_expansion); _button("UPGRADE ASSET", parent.upgrade_expansion); _button("ALLIANCE", parent.make_alliance_offer); _button("IMPROVE RELATION", parent.improve_alliance); _button("SUPPLY DEAL", parent.propose_supply_deal); _button("CUSTOMER DEAL", parent.propose_customer_partnership); _button("ACQUIRE ASSET", parent.negotiate_selected_acquisition); _button("UPGRADE TRANSPORT", parent.upgrade_transport); _button("LOAN", parent.take_loan); _button("REPAY LOAN", parent.repay_loan)
-            _screen_button("ALLIANCE COUNCIL", "AlliancePanel"); _screen_button("TECHNOLOGY", "TechnologyPanel"); _screen_button("DIPLOMACY", "RenewDiplomacyUI"); _screen_button("HEADQUARTERS", "HeadquartersPanel")
-            var corporate := get_node_or_null("../../World/Corporate"); _button_if_method("CORPORATE STATUS", corporate, "show_status"); _button_if_method("RAISE CAPITAL", corporate, "raise_capital"); _button_if_method("BUY BACK SHARES", corporate, "buyback_shares"); _button_if_method("DIVIDEND", corporate, "pay_dividend"); _button_if_method("DEFENSE", corporate, "strengthen_defense"); _button_if_method("ALLY DEFENSE", corporate, "strategic_ally_defense"); _button_if_method("BOARD INFLUENCE", corporate, "influence_board"); _button_if_method("HOSTILE TAKEOVER", corporate, "hostile_takeover"); _button("END DAY", parent.advance_day)
-        3:
-            var region := get_node_or_null("../../World/RegionController"); _button_if_method("ESTABLISH REGION", region, "establish_region"); _button_if_method("INFRASTRUCTURE", region, "upgrade_infrastructure"); _button_if_method("TRADE CORRIDOR", region, "establish_trade_route"); _button_if_method("DISPATCH GOODS", region, "dispatch_goods")
-            var missions := get_node_or_null("../../World/WorldMissions"); _button_if_method("TAKE OPPORTUNITY", missions, "choose_a"); _button_if_method("DECLINE OPPORTUNITY", missions, "choose_b"); _button("DISTRICT", _next_district); _button("SAVE GAME", parent.save_game); _button("LOAD GAME", parent.load_game); _button("END DAY", parent.advance_day)
-            _screen_button("COLLECTION", "CollectionPanel"); _screen_button("LIVE OPS", "LiveOpsPanel"); _screen_button("HISTORY", "HistoryPanel"); _screen_button("NEWS", "NewsPanel")
-
-func _next_rival() -> void:
-    if parent.rivals != null and not parent.rivals.rivals.is_empty(): parent.select_rival((int(parent.selected_rival)+1) % parent.rivals.rivals.size())
-func _next_asset() -> void:
-    if parent.expansion != null and not parent.expansion.properties.is_empty(): parent.select_expansion((int(parent.selected_expansion)+1) % parent.expansion.properties.size())
-func _next_district() -> void:
-    if parent.districts != null and not parent.districts.districts.is_empty(): parent.select_district((int(parent.selected_district)+1) % parent.districts.districts.size())
-func _seed_milestones() -> void:
-    observed_milestones = {"acquired":bool(parent.owned),"restored":str(parent.stage)=="Operational","opened":bool(parent.business_open),"profit":int(parent.total_profit)>0}
-func _detect_milestones() -> void:
-    var current := {"acquired":bool(parent.owned),"restored":str(parent.stage)=="Operational","opened":bool(parent.business_open),"profit":int(parent.total_profit)>0}; var text := {"acquired":"FIRST ASSET\nYou acquired your starting property.","restored":"REBUILDER\nThe warehouse is operational.","opened":"FIRST BUSINESS\nYour business is open.","profit":"FIRST PROFIT\nYour operating model is producing profit."}
-    for id in current:
-        if bool(current[id]) and not bool(observed_milestones.get(id,false)): observed_milestones[id]=true; _show_feedback("★ MILESTONE UNLOCKED\n"+String(text[id]))
-func _show_day_report() -> void:
-    var profit := int(parent.last_profit); var sign := "+" if profit >= 0 else "-"; _show_feedback("DAY %d RESULTS\nRevenue $%s  |  Profit %s$%s  |  Total profit $%s" % [int(parent.day)-1,_money(int(parent.last_sales)),sign,_money(abs(profit)),_money(int(parent.total_profit))])
-func _update_goal_label() -> void:
-    var goal := "GOAL: "
-    if not parent.owned: goal += "Inspect and acquire the abandoned warehouse."
-    elif str(parent.stage) != "Operational": goal += "Restore the warehouse before expanding."
-    elif not parent.business_open: goal += "Open the business and start operating."
-    elif int(parent.total_profit) < 10000: goal += "Build the operating model to $10,000 lifetime profit."
-    else: goal += "Expand into regions, resources and stronger corporate control."
-    goal_label.text = goal
-func _show_feedback(text: String) -> void:
-    feedback_label.text = text; feedback_panel.show(); feedback_timer = 7.0
-func _money(value: int) -> String: return String.num_int64(value)
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/mobile_ui_mobile_scale_fix.gd
 Lines: 59
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -17860,175 +17142,6 @@ func _hide_legacy_mobile_layers(mobile: bool) -> void:
     if strategy is CanvasLayer:
         strategy.visible = not mobile
 
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: scripts/mobile_ui_polished.gd
-Lines: 163
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-extends "res://scripts/mobile_ui.gd"
-const BG := Color("071319")
-const SURFACE := Color("0d2028")
-const SURFACE_2 := Color("102831")
-const BORDER := Color("274852")
-const TEXT := Color("e7f2ef")
-const MUTED := Color("78949a")
-const ACCENT := Color("d5b56b")
-var top_bar: ColorRect
-var sidebar: Panel
-var content_scroll: ScrollContainer
-var content: VBoxContainer
-var title_label: Label
-var status_panel: Panel
-var objective_panel: Panel
-var objective_label: Label
-var action_panel: Panel
-var action_title: Label
-var network_panel: Panel
-var network_summary: Label
-var network_cards: HBoxContainer
-var network_scroll: ScrollContainer
-var bottom_bar: Panel
-var button_theme: Theme
-var bottom_buttons: Array[Button] = []
-var side_buttons: Array[Button] = []
-var refresh_clock := 0.0
-
-func _build_ui() -> void:
-    root = Control.new(); root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); root.mouse_filter = Control.MOUSE_FILTER_IGNORE; add_child(root)
-    var bg := ColorRect.new(); bg.color = BG; bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); bg.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(bg)
-    top_bar = ColorRect.new(); top_bar.color = SURFACE; root.add_child(top_bar)
-    var brand := Label.new(); brand.name = "Brand"; brand.text = "RENEW"; brand.add_theme_font_size_override("font_size", 22); brand.add_theme_color_override("font_color", TEXT); root.add_child(brand)
-    var strap := Label.new(); strap.text = "RESTORE  •  OPERATE  •  COOPERATE  •  EXPAND"; strap.add_theme_font_size_override("font_size", 9); strap.add_theme_color_override("font_color", MUTED); strap.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; root.add_child(strap)
-    status_panel = Panel.new(); status_panel.add_theme_stylebox_override("panel", _style(SURFACE_2, BORDER, 12)); root.add_child(status_panel)
-    status_label = Label.new(); status_label.add_theme_font_size_override("font_size", 11); status_label.add_theme_color_override("font_color", TEXT); status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER; status_label.clip_text = true; status_panel.add_child(status_label)
-    tabs = HBoxContainer.new(); tabs.add_theme_constant_override("separation",6); root.add_child(tabs)
-    for i in range(4):
-        var tab := Button.new(); tab.text=["RESTORE","BUSINESS","EMPIRE","WORLD"][i]; tab.custom_minimum_size=Vector2(92,44); tab.focus_mode=Control.FOCUS_NONE; tab.pressed.connect(_set_tab.bind(i)); tabs.add_child(tab)
-    sidebar = Panel.new(); sidebar.add_theme_stylebox_override("panel", _style(SURFACE, BORDER, 0)); root.add_child(sidebar)
-    var side_title := Label.new(); side_title.text = "CORPORATE CONTROL"; side_title.position = Vector2(16, 16); side_title.add_theme_font_size_override("font_size", 10); side_title.add_theme_color_override("font_color", MUTED); sidebar.add_child(side_title)
-    var side_box := VBoxContainer.new(); side_box.position = Vector2(10, 46); side_box.add_theme_constant_override("separation", 6); sidebar.add_child(side_box)
-    for item in [["HOME",0],["ASSETS",0],["OPERATE",1],["NETWORK",2],["WORLD",3]]:
-        var b := Button.new(); b.text = String(item[0]); b.custom_minimum_size = Vector2(180,44); b.focus_mode = Control.FOCUS_NONE; b.pressed.connect(_select_nav.bind(int(item[1]))); side_box.add_child(b); side_buttons.append(b)
-    title_label = Label.new(); title_label.add_theme_font_size_override("font_size", 24); title_label.add_theme_color_override("font_color", TEXT); root.add_child(title_label)
-    content_scroll = ScrollContainer.new(); content_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; content_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; content_scroll.mouse_filter = Control.MOUSE_FILTER_STOP; root.add_child(content_scroll)
-    content = VBoxContainer.new(); content.add_theme_constant_override("separation", 12); content_scroll.add_child(content)
-    objective_panel = Panel.new(); objective_panel.add_theme_stylebox_override("panel", _style(SURFACE_2,BORDER,12)); objective_panel.custom_minimum_size.y = 82; content.add_child(objective_panel)
-    objective_label = Label.new(); objective_label.position = Vector2(16,10); objective_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; objective_label.add_theme_font_size_override("font_size",13); objective_label.add_theme_color_override("font_color",TEXT); objective_label.size = Vector2(0,60); objective_panel.add_child(objective_label)
-    feedback_panel = objective_panel; goal_label = objective_label
-    action_panel = Panel.new(); action_panel.add_theme_stylebox_override("panel", _style(SURFACE,BORDER,12)); content.add_child(action_panel)
-    action_title = Label.new(); action_title.position = Vector2(16,10); action_title.add_theme_font_size_override("font_size",11); action_title.add_theme_color_override("font_color",MUTED); action_panel.add_child(action_title)
-    action_scroll = ScrollContainer.new(); action_scroll.position = Vector2(12,36); action_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; action_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; action_scroll.mouse_filter = Control.MOUSE_FILTER_STOP; action_panel.add_child(action_scroll)
-    actions = GridContainer.new(); actions.add_theme_constant_override("h_separation",8); actions.add_theme_constant_override("v_separation",8); action_scroll.add_child(actions)
-    network_panel = Panel.new(); network_panel.add_theme_stylebox_override("panel", _style(Color("0c2229"),Color("315b60"),12)); content.add_child(network_panel)
-    var nt := Label.new(); nt.text = "CORPORATE NETWORK"; nt.position = Vector2(16,10); nt.add_theme_font_size_override("font_size",11); nt.add_theme_color_override("font_color",TEXT); network_panel.add_child(nt)
-    network_summary = Label.new(); network_summary.position = Vector2(16,32); network_summary.add_theme_font_size_override("font_size",9); network_summary.add_theme_color_override("font_color",MUTED); network_summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; network_panel.add_child(network_summary)
-    network_scroll = ScrollContainer.new(); network_scroll.position = Vector2(12,64); network_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; network_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; network_scroll.mouse_filter = Control.MOUSE_FILTER_STOP; network_panel.add_child(network_scroll)
-    network_cards = HBoxContainer.new(); network_cards.add_theme_constant_override("separation",8); network_scroll.add_child(network_cards)
-    bottom_bar = Panel.new(); bottom_bar.add_theme_stylebox_override("panel", _style(SURFACE,BORDER,0)); root.add_child(bottom_bar)
-    var bottom := HBoxContainer.new(); bottom.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT); bottom.add_theme_constant_override("separation",4); bottom_bar.add_child(bottom)
-    for i in range(5):
-        var b := Button.new(); b.text = ["HOME","ASSETS","OPERATE","NETWORK","WORLD"][i]; b.focus_mode = Control.FOCUS_NONE; b.size_flags_horizontal = Control.SIZE_EXPAND_FILL; b.pressed.connect(_select_bottom.bind(i)); bottom.add_child(b); bottom_buttons.append(b)
-    button_theme = _make_theme(); _layout_responsive(); _refresh(); _refresh_network(); _apply_nav_state()
-func _style(bg: Color, border: Color, radius: int) -> StyleBoxFlat:
-    var s := StyleBoxFlat.new(); s.bg_color=bg; s.border_color=border; s.set_border_width_all(1); s.set_corner_radius_all(radius); return s
-func _make_theme() -> Theme:
-    var t:=Theme.new(); t.default_font_size=12; var n:=_style(Color("132b33"),Color("31535b"),8); var h:=n.duplicate(); h.bg_color=Color("1d4148"); h.border_color=ACCENT; var p:=h.duplicate(); p.bg_color=Color("2a5658"); t.set_stylebox("normal","Button",n); t.set_stylebox("hover","Button",h); t.set_stylebox("pressed","Button",p); t.set_color("font_color","Button",TEXT); t.set_color("font_hover_color","Button",Color.WHITE); return t
-func _select_nav(tab:int)->void: _set_tab(tab); _apply_nav_state()
-func _select_bottom(index:int)->void: _select_nav(index if index==0 else (0 if index==1 else index-1))
-func _apply_nav_state()->void:
-    var selected:=0 if active_tab==0 else (2 if active_tab==1 else (3 if active_tab==2 else 4))
-    for i in range(side_buttons.size()): _nav_style(side_buttons[i],i==selected)
-    for i in range(bottom_buttons.size()): _nav_style(bottom_buttons[i],i==selected)
-func _nav_style(b:Button,active:bool)->void:
-    b.theme=button_theme; b.add_theme_stylebox_override("normal",_style(Color("23494c") if active else Color("10252c"),ACCENT if active else BORDER,8)); b.add_theme_color_override("font_color",TEXT if active else MUTED)
-func _refresh()->void:
-    if parent==null or actions==null:return
-    _clear_actions(); action_title.text=["ASSET & RESTORATION COMMAND","OPERATIONS COMMAND","CORPORATE NETWORK","WORLD COMMAND"][active_tab]
-    match active_tab:
-        0:
-            _button("INSPECT PROPERTY",parent.inspect_property); _button("ACQUIRE PROPERTY",parent.acquire_property); _button("RESTORE PROPERTY",parent.restore_property); _button("OPEN BUSINESS",parent.open_business); _screen("HEADQUARTERS","HeadquartersPanel"); _screen("RESTORATION","CollectionPanel")
-        1:
-            _button("BUY INPUTS",parent.buy_inputs); _button("PRODUCE GOODS",parent.produce_goods); _button("HIRE EMPLOYEE",parent.hire_employee); _button("UPGRADE BUSINESS",parent.upgrade_business); _button("MARKETING",parent.marketing_campaign); _button("CHANGE PRICE",parent.change_price); _screen("EMPLOYEES","EmployeePanel"); _screen("CONTRACTS","ContractPanel"); _screen("CUSTOMERS","CustomerSegmentsUI")
-        2:
-            _button("NEXT RIVAL",_next_rival); _button("MAKE ALLIANCE OFFER",parent.make_alliance_offer); _button("IMPROVE RELATION",parent.improve_alliance); _button("SUPPLY DEAL",parent.propose_supply_deal); _button("CUSTOMER PARTNERSHIP",parent.propose_customer_partnership); _button("ACQUIRE TARGET",parent.negotiate_selected_acquisition); _button("TAKE LOAN",parent.take_loan); _button("REPAY LOAN",parent.repay_loan); _button("FINANCE STATUS",_show_finance_status); _screen("ALLIANCE COUNCIL","AlliancePanel"); _screen("DIPLOMACY","RenewDiplomacyUI"); _screen("TECHNOLOGY","TechnologyPanel")
-        3:
-            _screen("MARKET","MarketPanel"); _screen("INFRASTRUCTURE","HeadquartersPanel"); _screen("TECHNOLOGY","TechnologyPanel"); _screen("NEWS","NewsPanel"); _screen("HISTORY","HistoryPanel"); _screen("LIVE OPS","LiveOpsPanel"); _button("SAVE GAME",parent.save_game); _button("LOAD GAME",parent.load_game)
-    _button("END DAY",parent.advance_day); _update_text(); call_deferred("_layout_responsive")
-func _button(text:String,callback:Callable)->void:
-    if not callback.is_valid():return
-    var b:=Button.new(); b.text=text; b.theme=button_theme; b.focus_mode=Control.FOCUS_NONE; b.mouse_filter=Control.MOUSE_FILTER_STOP; b.pressed.connect(_run_action.bind(text,callback)); actions.add_child(b)
-func _screen(text:String,screen_name:String)->void: _button(text,Callable(self,"_open_screen").bind(screen_name))
-func _open_screen(screen_name:String)->void:
-    var manager:=get_node_or_null("/root/RenewUIScreenManager")
-    if manager!=null and manager.has_method("show_screen"): manager.show_screen(screen_name); _show_feedback("OPENED: %s" % screen_name.replace("Panel","").replace("UI",""))
-    else: _show_feedback("Screen manager is unavailable.")
-func _run_action(label:String,callback:Callable)->void:
-    if parent==null or not callback.is_valid():_show_feedback(label+"\nAction is unavailable."); return
-    var before_cash:=int(parent.cash); var before_rep:=int(parent.reputation); var before_day:=int(parent.day); var before_message:=String(parent.message); var result=callback.call(); var message:=""
-    if result is Dictionary and result.has("message"):message=String(result["message"])
-    if message.is_empty() and String(parent.message)!=before_message:message=String(parent.message)
-    if message.is_empty():message=label+" completed."
-    var changes:Array[String]=[]; var dc:=int(parent.cash)-before_cash; var dr:=int(parent.reputation)-before_rep
-    if dc!=0:changes.append("Cash "+("+" if dc>0 else "-")+_money(abs(dc)))
-    if dr!=0:changes.append("REP "+("+" if dr>0 else "")+str(dr))
-    if int(parent.day)!=before_day:changes.append("Day "+str(int(parent.day)))
-    if not changes.is_empty():message+="\n"+"  •  ".join(changes)
-    _show_feedback(message); objective_label.text="LATEST DECISION\n"+message; _refresh(); _detect_milestones()
-func _show_finance_status()->void:
-    var finance:=get_node_or_null("/root/RenewFinanceSystem")
-    if finance==null:
-        objective_label.text="FINANCE STATUS\nAuthoritative finance ledger is unavailable."; _show_feedback("Finance ledger is unavailable."); return
-    var accrued:=int(finance._total_accrued_interest()) if finance.has_method("_total_accrued_interest") else 0
-    objective_label.text="FINANCE STATUS\nCash $%s  •  Debt $%s  •  Accrued interest $%s\nCredit %s (%s)" % [_money(int(finance.cash)),_money(int(finance.debt)),_money(accrued),str(finance.credit_rating),str(finance.credit_score)]
-    _show_feedback("FINANCE STATUS\nAuthoritative ledger values displayed.")
-func _update_text()->void:
-    if parent==null:return
-    var objective:="Inspect → acquire → restore your first property."
-    if bool(parent.owned) and bool(parent.inspected) and String(parent.stage)!="Operational":objective="Restore the property through its next phase."
-    elif String(parent.stage)=="Operational" and not bool(parent.business_open):objective="Open the business and establish cash flow."
-    elif int(parent.total_profit)>0:objective="Reinvest profits to expand your corporate network."
-    objective_label.text="NEXT OBJECTIVE\n"+objective; title_label.text=["ASSET COMMAND","OPERATIONS","CORPORATE NETWORK","WORLD COMMAND"][active_tab]; status_label.text="$"+_money(int(parent.cash))+"  •  REP "+str(int(parent.reputation))+"  •  DAY "+str(int(parent.day))
-func _refresh_network()->void:
-    if network_cards==null:return
-    for c in network_cards.get_children():c.queue_free()
-    network_summary.text="Live relationships from the authoritative competitor state."
-    if parent==null or parent.rivals==null:return
-    for i in range(min(3,parent.rivals.rivals.size())):
-        var r:Dictionary=parent.rivals.rivals[i]; var p:=Panel.new(); p.custom_minimum_size=Vector2(200,62); p.add_theme_stylebox_override("panel",_style(Color("122c33"),BORDER,8)); var n:=Label.new(); n.text=str(r.get("name","Corporate Partner")); n.position=Vector2(9,7); n.size=Vector2(180,20); n.clip_text=true; n.add_theme_color_override("font_color",TEXT); p.add_child(n); var rel:=Label.new(); rel.text="Relationship  "+str(int(r.get("relationship",0))); rel.position=Vector2(9,31); rel.add_theme_font_size_override("font_size",9); rel.add_theme_color_override("font_color",MUTED); p.add_child(rel); network_cards.add_child(p)
-func _clear_actions()->void:
-    for c in actions.get_children():c.queue_free()
-func _next_rival()->void:
-    if parent.rivals!=null and not parent.rivals.rivals.is_empty():parent.select_rival((int(parent.selected_rival)+1)%parent.rivals.rivals.size())
-func _layout_responsive()->void:
-    if root==null:return
-    var s:=root.size
-    if s.x<1.0 or s.y<1.0:s=get_viewport().get_visible_rect().size
-    var w:=maxf(320,s.x); var h:=maxf(480,s.y); var mobile:=w<760
-    top_bar.size=Vector2(w,72 if mobile else 64); sidebar.visible=not mobile; bottom_bar.visible=mobile; tabs.visible=not mobile
-    tabs.position=Vector2(260,10) if not mobile else Vector2(8,76); tabs.size=Vector2(minf(500,w-16),44)
-    for tab in tabs.get_children():tab.custom_minimum_size=Vector2(maxf(70,(tabs.size.x-18)/4),44)
-    var brand:=root.get_node_or_null("Brand") as Label; if brand:brand.position=Vector2(16,7); brand.size=Vector2(140,30)
-    var strap:=root.get_child(3) as Label
-    if strap:
-        strap.position=Vector2(16,38)
-        strap.size=Vector2(maxf(100,minf(330,maxf(100,w-250))),18) if mobile else Vector2(330,18)
-    status_panel.position=Vector2(maxf(150,w-230),10); status_panel.size=Vector2(minf(220,w-166),38); status_label.position=Vector2(8,3); status_label.size=Vector2(status_panel.size.x-16,30); status_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_RIGHT
-    if mobile:
-        title_label.position=Vector2(12,82); title_label.size=Vector2(w-24,30); content_scroll.position=Vector2(10,116); content_scroll.size=Vector2(w-20,maxf(260,h-184)); content.custom_minimum_size.x=w-20; objective_panel.custom_minimum_size.y=76; objective_label.size=Vector2(w-52,58); action_panel.custom_minimum_size.y=maxf(190,minf(330,h*.36)); action_scroll.size=Vector2(w-44,action_panel.custom_minimum_size.y-48); actions.columns=2; network_panel.custom_minimum_size.y=138; network_scroll.size=Vector2(w-24,62)
-        for c in actions.get_children():c.custom_minimum_size=Vector2(maxf(120,(w-40)/2),46)
-        bottom_bar.position=Vector2(0,h-58); bottom_bar.size=Vector2(w,58)
-    else:
-        sidebar.position=Vector2(0,64); sidebar.size=Vector2(202,h-64); title_label.position=Vector2(224,78); title_label.size=Vector2(w-246,34); content_scroll.position=Vector2(224,122); content_scroll.size=Vector2(w-246,h-184); content.custom_minimum_size.x=w-246; objective_panel.custom_minimum_size.y=76; objective_label.size=Vector2(w-278,58); action_panel.custom_minimum_size.y=230; action_scroll.size=Vector2(w-270,190); actions.columns=3; network_panel.custom_minimum_size.y=136; network_scroll.size=Vector2(w-250,62)
-        for c in actions.get_children():c.custom_minimum_size=Vector2(maxf(160,(w-300)/3),46)
-    _apply_nav_state()
-func _set_tab(index:int)->void:
-    active_tab=clampi(index,0,3); if action_scroll:action_scroll.scroll_vertical=0; _refresh(); _apply_nav_state(); _refresh_network(); _show_feedback("TAB: %s\nChoose an action below." % ["RESTORE","BUSINESS","EMPIRE","WORLD"][active_tab])
-func _process(delta:float)->void:
-    if parent==null:return
-    super(delta)
-    if status_panel!=null and status_label!=null:status_label.text="$"+_money(int(parent.cash))+"  •  REP "+str(int(parent.reputation))+"  •  DAY "+str(int(parent.day))
-    refresh_clock+=delta
-    if refresh_clock>=1.0:refresh_clock=0.0; _refresh_network()
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/news_system.gd
@@ -24703,172 +23816,6 @@ func _input(event: InputEvent) -> void:
     match event.keycode:
         KEY_F1: choose_a()
         KEY_F2: choose_b()
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: scripts/world_power_system.gd
-Lines: 160
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-extends Node
-class_name RenewWorldPowerSystem
-
-const DIMENSIONS := ["economic", "resource", "industrial", "technology", "logistics", "diplomatic", "alliance", "cultural_reputation"]
-const WEIGHTS := {"economic": 0.18, "resource": 0.12, "industrial": 0.14, "technology": 0.14, "logistics": 0.10, "diplomatic": 0.10, "alliance": 0.10, "cultural_reputation": 0.12}
-const MAX_HISTORY := 365
-const CHECK_INTERVAL_SECONDS := 0.25
-
-var entities: Dictionary = {}
-var snapshots: Array = []
-var history: Dictionary = {}
-var last_day: int = -1
-var _day_check_timer: Timer
-
-func _ready() -> void:
-    _day_check_timer = Timer.new()
-    _day_check_timer.wait_time = CHECK_INTERVAL_SECONDS
-    _day_check_timer.one_shot = false
-    _day_check_timer.timeout.connect(_check_day)
-    add_child(_day_check_timer)
-    _day_check_timer.start()
-    call_deferred("_check_day")
-
-func _exit_tree() -> void:
-    if _day_check_timer != null:
-        if _day_check_timer.timeout.is_connected(_check_day):
-            _day_check_timer.timeout.disconnect(_check_day)
-        _day_check_timer.stop()
-        _day_check_timer.queue_free()
-        _day_check_timer = null
-
-func _check_day() -> void:
-    process_day(_current_day())
-
-func register_entity(entity_id: String, name: String = "", region: String = "global") -> Dictionary:
-    var id: String = str(entity_id)
-    if not entities.has(id): entities[id] = {"id": id, "name": name if name != "" else id, "region": region, "dimensions": {}, "score": 0.0}
-    else:
-        if name != "": entities[id]["name"] = name
-        if region != "": entities[id]["region"] = region
-    return entities[id]
-
-func update_entity(entity_id: String, dimensions: Dictionary) -> Dictionary:
-    var entry: Variant = register_entity(entity_id)
-    var values: Dictionary = entry.get("dimensions", {}).duplicate(true)
-    for dimension in DIMENSIONS:
-        if dimensions.has(dimension): values[dimension] = clamp(float(dimensions[dimension]), 0.0, 100.0)
-    entry["dimensions"] = values
-    entry["score"] = _calculate_score(values)
-    entities[entity_id] = entry
-    return entry
-
-func process_day(day: int) -> void:
-    if day == last_day and not snapshots.is_empty(): return
-    _discover_entities()
-    var rankings: Array = _build_rankings()
-    var snapshot: Dictionary = {"day": day, "rankings": rankings}
-    snapshots.append(snapshot)
-    if snapshots.size() > MAX_HISTORY: snapshots.pop_front()
-    history[str(day)] = rankings.duplicate(true)
-    if history.size() > MAX_HISTORY:
-        var oldest: String = str(snapshots[0].get("day", day))
-        history.erase(oldest)
-    last_day = day
-
-func get_world_power(entity_id: String) -> float:
-    return float(entities.get(entity_id, {}).get("score", 0.0))
-
-func get_breakdown(entity_id: String) -> Dictionary:
-    var entry: Dictionary = entities.get(entity_id, {})
-    var values: Dictionary = entry.get("dimensions", {})
-    var result: Dictionary = {}
-    for dimension in DIMENSIONS:
-        var value: float = float(values.get(dimension, 0.0))
-        result[dimension] = {"score": value, "weight": WEIGHTS[dimension], "weighted": value * float(WEIGHTS[dimension])}
-    result["total"] = float(entry.get("score", _calculate_score(values)))
-    return result
-
-func get_global_ranking(limit: int = 20) -> Array:
-    var rows: Array = []
-    for id in entities.keys():
-        var e: Dictionary = entities[id]
-        rows.append({"rank": 0, "id": id, "name": e.get("name", id), "region": e.get("region", "global"), "score": float(e.get("score", 0.0))})
-    rows.sort_custom(func(a, b): return float(a["score"]) > float(b["score"]))
-    for i in range(rows.size()): rows[i]["rank"] = i + 1
-    return rows.slice(0, min(limit, rows.size()))
-
-func get_historical(day: int, entity_id: String = "") -> Variant:
-    var ranking: Array = history.get(str(day), [])
-    if entity_id == "": return ranking.duplicate(true)
-    for row in ranking:
-        if str(row.get("id", "")) == entity_id: return row.duplicate(true)
-    return {}
-
-func get_snapshots() -> Array: return snapshots.duplicate(true)
-
-func _build_rankings() -> Array:
-    var rows: Array = []
-    for id in entities.keys():
-        var e: Dictionary = entities[id]
-        rows.append({"rank": 0, "id": id, "name": e.get("name", id), "region": e.get("region", "global"), "score": float(e.get("score", 0.0)), "breakdown": get_breakdown(id)})
-    rows.sort_custom(func(a, b): return float(a["score"]) > float(b["score"]))
-    for i in range(rows.size()): rows[i]["rank"] = i + 1
-    return rows
-
-func _calculate_score(values: Dictionary) -> float:
-    var total: float = 0.0
-    for dimension in DIMENSIONS: total += clamp(float(values.get(dimension, 0.0)), 0.0, 100.0) * float(WEIGHTS[dimension])
-    return clamp(total, 0.0, 100.0)
-
-func _discover_entities() -> void:
-    var tree: Variant = Engine.get_main_loop()
-    if tree == null: return
-    var main = tree.get_current_scene()
-    if main == null: return
-    var ranking = tree.get_root().get_node_or_null("RenewGlobalRankingSystem")
-    if ranking != null:
-        for row in ranking.get_ranking("valuation", 1000):
-            var id: String = str(row.get("id", ""))
-            if id == "": continue
-            register_entity(id, str(row.get("name", id)), str(row.get("region", "global")))
-            var metrics: Dictionary = ranking.companies.get(id, {}).get("metrics", {})
-            update_entity(id, _dimensions_from_metrics(metrics))
-
-func _dimensions_from_metrics(metrics: Dictionary) -> Dictionary:
-    return {
-        "economic": _normalize_dimension([float(metrics.get("valuation", 0.0)), float(metrics.get("revenue", 0.0)), float(metrics.get("profit", 0.0))]),
-        "resource": _normalize_value(float(metrics.get("resource_control", 0.0))),
-        "industrial": _normalize_dimension([float(metrics.get("assets", 0.0)), float(metrics.get("employees", 0.0))]),
-        "technology": _normalize_value(float(metrics.get("technology", 0.0))),
-        "logistics": _normalize_value(float(metrics.get("infrastructure", 0.0))),
-        "diplomatic": _normalize_value(float(metrics.get("reputation", 0.0))),
-        "alliance": _normalize_value(float(metrics.get("alliance_influence", 0.0))),
-        "cultural_reputation": _normalize_value(float(metrics.get("reputation", 0.0)))
-    }
-
-func _normalize_dimension(values: Array) -> float:
-    var total: float = 0.0
-    for value in values: total += _normalize_value(value)
-    return total / max(1.0, float(values.size()))
-
-func _normalize_value(value: float) -> float:
-    if value <= 0.0: return 0.0
-    return clamp(log(value + 1.0) / log(100000001.0) * 100.0, 0.0, 100.0)
-
-func capture_state() -> Dictionary:
-    return {"entities": entities.duplicate(true), "snapshots": snapshots.duplicate(true), "history": history.duplicate(true), "last_day": last_day}
-
-func restore_state(state: Dictionary) -> void:
-    entities = state.get("entities", {}).duplicate(true)
-    snapshots = state.get("snapshots", []).duplicate(true)
-    history = state.get("history", {}).duplicate(true)
-    last_day = int(state.get("last_day", -1))
-
-func _current_day() -> int:
-    var tree: Variant = Engine.get_main_loop()
-    if tree == null: return 1
-    var main = tree.get_current_scene()
-    if main != null and main.get("day") != null: return int(main.get("day"))
-    return 1
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -33275,6 +32222,62 @@ func run() -> void:
     world.queue_free()
     await process_frame
     print("V89 CYCLES RESULT: %d passed, %d failed" % [passed, failed])
+    quit(1 if failed > 0 else 0)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: tests/test_v92_runtime_qa.gd
+Lines: 50
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+extends SceneTree
+
+## Production QA: grouped money never uses invalid format specifiers, and
+## the synthesized audio stack stays silent-safe with no usable playback.
+var passed := 0
+var failed := 0
+
+func _init() -> void:
+    call_deferred("run")
+
+func check(ok: bool, label: String) -> void:
+    if ok:
+        passed += 1
+        print("PASS: " + label)
+    else:
+        failed += 1
+        push_error("FAIL: " + label)
+
+func run() -> void:
+    var Rivals = load("res://scripts/competitors.gd")
+    var rivals = Rivals.new()
+    check(rivals._money(1234567) == "1,234,567", "Money groups thousands")
+    check(rivals._money(999) == "999", "Small money ungrouped")
+    check(rivals._money(-42000) == "-42,000", "Negative money groups")
+    check(rivals._money(0) == "0", "Zero money renders")
+    var bad: Array = []
+    var dir := DirAccess.open("res://scripts")
+    if dir != null:
+        for file_name in dir.get_files():
+            if not str(file_name).ends_with(".gd"):
+                continue
+            var file := FileAccess.open("res://scripts/" + str(file_name), FileAccess.READ)
+            if file == null:
+                continue
+            if str(file.get_as_text()).find("%,d") >= 0:
+                bad.append(str(file_name))
+    check(bad.is_empty(), "No invalid %,d specifiers in scripts")
+    var audio = root.get_node_or_null("RenewAudioManager")
+    check(audio != null, "Audio manager available")
+    if audio != null:
+        audio.play_ui_tap()
+        audio.play_success()
+        audio.play_failure()
+        check(true, "SFX calls stay error-free")
+    var ambient = root.get_node_or_null("RenewAmbientAudio")
+    check(ambient != null, "Soundscape available")
+    await process_frame
+    await process_frame
+    print("V92 RUNTIME QA RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
 
 
