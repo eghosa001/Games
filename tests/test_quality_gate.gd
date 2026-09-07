@@ -248,6 +248,22 @@ func test_render_checkpoint() -> void:
     var variance := maxf(sum_sq / maxf(float(sample_count), 1.0) - mean * mean, 0.0)
     check(nonzero >= MIN_NONZERO_SAMPLE_PIXELS, "Rendered frame contains substantial visible content")
     check(variance >= MIN_PIXEL_VARIANCE, "Rendered frame has meaningful visual variation")
+    # Verify the PremiumWorldBackdrop actually paints its signature teal sky
+    # rather than leaving the canvas as clear-color black. This catches cases
+    # where the node is present and `visible == true` but `_draw()` produces
+    # nothing (null viewport, early-return bugs, transform issues).
+    var teal_count := 0
+    step_x = maxi(1, image.get_width() / 16)
+    step_y = maxi(1, image.get_height() / 9)
+    for y in range(0, image.get_height(), step_y):
+        for x in range(0, image.get_width(), step_x):
+            var c := image.get_pixel(x, y)
+            # Backdrop teal bands: G > R, B >= G, luminance in 0.04–0.30 range.
+            if c.g > c.r and c.b >= c.g and c.r > 0.02 and (c.r + c.g + c.b) / 3.0 < 0.35:
+                teal_count += 1
+    var total_samples := 1
+    if sample_count > 0: total_samples = sample_count
+    check(teal_count >= total_samples / 16, "PremiumWorldBackdrop paints teal sky (not empty clear color)")
 
     DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SCREENSHOT_DIR))
     var screenshot_path := SCREENSHOT_DIR + "/quality_gate_main.png"
