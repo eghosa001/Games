@@ -26,7 +26,8 @@ func _wipe() -> void:
 
 func _write_raw(path: String, text: String) -> void:
     var file := FileAccess.open(path, FileAccess.WRITE)
-    file.store_string(text)
+    if file != null:
+        file.store_string(text)
 
 func run() -> void:
     var Save = load("res://scripts/save_system.gd")
@@ -36,6 +37,10 @@ func run() -> void:
         return
     _wipe()
     var scene = load("res://scenes/Main.tscn")
+    check(scene != null, "Main scene loads for save edge tests")
+    if scene == null:
+        quit(1)
+        return
     var game = scene.instantiate()
     root.add_child(game)
     current_scene = game
@@ -43,6 +48,14 @@ func run() -> void:
     await process_frame
     var state = root.get_node_or_null("RenewGameState")
     var finance = root.get_node_or_null("RenewFinanceSystem")
+    check(state != null, "GameState available for save edge tests")
+    check(finance != null, "Finance system available for save edge tests")
+    if state == null or finance == null:
+        game.free()
+        await process_frame
+        _wipe()
+        quit(1)
+        return
     game.cash = 250000
     game.day = 1
     game.inspect_property()
@@ -91,7 +104,8 @@ func run() -> void:
     snap["schema_version"] = 8
     _write_raw(SAVE_PATH, JSON.stringify(snap))
     game.load_game()
-    check(true, "Missing domain rejected without crashing")
+    var missing_domain_message := str(state.get_value("company", "message", ""))
+    check(missing_domain_message.find("No save file found") >= 0, "Missing required domain is rejected cleanly")
 
     _write_raw(SAVE_PATH, JSON.stringify({"schema_version": 1, "note": "ancient"}))
     if FileAccess.file_exists(BACKUP_PATH):
