@@ -52,8 +52,13 @@ func _process(delta: float) -> void:
     _watch_game_state()
 
 func _feed_music(delta: float) -> void:
-    if _music_playback == null:
-        return
+    if _music_playback == null or not _music_player.is_playing():
+        _music_player.play()
+        if not _music_player.is_playing():
+            return
+        _music_playback = _music_player.get_stream_playback() as AudioStreamGeneratorPlayback
+        if _music_playback == null:
+            return
     var frames: int = _music_playback.get_frames_available()
     var target: int = int(SAMPLE_RATE * clampf(delta, 0.04, 0.12))
     var count: int = mini(frames, target)
@@ -161,10 +166,14 @@ func _begin_sfx(duration: float) -> AudioStreamGeneratorPlayback:
     player.stream = _sfx_stream(duration)
     player.volume_db = 0.0
     player.play()
+    if not player.is_playing():
+        return null
     return player.get_stream_playback() as AudioStreamGeneratorPlayback
 
 func _render_sequence(notes: Array, total_duration: float, amplitude: float, harmonic: float = 0.15, spacing: float = 0.055) -> void:
     var playback: AudioStreamGeneratorPlayback = _begin_sfx(total_duration)
+    if playback == null:
+        return
     var total_frames: int = mini(playback.get_frames_available(), int(SAMPLE_RATE * total_duration))
     var spacing_frames: int = int(SAMPLE_RATE * spacing)
     var note_frames: int = int(SAMPLE_RATE * minf(0.16, total_duration))
@@ -183,6 +192,8 @@ func _render_sequence(notes: Array, total_duration: float, amplitude: float, har
         playback.push_frame(Vector2(sample * (1.0 - maxf(pan, 0.0)), sample * (1.0 + minf(pan, 0.0))))
 
 func _tone(playback: AudioStreamGeneratorPlayback, duration: float, frequency: float, amplitude: float, slide: float = 0.0, harmonic: float = 0.0, noise: float = 0.0, pan: float = 0.0) -> void:
+    if playback == null:
+        return
     var frames: int = mini(playback.get_frames_available(), int(SAMPLE_RATE * duration))
     for i: int in range(frames):
         var p: float = float(i) / float(maxi(frames, 1))

@@ -58,8 +58,13 @@ func _refresh_state() -> void:
     _city_level = lerpf(_city_level, target_city, 0.06)
 
 func _feed(delta: float) -> void:
-    if _playback == null:
-        return
+    if _playback == null or not _player.is_playing():
+        _player.play()
+        if not _player.is_playing():
+            return
+        _playback = _player.get_stream_playback() as AudioStreamGeneratorPlayback
+        if _playback == null:
+            return
     var frames: int = _playback.get_frames_available()
     var target: int = int(SAMPLE_RATE * clampf(delta, 0.04, 0.12))
     var count: int = mini(frames, target)
