@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 07:20:01 UTC 2026
+// Generated on: Mon Sep  7 07:24:45 UTC 2026
 
-// Source snapshot commit: cdab4513396e4862671ecfe6326ee10a3c89c637
+// Source snapshot commit: 345d26fe3728b755abdc529c2e210dd12a578c35
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -29876,25 +29876,41 @@ func _finish() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_ui_bottom_navigation.gd
-Lines: 42
+Lines: 77
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
+
+var passed := 0
+var failed := 0
 
 func _initialize() -> void:
     call_deferred("_run")
 
+func check(ok: bool, label: String) -> bool:
+    if ok:
+        passed += 1
+        print("PASS: " + label)
+        return true
+    failed += 1
+    push_error("FAIL: " + label)
+    return false
+
 func _run() -> void:
     var packed := load("res://scenes/Main.tscn") as PackedScene
-    if packed == null:
-        quit(1); return
+    if not check(packed != null, "Main scene loads for responsive navigation"):
+        _finish()
+        return
     var scene := packed.instantiate()
     root.add_child(scene)
     current_scene = scene
     await process_frame
     await process_frame
     var hud := scene.get_node_or_null("UI/MainHUD")
-    if hud == null:
-        quit(1); return
+    if not check(hud != null, "MainHUD exists"):
+        scene.free()
+        await process_frame
+        _finish()
+        return
 
     # MainHUD's final responsive layer intentionally uses the action dock and
     # top mode rail on phones; the legacy bottom_mobile grid is hidden.
@@ -29902,24 +29918,43 @@ func _run() -> void:
     var mode_buttons := hud.get("mode_buttons") as Array
     var action_dock := hud.get("action_dock") as Control
     var action_grid := hud.get("action_grid") as GridContainer
+    check(mode_rail != null, "Mobile mode rail exists")
+    check(action_dock != null, "Mobile action dock exists")
+    check(action_grid != null, "Mobile action grid exists")
+    check(mode_buttons.size() == 4, "Mobile mode rail has four modes")
     if mode_rail == null or action_dock == null or action_grid == null or mode_buttons.size() != 4:
-        quit(1); return
+        scene.free()
+        await process_frame
+        _finish()
+        return
 
     hud.root.size = Vector2(390, 844)
     hud._layout_responsive()
     await process_frame
 
-    if not mode_rail.visible or not action_dock.visible or action_grid.columns != 2:
-        quit(1); return
-    for button in mode_buttons:
-        if button is Button and button.size.y < 44.0:
-            quit(1); return
+    check(mode_rail.visible, "Mode rail visible on phone")
+    check(action_dock.visible, "Action dock visible on phone")
+    check(action_grid.columns == 2, "Action grid uses two phone columns")
+    for index in range(mode_buttons.size()):
+        var button = mode_buttons[index]
+        if button is Button:
+            check(button.size.y >= 44.0, "Mode button %d meets 44px touch target" % (index + 1))
+        else:
+            check(false, "Mode button %d is a Button" % (index + 1))
+    var action_index := 0
     for child in action_grid.get_children():
-        if child is Button and (child.custom_minimum_size.x <= 0.0 or child.custom_minimum_size.y < 44.0):
-            quit(1); return
+        if child is Button:
+            action_index += 1
+            check(child.custom_minimum_size.x > 0.0, "Action button %d has width" % action_index)
+            check(child.custom_minimum_size.y >= 44.0, "Action button %d meets 44px touch target" % action_index)
 
-    print("MOBILE RESPONSIVE NAVIGATION TEST: PASS")
-    quit(0)
+    scene.free()
+    await process_frame
+    _finish()
+
+func _finish() -> void:
+    print("MOBILE RESPONSIVE NAVIGATION RESULT: %d passed, %d failed" % [passed, failed])
+    quit(1 if failed > 0 else 0)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -31474,7 +31509,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_v31_victory.gd
-Lines: 112
+Lines: 111
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -31564,7 +31599,6 @@ func run() -> void:
     var stored: Dictionary = victory.stored_victory()
     check(not str(stored).is_empty() or not bool(mono.get("ok", false)), "Victory state readable")
     if str(stored.get("path", "")) == "monopolist":
-        check(true, "Monopolist path wins on 50 shares")
         var again: Dictionary = victory.check_victory()
         check(bool(again.get("already", false)), "Victory fires exactly once")
         check(str(state.get_value("company", "message", "")).find("VICTORY") >= 0, "Victory announced")
@@ -31592,7 +31626,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_v32_corporate_wars.gd
-Lines: 95
+Lines: 102
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -31672,11 +31706,18 @@ func run() -> void:
     check(not bool(rivals.battle_status(victim_index).get("ok", false)), "No battles with absorbed companies")
     check(not bool(rivals.negotiate_acquisition(victim_index, 9999999, 100, []).get("ok", false)), "No buyouts of absorbed companies")
     var news: Array = rivals.daily_update(49)
-    check(true, "Daily update skips the eliminated")
+    check(news is Array, "Daily update returns a news array")
+    var eliminated_name := str(victim.get("name", ""))
+    var mentions_eliminated := false
+    for item in news:
+        if str(item).find(eliminated_name) >= 0:
+            mentions_eliminated = true
+            break
+    check(not mentions_eliminated, "Daily update skips the eliminated rival")
     var snapshot: Dictionary = rivals.capture_state()
     var restored = Rivals.new()
     restored.restore_state(snapshot)
-    check(true, "War state persists across save/load")
+    check(restored.capture_state() == snapshot, "War state persists across save/load")
 
     var scene = load("res://scenes/Main.tscn")
     check(scene != null, "Main scene loads after war changes")
@@ -33384,7 +33425,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_v92_runtime_qa.gd
-Lines: 50
+Lines: 63
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -33406,6 +33447,10 @@ func check(ok: bool, label: String) -> void:
 
 func run() -> void:
     var Rivals = load("res://scripts/competitors.gd")
+    check(Rivals != null, "Competitor model loads")
+    if Rivals == null:
+        quit(1)
+        return
     var rivals = Rivals.new()
     check(rivals._money(1234567) == "1,234,567", "Money groups thousands")
     check(rivals._money(999) == "999", "Small money ungrouped")
@@ -33413,12 +33458,14 @@ func run() -> void:
     check(rivals._money(0) == "0", "Zero money renders")
     var bad: Array = []
     var dir := DirAccess.open("res://scripts")
+    check(dir != null, "Scripts directory is readable")
     if dir != null:
         for file_name in dir.get_files():
             if not str(file_name).ends_with(".gd"):
                 continue
             var file := FileAccess.open("res://scripts/" + str(file_name), FileAccess.READ)
             if file == null:
+                bad.append(str(file_name))
                 continue
             if str(file.get_as_text()).find("%,d") >= 0:
                 bad.append(str(file_name))
@@ -33426,10 +33473,17 @@ func run() -> void:
     var audio = root.get_node_or_null("RenewAudioManager")
     check(audio != null, "Audio manager available")
     if audio != null:
+        var before_cursor: int = int(audio.get("_sfx_cursor"))
         audio.play_ui_tap()
         audio.play_success()
         audio.play_failure()
-        check(true, "SFX calls stay error-free")
+        var players: Array = audio.get("_sfx_players") as Array
+        var active_players := 0
+        for player in players:
+            if player is AudioStreamPlayer and (player as AudioStreamPlayer).is_playing():
+                active_players += 1
+        check(active_players > 0, "SFX calls start at least one playback stream")
+        check(int(audio.get("_sfx_cursor")) != before_cursor, "SFX calls advance the playback cursor")
     var ambient = root.get_node_or_null("RenewAmbientAudio")
     check(ambient != null, "Soundscape available")
     await process_frame
@@ -33512,7 +33566,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_v94_save_edges.gd
-Lines: 120
+Lines: 134
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -33542,7 +33596,8 @@ func _wipe() -> void:
 
 func _write_raw(path: String, text: String) -> void:
     var file := FileAccess.open(path, FileAccess.WRITE)
-    file.store_string(text)
+    if file != null:
+        file.store_string(text)
 
 func run() -> void:
     var Save = load("res://scripts/save_system.gd")
@@ -33552,6 +33607,10 @@ func run() -> void:
         return
     _wipe()
     var scene = load("res://scenes/Main.tscn")
+    check(scene != null, "Main scene loads for save edge tests")
+    if scene == null:
+        quit(1)
+        return
     var game = scene.instantiate()
     root.add_child(game)
     current_scene = game
@@ -33559,6 +33618,14 @@ func run() -> void:
     await process_frame
     var state = root.get_node_or_null("RenewGameState")
     var finance = root.get_node_or_null("RenewFinanceSystem")
+    check(state != null, "GameState available for save edge tests")
+    check(finance != null, "Finance system available for save edge tests")
+    if state == null or finance == null:
+        game.free()
+        await process_frame
+        _wipe()
+        quit(1)
+        return
     game.cash = 250000
     game.day = 1
     game.inspect_property()
@@ -33607,7 +33674,8 @@ func run() -> void:
     snap["schema_version"] = 8
     _write_raw(SAVE_PATH, JSON.stringify(snap))
     game.load_game()
-    check(true, "Missing domain rejected without crashing")
+    var missing_domain_message := str(state.get_value("company", "message", ""))
+    check(missing_domain_message.find("No save file found") >= 0, "Missing required domain is rejected cleanly")
 
     _write_raw(SAVE_PATH, JSON.stringify({"schema_version": 1, "note": "ancient"}))
     if FileAccess.file_exists(BACKUP_PATH):
