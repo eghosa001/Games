@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 07:43:22 UTC 2026
+// Generated on: Mon Sep  7 07:43:58 UTC 2026
 
-// Source snapshot commit: acf6df87f438a0b223da09cd301ed50044470ad6
+// Source snapshot commit: 849dc95a6ec182872c7e69cab19c1f37a5123a3f
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -27398,7 +27398,7 @@ func run() -> void:
             continue
         var instance = script.new()
         if instance == null:
-            check(false, "script instantiates: " + path)
+            check(instance != null, "script instantiates: " + path)
             continue
         for signature in _declared_functions(source):
             functions_checked += 1
@@ -29259,7 +29259,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_runner.gd
-Lines: 186
+Lines: 185
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -29423,6 +29423,7 @@ func test_main_command_integration() -> void:
     check(game.transport_capacity >= 60, "integration transport capacity updated")
 
     var reaction = root.get_node_or_null("RenewCompetitorReactionSystem")
+    check(reaction != null, "integration competitor reaction system available")
     if reaction != null:
         reaction._remember(game.day, "integration_regression", {"ok": true})
         var before_reaction_count: int = reaction.reaction_history.size()
@@ -29440,8 +29441,6 @@ func test_main_command_integration() -> void:
         check(reaction.reaction_history.size() == before_reaction_count, "integration competitor reaction history restored")
         check(bool(game.expansion.properties[0].get("owned", false)) == expansion_owned_before_save, "integration expansion ownership restored")
         check(int(game.expansion.properties[0].get("level", 0)) == expansion_level_before_save, "integration expansion level restored")
-    else:
-        check(false, "integration competitor reaction system available")
 
     check(game.expansion.properties.size() == 3, "integration expansion state restored")
 
@@ -30097,7 +30096,7 @@ func _run() -> void:
         if button is Button:
             check(button.size.y >= 44.0, "Mode button %d meets 44px touch target" % (index + 1))
         else:
-            check(false, "Mode button %d is a Button" % (index + 1))
+            check(button is Button, "Mode button %d is a Button" % (index + 1))
     var action_index := 0
     for child in action_grid.get_children():
         if child is Button:
