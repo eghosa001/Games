@@ -18,6 +18,10 @@ func check(ok: bool, label: String) -> void:
 
 func run() -> void:
     var Rivals = load("res://scripts/competitors.gd")
+    check(Rivals != null, "Competitor model loads")
+    if Rivals == null:
+        quit(1)
+        return
     var rivals = Rivals.new()
     check(rivals._money(1234567) == "1,234,567", "Money groups thousands")
     check(rivals._money(999) == "999", "Small money ungrouped")
@@ -25,12 +29,14 @@ func run() -> void:
     check(rivals._money(0) == "0", "Zero money renders")
     var bad: Array = []
     var dir := DirAccess.open("res://scripts")
+    check(dir != null, "Scripts directory is readable")
     if dir != null:
         for file_name in dir.get_files():
             if not str(file_name).ends_with(".gd"):
                 continue
             var file := FileAccess.open("res://scripts/" + str(file_name), FileAccess.READ)
             if file == null:
+                bad.append(str(file_name))
                 continue
             if str(file.get_as_text()).find("%,d") >= 0:
                 bad.append(str(file_name))
@@ -38,10 +44,17 @@ func run() -> void:
     var audio = root.get_node_or_null("RenewAudioManager")
     check(audio != null, "Audio manager available")
     if audio != null:
+        var before_cursor: int = int(audio.get("_sfx_cursor"))
         audio.play_ui_tap()
         audio.play_success()
         audio.play_failure()
-        check(true, "SFX calls stay error-free")
+        var players: Array = audio.get("_sfx_players") as Array
+        var active_players := 0
+        for player in players:
+            if player is AudioStreamPlayer and (player as AudioStreamPlayer).is_playing():
+                active_players += 1
+        check(active_players > 0, "SFX calls start at least one playback stream")
+        check(int(audio.get("_sfx_cursor")) != before_cursor, "SFX calls advance the playback cursor")
     var ambient = root.get_node_or_null("RenewAmbientAudio")
     check(ambient != null, "Soundscape available")
     await process_frame
