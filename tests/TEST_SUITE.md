@@ -1,6 +1,13 @@
 # RENEW test suite
 
-The suite is organized by test purpose. Existing focused tests remain at `tests/` for compatibility; this index is the canonical grouping until physical test-file moves are made without breaking existing runners.
+The suite is organized by test purpose. Existing focused tests remain at `tests/` for compatibility. The strict quality gate is the release-level acceptance floor.
+
+## Strict release gates
+- `test_quality_gate.gd` — canonical Godot release gate: boot, scene composition, visible world assets, responsive UI, core gameplay progression, persistence, rendered-frame checkpoint and runtime stability.
+- `QUALITY_TEST_PROTOCOL.md` — rules preventing false-green/loophole tests and defining artifact review.
+- `release/test_full_new_game_flow.gd` — end-to-end first-session progression.
+- `test_release_smoke.gd` — release structure and architecture smoke test.
+- `test_architecture_integrity.gd` — script and scene architecture integrity.
 
 ## Unit
 - `test_employee_system.gd`
@@ -76,7 +83,13 @@ The suite is organized by test purpose. Existing focused tests remain at `tests/
 - `test_extreme_soak.gd`
 
 ## Release
+- `release/test_full_new_game_flow.gd`
 - `test_release_smoke.gd`
 - `test_architecture_integrity.gd`
+- `test_quality_gate.gd`
 
-Tests that did not previously exist are tracked by name here and should be added as their corresponding system contracts are finalized; this avoids creating fake passing tests.
+## CI policy
+
+The main Godot workflow runs every `tests/test_*.gd`, every integration test and every release test, excluding only the explicitly slow soak tests from the fast job. The strict quality gate is therefore included automatically in the fast CI suite and should remain a required release check.
+
+Tests must never manufacture a passing result by skipping a required assertion. Missing systems, missing assets, broken references, failed state transitions and invalid rendered output are failures.
