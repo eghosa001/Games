@@ -95,9 +95,20 @@ func _check_layout_contract(scene: Node, hud: Node) -> void:
     for viewport_size in [Vector2(390, 844), Vector2(320, 568), Vector2(1280, 720)]:
         root_control.size = viewport_size
         hud._layout_responsive()
-        await process_frame
+        # Propagate the simulated viewport size to floating-panel roots so their
+        # responsive layouts recompute for the target size instead of the boot
+        # viewport size.
         var tutorial := scene.get_node_or_null("UI/TutorialOverlay")
         var strategy := scene.get_node_or_null("UI/StrategyHUD")
+        if tutorial != null:
+            var troot := tutorial.get("overlay_root") as Control
+            if troot != null: troot.size = viewport_size
+            tutorial._layout_responsive()
+        if strategy != null:
+            var sroot := strategy.get("root") as Control
+            if sroot != null: sroot.size = viewport_size
+            strategy._layout_responsive()
+        await process_frame
         var tutorial_panel := tutorial.get("panel") as Control if tutorial != null else null
         var strategy_panel := strategy.get("panel") as Control if strategy != null else null
         if viewport_size.x < 700.0:
