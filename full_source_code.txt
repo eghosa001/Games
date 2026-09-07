@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 07:48:08 UTC 2026
+// Generated on: Mon Sep  7 08:00:37 UTC 2026
 
-// Source snapshot commit: efc78a69ecfed5734b2ee9f2ab95fc9960398c37
+// Source snapshot commit: afc68fe5b21022a970cc68a52fe94abcebfa1472
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -5936,7 +5936,7 @@ func _execute_motion(alliances: Dictionary, id: String, motion_index: int) -> Di
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/ambient_audio.gd
-Lines: 92
+Lines: 93
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 ## RENEW premium world soundscape.
@@ -5963,6 +5963,7 @@ func _ready() -> void:
     _seed = randf() * 100.0
     _player = AudioStreamPlayer.new()
     _player.name = "RenewWorldSoundscape"
+    _player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
     var stream: AudioStreamGenerator = AudioStreamGenerator.new()
     stream.mix_rate = SAMPLE_RATE
     stream.buffer_length = BUFFER_SECONDS
@@ -6145,7 +6146,7 @@ func _day() -> int:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/audio_manager.gd
-Lines: 236
+Lines: 239
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 ## RENEW premium adaptive audio system.
@@ -6178,6 +6179,7 @@ func _ready() -> void:
     for i: int in range(MAX_SFX_PLAYERS):
         var player: AudioStreamPlayer = AudioStreamPlayer.new()
         player.bus = "Master"
+        player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
         add_child(player)
         _sfx_players.append(player)
     call_deferred("_hook_ui")
@@ -6186,6 +6188,7 @@ func _ready() -> void:
 func _setup_music() -> void:
     _music_player = AudioStreamPlayer.new()
     _music_player.name = "RenewAdaptiveMusic"
+    _music_player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
     var stream: AudioStreamGenerator = AudioStreamGenerator.new()
     stream.mix_rate = SAMPLE_RATE
     stream.buffer_length = 2.0
@@ -6314,6 +6317,7 @@ func _begin_sfx(duration: float) -> AudioStreamGeneratorPlayback:
     _sfx_cursor = (_sfx_cursor + 1) % _sfx_players.size()
     player.stream = _sfx_stream(duration)
     player.volume_db = 0.0
+    player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
     player.play()
     if not player.is_playing():
         return null
@@ -22262,12 +22266,12 @@ func _contracts() -> Node:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/strategy_hud.gd
-Lines: 61
+Lines: 71
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 
-# Non-blocking CEO dashboard. Keep it clear of the primary touch controls on
-# both desktop and narrow mobile layouts.
+# Non-blocking CEO dashboard. Keep it clear of the primary touch controls and
+# tutorial surface instead of assuming a fixed screen coordinate is safe.
 var game: Node
 var root: Control
 var panel: Panel
@@ -22297,22 +22301,32 @@ func _ready() -> void:
 func _layout_responsive() -> void:
     if root == null or panel == null or label == null:
         return
-    var w: Variant = maxf(root.size.x, 320.0)
-    var h: Variant = maxf(root.size.y, 480.0)
-    if w < 700.0:
-        panel.position = Vector2(12, minf(418.0, h - 150.0))
-        panel.size = Vector2(w - 24.0, 86.0)
-        label.size = Vector2(panel.size.x - 28.0, panel.size.y - 20.0)
-        label.add_theme_font_size_override("font_size", 11)
-    else:
-        panel.position = Vector2(maxf(845.0, w - 435.0), minf(594.0, h - 100.0))
-        panel.size = Vector2(minf(410.0, w - panel.position.x - 18.0), 82.0)
-        label.size = Vector2(panel.size.x - 28.0, 62.0)
-        label.add_theme_font_size_override("font_size", 13)
+    var w: float = maxf(root.size.x, 320.0)
+    var h: float = maxf(root.size.y, 480.0)
+    # The compact action sheet owns the lower mobile viewport. The strategy
+    # summary is useful there but not essential, so remove it rather than
+    # competing for the same pixels as the command surface.
+    if w < 1000.0:
+        panel.hide()
+        return
+
+    var tutorial_layer := get_parent().get_node_or_null("TutorialOverlay")
+    var tutorial_panel := tutorial_layer.get("panel") if tutorial_layer != null else null
+    if tutorial_panel is Panel and tutorial_panel.visible:
+        # Tutorial owns the upper-right presentation slot until dismissed.
+        panel.hide()
+        return
+
+    panel.show()
+    panel.position = Vector2(w - 425.0, 116.0)
+    panel.size = Vector2(410.0, 82.0)
+    label.size = Vector2(panel.size.x - 28.0, 62.0)
+    label.add_theme_font_size_override("font_size", 13)
 
 func _process(_delta: float) -> void:
     if game == null or label == null:
         return
+    _layout_responsive()
     var market = game.get_node_or_null("Systems/MarketDirector")
     var goals = game.get_node_or_null("Systems/EmpireGoals")
     var market_text: Variant = "MARKET: stable"
@@ -23228,7 +23242,7 @@ func load_snapshot(state:Dictionary)->void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/tutorial_overlay.gd
-Lines: 145
+Lines: 160
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 
@@ -23313,7 +23327,13 @@ func _layout_responsive() -> void:
         return
     var narrow: bool = w < 700.0
     if narrow:
-        panel.position = Vector2(8, minf(426.0, maxf(420.0, h - 104.0)))
+        # Keep the tutorial immediately above the mobile command sheet. This
+        # makes its position derive from the same reserved lower region as the
+        # primary HUD instead of using a fixed y coordinate.
+        var dock_height: float = clampf(h * 0.40, 218.0, 250.0)
+        var dock_top: float = maxf(114.0, h - dock_height - 8.0)
+        var tutorial_bottom: float = dock_top - 8.0
+        panel.position = Vector2(8.0, maxf(108.0, tutorial_bottom - 86.0))
         panel.size = Vector2(w - 16.0, 86.0)
         title_label.position = Vector2(10, 8)
         title_label.size = Vector2(w - 132.0, 24)
@@ -23324,22 +23344,32 @@ func _layout_responsive() -> void:
         hint_label.hide()
         continue_button.position = Vector2(w - 106.0, 8)
         continue_button.size = Vector2(94, 32)
+        panel.show()
+    elif w >= 1000.0:
+        # Reserve the upper-right slot. StrategyHUD explicitly yields this slot
+        # while the tutorial is visible, so the two CanvasLayers cannot stack.
+        panel.position = Vector2(w - 425.0, 116.0)
+        panel.size = Vector2(410.0, 96.0)
+        title_label.position = Vector2(18, 10)
+        title_label.size = Vector2(panel.size.x - 36.0, 24)
+        progress_label.position = Vector2(18, 34)
+        progress_label.size = Vector2(panel.size.x - 36.0, 18)
+        body_label.position = Vector2(18, 54)
+        body_label.size = Vector2(panel.size.x - 36.0, 30)
+        hint_label.hide()
+        continue_button.position = Vector2(panel.size.x - 110.0, 62)
+        continue_button.size = Vector2(92, 28)
+        panel.show()
     else:
-        panel.position = Vector2(24, 420)
-        panel.size = Vector2(minf(420.0, w - 48.0), 142.0)
-        title_label.position = Vector2(18, 12)
-        title_label.size = Vector2(panel.size.x - 36.0, 28)
-        progress_label.position = Vector2(18, 40)
-        progress_label.size = Vector2(panel.size.x - 36.0, 20)
-        body_label.position = Vector2(18, 66)
-        body_label.size = Vector2(panel.size.x - 36.0, 44)
-        hint_label.position = Vector2(18, 112)
-        hint_label.size = Vector2(panel.size.x - 130.0, 22)
-        hint_label.show()
-        continue_button.position = Vector2(panel.size.x - 110.0, 108)
-        continue_button.size = Vector2(92, 30)
-    collapsed_button.position = Vector2(8, minf(426.0, maxf(420.0, h - 48.0)))
-    collapsed_button.size = Vector2(118, 38)
+        # At intermediate widths there is no safe dedicated desktop slot. Do
+        # not paint a floating card over the primary HUD; keep only the small
+        # reopen affordance in a non-critical margin.
+        panel.hide()
+        collapsed_button.position = Vector2(8.0, maxf(108.0, h - 46.0))
+        collapsed_button.size = Vector2(118.0, 38.0)
+        collapsed_button.show()
+        return
+    collapsed_button.hide()
 
 func _refresh() -> void:
     if dismissed or game == null:
@@ -23372,7 +23402,6 @@ func _collapse() -> void:
 func _expand() -> void:
     dismissed = false
     panel.show()
-    collapsed_button.hide()
     _layout_responsive()
     _refresh()
 
@@ -26091,6 +26120,43 @@ func _declared_functions(source: String) -> Array[String]:
                 var name := stripped.substr(5, open - 5).strip_edges()
                 if not result.has(name): result.append(name)
     return result
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: tests/test_audio_web_compat.gd
+Lines: 31
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+extends SceneTree
+
+var failed := 0
+var checks := 0
+
+func _init() -> void:
+    call_deferred("_run")
+
+func check(label: String, condition: bool) -> void:
+    checks += 1
+    if condition:
+        print("PASS: %s" % label)
+    else:
+        failed += 1
+        print("FAIL: %s" % label)
+
+func _run() -> void:
+    var audio_source := FileAccess.get_file_as_string("res://scripts/audio_manager.gd")
+    var ambient_source := FileAccess.get_file_as_string("res://scripts/ambient_audio.gd")
+    check("adaptive music explicitly forces stream playback", audio_source.contains("_music_player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM"))
+    check("SFX generator explicitly forces stream playback", audio_source.contains("player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM"))
+    check("ambient generator explicitly forces stream playback", ambient_source.contains("_player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM"))
+
+    var probe := AudioStreamPlayer.new()
+    probe.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
+    check("Godot exposes stream playback mode", probe.get_playback_type() == AudioServer.PLAYBACK_TYPE_STREAM)
+    probe.free()
+
+    print("--- AUDIO WEB COMPAT SUMMARY ---")
+    print("Checks: %d | Failures: %d" % [checks, failed])
+    quit(1 if failed > 0 else 0)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -29422,7 +29488,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_responsive_ui_shell.gd
-Lines: 114
+Lines: 185
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -29472,8 +29538,6 @@ func _run() -> void:
         for screen_name in screen_names:
             check("startup screen hidden: %s" % screen_name, not manager.is_screen_open(screen_name))
 
-        # Every primary screen must be openable, have a real close action, and
-        # release the UI back to the primary page after that action.
         for screen_name in screen_names:
             manager.show_screen(screen_name)
             await process_frame
@@ -29483,9 +29547,15 @@ func _run() -> void:
             check("has usable close button: %s" % screen_name, close_button != null and close_button.visible and close_button.size.x > 0.0 and close_button.size.y > 0.0)
             if close_button != null:
                 check("close button accepts mouse/touch: %s" % screen_name, close_button.mouse_filter != Control.MOUSE_FILTER_IGNORE)
-                close_button.emit_signal("pressed")
-                await process_frame
-            check("closes screen: %s" % screen_name, not manager.is_screen_open(screen_name))
+                await _click_at(close_button.get_global_rect().get_center())
+                check("real mouse click closes screen: %s" % screen_name, not manager.is_screen_open(screen_name))
+            if manager.is_screen_open(screen_name):
+                # Exercise the touch route too when a mouse route did not close
+                # it. This is real InputEventScreenTouch dispatch, not a signal
+                # shortcut, so the test covers the reported interception bug.
+                await _touch_at(close_button.get_global_rect().get_center())
+                check("real touch closes screen: %s" % screen_name, not manager.is_screen_open(screen_name))
+            check("screen is closed after real input: %s" % screen_name, not manager.is_screen_open(screen_name))
 
         # ESC must close the currently active primary screen as a second,
         # independent escape path.
@@ -29499,7 +29569,70 @@ func _run() -> void:
         await process_frame
         check("ESC closes active screen", not manager.is_screen_open("NewsPanel"))
 
+    # Validate the actual geometry contract at representative desktop/mobile
+    # sizes. These checks target the root cause: independent CanvasLayers must
+    # not paint their auxiliary cards over the primary command sheet.
+    await _check_layout_contract(scene, hud)
     _finish()
+
+func _check_layout_contract(scene: Node, hud: Node) -> void:
+    var root_control := hud.get("root") as Control
+    var action_dock := hud.get("action_dock") as Control
+    check("HUD root is a Control", root_control != null)
+    check("action dock resolves", action_dock != null)
+    if root_control == null or action_dock == null:
+        return
+
+    for viewport_size in [Vector2(390, 844), Vector2(320, 568), Vector2(1280, 720)]:
+        root_control.size = viewport_size
+        await process_frame
+        var tutorial := scene.get_node_or_null("UI/TutorialOverlay")
+        var strategy := scene.get_node_or_null("UI/StrategyHUD")
+        var tutorial_panel := tutorial.get("panel") as Control if tutorial != null else null
+        var strategy_panel := strategy.get("panel") as Control if strategy != null else null
+        if viewport_size.x < 700.0:
+            check("mobile action dock stays inside viewport %s" % viewport_size, _inside_viewport(action_dock, viewport_size))
+            if tutorial_panel != null and tutorial_panel.visible:
+                check("mobile tutorial avoids action dock %s" % viewport_size, not tutorial_panel.get_global_rect().intersects(action_dock.get_global_rect()))
+            check("mobile strategy HUD yields to primary shell %s" % viewport_size, strategy_panel == null or not strategy_panel.visible)
+        else:
+            if tutorial_panel != null and tutorial_panel.visible:
+                check("desktop tutorial avoids action dock", not tutorial_panel.get_global_rect().intersects(action_dock.get_global_rect()))
+            if strategy_panel != null and strategy_panel.visible:
+                check("desktop strategy HUD avoids action dock", not strategy_panel.get_global_rect().intersects(action_dock.get_global_rect()))
+
+func _inside_viewport(control: Control, size: Vector2) -> bool:
+    var rect := control.get_global_rect()
+    var viewport_rect := Rect2(Vector2.ZERO, size)
+    return viewport_rect.encloses(rect)
+
+func _click_at(position: Vector2) -> void:
+    var down := InputEventMouseButton.new()
+    down.button_index = MOUSE_BUTTON_LEFT
+    down.position = position
+    down.pressed = true
+    Input.parse_input_event(down)
+    await process_frame
+    var up := InputEventMouseButton.new()
+    up.button_index = MOUSE_BUTTON_LEFT
+    up.position = position
+    up.pressed = false
+    Input.parse_input_event(up)
+    await process_frame
+
+func _touch_at(position: Vector2) -> void:
+    var down := InputEventScreenTouch.new()
+    down.index = 1
+    down.position = position
+    down.pressed = true
+    Input.parse_input_event(down)
+    await process_frame
+    var up := InputEventScreenTouch.new()
+    up.index = 1
+    up.position = position
+    up.pressed = false
+    Input.parse_input_event(up)
+    await process_frame
 
 func _find_screen(manager: Node, screen_name: String) -> Node:
     var ui := get_root().get_node_or_null("Renew/UI")
@@ -29512,10 +29645,14 @@ func _find_screen(manager: Node, screen_name: String) -> Node:
 func _find_close_button(node: Node) -> Button:
     if node == null:
         return null
-    for child in node.get_children():
+    var children := node.get_children()
+    for i in range(children.size() - 1, -1, -1):
+        var child := children[i]
         var button := child as Button
-        if button != null and (button.text.to_upper() == "CLOSE" or button.name.to_lower().contains("close")):
-            return button
+        if button != null:
+            var label := button.text.strip_edges().to_upper()
+            if label == "CLOSE" or label == "X" or label == "×" or button.name.to_lower().contains("close"):
+                return button
         var nested := _find_close_button(child)
         if nested != null:
             return nested
