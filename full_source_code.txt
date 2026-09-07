@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 19:09:18 UTC 2026
+// Generated on: Mon Sep  7 19:46:45 UTC 2026
 
-// Source snapshot commit: 3a2a09e1bb693693715e64b9aedc5cb909149ec6
+// Source snapshot commit: 2801384ae065eaca5062b40cd62ea685e8daa4b5
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -82,7 +82,7 @@ jobs:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: .github/workflows/browser-qa.yml
-Lines: 85
+Lines: 91
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 name: Live Browser QA
 
@@ -98,6 +98,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/browser-qa.sh'
+      - 'scripts/visual_assertions.py'
       - '.github/workflows/browser-qa.yml'
   workflow_run:
     workflows: ["Godot Web Export"]
@@ -128,6 +129,11 @@ jobs:
           npm install -g agent-browser
           agent-browser install --with-deps
           agent-browser --version
+
+      - name: Install Python + Pillow
+        run: |
+          sudo apt-get update && sudo apt-get install -y python3-pip
+          pip3 install Pillow --break-system-packages
 
       - name: Allow deployment to settle
         if: github.event_name == 'workflow_run'
