@@ -1,6 +1,6 @@
 # RENEW Strict QA Protocol
 
-The repository has many focused Godot tests, but passing feature tests alone does not prove the game is release-ready. The canonical quality gate is `tests/test_quality_gate.gd`.
+The repository has many focused Godot tests, but passing feature tests alone does not prove the game is release-ready. The canonical quality gate is `tests/test_quality_gate.gd`, and the test-suite meta gate is `tests/test_test_quality_integrity.gd`.
 
 ## Mandatory gates
 
@@ -12,14 +12,17 @@ The repository has many focused Godot tests, but passing feature tests alone doe
 6. **Persistence** — authoritative state must capture and restore.
 7. **Rendered-frame checkpoint** — the actual Godot viewport must render substantial, visually varied content and a PNG checkpoint is produced.
 8. **Runtime stability** — the running scene must sustain at least 30 FPS in the automated sample and remain alive.
+9. **Test-suite integrity** — the tests themselves must not contain false-green patterns such as `assert()`-only checks, unconditional `quit()`, or retry loops that conceal nondeterministic failures.
 
 ## No-loophole rules
 
 - A test failure must exit with code 1 or the test is not a valid gate.
 - A warning cannot substitute for a required assertion.
+- `assert()` alone is forbidden for release acceptance tests; use explicit failure accounting and a non-zero exit status.
 - Asset existence does not count as visual availability; required final assets must be visible and textured in the playable scene.
 - UI existence does not count as usability; layout and touch-size constraints must be measured.
 - A command existing does not count as gameplay; the strict gate executes the core progression.
+- Randomized gameplay tests must use deterministic setup or an explicitly controlled RNG; retry-until-success is forbidden when it can hide a failure.
 - A screenshot existing does not count as quality; the gate checks that the rendered frame is non-empty and has meaningful pixel variation, while the saved image remains available for visual inspection.
 - Subjective visual quality still requires human review. Automated rendering tests are a floor, not an artistic substitute.
 
