@@ -32,8 +32,7 @@ func run() -> void:
     if failed > 0:
         for item in failures:
             print("FAILED: " + item)
-        quit(1)
-    quit(0)
+    quit(1 if failed > 0 else 0)
 
 func _new_game() -> Node:
     var scene = load("res://scenes/Main.tscn")

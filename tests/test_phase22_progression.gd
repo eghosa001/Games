@@ -3,7 +3,7 @@ var passed:=0
 var failed:=0
 func check(ok:bool,label:String)->void:
     if ok:passed+=1;print("PASS: "+label)
-    else:failed+=1;push_error("FAIL: "+label)
+    else:failed += 1;push_error("FAIL: "+label)
 func _init()->void:call_deferred("run")
 func run()->void:
     var State=load("res://scripts/game_state.gd");var Progression=load("res://scripts/progression_system.gd")
@@ -35,4 +35,4 @@ func run()->void:
     progression.sync_tracking()
     state.set_value("properties","restoration",25);state.set_value("properties","stage","Abandoned");progression._process(0.0)
     check(progression.get_xp()==10,"Restoration state change is tracked")
-    print("PHASE 22 RESULT: %d passed, %d failed"%[passed,failed]);quit(1 if failed>0 else 0)
+    print("PHASE 22 RESULT: %d passed, %d failed"%[passed,failed]);quit(1 if failed > 0 else 0)

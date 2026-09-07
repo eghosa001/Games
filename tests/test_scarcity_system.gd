@@ -4,7 +4,7 @@ var passed := 0
 var failed := 0
 func check(ok:bool,label:String)->void:
     if ok: passed+=1; print("PASS: "+label)
-    else: failed+=1; push_error("FAIL: "+label)
+    else: failed += 1; push_error("FAIL: "+label)
 func _init()->void: call_deferred("run")
 func run()->void:
     var Economy=load("res://scripts/economy.gd")
@@ -38,4 +38,4 @@ func run()->void:
     check(int(scarce_run.get("cycles",0))<int(normal_run.get("cycles",0)),"Scarcity reduces production throughput")
 
     print("SCARCITY SYSTEM RESULT: %d passed, %d failed"%[passed,failed])
-    quit(1 if failed>0 else 0)
+    quit(1 if failed > 0 else 0)

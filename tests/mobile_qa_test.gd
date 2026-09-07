@@ -6,6 +6,7 @@ const SAVE_LIMIT_MS: float = 1000.0
 const FPS_TARGET: float = 30.0
 const MEMORY_GROWTH_LIMIT_MB: float = 64.0
 var failures: Array[String] = []
+var failed := 0
 var warnings: Array[String] = []
 var checks: int = 0
 
@@ -130,11 +131,12 @@ func check(label: String, condition: bool) -> void:
     if condition: print("PASS: %s" % label)
     else: fail(label)
 func fail(label: String) -> void:
+    failed += 1
     failures.append(label); print("FAIL: %s" % label)
 func _finish() -> void:
     print("--- MOBILE QA SUMMARY ---"); print("Checks: %d | Failures: %d | Warnings: %d" % [checks, failures.size(), warnings.size()])
     for warning: String in warnings: print("WARN: %s" % warning)
     if not failures.is_empty():
         for failure: String in failures: print("FAILED: %s" % failure)
-        quit(1)
-    else: print("AUTOMATED MOBILE QA: PASS"); quit(0)
+    else: print("AUTOMATED MOBILE QA: PASS")
+    quit(1 if failed > 0 else 0)

@@ -1,6 +1,7 @@
 extends SceneTree
 
 var failures: Array[String] = []
+var failed := 0
 var checks := 0
 const Resolver := preload("res://scripts/runtime_dependency_resolver.gd")
 
@@ -37,6 +38,7 @@ func check(label: String, condition: bool) -> void:
         print("PASS: %s" % label)
     else:
         failures.append(label)
+        failed += 1
         print("FAIL: %s" % label)
 
 func _finish() -> void:
@@ -45,6 +47,6 @@ func _finish() -> void:
     if not failures.is_empty():
         for failure in failures:
             print("FAILED: %s" % failure)
-        quit(1)
-    print("RUNTIME DEPENDENCY TEST: PASS")
-    quit(0)
+    else:
+        print("RUNTIME DEPENDENCY TEST: PASS")
+    quit(1 if failed > 0 else 0)
