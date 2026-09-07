@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 16:48:58 UTC 2026
+// Generated on: Mon Sep  7 18:26:06 UTC 2026
 
-// Source snapshot commit: e4cc096d6c13f94f7e3766970e1cd32b3b70e72c
+// Source snapshot commit: 1fd8fe476f45c81c6f9f339930b5f0e4a5d243f4
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4465,9 +4465,9 @@ action_inspect={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scenes/Main.tscn
-Lines: 214
+Lines: 210
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[gd_scene load_steps=49 format=3]
+[gd_scene load_steps=48 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -4490,7 +4490,6 @@ Lines: 214
 [ext_resource path="res://scripts/history_museum_ui.gd" type="Script" id="20"]
 [ext_resource path="res://scripts/news_ui.gd" type="Script" id="21"]
 [ext_resource path="res://scripts/scarcity_system.gd" type="Script" id="22"]
-[ext_resource path="res://scripts/main_renderer.gd" type="Script" id="23"]
 [ext_resource path="res://scripts/ownership_system.gd" type="Script" id="24"]
 [ext_resource path="res://scripts/acquisition_system.gd" type="Script" id="25"]
 [ext_resource path="res://scripts/finance_scene_bridge.gd" type="Script" id="26"]
@@ -4559,9 +4558,6 @@ texture = ExtResource("40")
 position = Vector2(1060, 485)
 z_index = -23
 visible = false
-[node name="MainRenderer" type="Node2D" parent="World"]
-z_index = -10
-script = ExtResource("23")
 [node name="PropertyVisual" type="Node2D" parent="World"]
 z_index = -5
 script = ExtResource("34")
@@ -17327,90 +17323,6 @@ func _input(event: InputEvent) -> void:
         KEY_F9: load_game()
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: scripts/main_renderer.gd
-Lines: 78
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-extends Node2D
-
-var _accum := 0.0
-
-func _process(delta: float) -> void:
-    _accum += delta
-    if _accum >= 0.16:
-        _accum = 0.0
-        queue_redraw()
-
-func _draw() -> void:
-    var main: Node = get_parent().get_parent()
-    if main == null: return
-    draw_rect(Rect2(0, 0, 1280, 64), Color("17232d", 0.85), true)
-    var font: Variant = ThemeDB.fallback_font
-    draw_string(font, Vector2(28, 41), "RENEW", HORIZONTAL_ALIGNMENT_LEFT, -1, 30, Color.WHITE)
-    draw_string(font, Vector2(160, 39), "DAY %d" % main.day, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("9fb3c8"))
-    draw_string(font, Vector2(270, 39), "CASH $%s" % str(main.cash), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("8ee6a8"))
-    draw_string(font, Vector2(500, 39), "REP %d" % main.reputation, HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("f2d27a"))
-    draw_string(font, Vector2(620, 39), "DEBT $%s" % str(main.debt), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("ffad8f"))
-    draw_string(font, Vector2(790, 39), "PROFIT $%s" % str(main.total_profit), HORIZONTAL_ALIGNMENT_LEFT, -1, 18, Color("b7d7ff"))
-    _panel(Vector2(25, 82), Vector2(390, 270))
-    draw_string(font, Vector2(45, 112), "RESTORATION", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("7891a5"))
-    draw_string(font, Vector2(45, 146), "OLD WAREHOUSE", HORIZONTAL_ALIGNMENT_LEFT, -1, 25, Color.WHITE)
-    draw_string(font, Vector2(45, 176), str(main.stage), HORIZONTAL_ALIGNMENT_LEFT, -1, 21, Color("8ee6a8"))
-    draw_string(font, Vector2(45, 229), "%d%% restored" % main.restoration, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color.WHITE)
-    draw_string(font, Vector2(45, 258), "Next stage: $%s" % str(_next_cost(main)), HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("f2d27a"))
-    draw_string(font, Vector2(45, 292), "I inspect  A acquire  R restore  O open", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("c6d0d8"))
-    draw_string(font, Vector2(45, 318), "The building improves as you invest in it.", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aab8c3"))
-    _panel(Vector2(435, 82), Vector2(390, 270))
-    draw_string(font, Vector2(455, 112), "RENEW GOODS", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("7891a5"))
-    draw_string(font, Vector2(455, 145), "EMPLOYEES %d   CAPACITY %d" % [main.employees, main.capacity_level], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color.WHITE)
-    draw_string(font, Vector2(455, 174), "GOODS %d   PRICE $%d" % [main.finished_goods, main.player_price], HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color("8ee6a8"))
-    draw_string(font, Vector2(455, 203), "MARKETING %d" % main.marketing_level, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color("b7d7ff"))
-    draw_string(font, Vector2(455, 234), "B buy inputs  T supplier  P price", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("c6d0d8"))
-    draw_string(font, Vector2(455, 257), "B produce  H hire  U capacity  M marketing", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("c6d0d8"))
-    draw_string(font, Vector2(455, 280), "N end day  K contract  J loan  V repay", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("c6d0d8"))
-    draw_string(font, Vector2(455, 303), "Contract: %d days | $%s/day" % [main.contract_days, str(main.contract_bonus)], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("f2d27a"))
-    draw_string(font, Vector2(455, 326), "Last P&L: $%s" % str(main.last_profit), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color.WHITE)
-    _panel(Vector2(845, 82), Vector2(410, 270))
-    if main.rivals == null or main.districts == null: return
-    var r: Dictionary = main.rivals.rivals[main.selected_rival]
-    var d: Dictionary = main.districts.current()
-    draw_string(font, Vector2(865, 112), "REGION & COMPETITION", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("7891a5"))
-    draw_string(font, Vector2(865, 143), "[%d] %s" % [main.selected_rival + 1, r["name"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 21, Color.WHITE)
-    draw_string(font, Vector2(865, 171), "Price $%d | Relationship %d" % [r["price"], r["relationship"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("f2d27a"))
-    draw_string(font, Vector2(865, 198), "1-3 select  L improve  C alliance", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("c6d0d8"))
-    draw_string(font, Vector2(865, 228), "District: %s" % d["name"], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("8ee6a8"))
-    draw_string(font, Vector2(865, 252), "Demand %.2fx | Logistics %.2fx" % [d["demand"], d["logistics"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("b7d7ff"))
-    draw_string(font, Vector2(865, 274), "Rival pressure %.0f%% | Supplier pressure %d" % [main.rivals.district_pressure(main.selected_district) * 100.0, main.rivals.supplier_pressure(main.selected_district)], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("ffad8f"))
-    draw_string(font, Vector2(865, 298), "TAB district | 1-3 rival | 7-9 business", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("c6d0d8"))
-    draw_string(font, Vector2(865, 326), "Deal: %s (%d days) | Fleet L%d" % [r["deal"], r["deal_days"], main.transport_level], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("f2d27a"))
-    _panel(Vector2(25, 375), Vector2(800, 315))
-    draw_string(font, Vector2(45, 405), "ACTIVITY / MARKET", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("7891a5"))
-    var economy: Dictionary = main.economy.resources if main.economy != null and main.economy.resources is Dictionary else {}
-    var t_price: int = int(economy.get("timber", {}).get("price", 0)) if economy.has("timber") else 0
-    var i_price: int = int(economy.get("iron", {}).get("price", 0)) if economy.has("iron") else 0
-    var e_price: int = int(economy.get("energy", {}).get("price", 0)) if economy.has("energy") else 0
-    draw_string(font, Vector2(45, 432), "Timber $%d   Iron $%d   Energy $%d" % [t_price, i_price, e_price], HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
-    draw_string(font, Vector2(45, 457), "Supplier tier %d | Debt payment $%s/day" % [main.supplier_choice + 1, str(main.loan_payment)], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("b7d7ff"))
-    for i: int in range(main.log_lines.size()): draw_string(font, Vector2(45, 490 + i * 27), main.log_lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aab8c3"))
-    _panel(Vector2(845, 375), Vector2(410, 315))
-    draw_string(font, Vector2(865, 405), "CEO STATUS", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("7891a5"))
-    draw_string(font, Vector2(865, 438), str(main.message), HORIZONTAL_ALIGNMENT_LEFT, 365, 15, Color.WHITE)
-    draw_string(font, Vector2(865, 493), "F5 save    F9 load", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color("f2d27a"))
-    draw_string(font, Vector2(865, 530), "Core: RESTORE → BUSINESS → PROFIT", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("8ee6a8"))
-    draw_string(font, Vector2(865, 556), "REGION → LOGISTICS → RESOURCES → EMPIRE", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("8ee6a8"))
-    draw_string(font, Vector2(865, 610), "Deals: L alliance | C alliance offer", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("f2d27a"))
-    draw_string(font, Vector2(865, 636), "RENEW: rebuild the world you eventually control.", HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("aab8c3"))
-
-func _next_cost(main: Node) -> int:
-    if main.stage == "Operational": return 0
-    for i: int in range(main.stages.size()):
-        if main.stages[i][0] == main.stage and i + 1 < main.stages.size(): return int(main.stages[i + 1][2])
-    return 0
-
-func _panel(position: Vector2, size: Vector2) -> void:
-    draw_rect(Rect2(position, size), Color("111b23"), true)
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/market_director.gd
 Lines: 279
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -17747,7 +17659,7 @@ func _hide_legacy_mobile_layers(mobile: bool) -> void:
     if renew == null:
         return
     var legacy_paths := [
-        "World/MainRenderer", "World/PropertyVisual", "World/WorldView",
+        "World/PropertyVisual", "World/WorldView",
         "World/EmpireController", "World/Corporate", "World/WorldMissions",
         "World/RegionController", "World/BranchController", "World/RivalSupplyController"
     ]
@@ -26457,7 +26369,7 @@ func audit_main_screen() -> void:
     if game == null: return
     root.add_child(game)
     await process_frame
-    var world_nodes := ["MainRenderer","PropertyVisual","WorldView","EmpireController","Corporate","WorldMissions","RegionController","BranchController","SupplyChainController","RivalSupplyController"]
+    var world_nodes := ["PropertyVisual","WorldView","EmpireController","Corporate","WorldMissions","RegionController","BranchController","SupplyChainController","RivalSupplyController"]
     var system_nodes := ["ScarcitySystem","GameBalance","RestorationStrategy","Progression","MarketDirector","EmpireGoals","FinanceSystem","OwnershipSystem","AcquisitionSystem","BankruptcySystem"]
     var ui_nodes := ["MainHUD","StrategyHUD","TutorialOverlay","V1Celebration","TechnologyPanel","HistoryPanel","NewsPanel","AlliancePanel","HeadquartersPanel","CollectionPanel","LiveOpsPanel","CustomerSegmentsUI","ContractPanel","EmployeePanel","InfrastructurePanel"]
     for node_name in world_nodes: check(game.get_node_or_null("World/" + node_name) != null, "World node: " + node_name)
@@ -29542,7 +29454,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_quality_gate.gd
-Lines: 280
+Lines: 279
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -29631,7 +29543,6 @@ func test_world_visual_contract() -> void:
         "PremiumIndustrialScene",
         "PremiumRestorationScene",
         "RichWorldScenery",
-        "MainRenderer",
         "PropertyVisual",
         "WorldView",
         "PropertyMap"
