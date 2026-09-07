@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 18:26:06 UTC 2026
+// Generated on: Mon Sep  7 18:43:53 UTC 2026
 
-// Source snapshot commit: 1fd8fe476f45c81c6f9f339930b5f0e4a5d243f4
+// Source snapshot commit: 679285452ec4ed2f3bb60299575d2286c5e99e23
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -19200,7 +19200,7 @@ func _record_unlocks(old_level:int,new_level:int)->void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/property_map.gd
-Lines: 229
+Lines: 240
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node2D
 
@@ -19270,6 +19270,17 @@ func _map_area() -> Rect2:
         var dock: Variant = hud.get("action_dock")
         if dock is Control and (dock as Control).visible:
             bottom = minf(bottom, (dock as Control).position.y - 8.0)
+        # Clamp top against desktop property cards so the map never draws
+        # beneath left_rail / selected_card / objective_card (y:116→208).
+        var selected: Variant = hud.get("selected_card")
+        if selected is Control and selected.visible:
+            top = maxf(top, selected.position.y + selected.size.y + 4.0)
+        else:
+            var objective: Variant = hud.get("objective_card")
+            if objective is Control and objective.visible:
+                top = maxf(top, objective.position.y + objective.size.y + 4.0)
+            else:
+                top = maxf(top, 212.0)
     if bottom - top < 90.0:
         bottom = top + 90.0
     return Rect2(16.0, top, maxf(100.0, viewport.x - 32.0), maxf(90.0, bottom - top))
@@ -20494,7 +20505,7 @@ func reject_selected_acquisition() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/renew_sims_ui.gd
-Lines: 262
+Lines: 267
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 
@@ -20670,10 +20681,15 @@ func _layout_responsive() -> void:
         feedback_label.position = Vector2(10, 8); feedback_label.size = Vector2(maxf(40.0, w - 52.0), 40)
         goal_label.position = Vector2(8, 194); goal_label.size = Vector2(w - 16, 40)
     else:
-        status_label.position = Vector2(8, 344); status_label.size = Vector2(240, 24)
-        feedback_panel.position = Vector2(8, 372); feedback_panel.size = Vector2(300, 80)
-        feedback_label.position = Vector2(10, 8); feedback_label.size = Vector2(280, 64)
-        goal_label.position = Vector2(8, 456); goal_label.size = Vector2(300, 44)
+        var dock_bottom := action_dock.position.y + action_dock.size.y
+        status_label.position = Vector2(8, dock_bottom + 4.0)
+        status_label.size = Vector2(240, 24)
+        feedback_panel.position = Vector2(8, status_label.position.y + 32.0)
+        feedback_panel.size = Vector2(300, 80)
+        feedback_label.position = Vector2(10, 8)
+        feedback_label.size = Vector2(280, 64)
+        goal_label.position = Vector2(8, feedback_panel.position.y + 88.0)
+        goal_label.size = Vector2(300, 44)
 
 func _set_tab(index: int) -> void:
     active_tab = clampi(index, 0, 3); _refresh()
