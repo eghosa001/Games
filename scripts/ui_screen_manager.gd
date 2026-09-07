@@ -63,6 +63,32 @@ func _process(_delta: float) -> void:
         return
     _enforce_single_screen()
 
+func _input(event: InputEvent) -> void:
+    # Some complex CanvasLayer/control stacks can intercept a button event
+    # before the individual screen script receives its pressed signal. The
+    # screen manager therefore owns a narrow emergency close path: if the
+    # user clicks/taps inside a visible CLOSE button, close the active screen
+    # directly. This is deliberately limited to close controls and cannot
+    # steal normal gameplay button input.
+    if _active_screen == null or not is_instance_valid(_active_screen):
+        return
+    var pressed := false
+    var point := Vector2.ZERO
+    if event is InputEventMouseButton:
+        var mouse := event as InputEventMouseButton
+        pressed = mouse.pressed and mouse.button_index == MOUSE_BUTTON_LEFT
+        point = mouse.position
+    elif event is InputEventScreenTouch:
+        var touch := event as InputEventScreenTouch
+        pressed = touch.pressed
+        point = touch.position
+    if not pressed:
+        return
+    var close_button := _find_close_button_at(_active_screen, point)
+    if close_button != null:
+        hide_all_screens()
+        get_viewport().set_input_as_handled()
+
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and _active_screen != null:
         hide_all_screens(); get_viewport().set_input_as_handled()
@@ -147,3 +173,26 @@ func is_screen_open(screen_name: String) -> bool:
     for node in _screen_nodes():
         if node.name == canonical_name: return _is_node_visible(node)
     return false
+
+func _find_close_button_at(node: Node, global_point: Vector2) -> Button:
+    if node == null or not is_instance_valid(node):
+        return null
+    var children := node.get_children()
+    # Traverse in reverse tree order so the most recently added/topmost
+    # control wins when several controls occupy the same screen area.
+    for i in range(children.size() - 1, -1, -1):
+        var child: Node = children[i]
+        var nested := _find_close_button_at(child, global_point)
+        if nested != null:
+            return nested
+        var button := child as Button
+        if button == null or not button.visible or not button.is_visible_in_tree():
+            continue
+        var label := button.text.strip_edges().to_upper()
+        if label != "CLOSE" and label != "X" and label != "×":
+            continue
+        if button.mouse_filter == Control.MOUSE_FILTER_IGNORE:
+            continue
+        if button.get_global_rect().has_point(global_point):
+            return button
+    return null
