@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 07:03:24 UTC 2026
+// Generated on: Mon Sep  7 07:20:01 UTC 2026
 
-// Source snapshot commit: 354039c137d8e304a36f996adbce4fd469cf5dcf
+// Source snapshot commit: cdab4513396e4862671ecfe6326ee10a3c89c637
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4371,7 +4371,7 @@ action_inspect={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scenes/Main.tscn
-Lines: 215
+Lines: 214
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [gd_scene load_steps=49 format=3]
 
@@ -4449,7 +4449,6 @@ visible = true
 modulate = Color(1, 1, 1, 0.98)
 [node name="RichWorldScenery" type="Node2D" parent="World"]
 z_index = -25
-visible = false
 script = ExtResource("42")
 [node name="SkylineArt" type="Sprite2D" parent="World"]
 texture = ExtResource("38")
@@ -14549,8 +14548,8 @@ const RuntimeResolver := preload("res://scripts/runtime_dependency_resolver.gd")
 const SCHEMA_VERSION := 8
 const STATE_VERSION := 17
 const DOMAINS := ["player","company","properties","businesses","branches","employees","economy","resources","production","supply_chain","contracts","competitors","ownership","finance","alliances","diplomacy","regions","infrastructure","technology","events","progression","history","news","analytics","acquisition","bankruptcy"]
-const DOMAIN_KEYS := {"player":["day","reputation"],"company":["message","log_lines","culture","reputation"],"properties":["owned","inspected","restoration","stage","selected_property","catalog"],"businesses":["business_open","business_id","business_name","business_type","business_purpose","industry_id","origin_property_id","origin_property_name","origin_property_type","capacity_level","marketing_level","player_price"],"branches":["selected_expansion","expansion"],"employees":["roster","employee_system"],"economy":["cash","last_sales","last_profit","total_profit"],"resources":["resources"],"production":["finished_goods","system"],"supply_chain":["supplier_choice","transport_level","transport_capacity","resource_sites","transport_cost_multiplier","resource_delivery_multiplier"],"contracts":["contract_days","contract_bonus","contract_system","system"],"competitors":["rivals","selected_rival","relationship","reaction_system"],"ownership":["acquisition_count","valuation","takeover_wins","system","pending_offer","holdings"],"finance":["debt","loan_payment","system"],"alliances":["alliances"],"diplomacy":["diplomacy"],"regions":["selected_district","districts","regional_reputation"],"infrastructure":["management_level","management_overhead"],"technology":["technology","research_points"],"events":["history","active","modifiers","seasonal","market_director"],"progression":["milestones","unlocks","xp","level","claimed_goals"],"history":["history_system"],"news":["news_system"],"analytics":["simulation_system"],"acquisition":["system"],"bankruptcy":["system"]}
-const DEFAULT_DOMAINS := {"player":{"day":1,"reputation":0},"company":{"message":"Inspect the abandoned warehouse. Your empire starts here.","log_lines":[],"culture":{},"reputation":{}},"properties":{"owned":false,"inspected":false,"restoration":0,"stage":"Neglected","selected_property":0,"catalog":[]},"businesses":{"business_open":false,"business_id":"","business_name":"","business_type":"","business_purpose":"","industry_id":"","origin_property_id":"","origin_property_name":"","origin_property_type":"","capacity_level":1,"marketing_level":0,"player_price":110},"branches":{"selected_expansion":0,"expansion":{}},"employees":{"roster":[],"employee_system":{}},"economy":{"cash":35000,"last_sales":0,"last_profit":0,"total_profit":0},"resources":{"resources":{}},"production":{"finished_goods":0,"system":{}},"supply_chain":{"supplier_choice":0,"transport_level":1,"transport_capacity":40,"resource_sites":{},"transport_cost_multiplier":1.0,"resource_delivery_multiplier":1.0},"contracts":{"contract_days":0,"contract_bonus":0,"contract_system":{},"system":{}},"competitors":{"rivals":[],"selected_rival":0,"relationship":15,"reaction_system":{}},"ownership":{"acquisition_count":0,"valuation":25000,"takeover_wins":0,"system":{},"pending_offer":{},"holdings":[]},"finance":{"debt":0,"loan_payment":0,"system":{}},"alliances":{"alliances":{}},"diplomacy":{"diplomacy":{}},"regions":{"selected_district":0,"districts":{"renew_region":{"id":"renew_region","name":"Renew Region","cities":[],"resource_locations":[]}},"regional_reputation":0},"infrastructure":{"management_level":0,"management_overhead":0},"technology":{"technology":{},"research_points":20},"events":{"history":[],"active":{},"modifiers":{},"seasonal":{},"market_director":{}},"progression":{"milestones":[],"unlocks":[],"xp":0,"level":1,"claimed_goals":{}},"history":{"history_system":{}},"news":{"news_system":{}},"analytics":{"simulation_system":{}},"acquisition":{"system":{}},"bankruptcy":{"system":{}}}
+const DOMAIN_KEYS := {"player":["day","reputation"],"company":["message","log_lines","culture","reputation"],"properties":["owned","inspected","restoration","stage","selected_property","catalog","cleaning","repair","painting","furnishing"],"businesses":["business_open","business_id","business_name","business_type","business_purpose","industry_id","origin_property_id","origin_property_name","origin_property_type","capacity_level","marketing_level","player_price"],"branches":["selected_expansion","expansion"],"employees":["roster","employee_system"],"economy":["cash","last_sales","last_profit","total_profit"],"resources":["resources"],"production":["finished_goods","system"],"supply_chain":["supplier_choice","transport_level","transport_capacity","resource_sites","transport_cost_multiplier","resource_delivery_multiplier"],"contracts":["contract_days","contract_bonus","contract_system","system"],"competitors":["rivals","selected_rival","relationship","reaction_system"],"ownership":["acquisition_count","valuation","takeover_wins","system","pending_offer","holdings"],"finance":["debt","loan_payment","system"],"alliances":["alliances"],"diplomacy":["diplomacy"],"regions":["selected_district","districts","regional_reputation"],"infrastructure":["management_level","management_overhead"],"technology":["technology","research_points"],"events":["history","active","modifiers","seasonal","market_director"],"progression":["milestones","unlocks","xp","level","claimed_goals"],"history":["history_system"],"news":["news_system"],"analytics":["simulation_system"],"acquisition":["system"],"bankruptcy":["system"]}
+const DEFAULT_DOMAINS := {"player":{"day":1,"reputation":0},"company":{"message":"Inspect the abandoned warehouse. Your empire starts here.","log_lines":[],"culture":{},"reputation":{}},"properties":{"owned":false,"inspected":false,"restoration":0,"stage":"Neglected","selected_property":0,"catalog":[],"cleaning":0,"repair":0,"painting":0,"furnishing":0},"businesses":{"business_open":false,"business_id":"","business_name":"","business_type":"","business_purpose":"","industry_id":"","origin_property_id":"","origin_property_name":"","origin_property_type":"","capacity_level":1,"marketing_level":0,"player_price":110},"branches":{"selected_expansion":0,"expansion":{}},"employees":{"roster":[],"employee_system":{}},"economy":{"cash":35000,"last_sales":0,"last_profit":0,"total_profit":0},"resources":{"resources":{}},"production":{"finished_goods":0,"system":{}},"supply_chain":{"supplier_choice":0,"transport_level":1,"transport_capacity":40,"resource_sites":{},"transport_cost_multiplier":1.0,"resource_delivery_multiplier":1.0},"contracts":{"contract_days":0,"contract_bonus":0,"contract_system":{},"system":{}},"competitors":{"rivals":[],"selected_rival":0,"relationship":15,"reaction_system":{}},"ownership":{"acquisition_count":0,"valuation":25000,"takeover_wins":0,"system":{},"pending_offer":{},"holdings":[]},"finance":{"debt":0,"loan_payment":0,"system":{}},"alliances":{"alliances":{}},"diplomacy":{"diplomacy":{}},"regions":{"selected_district":0,"districts":{"renew_region":{"id":"renew_region","name":"Renew Region","cities":[],"resource_locations":[]}},"regional_reputation":0},"infrastructure":{"management_level":0,"management_overhead":0},"technology":{"technology":{},"research_points":20},"events":{"history":[],"active":{},"modifiers":{},"seasonal":{},"market_director":{}},"progression":{"milestones":[],"unlocks":[],"xp":0,"level":1,"claimed_goals":{}},"history":{"history_system":{}},"news":{"news_system":{}},"analytics":{"simulation_system":{}},"acquisition":{"system":{}},"bankruptcy":{"system":{}}}
 
 var domains: Dictionary = {}
 var data: Dictionary = {}
@@ -19385,7 +19384,7 @@ func _select_property(property_id: String) -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/property_system.gd
-Lines: 154
+Lines: 155
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 class_name RenewPropertySystem
@@ -19469,7 +19468,7 @@ func restore_step(step: String, property_id: String = "") -> Dictionary:
     var cost: Variant = int(STEP_COSTS[step]); var spend: Dictionary = state_adapter.spend(cost,"property restoration: %s" % step)
     if not bool(spend.get("ok",false)): return {"ok":false,"reason":"insufficient_cash","cost":cost,"cash":int(state_adapter.get_value("economy","cash",0))}
     progress = mini(100, progress + int(STEP_GAIN[step])); property[step] = progress; property["condition"] = mini(100, int(property.get("condition", 0)) + (5 if step == "repair" else 2)); catalog[index] = property
-    state_adapter.set_value("properties", "catalog", catalog); state_adapter.set_value("properties", "selected_property", index); _sync_legacy_fields()
+    state_adapter.set_value("properties", "catalog", catalog); state_adapter.set_value("properties", "selected_property", index); state_adapter.set_value("properties", "cleaning", int(property.get("cleaning", 0))); state_adapter.set_value("properties", "repair", int(property.get("repair", 0))); state_adapter.set_value("properties", "painting", int(property.get("painting", 0))); state_adapter.set_value("properties", "furnishing", int(property.get("furnishing", 0))); _sync_legacy_fields()
     state_adapter.log_message("RESTORATION: %s — %s +%d%% (-$%d)." % [property.get("name", id), step.capitalize(), int(STEP_GAIN[step]), cost])
     if is_operational(property):
         state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + 8); state_adapter.message("RESTORATION COMPLETE. Your neglected property is now productive capital.")
@@ -19527,6 +19526,7 @@ func sell_property() -> void:
     var proceeds: Dictionary = state_adapter.receive(price, "property sale: %s" % str(property.get("name", "property")))
     if not bool(proceeds.get("ok", false)): state_adapter.message(str(proceeds.get("message", "Sale could not complete."))); return
     state_adapter.set_value("properties", "owned", false)
+    state_adapter.set_value("properties", "cleaning", 0); state_adapter.set_value("properties", "repair", 0); state_adapter.set_value("properties", "painting", 0); state_adapter.set_value("properties", "furnishing", 0)
     _sync_legacy_fields(); state_adapter.message("Sold %s for $%s." % [str(property.get("name", "property")), state_adapter.money(price)]); state_adapter.log_message("SOLD: %s for $%s." % [str(property.get("name", "property")), state_adapter.money(price)])
 func lease_property() -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)): state_adapter.message("You own no property to lease."); return
@@ -24670,11 +24670,11 @@ func _draw_network(w: float, h: float) -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/QUALITY_TEST_PROTOCOL.md
-Lines: 34
+Lines: 37
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # RENEW Strict QA Protocol
 
-The repository has many focused Godot tests, but passing feature tests alone does not prove the game is release-ready. The canonical quality gate is `tests/test_quality_gate.gd`.
+The repository has many focused Godot tests, but passing feature tests alone does not prove the game is release-ready. The canonical quality gate is `tests/test_quality_gate.gd`, and the test-suite meta gate is `tests/test_test_quality_integrity.gd`.
 
 ## Mandatory gates
 
@@ -24686,14 +24686,17 @@ The repository has many focused Godot tests, but passing feature tests alone doe
 6. **Persistence** — authoritative state must capture and restore.
 7. **Rendered-frame checkpoint** — the actual Godot viewport must render substantial, visually varied content and a PNG checkpoint is produced.
 8. **Runtime stability** — the running scene must sustain at least 30 FPS in the automated sample and remain alive.
+9. **Test-suite integrity** — the tests themselves must not contain false-green patterns such as `assert()`-only checks, unconditional `quit()`, or retry loops that conceal nondeterministic failures.
 
 ## No-loophole rules
 
 - A test failure must exit with code 1 or the test is not a valid gate.
 - A warning cannot substitute for a required assertion.
+- `assert()` alone is forbidden for release acceptance tests; use explicit failure accounting and a non-zero exit status.
 - Asset existence does not count as visual availability; required final assets must be visible and textured in the playable scene.
 - UI existence does not count as usability; layout and touch-size constraints must be measured.
 - A command existing does not count as gameplay; the strict gate executes the core progression.
+- Randomized gameplay tests must use deterministic setup or an explicitly controlled RNG; retry-until-success is forbidden when it can hide a failure.
 - A screenshot existing does not count as quality; the gate checks that the rendered frame is non-empty and has meaningful pixel variation, while the saved image remains available for visual inspection.
 - Subjective visual quality still requires human review. Automated rendering tests are a floor, not an artistic substitute.
 
@@ -26301,7 +26304,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_economy_transactions.gd
-Lines: 49
+Lines: 54
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -26321,31 +26324,36 @@ func check(ok: bool, label: String) -> void:
 
 func run() -> void:
     var economy = load("res://scripts/economy.gd").new()
+    check(economy != null, "Economy system instantiates")
+    if economy == null:
+        quit(1)
+        return
     var orders: Array = [
         {"resource":"timber","amount":12},
         {"resource":"iron","amount":12},
         {"resource":"energy","amount":12}
     ]
     var quote = economy.quote_bundle(orders, 0, 0.10, 250)
-    check(quote["ok"], "Bundle quote succeeds")
-    check(int(quote["cost"]) == int(quote["base_cost"]) - int(quote["discount"]) + 250, "Bundle quote applies adjustments")
-    var cash := int(quote["cost"]) - 1
+    check(bool(quote.get("ok", false)), "Bundle quote succeeds")
+    check(int(quote.get("cost", 0)) == int(quote.get("base_cost", 0)) - int(quote.get("discount", 0)) + 250, "Bundle quote applies adjustments")
+    var cash := int(quote.get("cost", 0)) - 1
     var before: Dictionary = {}
     for order in orders:
         var resource := String(order["resource"])
         before[resource] = int(economy.resources[resource]["stock"])
     var rejected = economy.buy_bundle(orders, cash, 0, 0.10, 250)
-    check(not rejected["ok"], "Adjusted bundle rejects insufficient cash")
+    check(not bool(rejected.get("ok", false)), "Adjusted bundle rejects insufficient cash")
     for order in orders:
         var resource := String(order["resource"])
         check(int(economy.resources[resource]["stock"]) == int(before[resource]), "Rejected bundle leaves %s unchanged" % resource)
-    var successful: Dictionary = {"ok":false}
-    for attempt in range(20):
-        successful = economy.buy_bundle(orders, 100000, 0)
-        if bool(successful["ok"]):
-            break
-    check(successful["ok"], "Atomic bundle can commit")
-    if successful["ok"]:
+
+    # buy_bundle is an atomic bundle path and does not use the probabilistic
+    # supplier reliability roll used by buy_resource. A retry loop here would
+    # mask a regression, so one call is intentionally required to succeed.
+    var successful: Dictionary = economy.buy_bundle(orders, 100000, 0)
+    check(bool(successful.get("ok", false)), "Atomic bundle commits deterministically")
+    if bool(successful.get("ok", false)):
+        check(successful.get("delivered", []).size() == orders.size(), "Atomic bundle reports every delivery")
         for order in orders:
             var resource := String(order["resource"])
             var amount := int(order["amount"])
@@ -27682,33 +27690,48 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_news_system.gd
-Lines: 25
+Lines: 40
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
+var passed := 0
+var failed := 0
+
 func _init() -> void:
+    call_deferred("run")
+
+func check(ok: bool, label: String) -> void:
+    if ok:
+        passed += 1
+        print("PASS: " + label)
+    else:
+        failed += 1
+        push_error("FAIL: " + label)
+
+func run() -> void:
     var script = load("res://scripts/news_system.gd")
-    assert(script != null, "NewsSystem script must load")
+    check(script != null, "NewsSystem script must load")
+    if script == null:
+        _finish()
+        return
     var news = script.new()
     root.add_child(news)
-    assert(news.SECTIONS.size() == 10, "RENEW Daily must expose all ten sections")
-    assert(news.SECTIONS.has("Your Company"), "Company section missing")
-    assert(news.SECTIONS.has("People"), "People section missing")
-    assert(news.SECTIONS.has("Market"), "Market section missing")
-    assert(news.SECTIONS.has("Rivals"), "Rivals section missing")
-    assert(news.SECTIONS.has("Supply Chain"), "Supply Chain section missing")
-    assert(news.SECTIONS.has("Contracts"), "Contracts section missing")
-    assert(news.SECTIONS.has("Opportunities"), "Opportunities section missing")
-    assert(news.SECTIONS.has("Regions"), "Regions section missing")
-    assert(news.SECTIONS.has("World"), "World section missing")
-    assert(news.SECTIONS.has("Corporate History"), "Corporate History section missing")
+    check(news.SECTIONS.size() == 10, "RENEW Daily must expose all ten sections")
+    for section in ["Your Company", "People", "Market", "Rivals", "Supply Chain", "Contracts", "Opportunities", "Regions", "World", "Corporate History"]:
+        check(news.SECTIONS.has(section), "News section exists: " + section)
     var snapshot: Dictionary = news.capture_state()
-    assert(snapshot.has("archive"), "News archive must be persisted")
-    assert(snapshot.has("current_issue"), "Current newspaper must be persisted")
+    check(snapshot.has("archive"), "News archive must be persisted")
+    check(snapshot.has("current_issue"), "Current newspaper must be persisted")
     news.restore_state(snapshot)
-    assert(news.get_archive(10) is Array, "News archive API must return an array")
-    print("NEWS SYSTEM TESTS PASSED")
-    quit()
+    check(news.get_archive(10) is Array, "News archive API must return an array")
+    news.free()
+    await process_frame
+    print("NEWS SYSTEM RESULT: %d passed, %d failed" % [passed, failed])
+    quit(1 if failed > 0 else 0)
+
+func _finish() -> void:
+    print("NEWS SYSTEM RESULT: %d passed, %d failed" % [passed, failed])
+    quit(1 if failed > 0 else 0)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -28844,11 +28867,11 @@ func test_gameplay_contract() -> void:
 
     game.choose_business_purpose(0)
     check(game.business_open, "Business opens after restoration")
-    var roster_before := state.get_value("employees", "roster", [])
-    var before_count := roster_before.size() if roster_before is Array else 0
+    var roster_before: Variant = state.get_value("employees", "roster", [])
+    var before_count: int = roster_before.size() if roster_before is Array else 0
     game.hire_employee()
-    var roster_after := state.get_value("employees", "roster", [])
-    var after_count := roster_after.size() if roster_after is Array else 0
+    var roster_after: Variant = state.get_value("employees", "roster", [])
+    var after_count: int = roster_after.size() if roster_after is Array else 0
     check(after_count > before_count, "Hiring changes employee state exactly through command boundary")
 
     var before_goods := int(state.get_value("production", "finished_goods", 0))
@@ -28857,7 +28880,7 @@ func test_gameplay_contract() -> void:
     var after_goods := int(state.get_value("production", "finished_goods", 0))
     check(after_goods > before_goods, "Production creates finished goods")
 
-    var day_before := game.day
+    var day_before: int = int(game.day)
     game.advance_day()
     check(game.day == day_before + 1, "Advance day increments exactly once")
     check(int(state.get_value("economy", "last_sales", 0)) >= 0, "Daily sales state remains valid")
@@ -29643,6 +29666,82 @@ func run() -> void:
 
     print("SUPPLY RECEIPT ATOMICITY RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: tests/test_test_quality_integrity.gd
+Lines: 70
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+extends SceneTree
+
+## Meta-test for the test suite itself. This catches tests that can silently
+## report success because assertions are compiled out, exit successfully after
+## failures, or retry random behavior until a pass occurs.
+
+var passed := 0
+var failed := 0
+var failures: Array[String] = []
+var scanned := 0
+
+func _init() -> void:
+    call_deferred("run")
+
+func check(ok: bool, label: String) -> void:
+    if ok:
+        passed += 1
+        print("PASS: " + label)
+    else:
+        failed += 1
+        failures.append(label)
+        push_error("FAIL: " + label)
+
+func run() -> void:
+    var files: Array[String] = []
+    _collect_gd_files("res://tests", files)
+    check(files.size() >= 1, "Test suite contains Godot test scripts")
+
+    for path in files:
+        # This file intentionally contains the word split below so it does not
+        # match its own forbidden-pattern scan.
+        if path == "res://tests/test_test_quality_integrity.gd":
+            continue
+        scanned += 1
+        var source := FileAccess.get_file_as_string(path)
+        check(not source.is_empty(), "Test source is readable: " + path)
+
+        var assert_token := "ass" + "ert("
+        check(not source.contains(assert_token), "No assert()-only test assertions: " + path)
+        check(not source.contains("quit()"), "No unconditional bare quit(): " + path)
+        check(not source.contains("for attempt in range(20)"), "No 20-attempt retry masking randomness: " + path)
+
+        if source.contains("extends SceneTree"):
+            check(source.contains("quit(1 if failed > 0 else 0)"), "SceneTree test has failure-aware exit status: " + path)
+            check(source.contains("failed += 1"), "SceneTree test records failures explicitly: " + path)
+
+    print("TEST SUITE INTEGRITY RESULT: %d scanned, %d passed, %d failed" % [scanned, passed, failed])
+    if not failures.is_empty():
+        for item in failures:
+            print("FAILED: " + item)
+    quit(1 if failed > 0 else 0)
+
+func _collect_gd_files(directory_path: String, output: Array[String]) -> void:
+    var dir := DirAccess.open(directory_path)
+    if dir == null:
+        check(false, "Test directory can be opened: " + directory_path)
+        return
+    dir.list_dir_begin()
+    while true:
+        var entry := dir.get_next()
+        if entry.is_empty():
+            break
+        if entry == "." or entry == "..":
+            continue
+        var full_path := directory_path.path_join(entry)
+        if dir.current_is_dir():
+            _collect_gd_files(full_path, output)
+        elif entry.ends_with(".gd"):
+            output.append(full_path)
+    dir.list_dir_end()
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
