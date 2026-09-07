@@ -21,7 +21,8 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
     _time += delta
-    queue_redraw()
+    if fmod(_time, 0.12) < delta:
+        queue_redraw()
 
 func _draw() -> void:
     var state = get_node_or_null("/root/RenewGameState")

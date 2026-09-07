@@ -208,11 +208,11 @@ func _ready():
     command_system.initialize()
     refresh_ui()
 
-func _process(_delta):
-    refresh_ui()
+func _process(_delta: float) -> void:
+    pass
 
 func refresh_ui():
-    queue_redraw()
+    pass
 
 func inspect_property() -> void: command_system.inspect_property()
 func acquire_property() -> void: command_system.acquire_property()

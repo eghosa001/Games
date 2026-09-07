@@ -12,7 +12,8 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
     _time += delta
-    queue_redraw()
+    if fmod(_time, 0.16) < delta:
+        queue_redraw()
 
 func _draw() -> void:
     var size := get_viewport().get_visible_rect().size

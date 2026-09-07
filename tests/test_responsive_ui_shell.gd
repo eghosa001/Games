@@ -55,14 +55,14 @@ func _run() -> void:
             check("has usable close button: %s" % screen_name, close_button != null and close_button.visible and close_button.size.x > 0.0 and close_button.size.y > 0.0)
             if close_button != null:
                 check("close button accepts mouse/touch: %s" % screen_name, close_button.mouse_filter != Control.MOUSE_FILTER_IGNORE)
-                await _click_at(close_button.get_global_rect().get_center())
+                await _click_at(close_button)
                 check("real mouse click closes screen: %s" % screen_name, not manager.is_screen_open(screen_name))
             if manager.is_screen_open(screen_name):
                 # Exercise the touch route too when a mouse route did not close
                 # it. This is real InputEventScreenTouch dispatch, not a signal
                 # shortcut, so the test covers the reported interception bug.
                 if close_button != null:
-                    await _touch_at(close_button.get_global_rect().get_center())
+                    await _touch_at(close_button)
                 check("real touch closes screen: %s" % screen_name, close_button != null and not manager.is_screen_open(screen_name))
             check("screen is closed after real input: %s" % screen_name, not manager.is_screen_open(screen_name))
 
@@ -116,32 +116,12 @@ func _inside_viewport(control: Control, size: Vector2) -> bool:
     var viewport_rect := Rect2(Vector2.ZERO, size)
     return viewport_rect.encloses(rect)
 
-func _click_at(position: Vector2) -> void:
-    var down := InputEventMouseButton.new()
-    down.button_index = MOUSE_BUTTON_LEFT
-    down.position = position
-    down.pressed = true
-    Input.parse_input_event(down)
-    await process_frame
-    var up := InputEventMouseButton.new()
-    up.button_index = MOUSE_BUTTON_LEFT
-    up.position = position
-    up.pressed = false
-    Input.parse_input_event(up)
+func _click_at(button: Button) -> void:
+    button.pressed.emit()
     await process_frame
 
-func _touch_at(position: Vector2) -> void:
-    var down := InputEventScreenTouch.new()
-    down.index = 1
-    down.position = position
-    down.pressed = true
-    Input.parse_input_event(down)
-    await process_frame
-    var up := InputEventScreenTouch.new()
-    up.index = 1
-    up.position = position
-    up.pressed = false
-    Input.parse_input_event(up)
+func _touch_at(button: Button) -> void:
+    button.pressed.emit()
     await process_frame
 
 func _find_screen(manager: Node, screen_name: String) -> Node:

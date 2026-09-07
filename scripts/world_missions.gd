@@ -26,7 +26,10 @@ func _ready() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
     queue_redraw()
 
+var _accum := 0.0
+
 func _process(_delta: float) -> void:
+    _accum += _delta
     if parent == null: return
     if active and parent.day > expires_day:
         active = false
@@ -37,7 +40,9 @@ func _process(_delta: float) -> void:
         cooldown -= 1
     elif not active and cooldown <= 0 and parent.day >= 4 and parent.day % 3 == 1:
         _spawn()
-    queue_redraw()
+    if _accum >= 0.16:
+        _accum = 0.0
+        queue_redraw()
 
 func _spawn() -> void:
     var pool: Variant = missions.duplicate()

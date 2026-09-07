@@ -3,13 +3,18 @@ extends Node2D
 # Presentation layer: turns the simulation into a visible economic world.
 var game: Node
 
+var _accum := 0.0
+
 func _ready() -> void:
     game = get_tree().root.get_node_or_null("Renew")
     queue_redraw()
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
     # Keep the presentation synced without animating an input-obscuring marker.
-    queue_redraw()
+    _accum += delta
+    if _accum >= 0.16:
+        _accum = 0.0
+        queue_redraw()
 
 func _draw() -> void:
     if game == null:
