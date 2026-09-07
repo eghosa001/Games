@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 06:12:14 UTC 2026
+// Generated on: Mon Sep  7 06:19:38 UTC 2026
 
-// Source snapshot commit: 8d895f7a4ab48060df8c1a3606e6fbf4766f082a
+// Source snapshot commit: efbdd8e00255180582c6cd1e32adfb50a80cedff
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4143,7 +4143,7 @@ layer = 67
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/acquisition_system.gd
-Lines: 334
+Lines: 340
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 
@@ -4410,13 +4410,17 @@ func _resolve_merger_finance(target: Dictionary, price: float, terms: Dictionary
     if consideration > 0:
         var spend_result: Dictionary = state_adapter.spend(consideration, "merger consideration")
         if not bool(spend_result.get("ok", false)): return {"ok": false, "error": "insufficient_cash_for_merger", "required": consideration, "cash": finance.available_cash()}
-    if debt_assumed > 0.0: finance.debt += int(round(debt_assumed))
-    if liabilities_assumed > 0.0: finance.other_liabilities += liabilities_assumed
+    var instrument_id := ""
+    if debt_assumed > 0.0:
+        var assumed: Dictionary = finance.assume_debt(int(round(debt_assumed)), "merger: %s" % str(target.get("id", "target")))
+        if not bool(assumed.get("ok", false)): return {"ok": false, "error": "debt_assumption_failed"}
+        instrument_id = str(assumed.get("id", ""))
     var asset_value: Variant = 0.0
     for asset in target.get("assets", []):
         if asset is Dictionary: asset_value += float(asset.get("value", asset.get("cost", 0.0)))
-    finance.fixed_assets += asset_value
-    return {"ok": true, "cash_consideration": consideration, "debt_assumed": debt_assumed, "liabilities_assumed": liabilities_assumed, "assets_added": asset_value, "cash_after": finance.available_cash(), "debt_after": finance.debt}
+    if liabilities_assumed > 0.0 or asset_value > 0.0:
+        finance.absorb_external_balances(float(liabilities_assumed), float(asset_value), "merger: %s" % str(target.get("id", "target")))
+    return {"ok": true, "cash_consideration": consideration, "debt_assumed": debt_assumed, "debt_instrument": instrument_id, "liabilities_assumed": liabilities_assumed, "assets_added": asset_value, "cash_after": finance.available_cash(), "debt_after": finance.debt}
 
 func _rollback_merger_finance(finance_result: Dictionary) -> void:
     var finance = get_node_or_null("/root/RenewFinanceSystem")
@@ -4427,9 +4431,11 @@ func _rollback_merger_finance(finance_result: Dictionary) -> void:
     var assets_added := float(finance_result.get("assets_added", 0.0))
     if consideration > 0:
         finance.receive(consideration, "merger rollback refund")
-    finance.debt = max(0, finance.debt - debt_assumed)
-    finance.other_liabilities = max(0.0, finance.other_liabilities - liabilities_assumed)
-    finance.fixed_assets = max(0.0, finance.fixed_assets - assets_added)
+    var instrument_id := str(finance_result.get("debt_instrument", ""))
+    if not instrument_id.is_empty() and finance.has_method("release_assumed_debt"):
+        finance.release_assumed_debt(instrument_id)
+    if finance.has_method("absorb_external_balances"):
+        finance.absorb_external_balances(-liabilities_assumed, -assets_added, "merger rollback")
 
 func _resolve_merger_employees(target: Dictionary, terms: Dictionary) -> Dictionary:
     var employee_system = get_node_or_null("/root/RenewEmployeeSystem")
@@ -13274,7 +13280,7 @@ func _get(property: StringName) -> Variant:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/finance_system.gd
-Lines: 457
+Lines: 475
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 
@@ -13733,6 +13739,24 @@ func reconcile_books() -> Dictionary:
         return {"ok": true, "repaired": true, "plugged": difference}
     retained_earnings -= difference
     return {"ok": false, "repaired": false, "error": "repair_failed"}
+func release_assumed_debt(instrument_id: String) -> Dictionary:
+    if not financing.has(instrument_id):
+        return {"ok": false, "error": "instrument_not_found"}
+    var principal := maxf(0.0, float((financing[instrument_id] as Dictionary).get("principal", 0.0)))
+    financing.erase(instrument_id)
+    debt = 0
+    for id in financing:
+        debt += int(round(maxf(0.0, float((financing[id] as Dictionary).get("principal", 0.0)))))
+    fixed_assets = maxf(0.0, fixed_assets - principal)
+    _recalculate_loan_payment()
+    _record("release_assumed_debt", int(round(principal)), "merger rollback: " + str(instrument_id))
+    return {"ok": true, "released": principal, "debt": debt}
+func absorb_external_balances(other_liabilities_amount: float, fixed_assets_amount: float, reason: String = "merger absorption") -> Dictionary:
+    other_liabilities = maxf(0.0, other_liabilities + other_liabilities_amount)
+    fixed_assets = maxf(0.0, fixed_assets + fixed_assets_amount)
+    retained_earnings += fixed_assets_amount - other_liabilities_amount
+    _record("absorb_balances", int(round(fixed_assets_amount)), reason)
+    return {"ok": true, "other_liabilities": other_liabilities, "fixed_assets": fixed_assets, "retained_earnings": retained_earnings}
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -32278,6 +32302,78 @@ func run() -> void:
     await process_frame
     await process_frame
     print("V92 RUNTIME QA RESULT: %d passed, %d failed" % [passed, failed])
+    quit(1 if failed > 0 else 0)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: tests/test_v93_merger_ledger.gd
+Lines: 66
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+extends SceneTree
+
+## Pass 2: merger finance runs through the canonical ledger. Assumed debt
+## becomes an instrument, absorptions stay balanced, rollback restores.
+var passed := 0
+var failed := 0
+
+func _init() -> void:
+    call_deferred("run")
+
+func check(ok: bool, label: String) -> void:
+    if ok:
+        passed += 1
+        print("PASS: " + label)
+    else:
+        failed += 1
+        push_error("FAIL: " + label)
+
+func run() -> void:
+    var Acquire = load("res://scripts/acquisition_system.gd")
+    check(Acquire != null, "Acquisition system loads")
+    if Acquire == null:
+        quit(1)
+        return
+    var finance = root.get_node_or_null("RenewFinanceSystem")
+    check(finance != null, "Finance system available")
+    if finance == null:
+        quit(1)
+        return
+    var saved: Dictionary = finance.capture_state()
+    finance.financing = {}
+    finance.debt = 0
+    finance.loan_payment = 0
+    finance.cash = 300000
+    finance.equity_contributed = 300000.0
+    finance.retained_earnings = 0.0
+    finance.revenue = 0.0
+    finance.operating_expenses = 0.0
+    finance.interest_expense = 0.0
+    var acquirer: Node = Acquire.new()
+    root.add_child(acquirer)
+    await process_frame
+    check(bool(acquirer.register_target("t1", "Target One", [{"id": "plant", "value": 80000.0}], 50000.0, 10, [], 10000.0, 40.0, []).get("ok", false)), "Target registered with debt")
+    var merged: Dictionary = acquirer.merge_entities("renew_co", "t1", 0.0, 0.0, {})
+    check(bool(merged.get("ok", false)), "Merger completes")
+    check(bool(finance.validate_invariants().get("ok", false)), "Books validate after merger")
+    check(int(finance.get("debt")) == 50000, "Assumed debt on the books")
+    var assumed := false
+    for id in (finance.get("financing") as Dictionary).keys():
+        if str(id).begins_with("assumed_"):
+            assumed = true
+    check(assumed, "Assumption tracked as an instrument")
+    check(bool(acquirer.register_target("t2", "Target Two", [{"id": "depot", "value": 30000.0}], 20000.0, 5, [], 5000.0, 30.0, []).get("ok", false)), "Second target registered")
+    var debt_before := int(finance.get("debt"))
+    var fixed_before := float(finance.get("fixed_assets"))
+    var partial: Dictionary = acquirer._resolve_merger_finance((acquirer.targets as Dictionary)["t2"], 0.0, {})
+    check(bool(partial.get("ok", false)), "Finance stage resolves")
+    acquirer._rollback_merger_finance(partial)
+    check(int(finance.get("debt")) == debt_before, "Rollback restores debt")
+    check(abs(float(finance.get("fixed_assets")) - fixed_before) < 0.01, "Rollback restores fixed assets")
+    check(bool(finance.validate_invariants().get("ok", false)), "Books validate after rollback")
+    acquirer.queue_free()
+    finance.restore_state(saved)
+    await process_frame
+    print("V93 MERGER LEDGER RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
 
 
