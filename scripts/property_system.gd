@@ -80,7 +80,7 @@ func restore_step(step: String, property_id: String = "") -> Dictionary:
     var cost: Variant = int(STEP_COSTS[step]); var spend: Dictionary = state_adapter.spend(cost,"property restoration: %s" % step)
     if not bool(spend.get("ok",false)): return {"ok":false,"reason":"insufficient_cash","cost":cost,"cash":int(state_adapter.get_value("economy","cash",0))}
     progress = mini(100, progress + int(STEP_GAIN[step])); property[step] = progress; property["condition"] = mini(100, int(property.get("condition", 0)) + (5 if step == "repair" else 2)); catalog[index] = property
-    state_adapter.set_value("properties", "catalog", catalog); state_adapter.set_value("properties", "selected_property", index); _sync_legacy_fields()
+    state_adapter.set_value("properties", "catalog", catalog); state_adapter.set_value("properties", "selected_property", index); state_adapter.set_value("properties", "cleaning", int(property.get("cleaning", 0))); state_adapter.set_value("properties", "repair", int(property.get("repair", 0))); state_adapter.set_value("properties", "painting", int(property.get("painting", 0))); state_adapter.set_value("properties", "furnishing", int(property.get("furnishing", 0))); _sync_legacy_fields()
     state_adapter.log_message("RESTORATION: %s — %s +%d%% (-$%d)." % [property.get("name", id), step.capitalize(), int(STEP_GAIN[step]), cost])
     if is_operational(property):
         state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + 8); state_adapter.message("RESTORATION COMPLETE. Your neglected property is now productive capital.")
@@ -138,6 +138,7 @@ func sell_property() -> void:
     var proceeds: Dictionary = state_adapter.receive(price, "property sale: %s" % str(property.get("name", "property")))
     if not bool(proceeds.get("ok", false)): state_adapter.message(str(proceeds.get("message", "Sale could not complete."))); return
     state_adapter.set_value("properties", "owned", false)
+    state_adapter.set_value("properties", "cleaning", 0); state_adapter.set_value("properties", "repair", 0); state_adapter.set_value("properties", "painting", 0); state_adapter.set_value("properties", "furnishing", 0)
     _sync_legacy_fields(); state_adapter.message("Sold %s for $%s." % [str(property.get("name", "property")), state_adapter.money(price)]); state_adapter.log_message("SOLD: %s for $%s." % [str(property.get("name", "property")), state_adapter.money(price)])
 func lease_property() -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)): state_adapter.message("You own no property to lease."); return
