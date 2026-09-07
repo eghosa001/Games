@@ -50,8 +50,10 @@ func _resolve() -> void:
     if _panels.is_empty(): return
     # Lock panels so their _process() does not fight our visibility decisions.
     for info in _panels.values():
-        var node := info["panel"] as Node
-        if node != null and is_instance_valid(node) and node.has_method("_set_coordinator_active"):
+        var raw_panel = info["panel"]
+        if raw_panel == null or not is_instance_valid(raw_panel): continue
+        var node := raw_panel as Node
+        if node != null and node.has_method("_set_coordinator_active"):
             node.call("_set_coordinator_active", true)
     var dock_rect := _get_dock_rect()
     var screen_open := _last_screen != ""
@@ -64,8 +66,9 @@ func _resolve() -> void:
     var occupied: Array[Rect2] = []
     for name in sorted_keys:
         var panel_info := _panels[name] as Dictionary
-        var panel_node := panel_info["panel"] as Node
-        if panel_node == null or not is_instance_valid(panel_node): continue
+        var raw_node = panel_info["panel"]
+        if raw_node == null or not is_instance_valid(raw_node): continue
+        var panel_node := raw_node as Node
         # Ensure layout is current before checking overlap.
         if panel_node.has_method("_layout_responsive"):
             panel_node.call("_layout_responsive")
@@ -97,8 +100,10 @@ func _resolve() -> void:
     # Release coordinator lock so panels resume independent layout after the
     # current resolve tick finishes.
     for info in _panels.values():
-        var node := info["panel"] as Node
-        if node != null and is_instance_valid(node) and node.has_method("_set_coordinator_active"):
+        var raw_panel = info["panel"]
+        if raw_panel == null or not is_instance_valid(raw_panel): continue
+        var node := raw_panel as Node
+        if node != null and node.has_method("_set_coordinator_active"):
             node.call("_set_coordinator_active", false)
 
 func _propagate_visibility(node: Node, value: bool) -> void:

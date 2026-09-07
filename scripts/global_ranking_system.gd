@@ -177,7 +177,8 @@ func _discover_companies() -> void:
                 register_company(id, str(rival.get("name", id)), region)
                 update_company(id, _derive_metrics(rival))
     var player_id: Variant = "founder"
-    register_company(player_id, "RENEW", str(main.get("selected_region", "global")))
+    var selected_region: String = str(main.get("selected_region")) if main.get("selected_region") != null else "global"
+    register_company(player_id, "RENEW", selected_region)
     update_company(player_id, _derive_player_metrics(main))
 
 func _derive_player_metrics(main) -> Dictionary:
@@ -187,8 +188,8 @@ func _derive_player_metrics(main) -> Dictionary:
     var employees = get_node_or_null("/root/RenewEmployeeSystem")
     var ownership = main.get_node_or_null("Systems/OwnershipSystem")
     if ownership == null: ownership = main.get_node_or_null("OwnershipSystem")
-    var cash: Variant = float(main.get("cash", 0.0))
-    var reputation: Variant = float(main.get("reputation", 0.0))
+    var cash: Variant = float(main.get("cash")) if main.get("cash") != null else 0.0
+    var reputation: Variant = float(main.get("reputation")) if main.get("reputation") != null else 0.0
     var revenue: Variant = float(main.get("revenue")) if main.get("revenue") != null else 0.0
     var profit: Variant = float(main.get("profit")) if main.get("profit") != null else 0.0
     var assets: Variant = cash
@@ -213,10 +214,10 @@ func _derive_player_metrics(main) -> Dictionary:
         ownership_score = float(ownership.get_ownership_percent("renew_co", "founder"))
     return {
         "valuation": valuation, "revenue": revenue, "profit": profit, "assets": assets,
-        "market_share": max(0.0, float(main.get("market_share", 0.0))), "employees": employee_count,
-        "technology": float(main.get("technology_level", 0.0)), "infrastructure": infra_score,
-        "regional_presence": float(main.get("regions_unlocked", 1)), "reputation": reputation,
-        "resource_control": float(main.get("resource_control", 0.0)), "alliance_influence": alliance_score + ownership_score
+        "market_share": max(0.0, float(main.get("market_share")) if main.get("market_share") != null else 0.0), "employees": employee_count,
+        "technology": float(main.get("technology_level")) if main.get("technology_level") != null else 0.0, "infrastructure": infra_score,
+        "regional_presence": float(main.get("regions_unlocked")) if main.get("regions_unlocked") != null else 1.0, "reputation": reputation,
+        "resource_control": float(main.get("resource_control")) if main.get("resource_control") != null else 0.0, "alliance_influence": alliance_score + ownership_score
     }
 
 func _derive_metrics(data: Dictionary) -> Dictionary:

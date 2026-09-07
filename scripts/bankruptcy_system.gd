@@ -441,7 +441,13 @@ func restore_state(snapshot: Dictionary) -> void:
     previous_state = str(snapshot.get("previous_state", previous_state))
     distress_score = float(snapshot.get("distress_score", distress_score))
     cash_runway = float(snapshot.get("cash_runway", cash_runway))
-    covenant_breaches = snapshot.get("covenant_breaches", covenant_breaches).duplicate()
+    var _cb_raw = snapshot.get("covenant_breaches", covenant_breaches)
+    if _cb_raw is Array:
+        covenant_breaches.clear()
+        for _item in _cb_raw:
+            covenant_breaches.append(str(_item))
+    else:
+        covenant_breaches = []
     restructuring_plan = snapshot.get("restructuring_plan", {}).duplicate(true)
     asset_sale_history = snapshot.get("asset_sale_history", []).duplicate(true)
     investment_history = snapshot.get("investment_history", []).duplicate(true)
