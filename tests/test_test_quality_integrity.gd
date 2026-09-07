@@ -2,7 +2,8 @@ extends SceneTree
 
 ## Meta-test for the test suite itself. This catches tests that can silently
 ## report success because assertions are compiled out, exit successfully after
-## failures, or retry random behavior until a pass occurs.
+## failures, retry random behavior until a pass occurs, or assert an operation
+## succeeded without inspecting any result.
 
 var passed := 0
 var failed := 0
@@ -27,8 +28,8 @@ func run() -> void:
     check(files.size() >= 1, "Test suite contains Godot test scripts")
 
     for path in files:
-        # This file intentionally contains the word split below so it does not
-        # match its own forbidden-pattern scan.
+        # This file intentionally contains the forbidden-pattern tokens split
+        # below so it does not match its own source scan.
         if path == "res://tests/test_test_quality_integrity.gd":
             continue
         scanned += 1
@@ -36,9 +37,11 @@ func run() -> void:
         check(not source.is_empty(), "Test source is readable: " + path)
 
         var assert_token := "ass" + "ert("
+        var tautology_token := "check(" + "true,"
         check(not source.contains(assert_token), "No assert()-only test assertions: " + path)
         check(not source.contains("quit()"), "No unconditional bare quit(): " + path)
         check(not source.contains("for attempt in range(20)"), "No 20-attempt retry masking randomness: " + path)
+        check(not source.contains(tautology_token), "No tautological check(true, ...) assertions: " + path)
 
         if source.contains("extends SceneTree"):
             check(source.contains("quit(1 if failed > 0 else 0)"), "SceneTree test has failure-aware exit status: " + path)
