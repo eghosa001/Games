@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 08:47:25 UTC 2026
+// Generated on: Mon Sep  7 09:02:10 UTC 2026
 
-// Source snapshot commit: c00ac2b4861720737326648f68e44f0b8cd5b173
+// Source snapshot commit: 4ae6f5f23a3923389f1f651d861d18d43c4f3e92
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4387,8 +4387,8 @@ window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
 [debug]
-gdscript/warnings/enable=false
-gdscript/warnings/inference_on_variant=0
+gdscript/warnings/enable=true
+gdscript/warnings/inference_on_variant=1
 
 [rendering]
 renderer/rendering_method="gl_compatibility"
