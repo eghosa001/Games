@@ -59,6 +59,8 @@ func _map_area() -> Rect2:
     var viewport: Vector2 = get_viewport_rect().size
     var top := 64.0
     var bottom: float = viewport.y - 150.0
+    var left: float = 16.0
+    var width: float = maxf(100.0, viewport.x - 32.0)
     if viewport.x < 700.0:
         top = 112.0
     var hud := get_tree().root.get_node_or_null("Renew/UI/MainHUD") if get_tree() != null and get_tree().root != null else null
@@ -77,9 +79,19 @@ func _map_area() -> Rect2:
                 top = maxf(top, objective.position.y + objective.size.y + 4.0)
             else:
                 top = maxf(top, 212.0)
+        # Clamp left against left_rail (x:8→96 on desktop) so tiles do not
+        # draw behind the navigation rail; also respect the dock's left edge.
+        var left_rail: Variant = hud.get("left_rail")
+        var rail_right: float = 16.0
+        if left_rail is Control and left_rail.visible:
+            rail_right = maxf(rail_right, left_rail.position.x + left_rail.size.x + 4.0)
+        elif dock is Control and dock.visible:
+            rail_right = maxf(rail_right, dock.position.x + 4.0)
+        left = rail_right
+        width = maxf(100.0, viewport.x - left - 16.0)
     if bottom - top < 90.0:
         bottom = top + 90.0
-    return Rect2(16.0, top, maxf(100.0, viewport.x - 32.0), maxf(90.0, bottom - top))
+    return Rect2(left, top, maxf(width, 100.0), maxf(90.0, bottom - top))
 
 func map_rects() -> Array:
     var out: Array = []
