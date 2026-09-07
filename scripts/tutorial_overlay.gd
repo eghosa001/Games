@@ -21,8 +21,6 @@ func _ready() -> void:
     _refresh()
     overlay_root.resized.connect(_layout_responsive)
     _layout_responsive()
-    if RenewUIRegionCoordinator != null:
-        RenewUIRegionCoordinator.register_panel("TutorialOverlay", 10)
 
 func _enter_tree() -> void:
     if RenewUIRegionCoordinator != null:
@@ -134,6 +132,12 @@ func _get_rect() -> Rect2:
 
 func _set_coordinator_active(value: bool) -> void:
     _coordinator_active = value
+
+func _on_screen_changed(open: bool) -> void:
+    if open:
+        panel.hide()
+    elif not _coordinator_active:
+        _layout_responsive()
 
 func _refresh() -> void:
     if dismissed or game == null:

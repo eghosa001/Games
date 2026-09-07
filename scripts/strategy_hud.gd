@@ -28,8 +28,6 @@ func _ready() -> void:
 
     root.resized.connect(_layout_responsive)
     _layout_responsive()
-    if RenewUIRegionCoordinator != null:
-        RenewUIRegionCoordinator.register_panel("StrategyHUD", 5)
 
 func _enter_tree() -> void:
     if RenewUIRegionCoordinator != null:
@@ -41,6 +39,7 @@ func _layout_responsive() -> void:
     var w: float = maxf(root.size.x, 320.0)
     var h: float = maxf(root.size.y, 480.0)
     if w < 1000.0:
+        panel.hide()
         return
     panel.position = Vector2(w - 425.0, 116.0)
     panel.size = Vector2(410.0, 82.0)
@@ -58,6 +57,14 @@ func _get_rect() -> Rect2:
 
 func _set_coordinator_active(value: bool) -> void:
     _coordinator_active = value
+
+func _on_screen_changed(open: bool) -> void:
+    # When a primary screen opens, hide the floating strategy summary.
+    # When it closes, let the next _process tick re-evaluate layout.
+    if open:
+        panel.hide()
+    elif not _coordinator_active:
+        _layout_responsive()
 
 func _process(_delta: float) -> void:
     if game == null or label == null:

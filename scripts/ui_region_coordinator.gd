@@ -1,55 +1,52 @@
 extends Node
 ## Central UI region coordinator. Prevents floating CanvasLayer panels from
 ## overlapping each other or the primary command surface (action dock).
-## Each floater registers its rectangle; the coordinator suppresses any that
-## would intersect reserved regions or other higher-priority floaters.
-var _panel_names: Array[String] = []   # ordered list of registered panel names
-var _panel_priorities: Dictionary = {}  # name -> priority (int)
+## Panels self-register via _on_screen_changed(open: bool).
+## Stores only panel names (strings), never raw node pointers, to avoid
+## use-after-free during tree teardown.
+
+var _panel_names: Array[String] = ["StrategyHUD", "TutorialOverlay"]
 var _last_screen: String = ""
 
+func _ready() -> void:
+    pass
+
 func _exit_tree() -> void:
-    # Clear registries immediately during teardown to prevent dangling lookups.
+    # Clear registries before any native cleanup runs.
     _panel_names.clear()
-    _panel_priorities.clear()
+    _last_screen = ""
 
 func _notification(what: int) -> void:
-    # Godot calls NOTIFICATION_PREDELETE right before the object is freed.
-    # Clear everything here as a last resort safety net.
     if what == NOTIFICATION_PREDELETE:
         _panel_names.clear()
-        _panel_priorities.clear()
-
-func register_panel(name: String, priority: int) -> void:
-    if not _panel_names.has(name):
-        _panel_names.append(name)
-    _panel_priorities[name] = priority
-
-func unregister_panel(name: String) -> void:
-    if _panel_names.has(name):
-        _panel_names.erase(name)
-    _panel_priorities.erase(name)
-
-func _find_panel(name: String) -> Node:
-    if name == "" or name == null: return null
-    # Early exit if the tree is in an unstable state (tearing down).
-    var tree := get_tree()
-    if tree == null: return null
-    var root := tree.root
-    if root == null or not root.is_inside_tree(): return null
-    # Try common locations where panels might live (coordinator is an autoload
-    # so paths must be absolute or relative to known roots).
-    var candidates := [
-        root.get_node_or_null("Renew/UI/" + name),
-        root.get_node_or_null("UI/" + name),
-        root.get_node_or_null("Renew/" + name),
-    ]
-    for c in candidates:
-        if c != null and c.is_inside_tree() and is_instance_valid(c): return c
-    return null
+        _last_screen = ""
 
 func set_active_screen(screen_name: String) -> void:
     _last_screen = screen_name
-    _resolve()
+    # Skip entirely if the tree is tearing down.
+    var root := get_tree().root
+    if root == null or not root.is_inside_tree() or root.is_queued_for_deletion():
+        return
+    var open := screen_name != ""
+    for name in _panel_names:
+        if name == "" or name == null: continue
+        # Look up by absolute path to avoid ambiguity.
+        var n := root.get_node_or_null("Renew/UI/" + name)
+        if n == null:
+            n = root.get_node_or_null("UI/" + name)
+        if n == null:
+            n = root.get_node_or_null("Renew/" + name)
+        if n == null: continue
+        if not is_instance_valid(n): continue
+        if not n.is_inside_tree(): continue
+        if n.is_queued_for_deletion(): continue
+        # Use try_call equivalent: skip if method doesn't exist or call fails.
+        if n.has_method("_on_screen_changed"):
+            var _r := n.callv("_on_screen_changed", [open])
+
+## Backward-compat no-op for ui_screen_manager callers.
+func _resolve() -> void:
+    pass
 
 func is_any_floating_panel_being_managed() -> bool:
     return _last_screen != ""
@@ -57,114 +54,20 @@ func is_any_floating_panel_being_managed() -> bool:
 func get_active_screen() -> String:
     return _last_screen
 
-func get_all_registered() -> Array[String]:
+func get_all_registered() -> Array:
     return _panel_names.duplicate()
 
 func get_panel_rect(panel_name: String) -> Rect2:
-    var node := _find_panel(panel_name)
-    if node == null: return Rect2()
-    if node.has_method("_get_rect"):
-        var r := node.call("_get_rect")
-        if r is Rect2: return r
+    var root := get_tree().root
+    if root == null: return Rect2()
+    var n := root.get_node_or_null("Renew/UI/" + panel_name)
+    if n == null:
+        n = root.get_node_or_null("UI/" + panel_name)
+    if n == null:
+        n = root.get_node_or_null("Renew/" + panel_name)
+    if n == null or not is_instance_valid(n) or not n.is_inside_tree():
+        return Rect2()
+    var panel_node := n.get("panel")
+    if panel_node != null and panel_node is Control:
+        return panel_node.get_global_rect()
     return Rect2()
-
-func rect_intersects_dock(rect: Rect2, dock_rect: Rect2) -> bool:
-    return rect.intersects(dock_rect)
-
-func is_any_floating_panel_visible() -> bool:
-    for name in _panel_names:
-        var node := _find_panel(name)
-        if node != null and node.visible and node.is_visible_in_tree():
-            return true
-    return false
-
-func _resolve() -> void:
-    if _panel_names.is_empty(): return
-    # Lock panels so their _process() does not fight our visibility decisions.
-    for name in _panel_names:
-        var node := _find_panel(name)
-        if node == null: continue
-        if node.has_method("_set_coordinator_active"):
-            node.call("_set_coordinator_active", true)
-    var dock_rect := _get_dock_rect()
-    var screen_open := _last_screen != ""
-    var sorted_keys: Array = _panel_names.duplicate()
-    sorted_keys.sort_custom(func(a: String, b: String) -> int:
-        var pa := _panel_priorities.get(a, 999) as int
-        var pb := _panel_priorities.get(b, 999) as int
-        return pa - pb
-    )
-    var occupied: Array[Rect2] = []
-    for name in sorted_keys:
-        var panel_node := _find_panel(name)
-        if panel_node == null: continue
-        # Ensure layout is current before checking overlap.
-        if panel_node.has_method("_layout_responsive"):
-            panel_node.call("_layout_responsive")
-        var r: Variant = panel_node.call("_get_rect")
-        var rect: Rect2 = Rect2() if r == null else (r as Rect2)
-        if rect == Rect2(): continue
-        var should_show: bool = false
-        if panel_node.has_method("_should_show"):
-            var result = panel_node.call("_should_show")
-            should_show = result is bool and result as bool
-        var would_overlap: bool = false
-        if screen_open:
-            would_overlap = true
-        elif dock_rect != Rect2() and rect_intersects_dock(r, dock_rect):
-            would_overlap = true
-        else:
-            for other_r in occupied:
-                if r.intersects(other_r):
-                    would_overlap = true
-                    break
-        if not should_show:
-            would_overlap = true
-        var show := not would_overlap
-        panel_node.visible = show
-        # Propagate to all descendant Controls so nested-panel visibility checks
-        # (e.g. strategy.get("panel").visible) remain consistent.
-        _propagate_visibility(panel_node, show)
-        if not would_overlap:
-            occupied.append(r)
-    # Release coordinator lock so panels resume independent layout after the
-    # current resolve tick finishes.
-    for name in _panel_names:
-        var node := _find_panel(name)
-        if node == null: continue
-        if node.has_method("_set_coordinator_active"):
-            node.call("_set_coordinator_active", false)
-
-func _propagate_visibility(node: Node, value: bool) -> void:
-    if node == null or not is_instance_valid(node): return
-    if node is Control:
-        node.visible = value
-    for child in node.get_children():
-        _propagate_visibility(child, value)
-
-func _get_dock_rect() -> Rect2:
-    var hud := get_node_or_null("/root/Renew/UI/MainHUD") as CanvasLayer
-    if hud == null:
-        hud = get_tree().root.get_node_or_null("Renew/UI/MainHUD")
-    if hud == null: return Rect2()
-    var root_ctrl := hud.get("root") as Control
-    if root_ctrl == null: return Rect2()
-    var dock := hud.get("action_dock") as Control
-    if dock == null: return Rect2()
-    var global_rect: Rect2 = dock.get_global_rect()
-    if global_rect == Rect2(): return Rect2()
-    var vp: Rect2 = get_viewport().get_visible_rect()
-    if vp.size.x <= 0.0 or vp.size.y <= 0.0: return Rect2()
-    # Clamp dock rect to viewport bounds manually (Godot 4 has no Rect2.clip).
-    var clamped := global_rect
-    if clamped.position.x < vp.position.x:
-        clamped.position.x = vp.position.x
-    if clamped.position.y < vp.position.y:
-        clamped.position.y = vp.position.y
-    var vp_right := vp.position.x + vp.size.x
-    var vp_bottom := vp.position.y + vp.size.y
-    if clamped.position.x + clamped.size.x > vp_right:
-        clamped.size.x = vp_right - clamped.position.x
-    if clamped.position.y + clamped.size.y > vp_bottom:
-        clamped.size.y = vp_bottom - clamped.position.y
-    return clamped
