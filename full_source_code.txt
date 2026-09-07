@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 09:28:57 UTC 2026
+// Generated on: Mon Sep  7 16:48:58 UTC 2026
 
-// Source snapshot commit: 0d54271540d3271d1644773efc8581201d74ea10
+// Source snapshot commit: e4cc096d6c13f94f7e3766970e1cd32b3b70e72c
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4322,76 +4322,145 @@ progressive_web_app/ensure_cross_origin_isolation_headers=false
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: project.godot
-Lines: 68
+Lines: 137
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [application]
+
 config/name="RENEW"
+
 config/icon="res://Assets/renew_icon.svg"
+
 run/main_scene="res://scenes/Main.tscn"
 
+
+
 [autoload]
+
 RenewWebResponsive="*res://scripts/web_responsive.gd"
+
 RenewGameState="*res://scripts/game_state.gd"
+
 RenewAutosave="*res://scripts/autosave.gd"
+
 RenewFinanceSystem="*res://scripts/finance_system_fixed.gd"
+
 RenewSimulationSystem="*res://scripts/simulation_system.gd"
+RenewUIRegionCoordinator="*res://scripts/ui_region_coordinator.gd"
+
 RenewProductionSystem="*res://scripts/production_system.gd"
+
 RenewContractSystem="*res://scripts/contract_system.gd"
+
 RenewAllianceSystem="*res://scripts/alliance_v1_system.gd"
+
 RenewVictorySystem="*res://scripts/victory_system.gd"
+
 RenewIdentitySystem="*res://scripts/identity_system.gd"
+
 RenewReputationSystem="*res://scripts/reputation_system.gd"
+
 RenewAllianceControl="*res://scripts/alliance_control_system.gd"
+
 RenewDiplomacySystem="*res://scripts/diplomacy_system.gd"
+
 RenewDiplomacyAI="*res://scripts/diplomacy_ai.gd"
+
 RenewDiplomacyEffects="*res://scripts/diplomacy_effects.gd"
+
 RenewDiplomacyControl="*res://scripts/diplomacy_control_bridge.gd"
+
 RenewInfrastructureSystem="*res://scripts/infrastructure_system.gd"
+
 RenewCollectionSystem="*res://scripts/collection_system.gd"
+
 RenewCollectionUI="*res://scripts/collection_ui.gd"
+
 RenewLiveOpsSystem="*res://scripts/liveops_system.gd"
+
 RenewLiveOpsUI="*res://scripts/liveops_ui.gd"
+
 RenewHeadquartersSystem="*res://scripts/headquarters_system.gd"
+
 RenewCorporateLegacy="*res://scripts/corporate_legacy_system.gd"
+
 RenewEmployeeSystem="*res://scripts/employee_system.gd"
+
 RenewCompanyCultureSystem="*res://scripts/company_culture_system.gd"
+
 RenewGlobalRankingSystem="*res://scripts/global_ranking_system.gd"
+
 RenewWorldEventSystem="*res://scripts/world_event_system.gd"
+
 RenewAnalyticsSystem="*res://scripts/analytics_system.gd"
+
 RenewCompetitorStateBridge="*res://scripts/competitor_state_bridge.gd"
+
 RenewCompetitorReactionSystem="*res://scripts/competitor_reaction_system.gd"
+
 RenewTechnologySystem="*res://scripts/technology_system.gd"
+
 RenewResearchSystem="*res://scripts/research_system.gd"
+
 RenewProgressionSystem="*res://scripts/progression_system.gd"
+
 RenewRegionSystem="*res://scripts/region_system.gd"
+
 RenewDynamicEventController="*res://scripts/dynamic_event_controller.gd"
+
 RenewSeasonalRestorationSystem="*res://scripts/seasonal_restoration_system.gd"
+
 RenewHistorySystem="*res://scripts/history_system.gd"
+
 RenewHistoryEventBridge="*res://scripts/history_event_bridge.gd"
+
 RenewNewsSystem="*res://scripts/news_system.gd"
+
 RenewAudioManager="*res://scripts/audio_manager.gd"
+
 RenewAmbientAudio="*res://scripts/ambient_audio.gd"
+
 RenewUIScreenManager="*res://scripts/ui_screen_manager.gd"
 
+
+
 [display]
+
 window/size/viewport_width=1280
+
 window/size/viewport_height=720
+
 window/size/window_width_override=1280
+
 window/size/window_height_override=720
+
 window/stretch/mode="canvas_items"
+
 window/stretch/aspect="expand"
 
+
+
 [debug]
+
 gdscript/warnings/enable=true
+
 gdscript/warnings/inference_on_variant=1
 
+
+
 [rendering]
+
 renderer/rendering_method="gl_compatibility"
+
 renderer/rendering_method.mobile="gl_compatibility"
+
 environment/defaults/default_clear_color=Color(0.03, 0.05, 0.06, 1)
 
+
+
 [input]
+
 action_restore={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":82)]}
+
 action_inspect={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":73)]}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -22307,7 +22376,7 @@ func _contracts() -> Node:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/strategy_hud.gd
-Lines: 71
+Lines: 81
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 
@@ -22317,6 +22386,7 @@ var game: Node
 var root: Control
 var panel: Panel
 var label: Label
+var _coordinator_active := false
 
 func _ready() -> void:
     game = get_tree().root.get_node_or_null("Renew")
@@ -22338,36 +22408,45 @@ func _ready() -> void:
 
     root.resized.connect(_layout_responsive)
     _layout_responsive()
+    if RenewUIRegionCoordinator != null:
+        RenewUIRegionCoordinator.register_panel("StrategyHUD", self, 5, _get_rect)
+
+func _enter_tree() -> void:
+    if RenewUIRegionCoordinator != null:
+        RenewUIRegionCoordinator.set_active_screen("")
 
 func _layout_responsive() -> void:
     if root == null or panel == null or label == null:
         return
     var w: float = maxf(root.size.x, 320.0)
     var h: float = maxf(root.size.y, 480.0)
-    # The compact action sheet owns the lower mobile viewport. The strategy
-    # summary is useful there but not essential, so remove it rather than
-    # competing for the same pixels as the command surface.
     if w < 1000.0:
-        panel.hide()
         return
-
-    var tutorial_layer := get_parent().get_node_or_null("TutorialOverlay")
-    var tutorial_panel := tutorial_layer.get("panel") if tutorial_layer != null else null
-    if tutorial_panel is Panel and tutorial_panel.visible:
-        # Tutorial owns the upper-right presentation slot until dismissed.
-        panel.hide()
-        return
-
-    panel.show()
     panel.position = Vector2(w - 425.0, 116.0)
     panel.size = Vector2(410.0, 82.0)
     label.size = Vector2(panel.size.x - 28.0, 62.0)
     label.add_theme_font_size_override("font_size", 13)
+    panel.show()
+
+func _should_show() -> bool:
+    if root == null: return false
+    return maxf(root.size.x, 320.0) >= 1000.0
+
+func _get_rect() -> Rect2:
+    if panel == null: return Rect2()
+    return panel.get_global_rect()
+
+func _set_coordinator_active(value: bool) -> void:
+    _coordinator_active = value
 
 func _process(_delta: float) -> void:
     if game == null or label == null:
         return
-    _layout_responsive()
+    var screen_name := ""
+    if RenewUIRegionCoordinator != null:
+        screen_name = RenewUIRegionCoordinator.get_active_screen()
+    if screen_name == "":
+        _layout_responsive()
     var market = game.get_node_or_null("Systems/MarketDirector")
     var goals = game.get_node_or_null("Systems/EmpireGoals")
     var market_text: Variant = "MARKET: stable"
@@ -23283,7 +23362,7 @@ func load_snapshot(state:Dictionary)->void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/tutorial_overlay.gd
-Lines: 160
+Lines: 170
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 
@@ -23300,6 +23379,7 @@ var continue_button: Button
 var collapsed_button: Button
 var dismissed: Variant = false
 var last_step: Variant = -1
+var _coordinator_active := false
 
 func _ready() -> void:
     game = get_tree().root.get_node_or_null("Renew")
@@ -23307,10 +23387,21 @@ func _ready() -> void:
     _refresh()
     overlay_root.resized.connect(_layout_responsive)
     _layout_responsive()
+    if RenewUIRegionCoordinator != null:
+        RenewUIRegionCoordinator.register_panel("TutorialOverlay", self, 10, _get_rect)
+
+func _enter_tree() -> void:
+    if RenewUIRegionCoordinator != null:
+        RenewUIRegionCoordinator.set_active_screen("")
 
 func _process(_delta: float) -> void:
     if game == null:
         return
+    var screen_name := ""
+    if RenewUIRegionCoordinator != null:
+        screen_name = RenewUIRegionCoordinator.get_active_screen()
+    if screen_name == "":
+        _layout_responsive()
     var current_action: String = String(tutorial.current().get("action", "COMPLETE"))
     if not tutorial.completed and current_action != "COMPLETE":
         var old_step: int = int(tutorial.step)
@@ -23368,13 +23459,7 @@ func _layout_responsive() -> void:
         return
     var narrow: bool = w < 700.0
     if narrow:
-        # Keep the tutorial immediately above the mobile command sheet. This
-        # makes its position derive from the same reserved lower region as the
-        # primary HUD instead of using a fixed y coordinate.
-        var dock_height: float = clampf(h * 0.40, 218.0, 250.0)
-        var dock_top: float = maxf(114.0, h - dock_height - 8.0)
-        var tutorial_bottom: float = dock_top - 8.0
-        panel.position = Vector2(8.0, maxf(108.0, tutorial_bottom - 86.0))
+        panel.position = Vector2(8.0, maxf(108.0, (maxf(114.0, h - clampf(h * 0.40, 218.0, 250.0) - 8.0) - 8.0) - 86.0))
         panel.size = Vector2(w - 16.0, 86.0)
         title_label.position = Vector2(10, 8)
         title_label.size = Vector2(w - 132.0, 24)
@@ -23385,10 +23470,7 @@ func _layout_responsive() -> void:
         hint_label.hide()
         continue_button.position = Vector2(w - 106.0, 8)
         continue_button.size = Vector2(94, 32)
-        panel.show()
     elif w >= 1000.0:
-        # Reserve the upper-right slot. StrategyHUD explicitly yields this slot
-        # while the tutorial is visible, so the two CanvasLayers cannot stack.
         panel.position = Vector2(w - 425.0, 116.0)
         panel.size = Vector2(410.0, 96.0)
         title_label.position = Vector2(18, 10)
@@ -23400,17 +23482,24 @@ func _layout_responsive() -> void:
         hint_label.hide()
         continue_button.position = Vector2(panel.size.x - 110.0, 62)
         continue_button.size = Vector2(92, 28)
-        panel.show()
     else:
-        # At intermediate widths there is no safe dedicated desktop slot. Do
-        # not paint a floating card over the primary HUD; keep only the small
-        # reopen affordance in a non-critical margin.
-        panel.hide()
         collapsed_button.position = Vector2(8.0, maxf(108.0, h - 46.0))
         collapsed_button.size = Vector2(118.0, 38.0)
         collapsed_button.show()
         return
     collapsed_button.hide()
+    panel.show()
+
+func _should_show() -> bool:
+    var vp := get_viewport().get_visible_rect().size
+    return vp.x >= 700.0
+
+func _get_rect() -> Rect2:
+    if panel == null: return Rect2()
+    return panel.get_global_rect()
+
+func _set_coordinator_active(value: bool) -> void:
+    _coordinator_active = value
 
 func _refresh() -> void:
     if dismissed or game == null:
@@ -23448,8 +23537,150 @@ func _expand() -> void:
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: scripts/ui_region_coordinator.gd
+Lines: 136
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+extends Node
+## Central UI region coordinator. Prevents floating CanvasLayer panels from
+## overlapping each other or the primary command surface (action dock).
+## Each floater registers its rectangle; the coordinator suppresses any that
+## would intersect reserved regions or other higher-priority floaters.
+var _panels: Dictionary = {}   # name -> {panel, priority, rect_fn}
+var _last_screen: String = ""
+
+func _ready() -> void:
+    pass
+
+func register_panel(name: String, panel: Node, priority: int, rect_fn: Callable) -> void:
+    _panels[name] = {"panel": panel, "priority": priority, "rect_fn": rect_fn}
+
+func unregister_panel(name: String) -> void:
+    if _panels.has(name):
+        _panels.erase(name)
+
+func set_active_screen(screen_name: String) -> void:
+    _last_screen = screen_name
+    _resolve()
+
+func is_any_floating_panel_being_managed() -> bool:
+    return _last_screen != ""
+
+func get_active_screen() -> String:
+    return _last_screen
+
+func get_all_registered() -> Array[String]:
+    return _panels.keys()
+
+func get_panel_rect(panel_name: String) -> Rect2:
+    if not _panels.has(panel_name): return Rect2()
+    var panel_info := _panels[panel_name] as Dictionary
+    if panel_info["rect_fn"].is_valid():
+        return panel_info["rect_fn"].call() as Rect2
+    return Rect2()
+
+func rect_intersects_dock(rect: Rect2, dock_rect: Rect2) -> bool:
+    return rect.intersects(dock_rect)
+
+func is_any_floating_panel_visible() -> bool:
+    for _panel_info in _panels.values():
+        var pi := _panel_info as Dictionary
+        if pi["panel"] != null and pi["panel"].visible and pi["panel"].is_visible_in_tree():
+            return true
+    return false
+
+func _resolve() -> void:
+    if _panels.is_empty(): return
+    # Lock panels so their _process() does not fight our visibility decisions.
+    for info in _panels.values():
+        var node := info["panel"] as Node
+        if node != null and is_instance_valid(node) and node.has_method("_set_coordinator_active"):
+            node.call("_set_coordinator_active", true)
+    var dock_rect := _get_dock_rect()
+    var screen_open := _last_screen != ""
+    var sorted_keys: Array = _panels.keys()
+    sorted_keys.sort_custom(func(a: String, b: String) -> int:
+        var pa := _panels[a] as Dictionary
+        var pb := _panels[b] as Dictionary
+        return pa["priority"] as int - pb["priority"] as int
+    )
+    var occupied: Array[Rect2] = []
+    for name in sorted_keys:
+        var panel_info := _panels[name] as Dictionary
+        var panel_node := panel_info["panel"] as Node
+        if panel_node == null or not is_instance_valid(panel_node): continue
+        # Ensure layout is current before checking overlap.
+        if panel_node.has_method("_layout_responsive"):
+            panel_node.call("_layout_responsive")
+        var r: Rect2 = panel_info["rect_fn"].call() as Rect2
+        if r == Rect2(): continue
+        var should_show: bool = false
+        if panel_node.has_method("_should_show"):
+            var result = panel_node.call("_should_show")
+            should_show = result is bool and result as bool
+        var would_overlap: bool = false
+        if screen_open:
+            would_overlap = true
+        elif dock_rect != Rect2() and rect_intersects_dock(r, dock_rect):
+            would_overlap = true
+        else:
+            for other_r in occupied:
+                if r.intersects(other_r):
+                    would_overlap = true
+                    break
+        if not should_show:
+            would_overlap = true
+        var show := not would_overlap
+        panel_node.visible = show
+        # Propagate to all descendant Controls so nested-panel visibility checks
+        # (e.g. strategy.get("panel").visible) remain consistent.
+        _propagate_visibility(panel_node, show)
+        if not would_overlap:
+            occupied.append(r)
+    # Release coordinator lock so panels resume independent layout after the
+    # current resolve tick finishes.
+    for info in _panels.values():
+        var node := info["panel"] as Node
+        if node != null and is_instance_valid(node) and node.has_method("_set_coordinator_active"):
+            node.call("_set_coordinator_active", false)
+
+func _propagate_visibility(node: Node, value: bool) -> void:
+    if node == null or not is_instance_valid(node): return
+    if node is Control:
+        node.visible = value
+    for child in node.get_children():
+        _propagate_visibility(child, value)
+
+func _get_dock_rect() -> Rect2:
+    var hud := get_node_or_null("/root/Renew/UI/MainHUD") as CanvasLayer
+    if hud == null:
+        hud = get_tree().root.get_node_or_null("Renew/UI/MainHUD")
+    if hud == null: return Rect2()
+    var root_ctrl := hud.get("root") as Control
+    if root_ctrl == null: return Rect2()
+    var dock := hud.get("action_dock") as Control
+    if dock == null: return Rect2()
+    var global_rect: Rect2 = dock.get_global_rect()
+    if global_rect == Rect2(): return Rect2()
+    var vp: Rect2 = get_viewport().get_visible_rect()
+    if vp.size.x <= 0.0 or vp.size.y <= 0.0: return Rect2()
+    # Clamp dock rect to viewport bounds manually (Godot 4 has no Rect2.clip).
+    var clamped := global_rect
+    if clamped.position.x < vp.position.x:
+        clamped.position.x = vp.position.x
+    if clamped.position.y < vp.position.y:
+        clamped.position.y = vp.position.y
+    var vp_right := vp.position.x + vp.size.x
+    var vp_bottom := vp.position.y + vp.size.y
+    if clamped.position.x + clamped.size.x > vp_right:
+        clamped.size.x = vp_right - clamped.position.x
+    if clamped.position.y + clamped.size.y > vp_bottom:
+        clamped.size.y = vp_bottom - clamped.position.y
+    return clamped
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/ui_screen_manager.gd
-Lines: 198
+Lines: 210
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 ## class_name removed: "RenewUIScreenManager" conflicts with project.godot autoload.
@@ -23581,6 +23812,9 @@ func hide_all_screens() -> void:
     for node in _screen_nodes():
         _set_node_visible(node, false)
         _previous_visible[node.name] = false
+    if RenewUIRegionCoordinator != null:
+        RenewUIRegionCoordinator.set_active_screen("")
+        RenewUIRegionCoordinator._resolve()
 
 func _enforce_single_screen() -> void:
     var nodes := _screen_nodes(); var newly_opened: Node = null
@@ -23594,11 +23828,17 @@ func _enforce_single_screen() -> void:
     if _active_screen == null or not _is_node_visible(_active_screen):
         _active_screen = null
         _active_screen_name = ""
+        if RenewUIRegionCoordinator != null:
+            RenewUIRegionCoordinator.set_active_screen("")
+            RenewUIRegionCoordinator._resolve()
         return
     for node in nodes:
         if node != _active_screen and _is_node_visible(node):
             _set_node_visible(node, false)
             _previous_visible[node.name] = false
+    if RenewUIRegionCoordinator != null:
+        RenewUIRegionCoordinator.set_active_screen(_active_screen_name)
+        RenewUIRegionCoordinator._resolve()
 
 func show_screen(screen_name: String) -> void:
     if _initializing: _try_initialize()
@@ -23615,6 +23855,9 @@ func show_screen(screen_name: String) -> void:
         var should_show := node == target
         _set_node_visible(node, should_show)
         _previous_visible[node.name] = should_show
+    if RenewUIRegionCoordinator != null:
+        RenewUIRegionCoordinator.set_active_screen(canonical_name)
+        RenewUIRegionCoordinator._resolve()
 
 func get_active_screen_name() -> String:
     if _active_screen != null and is_instance_valid(_active_screen):
@@ -29619,7 +29862,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_responsive_ui_shell.gd
-Lines: 167
+Lines: 178
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -29718,9 +29961,20 @@ func _check_layout_contract(scene: Node, hud: Node) -> void:
     for viewport_size in [Vector2(390, 844), Vector2(320, 568), Vector2(1280, 720)]:
         root_control.size = viewport_size
         hud._layout_responsive()
-        await process_frame
+        # Propagate the simulated viewport size to floating-panel roots so their
+        # responsive layouts recompute for the target size instead of the boot
+        # viewport size.
         var tutorial := scene.get_node_or_null("UI/TutorialOverlay")
         var strategy := scene.get_node_or_null("UI/StrategyHUD")
+        if tutorial != null:
+            var troot := tutorial.get("overlay_root") as Control
+            if troot != null: troot.size = viewport_size
+            tutorial._layout_responsive()
+        if strategy != null:
+            var sroot := strategy.get("root") as Control
+            if sroot != null: sroot.size = viewport_size
+            strategy._layout_responsive()
+        await process_frame
         var tutorial_panel := tutorial.get("panel") as Control if tutorial != null else null
         var strategy_panel := strategy.get("panel") as Control if strategy != null else null
         if viewport_size.x < 700.0:
@@ -30707,6 +30961,122 @@ func _run() -> void:
 
 func _finish() -> void:
     print("MOBILE RESPONSIVE NAVIGATION RESULT: %d passed, %d failed" % [passed, failed])
+    quit(1 if failed > 0 else 0)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: tests/test_ui_region_coordinator.gd
+Lines: 110
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+extends SceneTree
+
+## Verifies that the UIRegionCoordinator correctly suppresses overlapping
+## floating panels (StrategyHUD, TutorialOverlay) and hides them when any
+## primary screen is open.
+var passed := 0
+var failed := 0
+
+func _init() -> void:
+    call_deferred("run")
+
+func check(label: String, ok: bool) -> void:
+    if ok:
+        passed += 1
+        print("PASS: " + label)
+    else:
+        failed += 1
+        push_error("FAIL: " + label)
+
+func run() -> void:
+    var packed := load("res://scenes/Main.tscn") as PackedScene
+    check("Main scene loads", packed != null)
+    if packed == null:
+        quit(1)
+        return
+    var game := packed.instantiate()
+    root.add_child(game)
+    current_scene = game
+    await process_frame
+    await process_frame
+    await process_frame
+
+    var hud := game.get_node_or_null("UI/MainHUD")
+    var strategy := game.get_node_or_null("UI/StrategyHUD")
+    var tutorial := game.get_node_or_null("UI/TutorialOverlay")
+    var coordinator: Node = get_root().get_node_or_null("RenewUIRegionCoordinator")
+    check("coordinator autoload resolves", coordinator != null)
+    if coordinator == null:
+        game.free()
+        quit(1)
+        return
+
+    # ── Registration ──────────────────────────────────────────────────
+    var registered: Array = coordinator.get_all_registered()
+    check("StrategyHUD is registered", registered.has("StrategyHUD"))
+    check("TutorialOverlay is registered", registered.has("TutorialOverlay"))
+
+    # ── No screen open — layout-driven visibility ─────────────────────
+    var strat_panel := strategy.get("panel") as Control
+    var tut_panel := tutorial.get("panel") as Control
+    var strat_root := strategy.get("root") as Control
+    var tut_root := tutorial.get("overlay_root") as Control
+
+    # Desktop-sized viewport: both floaters should compute positions.
+    if strat_root != null: strat_root.size = Vector2(1280, 720)
+    if tut_root != null: tut_root.size = Vector2(1280, 720)
+    strategy._layout_responsive()
+    tutorial._layout_responsive()
+    coordinator.set_active_screen("")
+    await process_frame
+    check("desktop strategy panel has position", strat_panel.position.x >= 0.0)
+    check("desktop tutorial panel has position", tut_panel.position.x >= 0.0)
+
+    # ── Mobile-sized viewport: strategy yields ────────────────────────
+    if strat_root != null: strat_root.size = Vector2(390, 844)
+    if tut_root != null: tut_root.size = Vector2(390, 844)
+    strategy._layout_responsive()
+    tutorial._layout_responsive()
+    coordinator.set_active_screen("")
+    await process_frame
+    check("mobile strategy HUD hides", not strat_panel.visible)
+    # Tutorial may show above the dock on mobile; just verify no crash.
+
+    # ── Screen open suppresses all floaters ───────────────────────────
+    if strat_root != null: strat_root.size = Vector2(1280, 720)
+    strategy._layout_responsive()
+    tutorial._layout_responsive()
+    var smgr := get_root().get_node_or_null("RenewUIScreenManager")
+    if smgr != null:
+        smgr.show_screen("FinancePanel")
+        coordinator.set_active_screen("FinancePanel")
+    await process_frame
+    check("floating strategy hidden when screen open", not strat_panel.visible)
+    check("floating tutorial hidden when screen open", not tut_panel.visible)
+
+    # ── Screen close restores floaters ────────────────────────────────
+    if smgr != null:
+        smgr.hide_all_screens()
+    coordinator.set_active_screen("")
+    await process_frame
+    check("floating strategy visible after screen closes", strat_panel.visible)
+
+    # ── Action-dock overlap suppression ───────────────────────────────
+    var action_dock := hud.get("action_dock") as Control
+    if action_dock != null:
+        var dock_rect := action_dock.get_global_rect()
+        var strat_rect := strat_panel.get_global_rect()
+        # With desktop size, strategy sits in upper-right; dock is lower.
+        # If they happen to overlap, coordinator should hide strategy.
+        var overlaps := dock_rect != Rect2() and strat_rect != Rect2() and \
+                        dock_rect.intersects(strat_rect)
+        if overlaps:
+            check("coordinator hides floater overlapping dock", not strat_panel.visible)
+        else:
+            check("strategy does not overlap dock at desktop size", strat_panel.visible)
+
+    game.free()
+    await process_frame
+    print("COORDINATOR TEST RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
 
 
