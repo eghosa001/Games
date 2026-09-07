@@ -66,6 +66,17 @@ func _map_area() -> Rect2:
         var dock: Variant = hud.get("action_dock")
         if dock is Control and (dock as Control).visible:
             bottom = minf(bottom, (dock as Control).position.y - 8.0)
+        # Clamp top against desktop property cards so the map never draws
+        # beneath left_rail / selected_card / objective_card (y:116→208).
+        var selected: Variant = hud.get("selected_card")
+        if selected is Control and selected.visible:
+            top = maxf(top, selected.position.y + selected.size.y + 4.0)
+        else:
+            var objective: Variant = hud.get("objective_card")
+            if objective is Control and objective.visible:
+                top = maxf(top, objective.position.y + objective.size.y + 4.0)
+            else:
+                top = maxf(top, 212.0)
     if bottom - top < 90.0:
         bottom = top + 90.0
     return Rect2(16.0, top, maxf(100.0, viewport.x - 32.0), maxf(90.0, bottom - top))
