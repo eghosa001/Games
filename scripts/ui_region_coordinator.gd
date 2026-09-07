@@ -3,18 +3,22 @@ extends Node
 ## overlapping each other or the primary command surface (action dock).
 ## Each floater registers its rectangle; the coordinator suppresses any that
 ## would intersect reserved regions or other higher-priority floaters.
-var _panels: Dictionary = {}   # name -> {panel, priority, rect_fn}
+var _panels: Dictionary = {}   # name -> {panel_ref, priority, rect_method}
 var _last_screen: String = ""
 
 func _ready() -> void:
     pass
 
-func register_panel(name: String, panel: Node, priority: int, rect_fn: Callable) -> void:
-    _panels[name] = {"panel": panel, "priority": priority, "rect_fn": rect_fn}
+func register_panel(name: String, panel: Node, priority: int, rect_method: StringName) -> void:
+    _panels[name] = {"panel_ref": weakref(panel), "priority": priority, "rect_method": rect_method}
 
 func unregister_panel(name: String) -> void:
     if _panels.has(name):
         _panels.erase(name)
+
+func _exit_tree() -> void:
+    # Clear all weak refs before teardown to avoid dangling-pointer crashes.
+    _panels.clear()
 
 func set_active_screen(screen_name: String) -> void:
     _last_screen = screen_name
@@ -32,8 +36,12 @@ func get_all_registered() -> Array[String]:
 func get_panel_rect(panel_name: String) -> Rect2:
     if not _panels.has(panel_name): return Rect2()
     var panel_info := _panels[panel_name] as Dictionary
-    if panel_info["rect_fn"].is_valid():
-        return panel_info["rect_fn"].call() as Rect2
+    var raw = panel_info["panel"]
+    if raw == null or not is_instance_valid(raw): return Rect2()
+    var node := raw as Node
+    if node != null and node.has_method(panel_info["rect_method"]):
+        var r = node.call(panel_info["rect_method"])
+        if r is Rect2: return r
     return Rect2()
 
 func rect_intersects_dock(rect: Rect2, dock_rect: Rect2) -> bool:
@@ -50,8 +58,10 @@ func _resolve() -> void:
     if _panels.is_empty(): return
     # Lock panels so their _process() does not fight our visibility decisions.
     for info in _panels.values():
-        var raw_panel = info["panel"]
-        if raw_panel == null or not is_instance_valid(raw_panel): continue
+        var wr = info["panel_ref"] as WeakRef
+        if wr == null: continue
+        var raw_panel = wr.get_ref()
+        if raw_panel == null: continue
         var node := raw_panel as Node
         if node != null and node.has_method("_set_coordinator_active"):
             node.call("_set_coordinator_active", true)
@@ -66,14 +76,17 @@ func _resolve() -> void:
     var occupied: Array[Rect2] = []
     for name in sorted_keys:
         var panel_info := _panels[name] as Dictionary
-        var raw_node = panel_info["panel"]
-        if raw_node == null or not is_instance_valid(raw_node): continue
+        var wr = panel_info["panel_ref"] as WeakRef
+        if wr == null: continue
+        var raw_node = wr.get_ref()
+        if raw_node == null: continue
         var panel_node := raw_node as Node
         # Ensure layout is current before checking overlap.
         if panel_node.has_method("_layout_responsive"):
             panel_node.call("_layout_responsive")
-        var r: Rect2 = panel_info["rect_fn"].call() as Rect2
-        if r == Rect2(): continue
+        var r: Variant = panel_node.call(panel_info["rect_method"])
+        var rect: Rect2 = Rect2() if r == null else (r as Rect2)
+        if rect == Rect2(): continue
         var should_show: bool = false
         if panel_node.has_method("_should_show"):
             var result = panel_node.call("_should_show")
@@ -100,8 +113,10 @@ func _resolve() -> void:
     # Release coordinator lock so panels resume independent layout after the
     # current resolve tick finishes.
     for info in _panels.values():
-        var raw_panel = info["panel"]
-        if raw_panel == null or not is_instance_valid(raw_panel): continue
+        var wr = info["panel_ref"] as WeakRef
+        if wr == null: continue
+        var raw_panel = wr.get_ref()
+        if raw_panel == null: continue
         var node := raw_panel as Node
         if node != null and node.has_method("_set_coordinator_active"):
             node.call("_set_coordinator_active", false)

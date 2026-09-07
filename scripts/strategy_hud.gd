@@ -29,7 +29,7 @@ func _ready() -> void:
     root.resized.connect(_layout_responsive)
     _layout_responsive()
     if RenewUIRegionCoordinator != null:
-        RenewUIRegionCoordinator.register_panel("StrategyHUD", self, 5, _get_rect)
+        RenewUIRegionCoordinator.register_panel("StrategyHUD", self, 5, "_get_rect")
 
 func _enter_tree() -> void:
     if RenewUIRegionCoordinator != null:
