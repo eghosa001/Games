@@ -67,6 +67,15 @@ func run() -> void:
             if (slots[i]["rect"] as Rect2).intersects(slots[j]["rect"] as Rect2):
                 overlap = true
     check(not overlap, "Buildings never overlap")
+    var hud: Node = game.get_node_or_null("UI/MainHUD")
+    if hud != null:
+        var dock: Variant = hud.get("action_dock")
+        if dock is Control and (dock as Control).visible:
+            var clear := true
+            for slot in slots:
+                if ((slot as Dictionary)["rect"] as Rect2).end.y > (dock as Control).position.y:
+                    clear = false
+            check(clear, "Map stays clear of the command dock")
     var sig_before: String = str(map._signature())
     game.inspect_property()
     game.acquire_property()

@@ -55,26 +55,52 @@ func stage_of(property: Dictionary, owned: bool) -> int:
         return 4
     return 5
 
+func _map_area() -> Rect2:
+    var viewport: Vector2 = get_viewport_rect().size
+    var top := 64.0
+    var bottom: float = viewport.y - 150.0
+    if viewport.x < 700.0:
+        top = 112.0
+    var hud := get_tree().root.get_node_or_null("Renew/UI/MainHUD") if get_tree() != null and get_tree().root != null else null
+    if hud != null:
+        var dock: Variant = hud.get("action_dock")
+        if dock is Control and (dock as Control).visible:
+            bottom = minf(bottom, (dock as Control).position.y - 8.0)
+    if bottom - top < 90.0:
+        bottom = top + 90.0
+    return Rect2(16.0, top, maxf(100.0, viewport.x - 32.0), maxf(90.0, bottom - top))
+
 func map_rects() -> Array:
     var out: Array = []
-    var viewport: Vector2 = get_viewport_rect().size
     var state = _state()
     if state == null:
         return out
     var catalog = state.get_value("properties", "catalog", [])
     if not catalog is Array or catalog.is_empty():
         return out
-    var cols := 3
-    var area := Rect2(viewport.x * 0.06, viewport.y * 0.40, viewport.x * 0.88, viewport.y * 0.34)
-    var cell := Vector2(area.size.x / cols, area.size.y / 3.0)
+    var area := _map_area()
+    var count := 0
+    for entry in catalog:
+        if entry is Dictionary:
+            count += 1
+    if count <= 0:
+        return out
+    var cols := 9
+    if area.size.x < 900.0:
+        cols = 5
+    if area.size.x < 500.0:
+        cols = 3
+    cols = mini(cols, count)
+    var rows := int(ceil(float(count) / float(maxi(1, cols))))
+    var cell := Vector2(area.size.x / float(cols), area.size.y / float(maxi(1, rows)))
     var index := 0
     for entry in catalog:
         if not entry is Dictionary:
             continue
         var col: int = index % cols
         var row: int = index / cols
-        var origin := area.position + Vector2(col * cell.x + 8.0, row * cell.y + 8.0)
-        var size := Vector2(cell.x - 16.0, cell.y - 30.0)
+        var origin := area.position + Vector2(col * cell.x + 6.0, row * cell.y + 4.0)
+        var size := Vector2(maxf(40.0, cell.x - 12.0), maxf(40.0, cell.y - 32.0))
         out.append({"id": str(entry.get("id", "")), "rect": Rect2(origin, size)})
         index += 1
     return out
