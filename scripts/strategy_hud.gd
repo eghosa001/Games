@@ -6,6 +6,7 @@ var game: Node
 var root: Control
 var panel: Panel
 var label: Label
+var _coordinator_active := false
 
 func _ready() -> void:
     game = get_tree().root.get_node_or_null("Renew")
@@ -27,36 +28,45 @@ func _ready() -> void:
 
     root.resized.connect(_layout_responsive)
     _layout_responsive()
+    if RenewUIRegionCoordinator != null:
+        RenewUIRegionCoordinator.register_panel("StrategyHUD", self, 5, _get_rect)
+
+func _enter_tree() -> void:
+    if RenewUIRegionCoordinator != null:
+        RenewUIRegionCoordinator.set_active_screen("")
 
 func _layout_responsive() -> void:
     if root == null or panel == null or label == null:
         return
     var w: float = maxf(root.size.x, 320.0)
     var h: float = maxf(root.size.y, 480.0)
-    # The compact action sheet owns the lower mobile viewport. The strategy
-    # summary is useful there but not essential, so remove it rather than
-    # competing for the same pixels as the command surface.
     if w < 1000.0:
-        panel.hide()
         return
-
-    var tutorial_layer := get_parent().get_node_or_null("TutorialOverlay")
-    var tutorial_panel := tutorial_layer.get("panel") if tutorial_layer != null else null
-    if tutorial_panel is Panel and tutorial_panel.visible:
-        # Tutorial owns the upper-right presentation slot until dismissed.
-        panel.hide()
-        return
-
-    panel.show()
     panel.position = Vector2(w - 425.0, 116.0)
     panel.size = Vector2(410.0, 82.0)
     label.size = Vector2(panel.size.x - 28.0, 62.0)
     label.add_theme_font_size_override("font_size", 13)
+    panel.show()
+
+func _should_show() -> bool:
+    if root == null: return false
+    return maxf(root.size.x, 320.0) >= 1000.0
+
+func _get_rect() -> Rect2:
+    if panel == null: return Rect2()
+    return panel.get_global_rect()
+
+func _set_coordinator_active(value: bool) -> void:
+    _coordinator_active = value
 
 func _process(_delta: float) -> void:
     if game == null or label == null:
         return
-    _layout_responsive()
+    var screen_name := ""
+    if RenewUIRegionCoordinator != null:
+        screen_name = RenewUIRegionCoordinator.get_active_screen()
+    if screen_name == "":
+        _layout_responsive()
     var market = game.get_node_or_null("Systems/MarketDirector")
     var goals = game.get_node_or_null("Systems/EmpireGoals")
     var market_text: Variant = "MARKET: stable"

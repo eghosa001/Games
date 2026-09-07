@@ -128,6 +128,9 @@ func hide_all_screens() -> void:
     for node in _screen_nodes():
         _set_node_visible(node, false)
         _previous_visible[node.name] = false
+    if RenewUIRegionCoordinator != null:
+        RenewUIRegionCoordinator.set_active_screen("")
+        RenewUIRegionCoordinator._resolve()
 
 func _enforce_single_screen() -> void:
     var nodes := _screen_nodes(); var newly_opened: Node = null
@@ -141,11 +144,17 @@ func _enforce_single_screen() -> void:
     if _active_screen == null or not _is_node_visible(_active_screen):
         _active_screen = null
         _active_screen_name = ""
+        if RenewUIRegionCoordinator != null:
+            RenewUIRegionCoordinator.set_active_screen("")
+            RenewUIRegionCoordinator._resolve()
         return
     for node in nodes:
         if node != _active_screen and _is_node_visible(node):
             _set_node_visible(node, false)
             _previous_visible[node.name] = false
+    if RenewUIRegionCoordinator != null:
+        RenewUIRegionCoordinator.set_active_screen(_active_screen_name)
+        RenewUIRegionCoordinator._resolve()
 
 func show_screen(screen_name: String) -> void:
     if _initializing: _try_initialize()
@@ -162,6 +171,9 @@ func show_screen(screen_name: String) -> void:
         var should_show := node == target
         _set_node_visible(node, should_show)
         _previous_visible[node.name] = should_show
+    if RenewUIRegionCoordinator != null:
+        RenewUIRegionCoordinator.set_active_screen(canonical_name)
+        RenewUIRegionCoordinator._resolve()
 
 func get_active_screen_name() -> String:
     if _active_screen != null and is_instance_valid(_active_screen):

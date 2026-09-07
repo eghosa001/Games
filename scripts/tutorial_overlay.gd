@@ -13,6 +13,7 @@ var continue_button: Button
 var collapsed_button: Button
 var dismissed: Variant = false
 var last_step: Variant = -1
+var _coordinator_active := false
 
 func _ready() -> void:
     game = get_tree().root.get_node_or_null("Renew")
@@ -20,10 +21,21 @@ func _ready() -> void:
     _refresh()
     overlay_root.resized.connect(_layout_responsive)
     _layout_responsive()
+    if RenewUIRegionCoordinator != null:
+        RenewUIRegionCoordinator.register_panel("TutorialOverlay", self, 10, _get_rect)
+
+func _enter_tree() -> void:
+    if RenewUIRegionCoordinator != null:
+        RenewUIRegionCoordinator.set_active_screen("")
 
 func _process(_delta: float) -> void:
     if game == null:
         return
+    var screen_name := ""
+    if RenewUIRegionCoordinator != null:
+        screen_name = RenewUIRegionCoordinator.get_active_screen()
+    if screen_name == "":
+        _layout_responsive()
     var current_action: String = String(tutorial.current().get("action", "COMPLETE"))
     if not tutorial.completed and current_action != "COMPLETE":
         var old_step: int = int(tutorial.step)
@@ -81,13 +93,7 @@ func _layout_responsive() -> void:
         return
     var narrow: bool = w < 700.0
     if narrow:
-        # Keep the tutorial immediately above the mobile command sheet. This
-        # makes its position derive from the same reserved lower region as the
-        # primary HUD instead of using a fixed y coordinate.
-        var dock_height: float = clampf(h * 0.40, 218.0, 250.0)
-        var dock_top: float = maxf(114.0, h - dock_height - 8.0)
-        var tutorial_bottom: float = dock_top - 8.0
-        panel.position = Vector2(8.0, maxf(108.0, tutorial_bottom - 86.0))
+        panel.position = Vector2(8.0, maxf(108.0, (maxf(114.0, h - clampf(h * 0.40, 218.0, 250.0) - 8.0) - 8.0) - 86.0))
         panel.size = Vector2(w - 16.0, 86.0)
         title_label.position = Vector2(10, 8)
         title_label.size = Vector2(w - 132.0, 24)
@@ -98,10 +104,7 @@ func _layout_responsive() -> void:
         hint_label.hide()
         continue_button.position = Vector2(w - 106.0, 8)
         continue_button.size = Vector2(94, 32)
-        panel.show()
     elif w >= 1000.0:
-        # Reserve the upper-right slot. StrategyHUD explicitly yields this slot
-        # while the tutorial is visible, so the two CanvasLayers cannot stack.
         panel.position = Vector2(w - 425.0, 116.0)
         panel.size = Vector2(410.0, 96.0)
         title_label.position = Vector2(18, 10)
@@ -113,17 +116,24 @@ func _layout_responsive() -> void:
         hint_label.hide()
         continue_button.position = Vector2(panel.size.x - 110.0, 62)
         continue_button.size = Vector2(92, 28)
-        panel.show()
     else:
-        # At intermediate widths there is no safe dedicated desktop slot. Do
-        # not paint a floating card over the primary HUD; keep only the small
-        # reopen affordance in a non-critical margin.
-        panel.hide()
         collapsed_button.position = Vector2(8.0, maxf(108.0, h - 46.0))
         collapsed_button.size = Vector2(118.0, 38.0)
         collapsed_button.show()
         return
     collapsed_button.hide()
+    panel.show()
+
+func _should_show() -> bool:
+    var vp := get_viewport().get_visible_rect().size
+    return vp.x >= 700.0
+
+func _get_rect() -> Rect2:
+    if panel == null: return Rect2()
+    return panel.get_global_rect()
+
+func _set_coordinator_active(value: bool) -> void:
+    _coordinator_active = value
 
 func _refresh() -> void:
     if dismissed or game == null:
