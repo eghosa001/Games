@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 07:28:01 UTC 2026
+// Generated on: Mon Sep  7 07:36:19 UTC 2026
 
-// Source snapshot commit: 4c7a276bf8dfe1691a361d29ec6838ffc9b7bcc3
+// Source snapshot commit: 37e8b562848c37d3c7d1606b284295e1dd18a178
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -25466,7 +25466,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/mobile_qa_test.gd
-Lines: 140
+Lines: 142
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -25476,6 +25476,7 @@ const SAVE_LIMIT_MS: float = 1000.0
 const FPS_TARGET: float = 30.0
 const MEMORY_GROWTH_LIMIT_MB: float = 64.0
 var failures: Array[String] = []
+var failed := 0
 var warnings: Array[String] = []
 var checks: int = 0
 
@@ -25600,14 +25601,15 @@ func check(label: String, condition: bool) -> void:
     if condition: print("PASS: %s" % label)
     else: fail(label)
 func fail(label: String) -> void:
+    failed += 1
     failures.append(label); print("FAIL: %s" % label)
 func _finish() -> void:
     print("--- MOBILE QA SUMMARY ---"); print("Checks: %d | Failures: %d | Warnings: %d" % [checks, failures.size(), warnings.size()])
     for warning: String in warnings: print("WARN: %s" % warning)
     if not failures.is_empty():
         for failure: String in failures: print("FAILED: %s" % failure)
-        quit(1)
-    else: print("AUTOMATED MOBILE QA: PASS"); quit(0)
+    else: print("AUTOMATED MOBILE QA: PASS")
+    quit(1 if failed > 0 else 0)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -25857,12 +25859,13 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_android_release_config.gd
-Lines: 60
+Lines: 62
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
 const PRESET_PATH := "res://export_presets.cfg"
 var failures: Array[String] = []
+var failed := 0
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -25895,7 +25898,7 @@ func _run() -> void:
     if failures.size() > 0:
         quit(1)
     print("ANDROID RELEASE CONFIG: PASS")
-    quit(0)
+    quit(1 if failed > 0 else 0)
 
 func _contains_network_analytics() -> bool:
     var dir := DirAccess.open("res://scripts")
@@ -25918,6 +25921,7 @@ func check(label: String, condition: bool) -> void:
         print("PASS: %s" % label)
     else:
         failures.append(label)
+        failed += 1
         print("FAIL: %s" % label)
 
 
@@ -26090,7 +26094,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_company_culture_system.gd
-Lines: 67
+Lines: 68
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -26101,6 +26105,7 @@ func _init() -> void:
 
 func run() -> void:
     var failures: Array[String] = []
+    var failed := 0
     var system := CultureSystem.new()
     root.add_child(system)
     await process_frame
@@ -26108,49 +26113,49 @@ func run() -> void:
     var profile := system.get_profile()
     for dimension in CultureSystem.DIMENSIONS:
         if not profile.has(dimension):
-            failures.append("Culture profile missing dimension: %s" % dimension)
+            failed += 1;failures.append("Culture profile missing dimension: %s" % dimension)
         elif int(profile[dimension]) < 0 or int(profile[dimension]) > 100:
-            failures.append("Culture dimension out of range: %s" % dimension)
+            failed += 1;failures.append("Culture dimension out of range: %s" % dimension)
 
     var before := system.get_dimension("innovation")
     var changed := system.adjust_dimension("innovation", 20, 5, "technology investment")
     if not bool(changed.get("ok", false)) or system.get_dimension("innovation") != min(before + 20, 100):
-        failures.append("Culture dimension adjustment should be bounded and persistent")
+        failed += 1;failures.append("Culture dimension adjustment should be bounded and persistent")
 
     var clamped := system.set_dimension("quality", 999, 5, "quality initiative")
     if not bool(clamped.get("ok", false)) or system.get_dimension("quality") != 100:
-        failures.append("Culture values must clamp to 100")
+        failed += 1;failures.append("Culture values must clamp to 100")
 
     var effects := system.get_effects()
     for key in ["recruitment_multiplier", "retention_multiplier", "productivity_multiplier", "research_multiplier", "quality_multiplier", "expansion_multiplier", "reputation_multiplier"]:
         if not effects.has(key) or float(effects[key]) <= 0.0:
-            failures.append("Culture effects missing or invalid: %s" % key)
+            failed += 1;failures.append("Culture effects missing or invalid: %s" % key)
 
     var daily_first := system.daily_update(10)
     var after_first := system.capture_state()
     var daily_second := system.daily_update(10)
     var after_second := system.capture_state()
     if bool(daily_second.get("changed", true)):
-        failures.append("Company culture daily update must be idempotent for the same day")
+        failed += 1;failures.append("Company culture daily update must be idempotent for the same day")
     if after_first.get("culture", {}) != after_second.get("culture", {}):
-        failures.append("Repeated same-day culture updates must not apply modifiers twice")
+        failed += 1;failures.append("Repeated same-day culture updates must not apply modifiers twice")
     if int(after_first.get("last_day", 0)) != 10:
-        failures.append("Culture daily update must record the processed day")
+        failed += 1;failures.append("Culture daily update must record the processed day")
 
     var snapshot := system.capture_state()
     var restored := CultureSystem.new()
     root.add_child(restored)
     restored.restore_state(snapshot)
     if restored.get_dimension("innovation") != system.get_dimension("innovation"):
-        failures.append("Culture must survive capture/restore")
+        failed += 1;failures.append("Culture must survive capture/restore")
     if restored.get_dimension("quality") != 100:
-        failures.append("Restored culture must retain bounded values")
+        failed += 1;failures.append("Restored culture must retain bounded values")
     if int(restored.capture_state().get("last_day", 0)) != 10:
-        failures.append("Processed culture day must survive capture/restore")
+        failed += 1;failures.append("Processed culture day must survive capture/restore")
 
     var invalid := restored.set_dimension("not_a_dimension", 50)
     if bool(invalid.get("ok", true)):
-        failures.append("Unknown culture dimensions must be rejected")
+        failed += 1;failures.append("Unknown culture dimensions must be rejected")
 
     if failures.is_empty():
         print("COMPANY CULTURE SYSTEM TESTS PASSED")
@@ -26158,7 +26163,7 @@ func run() -> void:
         for failure in failures:
             push_error(failure)
         print("COMPANY CULTURE SYSTEM TESTS FAILED: %d" % failures.size())
-    quit(0 if failures.is_empty() else 1)
+    quit(1 if failed > 0 else 0)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -26290,7 +26295,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_demand_culture_integration.gd
-Lines: 34
+Lines: 35
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -26301,9 +26306,10 @@ func _init() -> void:
 
 func run() -> void:
     var failures: Array[String] = []
+    var failed := 0
     var culture = root.get_node_or_null("RenewCompanyCultureSystem")
     if culture == null or not culture.has_method("set_dimension"):
-        failures.append("Company Culture System must be available for demand integration")
+        failed += 1;failures.append("Company Culture System must be available for demand integration")
     else:
         var model = DemandModel.new()
         root.add_child(model)
@@ -26313,19 +26319,19 @@ func run() -> void:
         culture.set_dimension("quality", 100, 1, "demand integration improvement")
         var high: Dictionary = model.calculate("furniture", 160.0, 120.0, 10, 75, 0, 0, 1.0, 1.0, 0.0, 0.0, 0.0)
         if not bool(low.get("ok", false)) or not bool(high.get("ok", false)):
-            failures.append("Demand model must remain operational with culture integration")
+            failed += 1;failures.append("Demand model must remain operational with culture integration")
         if int(high.get("demand", 0)) <= int(low.get("demand", 0)):
-            failures.append("Higher company culture quality must improve customer demand")
+            failed += 1;failures.append("Higher company culture quality must improve customer demand")
         var modifiers: Dictionary = high.get("modifiers", {})
         if not modifiers.has("culture_quality") or not modifiers.has("quality"):
-            failures.append("Demand result must expose effective culture quality modifiers")
+            failed += 1;failures.append("Demand result must expose effective culture quality modifiers")
         culture.set_dimension("quality", 55, 1, "restore demand integration baseline")
 
     if failures.is_empty(): print("DEMAND CULTURE INTEGRATION TESTS PASSED")
     else:
         for failure in failures: push_error(failure)
         print("DEMAND CULTURE INTEGRATION TESTS FAILED: %d" % failures.size())
-    quit(0 if failures.is_empty() else 1)
+    quit(1 if failed > 0 else 0)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -26486,7 +26492,7 @@ func test_scene_edges() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_employee_system.gd
-Lines: 58
+Lines: 59
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -26500,52 +26506,53 @@ func run() -> void:
     root.add_child(system)
     await process_frame
     var failures: Array[String] = []
+    var failed := 0
     var james = system.get_employee(EmployeeSystem.JAMES_ID)
-    if james.is_empty() or james["name"] != "James": failures.append("James must exist with stable identity")
+    if james.is_empty() or james["name"] != "James": failed += 1;failures.append("James must exist with stable identity")
     for field in ["id", "name", "role", "level", "skills", "experience", "salary", "loyalty", "morale", "productivity", "specialization", "status", "assignment"]:
-        if not james.has(field): failures.append("Employee missing field: %s" % field)
+        if not james.has(field): failed += 1;failures.append("Employee missing field: %s" % field)
     for skill in ["production", "logistics", "management"]:
-        if not james.get("skills", {}).has(skill): failures.append("Employee skills missing: %s" % skill)
-    if not is_equal_approx(float(james.get("productivity", 0.0)), 0.82): failures.append("Productivity should use a normalized 0..1 value")
-    if system.get_active_employee_count() != 3: failures.append("Active employee count must be derived from records")
+        if not james.get("skills", {}).has(skill): failed += 1;failures.append("Employee skills missing: %s" % skill)
+    if not is_equal_approx(float(james.get("productivity", 0.0)), 0.82): failed += 1;failures.append("Productivity should use a normalized 0..1 value")
+    if system.get_active_employee_count() != 3: failed += 1;failures.append("Active employee count must be derived from records")
     var original_id = james["id"]
     var snapshot: Dictionary = system.capture_state()
     var restored = EmployeeSystem.new(); root.add_child(restored); restored.restore_state(snapshot)
-    if restored.get_employee(original_id).get("name", "") != "James": failures.append("James identity must survive save/load")
+    if restored.get_employee(original_id).get("name", "") != "James": failed += 1;failures.append("James identity must survive save/load")
     var candidate = restored.candidates[0]
     var hire = restored.hire_candidate(str(candidate["id"]), 2)
-    if not hire["ok"]: failures.append("Candidate hiring should create a real employee")
+    if not hire["ok"]: failed += 1;failures.append("Candidate hiring should create a real employee")
     var hired = hire["employee"]
     var hired_id := str(hired.get("id", ""))
-    if hired_id.is_empty() or hired.get("status", "") != "active": failures.append("Hired employee must have persistent active record")
-    if not hired.has("skills") or not hired.has("level"): failures.append("Hired employee must use the authoritative record schema")
+    if hired_id.is_empty() or hired.get("status", "") != "active": failed += 1;failures.append("Hired employee must have persistent active record")
+    if not hired.has("skills") or not hired.has("level"): failed += 1;failures.append("Hired employee must use the authoritative record schema")
     var before_skill := int(restored.get_employee(hired_id).get("skills", {}).get("production", 0))
     var train = restored.train_employee(hired_id, 2)
     var trained = restored.get_employee(hired_id)
-    if not train["ok"] or int(trained.get("skills", {}).get("production", 0)) <= before_skill: failures.append("Training should improve employee specialization skill")
+    if not train["ok"] or int(trained.get("skills", {}).get("production", 0)) <= before_skill: failed += 1;failures.append("Training should improve employee specialization skill")
     var promote = restored.promote_employee(EmployeeSystem.JAMES_ID, 20)
-    if not promote["ok"]: failures.append("James should be promotable")
-    if int(restored.get_employee(EmployeeSystem.JAMES_ID)["level"]) < 2: failures.append("Promotion should increase employee level")
+    if not promote["ok"]: failed += 1;failures.append("James should be promotable")
+    if int(restored.get_employee(EmployeeSystem.JAMES_ID)["level"]) < 2: failed += 1;failures.append("Promotion should increase employee level")
     restored.daily_update(21, 1)
-    if int(restored.get_employee(EmployeeSystem.JAMES_ID)["experience"]) <= 6: failures.append("Daily update should advance employee experience")
-    if restored.total_salary() <= 0 or restored.total_productivity() <= 0.0: failures.append("Roster should drive salary and productivity totals")
+    if int(restored.get_employee(EmployeeSystem.JAMES_ID)["experience"]) <= 6: failed += 1;failures.append("Daily update should advance employee experience")
+    if restored.total_salary() <= 0 or restored.total_productivity() <= 0.0: failed += 1;failures.append("Roster should drive salary and productivity totals")
 
     var culture = root.get_node_or_null("RenewCompanyCultureSystem")
     if culture != null and culture.has_method("set_dimension"):
         var baseline := system.get_productivity_multiplier("factory_001")
         culture.set_dimension("employee_welfare", 100, 21, "culture integration test")
         var improved := system.get_productivity_multiplier("factory_001")
-        if improved <= baseline: failures.append("Employee productivity must respond to company culture")
+        if improved <= baseline: failed += 1;failures.append("Employee productivity must respond to company culture")
         culture.set_dimension("employee_welfare", 60, 21, "restore test baseline")
 
     var legacy = EmployeeSystem.new(); root.add_child(legacy); legacy.employees.clear(); legacy.migrate_legacy_count(5, 1)
-    if legacy.get_active_employee_count() < 5: failures.append("Legacy employee count migration must preserve headcount")
-    if legacy.get_employee(EmployeeSystem.JAMES_ID).is_empty(): failures.append("Legacy migration must restore James")
+    if legacy.get_active_employee_count() < 5: failed += 1;failures.append("Legacy employee count migration must preserve headcount")
+    if legacy.get_employee(EmployeeSystem.JAMES_ID).is_empty(): failed += 1;failures.append("Legacy migration must restore James")
     if failures.is_empty(): print("EMPLOYEE SYSTEM TESTS PASSED")
     else:
         for failure in failures: push_error(failure)
         print("EMPLOYEE SYSTEM TESTS FAILED: %d" % failures.size())
-    quit(0 if failures.is_empty() else 1)
+    quit(1 if failed > 0 else 0)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -27972,7 +27979,7 @@ var passed:=0
 var failed:=0
 func check(ok:bool,label:String)->void:
     if ok:passed+=1;print("PASS: "+label)
-    else:failed+=1;push_error("FAIL: "+label)
+    else:failed += 1;push_error("FAIL: "+label)
 func _init()->void:call_deferred("run")
 func run()->void:
     var State=load("res://scripts/game_state.gd");var Tech=load("res://scripts/technology_system.gd")
@@ -28013,7 +28020,7 @@ func run()->void:
     tech.add_daily_research_points(3)
     check(int(state.get_value("technology","research_points",0))==8,"Daily research points are awarded")
     if temp_tech and is_instance_valid(tech): tech.queue_free()
-    print("PHASE 21 RESULT: %d passed, %d failed"%[passed,failed]);quit(1 if failed>0 else 0)
+    print("PHASE 21 RESULT: %d passed, %d failed"%[passed,failed]);quit(1 if failed > 0 else 0)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -28025,7 +28032,7 @@ var passed:=0
 var failed:=0
 func check(ok:bool,label:String)->void:
     if ok:passed+=1;print("PASS: "+label)
-    else:failed+=1;push_error("FAIL: "+label)
+    else:failed += 1;push_error("FAIL: "+label)
 func _init()->void:call_deferred("run")
 func run()->void:
     var State=load("res://scripts/game_state.gd");var Progression=load("res://scripts/progression_system.gd")
@@ -28057,7 +28064,7 @@ func run()->void:
     progression.sync_tracking()
     state.set_value("properties","restoration",25);state.set_value("properties","stage","Abandoned");progression._process(0.0)
     check(progression.get_xp()==10,"Restoration state change is tracked")
-    print("PHASE 22 RESULT: %d passed, %d failed"%[passed,failed]);quit(1 if failed>0 else 0)
+    print("PHASE 22 RESULT: %d passed, %d failed"%[passed,failed]);quit(1 if failed > 0 else 0)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -29019,11 +29026,12 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_responsive_ui_shell.gd
-Lines: 55
+Lines: 57
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
 var failures: Array[String] = []
+var failed := 0
 var checks := 0
 
 func _initialize() -> void:
@@ -29066,6 +29074,7 @@ func check(label: String, condition: bool) -> void:
         print("PASS: %s" % label)
     else:
         failures.append(label)
+        failed += 1
         print("FAIL: %s" % label)
 
 func _finish() -> void:
@@ -29073,9 +29082,9 @@ func _finish() -> void:
     print("Checks: %d | Failures: %d" % [checks, failures.size()])
     if not failures.is_empty():
         for failure in failures: print("FAILED: %s" % failure)
-        quit(1)
-    print("RESPONSIVE UI SHELL TEST: PASS")
-    quit(0)
+    else:
+        print("RESPONSIVE UI SHELL TEST: PASS")
+    quit(1 if failed > 0 else 0)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -29144,7 +29153,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_runner.gd
-Lines: 187
+Lines: 186
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -29180,8 +29189,7 @@ func run() -> void:
     if failed > 0:
         for item in failures:
             print("FAILED: " + item)
-        quit(1)
-    quit(0)
+    quit(1 if failed > 0 else 0)
 
 func _new_game() -> Node:
     var scene = load("res://scenes/Main.tscn")
@@ -29337,11 +29345,12 @@ func test_main_command_integration() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_runtime_dependency_resolution.gd
-Lines: 50
+Lines: 52
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
 var failures: Array[String] = []
+var failed := 0
 var checks := 0
 const Resolver := preload("res://scripts/runtime_dependency_resolver.gd")
 
@@ -29378,6 +29387,7 @@ func check(label: String, condition: bool) -> void:
         print("PASS: %s" % label)
     else:
         failures.append(label)
+        failed += 1
         print("FAIL: %s" % label)
 
 func _finish() -> void:
@@ -29386,9 +29396,9 @@ func _finish() -> void:
     if not failures.is_empty():
         for failure in failures:
             print("FAILED: %s" % failure)
-        quit(1)
-    print("RUNTIME DEPENDENCY TEST: PASS")
-    quit(0)
+    else:
+        print("RUNTIME DEPENDENCY TEST: PASS")
+    quit(1 if failed > 0 else 0)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -29401,7 +29411,7 @@ var passed := 0
 var failed := 0
 func check(ok:bool,label:String)->void:
     if ok: passed+=1; print("PASS: "+label)
-    else: failed+=1; push_error("FAIL: "+label)
+    else: failed += 1; push_error("FAIL: "+label)
 func _init()->void: call_deferred("run")
 func run()->void:
     var Economy=load("res://scripts/economy.gd")
@@ -29435,7 +29445,7 @@ func run()->void:
     check(int(scarce_run.get("cycles",0))<int(normal_run.get("cycles",0)),"Scarcity reduces production throughput")
 
     print("SCARCITY SYSTEM RESULT: %d passed, %d failed"%[passed,failed])
-    quit(1 if failed>0 else 0)
+    quit(1 if failed > 0 else 0)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -29785,11 +29795,12 @@ func _collect_gd_files(directory_path: String, output: Array[String]) -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_ui_architecture.gd
-Lines: 124
+Lines: 126
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
 var failures: Array[String] = []
+var failed := 0
 var checks: int = 0
 
 func _initialize() -> void:
@@ -29900,6 +29911,7 @@ func check(label: String, condition: bool) -> void:
         print("PASS: %s" % label)
     else:
         failures.append(label)
+        failed += 1
         print("FAIL: %s" % label)
 
 func _finish() -> void:
@@ -29908,9 +29920,9 @@ func _finish() -> void:
     if not failures.is_empty():
         for failure in failures:
             print("FAILED: %s" % failure)
-        quit(1)
-    print("UI ARCHITECTURE TEST: PASS")
-    quit(0)
+    else:
+        print("UI ARCHITECTURE TEST: PASS")
+    quit(1 if failed > 0 else 0)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
