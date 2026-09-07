@@ -76,11 +76,18 @@ func run() -> void:
     check(not bool(rivals.battle_status(victim_index).get("ok", false)), "No battles with absorbed companies")
     check(not bool(rivals.negotiate_acquisition(victim_index, 9999999, 100, []).get("ok", false)), "No buyouts of absorbed companies")
     var news: Array = rivals.daily_update(49)
-    check(true, "Daily update skips the eliminated")
+    check(news is Array, "Daily update returns a news array")
+    var eliminated_name := str(victim.get("name", ""))
+    var mentions_eliminated := false
+    for item in news:
+        if str(item).find(eliminated_name) >= 0:
+            mentions_eliminated = true
+            break
+    check(not mentions_eliminated, "Daily update skips the eliminated rival")
     var snapshot: Dictionary = rivals.capture_state()
     var restored = Rivals.new()
     restored.restore_state(snapshot)
-    check(true, "War state persists across save/load")
+    check(restored.capture_state() == snapshot, "War state persists across save/load")
 
     var scene = load("res://scenes/Main.tscn")
     check(scene != null, "Main scene loads after war changes")
