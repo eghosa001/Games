@@ -23,6 +23,8 @@ func _ready() -> void:
     layer = 67
     _build_ui()
     _refresh(true)
+    if not get_viewport().size_changed.is_connected(_layout):
+        get_viewport().size_changed.connect(_layout)
 
 func _process(delta: float) -> void:
     if not visible:
@@ -90,18 +92,19 @@ func _button(text: String) -> Button:
     return button
 
 func _layout() -> void:
-    var viewport: Vector2 = get_viewport().get_visible_rect().size
+    var viewport: Vector2 = get_viewport().size
     var margin := 16.0
     var width := minf(560.0, viewport.x - margin * 2.0)
+    var height := minf(560.0, viewport.y - 140.0)
     panel.position = Vector2((viewport.x - width) / 2.0, 70.0)
-    panel.size = Vector2(width, minf(560.0, viewport.y - 160.0))
+    panel.size = Vector2(width, height)
     title_label.position = Vector2(14, 12)
     title_label.size = Vector2(width - 28, 28)
     list_label.position = Vector2(14, 44)
-    list_label.size = Vector2(width - 28, 220)
-    detail_label.position = Vector2(14, 268)
+    list_label.size = Vector2(width - 28, maxf(40.0, height - 224.0))
+    detail_label.position = Vector2(14, height - 176)
     detail_label.size = Vector2(width - 28, 60)
-    var y := 334.0
+    var y := height - 108.0
     var w := (width - 56) / 4.0
     next_button.position = Vector2(14, y)
     next_button.size = Vector2(w, 46)
@@ -111,7 +114,7 @@ func _layout() -> void:
     improve_button.size = Vector2(w, 46)
     shares_button.position = Vector2(32 + w * 3.0, y)
     shares_button.size = Vector2(w, 46)
-    close_button.position = Vector2(14, y + 52)
+    close_button.position = Vector2(14, height - 56)
     close_button.size = Vector2(width - 28, 46)
 
 func _refresh(_force: bool) -> void:

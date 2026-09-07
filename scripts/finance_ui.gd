@@ -22,6 +22,8 @@ func _ready() -> void:
     layer = 65
     _build_ui()
     _refresh(true)
+    if not get_viewport().size_changed.is_connected(_layout):
+        get_viewport().size_changed.connect(_layout)
 
 func _process(delta: float) -> void:
     if not visible:
@@ -79,11 +81,12 @@ func _button(text: String) -> Button:
     return button
 
 func _layout() -> void:
-    var viewport: Vector2 = get_viewport().get_visible_rect().size
+    var viewport: Vector2 = get_viewport().size
     var margin := 16.0
     var width := minf(560.0, viewport.x - margin * 2.0)
+    var height := minf(560.0, viewport.y - 140.0)
     panel.position = Vector2((viewport.x - width) / 2.0, 70.0)
-    panel.size = Vector2(width, minf(560.0, viewport.y - 160.0))
+    panel.size = Vector2(width, height)
     title_label.position = Vector2(14, 12)
     title_label.size = Vector2(width - 28, 28)
     overview_label.position = Vector2(14, 44)
@@ -91,15 +94,15 @@ func _layout() -> void:
     credit_label.position = Vector2(14, 118)
     credit_label.size = Vector2(width - 28, 44)
     tx_label.position = Vector2(14, 166)
-    tx_label.size = Vector2(width - 28, 220)
-    var y := 392.0
+    tx_label.size = Vector2(width - 28, maxf(40.0, height - 286.0))
+    var y := height - 108.0
     loan_button.position = Vector2(14, y)
     loan_button.size = Vector2((width - 42) / 3.0, 46)
     repay_button.position = Vector2(20 + (width - 42) / 3.0, y)
     repay_button.size = Vector2((width - 42) / 3.0, 46)
     investor_button.position = Vector2(26 + (width - 42) * 2.0 / 3.0, y)
     investor_button.size = Vector2((width - 42) / 3.0, 46)
-    close_button.position = Vector2(14, y + 52)
+    close_button.position = Vector2(14, height - 56)
     close_button.size = Vector2(width - 28, 46)
 
 func _refresh(_force: bool) -> void:

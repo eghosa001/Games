@@ -24,6 +24,8 @@ func _ready() -> void:
     layer = 63
     _build_ui()
     _refresh(true)
+    if not get_viewport().size_changed.is_connected(_layout):
+        get_viewport().size_changed.connect(_layout)
 
 func _process(delta: float) -> void:
     if not visible:
@@ -86,28 +88,27 @@ func _button(text: String) -> Button:
     return button
 
 func _layout() -> void:
-    var viewport: Vector2 = get_viewport().get_visible_rect().size
+    var viewport: Vector2 = get_viewport().size
     var margin := 16.0
     var width := minf(560.0, viewport.x - margin * 2.0)
+    var height := minf(560.0, viewport.y - 140.0)
     panel.position = Vector2((viewport.x - width) / 2.0, 70.0)
-    panel.size = Vector2(width, minf(560.0, viewport.y - 160.0))
-    var y := 12.0
-    for control in [title_label, overview_label, objective_label, ops_label, events_label]:
-        control.position = Vector2(14, y)
-        control.size = Vector2(width - 28, 30)
-        y += 34.0
-    overview_label.size.y = 52
-    y += 22.0
-    ops_label.size.y = 66
-    y += 36.0
-    events_label.size.y = 150
-    y += 156.0
-    primary_button.position = Vector2(14, y)
+    panel.size = Vector2(width, height)
+    title_label.position = Vector2(14, 12)
+    title_label.size = Vector2(width - 28, 28)
+    overview_label.position = Vector2(14, 44)
+    overview_label.size = Vector2(width - 28, 52)
+    objective_label.position = Vector2(14, 100)
+    objective_label.size = Vector2(width - 28, 30)
+    ops_label.position = Vector2(14, 134)
+    ops_label.size = Vector2(width - 28, 60)
+    events_label.position = Vector2(14, 198)
+    events_label.size = Vector2(width - 28, maxf(40.0, height - 318.0))
+    primary_button.position = Vector2(14, height - 108)
     primary_button.size = Vector2(width - 28, 46)
-    y += 52.0
-    notices_button.position = Vector2(14, y)
+    notices_button.position = Vector2(14, height - 56)
     notices_button.size = Vector2((width - 34) / 2.0, 46)
-    close_button.position = Vector2(20 + (width - 34) / 2.0, y)
+    close_button.position = Vector2(20 + (width - 34) / 2.0, height - 56)
     close_button.size = Vector2((width - 34) / 2.0, 46)
 
 func _refresh(_force: bool) -> void:
