@@ -3,22 +3,37 @@ extends Node
 ## overlapping each other or the primary command surface (action dock).
 ## Each floater registers its rectangle; the coordinator suppresses any that
 ## would intersect reserved regions or other higher-priority floaters.
-var _panels: Dictionary = {}   # name -> {panel_ref, priority, rect_method}
+var _panel_names: Array[String] = []   # ordered list of registered panel names
+var _panel_priorities: Dictionary = {}  # name -> priority (int)
 var _last_screen: String = ""
 
 func _ready() -> void:
     pass
 
-func register_panel(name: String, panel: Node, priority: int, rect_method: StringName) -> void:
-    _panels[name] = {"panel_ref": weakref(panel), "priority": priority, "rect_method": rect_method}
+func register_panel(name: String, priority: int) -> void:
+    if not _panel_names.has(name):
+        _panel_names.append(name)
+    _panel_priorities[name] = priority
 
 func unregister_panel(name: String) -> void:
-    if _panels.has(name):
-        _panels.erase(name)
+    if _panel_names.has(name):
+        _panel_names.erase(name)
+    _panel_priorities.erase(name)
 
-func _exit_tree() -> void:
-    # Clear all weak refs before teardown to avoid dangling-pointer crashes.
-    _panels.clear()
+func _find_panel(name: String) -> Node:
+    if name == "" or name == null: return null
+    # Try common locations where panels might live.
+    var candidates := [
+        get_node_or_null("Renew/UI/" + name),
+        get_node_or_null("UI/" + name),
+        get_node_or_null("Renew/" + name),
+        get_tree().root.get_node_or_null("Renew/UI/" + name),
+        get_tree().root.get_node_or_null("UI/" + name),
+        get_tree().root.get_node_or_null("Renew/" + name),
+    ]
+    for c in candidates:
+        if c != null and is_instance_valid(c): return c
+    return null
 
 func set_active_screen(screen_name: String) -> void:
     _last_screen = screen_name
@@ -31,16 +46,13 @@ func get_active_screen() -> String:
     return _last_screen
 
 func get_all_registered() -> Array[String]:
-    return _panels.keys()
+    return _panel_names.duplicate()
 
 func get_panel_rect(panel_name: String) -> Rect2:
-    if not _panels.has(panel_name): return Rect2()
-    var panel_info := _panels[panel_name] as Dictionary
-    var raw = panel_info["panel"]
-    if raw == null or not is_instance_valid(raw): return Rect2()
-    var node := raw as Node
-    if node != null and node.has_method(panel_info["rect_method"]):
-        var r = node.call(panel_info["rect_method"])
+    var node := _find_panel(panel_name)
+    if node == null: return Rect2()
+    if node.has_method("_get_rect"):
+        var r := node.call("_get_rect")
         if r is Rect2: return r
     return Rect2()
 
@@ -48,43 +60,36 @@ func rect_intersects_dock(rect: Rect2, dock_rect: Rect2) -> bool:
     return rect.intersects(dock_rect)
 
 func is_any_floating_panel_visible() -> bool:
-    for _panel_info in _panels.values():
-        var pi := _panel_info as Dictionary
-        if pi["panel"] != null and pi["panel"].visible and pi["panel"].is_visible_in_tree():
+    for name in _panel_names:
+        var node := _find_panel(name)
+        if node != null and node.visible and node.is_visible_in_tree():
             return true
     return false
 
 func _resolve() -> void:
-    if _panels.is_empty(): return
+    if _panel_names.is_empty(): return
     # Lock panels so their _process() does not fight our visibility decisions.
-    for info in _panels.values():
-        var wr = info["panel_ref"] as WeakRef
-        if wr == null: continue
-        var raw_panel = wr.get_ref()
-        if raw_panel == null: continue
-        var node := raw_panel as Node
-        if node != null and node.has_method("_set_coordinator_active"):
+    for name in _panel_names:
+        var node := _find_panel(name)
+        if node == null: continue
+        if node.has_method("_set_coordinator_active"):
             node.call("_set_coordinator_active", true)
     var dock_rect := _get_dock_rect()
     var screen_open := _last_screen != ""
-    var sorted_keys: Array = _panels.keys()
+    var sorted_keys: Array = _panel_names.duplicate()
     sorted_keys.sort_custom(func(a: String, b: String) -> int:
-        var pa := _panels[a] as Dictionary
-        var pb := _panels[b] as Dictionary
-        return pa["priority"] as int - pb["priority"] as int
+        var pa := _panel_priorities.get(a, 999) as int
+        var pb := _panel_priorities.get(b, 999) as int
+        return pa - pb
     )
     var occupied: Array[Rect2] = []
     for name in sorted_keys:
-        var panel_info := _panels[name] as Dictionary
-        var wr = panel_info["panel_ref"] as WeakRef
-        if wr == null: continue
-        var raw_node = wr.get_ref()
-        if raw_node == null: continue
-        var panel_node := raw_node as Node
+        var panel_node := _find_panel(name)
+        if panel_node == null: continue
         # Ensure layout is current before checking overlap.
         if panel_node.has_method("_layout_responsive"):
             panel_node.call("_layout_responsive")
-        var r: Variant = panel_node.call(panel_info["rect_method"])
+        var r: Variant = panel_node.call("_get_rect")
         var rect: Rect2 = Rect2() if r == null else (r as Rect2)
         if rect == Rect2(): continue
         var should_show: bool = false
@@ -112,13 +117,10 @@ func _resolve() -> void:
             occupied.append(r)
     # Release coordinator lock so panels resume independent layout after the
     # current resolve tick finishes.
-    for info in _panels.values():
-        var wr = info["panel_ref"] as WeakRef
-        if wr == null: continue
-        var raw_panel = wr.get_ref()
-        if raw_panel == null: continue
-        var node := raw_panel as Node
-        if node != null and node.has_method("_set_coordinator_active"):
+    for name in _panel_names:
+        var node := _find_panel(name)
+        if node == null: continue
+        if node.has_method("_set_coordinator_active"):
             node.call("_set_coordinator_active", false)
 
 func _propagate_visibility(node: Node, value: bool) -> void:
