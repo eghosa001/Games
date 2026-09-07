@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 07:02:42 UTC 2026
+// Generated on: Mon Sep  7 07:03:24 UTC 2026
 
-// Source snapshot commit: 897dade122cff6c1c339b9d60e39f3351a3e4680
+// Source snapshot commit: 354039c137d8e304a36f996adbce4fd469cf5dcf
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -173,7 +173,7 @@ jobs:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: .github/workflows/godot-tests.yml
-Lines: 68
+Lines: 78
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 name: RENEW Godot Tests
 
@@ -207,6 +207,8 @@ jobs:
           "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
       - name: Import project
         run: timeout 120s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+      - name: Run strict Godot quality gate
+        run: timeout 600s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_quality_gate.gd
       - name: Run mobile QA automation
         run: timeout 300s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/mobile_qa_test.gd
       - name: Run full fast suite (every test except soaks)
@@ -219,6 +221,14 @@ jobs:
             echo "=== $t ==="
             timeout 600s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script "res://$t"
           done
+      - name: Upload strict Godot visual diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: renew-godot-quality-gate
+          path: ~/.local/share/godot/app_userdata/RENEW/quality_gate/
+          if-no-files-found: warn
+          retention-days: 14
 
   test-slow:
     runs-on: ubuntu-latest
@@ -24659,12 +24669,59 @@ func _draw_network(w: float, h: float) -> void:
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: tests/QUALITY_TEST_PROTOCOL.md
+Lines: 34
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# RENEW Strict QA Protocol
+
+The repository has many focused Godot tests, but passing feature tests alone does not prove the game is release-ready. The canonical quality gate is `tests/test_quality_gate.gd`.
+
+## Mandatory gates
+
+1. **Project boot** — configured main scene, autoloads and renderer must be valid.
+2. **Scene composition** — Main must instantiate with World, Systems and UI roots plus the required gameplay controllers.
+3. **World presentation** — the playable world must contain real visible artwork, scenery and district composition. Assets merely existing on disk are not enough.
+4. **Responsive UI** — desktop and small mobile viewports must stay contained; primary touch controls must meet the 44px minimum.
+5. **Gameplay path** — inspect → acquire → restore all stages → operate business → hire → produce → advance day must work through the real command boundary.
+6. **Persistence** — authoritative state must capture and restore.
+7. **Rendered-frame checkpoint** — the actual Godot viewport must render substantial, visually varied content and a PNG checkpoint is produced.
+8. **Runtime stability** — the running scene must sustain at least 30 FPS in the automated sample and remain alive.
+
+## No-loophole rules
+
+- A test failure must exit with code 1 or the test is not a valid gate.
+- A warning cannot substitute for a required assertion.
+- Asset existence does not count as visual availability; required final assets must be visible and textured in the playable scene.
+- UI existence does not count as usability; layout and touch-size constraints must be measured.
+- A command existing does not count as gameplay; the strict gate executes the core progression.
+- A screenshot existing does not count as quality; the gate checks that the rendered frame is non-empty and has meaningful pixel variation, while the saved image remains available for visual inspection.
+- Subjective visual quality still requires human review. Automated rendering tests are a floor, not an artistic substitute.
+
+## Screenshot checkpoints
+
+The strict Godot gate writes `user://quality_gate/quality_gate_main.png`. CI uploads the quality-gate directory as an artifact so a failed run can be visually inspected rather than inferred from logs alone.
+
+The separate browser QA workflow remains responsible for testing the deployed web build with real browser interaction and diagnostics.
+
+## Release rule
+
+**Release = all mandatory automated gates pass + no known P0/P1 defects + human visual review passes the 90/100 Game Quality Acceptance Standard.**
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/TEST_SUITE.md
-Lines: 82
+Lines: 95
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # RENEW test suite
 
-The suite is organized by test purpose. Existing focused tests remain at `tests/` for compatibility; this index is the canonical grouping until physical test-file moves are made without breaking existing runners.
+The suite is organized by test purpose. Existing focused tests remain at `tests/` for compatibility. The strict quality gate is the release-level acceptance floor.
+
+## Strict release gates
+- `test_quality_gate.gd` — canonical Godot release gate: boot, scene composition, visible world assets, responsive UI, core gameplay progression, persistence, rendered-frame checkpoint and runtime stability.
+- `QUALITY_TEST_PROTOCOL.md` — rules preventing false-green/loophole tests and defining artifact review.
+- `release/test_full_new_game_flow.gd` — end-to-end first-session progression.
+- `test_release_smoke.gd` — release structure and architecture smoke test.
+- `test_architecture_integrity.gd` — script and scene architecture integrity.
 
 ## Unit
 - `test_employee_system.gd`
@@ -24740,10 +24797,16 @@ The suite is organized by test purpose. Existing focused tests remain at `tests/
 - `test_extreme_soak.gd`
 
 ## Release
+- `release/test_full_new_game_flow.gd`
 - `test_release_smoke.gd`
 - `test_architecture_integrity.gd`
+- `test_quality_gate.gd`
 
-Tests that did not previously exist are tracked by name here and should be added as their corresponding system contracts are finalized; this avoids creating fake passing tests.
+## CI policy
+
+The main Godot workflow runs every `tests/test_*.gd`, every integration test and every release test, excluding only the explicitly slow soak tests from the fast job. The strict quality gate is therefore included automatically in the fast CI suite and should remain a required release check.
+
+Tests must never manufacture a passing result by skipping a required assertion. Missing systems, missing assets, broken references, failed state transitions and invalid rendered output are failures.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
