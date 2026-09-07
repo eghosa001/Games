@@ -31,7 +31,7 @@ func run() -> void:
             continue
         var instance = script.new()
         if instance == null:
-            check(false, "script instantiates: " + path)
+            check(instance != null, "script instantiates: " + path)
             continue
         for signature in _declared_functions(source):
             functions_checked += 1

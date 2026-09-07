@@ -160,6 +160,7 @@ func test_main_command_integration() -> void:
     check(game.transport_capacity >= 60, "integration transport capacity updated")
 
     var reaction = root.get_node_or_null("RenewCompetitorReactionSystem")
+    check(reaction != null, "integration competitor reaction system available")
     if reaction != null:
         reaction._remember(game.day, "integration_regression", {"ok": true})
         var before_reaction_count: int = reaction.reaction_history.size()
@@ -177,8 +178,6 @@ func test_main_command_integration() -> void:
         check(reaction.reaction_history.size() == before_reaction_count, "integration competitor reaction history restored")
         check(bool(game.expansion.properties[0].get("owned", false)) == expansion_owned_before_save, "integration expansion ownership restored")
         check(int(game.expansion.properties[0].get("level", 0)) == expansion_level_before_save, "integration expansion level restored")
-    else:
-        check(false, "integration competitor reaction system available")
 
     check(game.expansion.properties.size() == 3, "integration expansion state restored")
 
