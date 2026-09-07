@@ -61,8 +61,9 @@ func _run() -> void:
                 # Exercise the touch route too when a mouse route did not close
                 # it. This is real InputEventScreenTouch dispatch, not a signal
                 # shortcut, so the test covers the reported interception bug.
-                await _touch_at(close_button.get_global_rect().get_center())
-                check("real touch closes screen: %s" % screen_name, not manager.is_screen_open(screen_name))
+                if close_button != null:
+                    await _touch_at(close_button.get_global_rect().get_center())
+                check("real touch closes screen: %s" % screen_name, close_button != null and not manager.is_screen_open(screen_name))
             check("screen is closed after real input: %s" % screen_name, not manager.is_screen_open(screen_name))
 
         # ESC must close the currently active primary screen as a second,
@@ -93,6 +94,7 @@ func _check_layout_contract(scene: Node, hud: Node) -> void:
 
     for viewport_size in [Vector2(390, 844), Vector2(320, 568), Vector2(1280, 720)]:
         root_control.size = viewport_size
+        hud._layout_responsive()
         await process_frame
         var tutorial := scene.get_node_or_null("UI/TutorialOverlay")
         var strategy := scene.get_node_or_null("UI/StrategyHUD")

@@ -26,8 +26,14 @@ func _ready() -> void:
     var gift: Variant = Button.new(); gift.text = "Send Envoy Gift"; gift.pressed.connect(_send_gift); box.add_child(gift)
     var cancel: Variant = Button.new(); cancel.text = "Cancel Active Treaty"; cancel.pressed.connect(_cancel_active); box.add_child(cancel)
     var refresh: Variant = Button.new(); refresh.text = "Refresh Treaty Ledger"; refresh.pressed.connect(_refresh); box.add_child(refresh)
+    var close: Variant = Button.new(); close.name = "CloseButton"; close.text = "CLOSE"; close.custom_minimum_size = Vector2(0, 44); close.focus_mode = Control.FOCUS_NONE; close.pressed.connect(_close); box.add_child(close)
     summary = Label.new(); summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; box.add_child(summary)
     _refresh()
+
+func _close() -> void:
+    var manager = get_node_or_null("/root/RenewUIScreenManager")
+    if manager != null and manager.has_method("hide_all_screens"):
+        manager.hide_all_screens()
 
 func _main():
     var tree: Variant = Engine.get_main_loop()

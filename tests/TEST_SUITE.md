@@ -84,12 +84,14 @@ The suite is organized by test purpose. Existing focused tests remain at `tests/
 
 ## Release
 - `release/test_full_new_game_flow.gd`
+- `release/test_release_smoke.gd`
 - `test_release_smoke.gd`
 - `test_architecture_integrity.gd`
 - `test_quality_gate.gd`
 
 ## CI policy
-
-The main Godot workflow runs every `tests/test_*.gd`, every integration test and every release test, excluding only the explicitly slow soak tests from the fast job. The strict quality gate is therefore included automatically in the fast CI suite and should remain a required release check.
-
-Tests must never manufacture a passing result by skipping a required assertion. Missing systems, missing assets, broken references, failed state transitions and invalid rendered output are failures.
+The main Godot workflow runs every `tests/test_*.gd`, every integration test and every
+release test, excluding only the explicitly slow soak tests from the fast job. Suites that
+need a real display server (the strict quality gate's frame checkpoint, real mouse/touch
+dispatch in the responsive shell) run under Xvfb instead of headless. Tests must never
+manufacture a passing result by skipping a required assertion. Missing systems, missing assets, broken references, failed state transitions and invalid rendered output are failures.

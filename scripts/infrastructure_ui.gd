@@ -13,7 +13,22 @@ func _ready() -> void:
     parent = get_tree().current_scene
     add_child(state_adapter)
     z_index = 57
+    var close_button := Button.new()
+    close_button.name = "CloseButton"
+    close_button.text = "CLOSE"
+    close_button.position = Vector2(1159, 424)
+    close_button.size = Vector2(88, 44)
+    close_button.focus_mode = Control.FOCUS_NONE
+    close_button.pressed.connect(_close)
+    add_child(close_button)
     queue_redraw()
+
+func _close() -> void:
+    var manager = get_node_or_null("/root/RenewUIScreenManager")
+    if manager != null and manager.has_method("hide_all_screens"):
+        manager.hide_all_screens()
+    else:
+        visible = false
 
 func _process(_delta: float) -> void:
     if parent == null: parent = get_tree().current_scene

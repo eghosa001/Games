@@ -46,7 +46,7 @@ func _build_ui() -> void:
     var header: Variant = HBoxContainer.new(); root.add_child(header)
     var title: Variant = Label.new(); title.text = "RENEW CORPORATE MUSEUM"; title.add_theme_font_size_override("font_size", 28); header.add_child(title)
     var spacer: Variant = Control.new(); spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL; header.add_child(spacer)
-    var close: Variant = Button.new(); close.text = "Close [Esc]"; close.pressed.connect(close_screen); header.add_child(close)
+    var close: Variant = Button.new(); close.name = "CloseButton"; close.text = "Close [Esc]"; close.pressed.connect(close_screen); header.add_child(close)
     summary_label = Label.new(); summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; root.add_child(summary_label)
     tabs = HBoxContainer.new(); root.add_child(tabs)
     for id in TABS.keys(): _add_tab(id, TABS[id])
