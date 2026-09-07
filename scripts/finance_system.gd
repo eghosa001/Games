@@ -455,3 +455,21 @@ func reconcile_books() -> Dictionary:
         return {"ok": true, "repaired": true, "plugged": difference}
     retained_earnings -= difference
     return {"ok": false, "repaired": false, "error": "repair_failed"}
+func release_assumed_debt(instrument_id: String) -> Dictionary:
+    if not financing.has(instrument_id):
+        return {"ok": false, "error": "instrument_not_found"}
+    var principal := maxf(0.0, float((financing[instrument_id] as Dictionary).get("principal", 0.0)))
+    financing.erase(instrument_id)
+    debt = 0
+    for id in financing:
+        debt += int(round(maxf(0.0, float((financing[id] as Dictionary).get("principal", 0.0)))))
+    fixed_assets = maxf(0.0, fixed_assets - principal)
+    _recalculate_loan_payment()
+    _record("release_assumed_debt", int(round(principal)), "merger rollback: " + str(instrument_id))
+    return {"ok": true, "released": principal, "debt": debt}
+func absorb_external_balances(other_liabilities_amount: float, fixed_assets_amount: float, reason: String = "merger absorption") -> Dictionary:
+    other_liabilities = maxf(0.0, other_liabilities + other_liabilities_amount)
+    fixed_assets = maxf(0.0, fixed_assets + fixed_assets_amount)
+    retained_earnings += fixed_assets_amount - other_liabilities_amount
+    _record("absorb_balances", int(round(fixed_assets_amount)), reason)
+    return {"ok": true, "other_liabilities": other_liabilities, "fixed_assets": fixed_assets, "retained_earnings": retained_earnings}

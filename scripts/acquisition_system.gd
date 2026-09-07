@@ -263,13 +263,17 @@ func _resolve_merger_finance(target: Dictionary, price: float, terms: Dictionary
     if consideration > 0:
         var spend_result: Dictionary = state_adapter.spend(consideration, "merger consideration")
         if not bool(spend_result.get("ok", false)): return {"ok": false, "error": "insufficient_cash_for_merger", "required": consideration, "cash": finance.available_cash()}
-    if debt_assumed > 0.0: finance.debt += int(round(debt_assumed))
-    if liabilities_assumed > 0.0: finance.other_liabilities += liabilities_assumed
+    var instrument_id := ""
+    if debt_assumed > 0.0:
+        var assumed: Dictionary = finance.assume_debt(int(round(debt_assumed)), "merger: %s" % str(target.get("id", "target")))
+        if not bool(assumed.get("ok", false)): return {"ok": false, "error": "debt_assumption_failed"}
+        instrument_id = str(assumed.get("id", ""))
     var asset_value: Variant = 0.0
     for asset in target.get("assets", []):
         if asset is Dictionary: asset_value += float(asset.get("value", asset.get("cost", 0.0)))
-    finance.fixed_assets += asset_value
-    return {"ok": true, "cash_consideration": consideration, "debt_assumed": debt_assumed, "liabilities_assumed": liabilities_assumed, "assets_added": asset_value, "cash_after": finance.available_cash(), "debt_after": finance.debt}
+    if liabilities_assumed > 0.0 or asset_value > 0.0:
+        finance.absorb_external_balances(float(liabilities_assumed), float(asset_value), "merger: %s" % str(target.get("id", "target")))
+    return {"ok": true, "cash_consideration": consideration, "debt_assumed": debt_assumed, "debt_instrument": instrument_id, "liabilities_assumed": liabilities_assumed, "assets_added": asset_value, "cash_after": finance.available_cash(), "debt_after": finance.debt}
 
 func _rollback_merger_finance(finance_result: Dictionary) -> void:
     var finance = get_node_or_null("/root/RenewFinanceSystem")
@@ -280,9 +284,11 @@ func _rollback_merger_finance(finance_result: Dictionary) -> void:
     var assets_added := float(finance_result.get("assets_added", 0.0))
     if consideration > 0:
         finance.receive(consideration, "merger rollback refund")
-    finance.debt = max(0, finance.debt - debt_assumed)
-    finance.other_liabilities = max(0.0, finance.other_liabilities - liabilities_assumed)
-    finance.fixed_assets = max(0.0, finance.fixed_assets - assets_added)
+    var instrument_id := str(finance_result.get("debt_instrument", ""))
+    if not instrument_id.is_empty() and finance.has_method("release_assumed_debt"):
+        finance.release_assumed_debt(instrument_id)
+    if finance.has_method("absorb_external_balances"):
+        finance.absorb_external_balances(-liabilities_assumed, -assets_added, "merger rollback")
 
 func _resolve_merger_employees(target: Dictionary, terms: Dictionary) -> Dictionary:
     var employee_system = get_node_or_null("/root/RenewEmployeeSystem")
