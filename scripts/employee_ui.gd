@@ -88,6 +88,20 @@ func _build_ui() -> void:
     _add_action(_actions, "Assign", "assign")
     _add_action(_actions, "Transfer", "transfer")
     _add_action(_actions, "Fire", "fire")
+    var close_button := Button.new()
+    close_button.text = "Close"
+    close_button.custom_minimum_size = Vector2(0, 44)
+    close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    close_button.focus_mode = Control.FOCUS_NONE
+    close_button.pressed.connect(_close)
+    _actions.add_child(close_button)
+
+func _close() -> void:
+    var manager = get_node_or_null("/root/RenewUIScreenManager")
+    if manager != null and manager.has_method("hide_all_screens"):
+        manager.hide_all_screens()
+    else:
+        panel.visible = false
 
 func _add_action(parent_node: GridContainer, text: String, action: String) -> void:
     var button := Button.new()
