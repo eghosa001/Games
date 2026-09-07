@@ -7,8 +7,17 @@ var _panel_names: Array[String] = []   # ordered list of registered panel names
 var _panel_priorities: Dictionary = {}  # name -> priority (int)
 var _last_screen: String = ""
 
-func _ready() -> void:
-    pass
+func _exit_tree() -> void:
+    # Clear registries immediately during teardown to prevent dangling lookups.
+    _panel_names.clear()
+    _panel_priorities.clear()
+
+func _notification(what: int) -> void:
+    # Godot calls NOTIFICATION_PREDELETE right before the object is freed.
+    # Clear everything here as a last resort safety net.
+    if what == NOTIFICATION_PREDELETE:
+        _panel_names.clear()
+        _panel_priorities.clear()
 
 func register_panel(name: String, priority: int) -> void:
     if not _panel_names.has(name):
@@ -22,17 +31,20 @@ func unregister_panel(name: String) -> void:
 
 func _find_panel(name: String) -> Node:
     if name == "" or name == null: return null
-    # Try common locations where panels might live.
+    # Early exit if the tree is in an unstable state (tearing down).
+    var tree := get_tree()
+    if tree == null: return null
+    var root := tree.root
+    if root == null or not root.is_inside_tree(): return null
+    # Try common locations where panels might live (coordinator is an autoload
+    # so paths must be absolute or relative to known roots).
     var candidates := [
-        get_node_or_null("Renew/UI/" + name),
-        get_node_or_null("UI/" + name),
-        get_node_or_null("Renew/" + name),
-        get_tree().root.get_node_or_null("Renew/UI/" + name),
-        get_tree().root.get_node_or_null("UI/" + name),
-        get_tree().root.get_node_or_null("Renew/" + name),
+        root.get_node_or_null("Renew/UI/" + name),
+        root.get_node_or_null("UI/" + name),
+        root.get_node_or_null("Renew/" + name),
     ]
     for c in candidates:
-        if c != null and is_instance_valid(c): return c
+        if c != null and c.is_inside_tree() and is_instance_valid(c): return c
     return null
 
 func set_active_screen(screen_name: String) -> void:
