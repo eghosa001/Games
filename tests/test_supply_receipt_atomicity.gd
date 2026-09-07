@@ -32,8 +32,8 @@ func run() -> void:
 
     supply.warehouse["furniture"] = 500.0
     production.inventory["furniture"] = 7
-    var before_warehouse := supply.warehouse_snapshot()
-    var before_production := production.inventory.duplicate(true)
+    var before_warehouse: Dictionary = supply.warehouse_snapshot()
+    var before_production: Dictionary = production.inventory.duplicate(true)
 
     var result: Dictionary = supply.receive_product("furniture", 1)
     check(not bool(result.get("ok", false)), "Receipt rejects warehouse overflow")

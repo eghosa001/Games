@@ -28,7 +28,7 @@ func run() -> void:
     await process_frame
     await process_frame
 
-    var state = get_node_or_null("/root/RenewGameState")
+    var state = root.get_node_or_null("RenewGameState")
     check(state != null, "Canonical GameState exists")
     check(game.has_method("hire_employee"), "Main exposes hire flow")
     check(game.has_method("produce_goods"), "Main exposes production flow")
@@ -41,9 +41,18 @@ func run() -> void:
         quit(1)
         return
 
-    # Start from a deterministic, affordable state.
+    # Start from a deterministic, affordable state and bootstrap the valid
+    # V1 flow: Inspect -> Acquire -> Restore -> Open. Hiring, production and
+    # day simulation are gated on an operating business by design.
     game.cash = 100000
     game.day = 1
+    game.inspect_property()
+    game.acquire_property()
+    for _i in range(5):
+        game.restore_property()
+    game.choose_business_purpose(0)
+    game.open_business()
+    check(game.business_open, "Business is operating before hire flow")
     var before_hire_cash := int(game.cash)
 
     # Hire James through the actual gameplay façade.

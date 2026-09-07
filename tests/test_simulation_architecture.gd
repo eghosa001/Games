@@ -64,8 +64,8 @@ func run() -> void:
     check(gameplay_text.contains("_restore_daily_transaction(transaction[\"snapshot\"])") , "Failed daily simulation restores the outer transaction")
     check(not gameplay_text.contains("supply_chain.warehouse[\"furniture\"]=float(_state_value(\"production\",\"finished_goods\",0))"), "Production no longer overwrites canonical supply inventory")
 
-    var cash_before_legacy_end := finance.cash
-    var debt_before_legacy_end := finance.debt
+    var cash_before_legacy_end: int = int(finance.cash)
+    var debt_before_legacy_end: int = int(finance.debt)
     var legacy_result = simulation.execute("end_day")
     check(not bool(legacy_result.get("ok", false)), "Legacy end_day is rejected")
     check(finance.cash == cash_before_legacy_end, "Legacy end_day does not mutate cash")

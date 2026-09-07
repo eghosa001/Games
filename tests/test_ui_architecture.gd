@@ -30,7 +30,7 @@ func _run() -> void:
     var expected_screens: Array[String] = [
         "ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel",
         "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel",
-        "NewsPanel", "RenewDiplomacyUI", "CustomerSegmentsUI"
+        "NewsPanel", "InfrastructurePanel", "RenewDiplomacyUI", "CustomerSegmentsUI"
     ]
     for screen_name in expected_screens:
         check("screen node resolves: %s" % screen_name, _find_screen(scene, screen_name) != null)
@@ -41,7 +41,7 @@ func _run() -> void:
 
     # Screen routing is the contract: exactly one managed screen is rendered
     # after every explicit open.
-    for screen_name in ["CustomerSegmentsUI", "ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel", "RenewDiplomacyUI"]:
+    for screen_name in ["CustomerSegmentsUI", "ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel", "InfrastructurePanel", "RenewDiplomacyUI"]:
         manager.show_screen(screen_name)
         await process_frame
         check("active screen is %s" % screen_name, manager.get_active_screen_name() == screen_name)

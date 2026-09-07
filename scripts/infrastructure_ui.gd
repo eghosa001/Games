@@ -21,7 +21,62 @@ func _process(_delta: float) -> void:
     queue_redraw()
 
 func _region_controller():
-    return parent.get_node_or_null("World/RegionController") if parent != null else null
+    var game: Node = _parent()
+    return game.get_node_or_null("World/RegionController") if game != null else null
+
+func _parent():
+    if parent != null:
+        return parent
+    var scene = get_tree().current_scene if get_tree() != null else null
+    if scene != null:
+        parent = scene
+        return parent
+    var root_node = get_tree().root if get_tree() != null else null
+    if root_node != null:
+        parent = root_node.get_node_or_null("Renew")
+    return parent
+
+func build_selected() -> void:
+    var game: Node = _parent()
+    if game == null or system == null:
+        message = "Infrastructure system is unavailable."
+        return
+    var region := _region_index()
+    var result = system.build(system.TYPES[selected_type], region, "founder", int(game.cash), int(game.day))
+    message = result["message"]
+    if bool(result.get("ok", false)):
+        if not _spend_result(result, "infrastructure construction"):
+            if str(result.get("id", "")) != "":
+                system.assets.erase(str(result["id"]))
+            message = "Construction payment failed; the site was cancelled."
+
+func cycle_type() -> void:
+    if system == null:
+        return
+    selected_type = (selected_type + 1) % system.TYPES.size()
+    message = "Selected %s." % system.TYPES[selected_type].replace("_", " ").capitalize()
+
+func repair_damaged() -> void:
+    var game: Node = _parent()
+    if game == null or system == null:
+        message = "Infrastructure system is unavailable."
+        return
+    var region := _region_index()
+    var list: Array = system.list_region(region)
+    var target := ""
+    for asset in list:
+        if str(asset.get("status")) == system.DISRUPTED:
+            target = str(asset["id"])
+            break
+    if target == "":
+        message = "No disrupted infrastructure to repair in this region."
+        return
+    var before = system.assets.get(target, {}).duplicate(true)
+    var result = system.repair(target, "founder", int(game.cash), int(game.day))
+    message = result["message"]
+    if bool(result.get("ok", false)) and not _spend_result(result, "infrastructure repair"):
+        system.assets[target] = before
+        message = "Repair payment failed."
 
 func _region_index() -> int:
     var regions = _region_controller()

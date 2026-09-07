@@ -38,3 +38,9 @@ func logistics_cost(base: int) -> int:
 
 func competition_pressure() -> float:
     return float(current()["competition"])
+func capture_state() -> Dictionary:
+    return {"districts":districts.duplicate(true),"selected":selected}
+func restore_state(snapshot: Dictionary) -> void:
+    if snapshot.is_empty():return
+    var saved=snapshot.get("districts",[]);districts=saved.duplicate(true) if saved is Array else districts
+    selected=int(snapshot.get("selected",selected))

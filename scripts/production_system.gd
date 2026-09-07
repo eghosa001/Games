@@ -1,5 +1,5 @@
 extends Node
-class_name RenewProductionSystem
+## class_name removed: "RenewProductionSystem" conflicts with project.godot autoload.
 
 const SYSTEM_VERSION := 4
 const MAX_HISTORY := 500
@@ -9,7 +9,9 @@ const MAX_HISTORY := 500
 const PRODUCT_CONFIG := {
     "consumer_goods":{"name":"Consumer Goods","stage":"manufacturing","inputs":{"food":1.0,"electronics":0.5,"energy":2.0},"output_item":"goods","output_per_cycle":2,"production_time":1.0,"employee_capacity":1,"base_price":110,"operating_cost":75,"reputation_effect":1,"base_quality":72,"waste_rate":0.06},
     "furniture":{"name":"Furniture","stage":"manufacturing","inputs":{"timber":1.0,"iron":0.5,"energy":2.0},"output_item":"furniture","output_per_cycle":1,"production_time":2.0,"employee_capacity":2,"base_price":320,"operating_cost":80,"reputation_effect":2,"base_quality":76,"waste_rate":0.05},
-    "appliance":{"name":"Appliance","stage":"manufacturing","inputs":{"iron":1.0,"electronics":1.0,"energy":2.0},"output_item":"appliance","output_per_cycle":1,"production_time":2.5,"employee_capacity":2,"base_price":320,"operating_cost":165,"reputation_effect":3,"base_quality":80,"waste_rate":0.10}
+    "appliance":{"name":"Appliance","stage":"manufacturing","inputs":{"iron":1.0,"electronics":1.0,"energy":2.0},"output_item":"appliance","output_per_cycle":1,"production_time":2.5,"employee_capacity":2,"base_price":320,"operating_cost":165,"reputation_effect":3,"base_quality":80,"waste_rate":0.10},
+    "construction_materials":{"name":"Construction Materials","stage":"manufacturing","inputs":{"timber":1.0,"iron":1.0,"energy":2.5},"output_item":"construction_materials","output_per_cycle":1,"production_time":2.0,"employee_capacity":2,"base_price":180,"operating_cost":95,"reputation_effect":2,"base_quality":74,"waste_rate":0.07},
+    "consumer_electronics":{"name":"Consumer Electronics","stage":"manufacturing","inputs":{"iron":1.0,"electronics":1.0,"energy":3.0},"output_item":"consumer_electronics","output_per_cycle":1,"production_time":3.0,"employee_capacity":3,"base_price":360,"operating_cost":130,"reputation_effect":3,"base_quality":82,"waste_rate":0.09}
 }
 
 const RECIPES := {
@@ -76,23 +78,25 @@ func run_recipe(recipe_id:String,cycles:int=1)->Dictionary:
     for item in r["outputs"]:
         var planned:=int(r["outputs"][item])*run_cycles; var waste_amount:=int(floor(planned*effective_waste)); var actual:=max(0,planned-waste_amount); add_inventory(item,actual); outputs[item]=actual; total+=actual; waste[item]=int(waste.get(item,0))+waste_amount
     var run_quality:=clamp(int(r["base_quality"])+randi_range(-2,3)+auto+int(round((condition-80.0)/20.0)),25,100); quality=int(round((quality+run_quality)/2.0)); m["condition"]=max(0.0,condition-(0.7+run_cycles*0.55-auto*0.08)); m["maintenance_due"]=int(m["maintenance_due"])+run_cycles; machines[machine_id]=m; utilization[machine_id]=clamp(float(utilization.get(machine_id,0.0))*0.75+float(run_cycles)/float(max(1,int(m["capacity"])+auto))*25.0,0.0,100.0)
+    if String(r["stage"])=="retail":
+        finished_goods+=total; inventory["goods"]=finished_goods
     last_run={"recipe":recipe_id,"stage":r["stage"],"cycles":run_cycles,"outputs":outputs,"quality":run_quality,"waste":effective_waste,"machine":machine_id,"condition":m["condition"]}; history.append(last_run.duplicate(true)); if history.size()>MAX_HISTORY:history.pop_front()
     return {"ok":true,"recipe":recipe_id,"stage":r["stage"],"cycles":run_cycles,"outputs":outputs,"output":total,"quality":run_quality,"waste_rate":effective_waste,"machine":machine_id,"condition":m["condition"],"utilization":utilization[machine_id]}
 
 func produce(economy:RenewEconomy,cycles:int,product_id:String="consumer_goods")->Dictionary:
-    if economy==null or cycles<=0:return {"ok":false,"cycles":0,"output":0,"quality":quality}
-    var c:=get_product_config(product_id); if c.is_empty():return {"ok":false,"cycles":0,"output":0,"quality":quality,"reason":"invalid_product"}
+    if economy==null or cycles<=0:return {"ok":false,"requested_cycles":maxi(0,cycles),"cycles":0,"output":0,"quality":quality}
+    var c:=get_product_config(product_id); if c.is_empty():return {"ok":false,"requested_cycles":cycles,"cycles":0,"output":0,"quality":quality,"reason":"invalid_product"}
     var possible:=cycles
     for resource in c["inputs"]:
-        if not economy.resources.has(resource):return {"ok":false,"cycles":0,"output":0,"quality":quality,"reason":"missing_market_resource","resource":resource}
+        if not economy.resources.has(resource):return {"ok":false,"requested_cycles":cycles,"cycles":0,"output":0,"quality":quality,"reason":"missing_market_resource","resource":resource}
         var required:=float(c["inputs"][resource]); possible=min(possible,int(floor(float(economy.resources[resource].get("stock",0.0))/required)))
-    if possible<=0:return {"ok":false,"cycles":0,"output":0,"quality":quality,"reason":"insufficient_resources"}
+    if possible<=0:return {"ok":false,"requested_cycles":cycles,"cycles":0,"output":0,"quality":quality,"reason":"insufficient_resources"}
     var consumed:Dictionary={}; var input_cost:=0.0
     for resource in c["inputs"]:
         var amount:=float(c["inputs"][resource])*possible; var unit:=float(economy.resources[resource].get("current_price",economy.resources[resource].get("price",0.0))); input_cost+=amount*unit; economy.resources[resource]["stock"]=max(0.0,float(economy.resources[resource]["stock"])-amount); consumed[resource]=amount
     var planned:=possible*int(c["output_per_cycle"]); var waste_amount:=int(floor(planned*float(c["waste_rate"]))); var output:=max(0,planned-waste_amount); finished_goods+=output; inventory["goods"]=finished_goods; quality=clamp(int(round((quality+float(c["base_quality"])+randi_range(-3,4))/2.0)),30,100)
     var operating_cost:=possible*int(c["operating_cost"]); last_run={"product":product_id,"stage":c["stage"],"cycles":possible,"output":output,"quality":quality,"resources":consumed,"resource_requirements":c["inputs"].duplicate(true),"resource_cost":input_cost,"production_time":float(c["production_time"]),"employee_capacity":int(c["employee_capacity"]),"base_price":int(c["base_price"]),"operating_cost":operating_cost,"reputation_effect":int(c["reputation_effect"]),"waste":waste_amount}; history.append(last_run.duplicate(true)); if history.size()>MAX_HISTORY:history.pop_front()
-    return {"ok":true,"product":product_id,"cycles":possible,"output":output,"quality":quality,"finished_goods":finished_goods,"waste":waste_amount,"resources":consumed,"resource_cost":input_cost,"operating_cost":operating_cost,"base_price":int(c["base_price"]),"reputation_effect":int(c["reputation_effect"])}
+    return {"ok":true,"product":product_id,"requested_cycles":cycles,"cycles":possible,"output":output,"quality":quality,"finished_goods":finished_goods,"waste":waste_amount,"resources":consumed,"resource_cost":input_cost,"operating_cost":operating_cost,"base_price":int(c["base_price"]),"reputation_effect":int(c["reputation_effect"])}
 func consume_goods(amount:int)->bool:
     if amount<0 or amount>finished_goods:return false
     finished_goods-=amount; inventory["goods"]=finished_goods; return true

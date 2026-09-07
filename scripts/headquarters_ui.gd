@@ -24,6 +24,15 @@ func _ready() -> void:
     main = get_tree().current_scene
     _build_ui(); _layout(); _refresh()
     if not get_viewport().size_changed.is_connected(_layout): get_viewport().size_changed.connect(_layout)
+    call_deferred("_resolve_main")
+
+func _resolve_main() -> void:
+    if main == null:
+        main = get_tree().current_scene
+    if system == null:
+        system = get_node_or_null("/root/RenewHeadquartersSystem")
+    if finance == null:
+        finance = get_node_or_null("/root/RenewFinanceSystem")
 func _style(bg: Color, border: Color, radius := 12) -> StyleBoxFlat:
     var s := StyleBoxFlat.new(); s.bg_color = bg; s.border_color = border; s.set_border_width_all(1); s.set_corner_radius_all(radius); return s
 func _build_ui() -> void:

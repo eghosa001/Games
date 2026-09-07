@@ -29,11 +29,13 @@ func _check_state() -> void:
     _counter(history,"total_profit",int(state.get_value("economy","total_profit",0)),day,"FIRST_PROFIT","First profit recorded",{"profit":state.get_value("economy","total_profit",0)})
     _array_counter(history,"employees",state.get_value("employees","roster",[]),day,"EMPLOYEE_HIRED","Employee hired")
     _contract_events(history,state,day)
+    _acquisition_events(history,state,day)
     _technology_events(history,state,day)
     _alliance_events(history,state,day)
     _project_events(history,state,day)
     _competitor_events(history,state,day)
     _major_events(history,state,day)
+    _ingest_log(history,state,day)
 
 func _exit_tree() -> void:
     if check_timer != null and is_instance_valid(check_timer):
@@ -64,6 +66,10 @@ func _contract_events(history,state,day:int)->void:
     var fulfilled=int(contracts.get("fulfilled_count",contracts.get("completed_count",0)))
     _counter(history,"contracts_signed",signed,day,"CONTRACT_SIGNED","Contract signed",{"count":signed})
     _counter(history,"contracts_fulfilled",fulfilled,day,"CONTRACT_FULFILLED","Contract fulfilled",{"count":fulfilled})
+
+func _acquisition_events(history,state,day:int)->void:
+    var count:=int(state.get_value("ownership","acquisition_count",0))
+    _counter(history,"acquisitions_completed",count,day,"ACQUISITION","Acquisition completed",{"count":count})
 
 func _technology_events(history,state,day:int)->void:
     var tech=state.get_value("technology","technology",{})
@@ -110,3 +116,7 @@ func _major_events(history,state,day:int)->void:
 func _record(history,event_name:String,day:int,title:String,details:Dictionary,key:String)->void:
     if history.has_method("record_gameplay_event"):history.record_gameplay_event(event_name,day,title,details,"phase28|%s|%s"%[key,event_name])
     else:history.record("general",day,title,details,"phase28|%s|%s"%[key,event_name])
+func _ingest_log(history,state,day:int)->void:
+    if not history.has_method("ingest_activity_log"):return
+    var lines=state.get_value("company","log_lines",[])
+    if lines is Array and not (lines as Array).is_empty():history.ingest_activity_log(lines,day)

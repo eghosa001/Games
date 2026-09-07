@@ -23,16 +23,35 @@ func run() -> void:
         quit(1)
         return
 
-    var game_state = GameState.new()
-    game_state.name = "RenewGameState"
-    root.add_child(game_state)
-    await process_frame
+    # Reuse the canonical autoloads so the business under test reads the same
+    # GameState/FinanceSystem that its DomainSystem bridge resolves via /root.
+    var game_state = root.get_node_or_null("RenewGameState")
+    if game_state == null:
+        game_state = GameState.new()
+        game_state.name = "RenewGameState"
+        root.add_child(game_state)
+        await process_frame
+    elif game_state.has_method("clear"):
+        game_state.clear()
+        await process_frame
+    var finance = root.get_node_or_null("RenewFinanceSystem")
+    if finance != null and finance.has_method("record_equity"):
+        finance.cash = 25000
+        finance.debt = 0
+        finance.financing = {}
+        finance.revenue = 0.0
+        finance.operating_expenses = 0.0
+        finance.interest_expense = 0.0
+        finance.retained_earnings = 0.0
+        finance.equity_contributed = 25000.0
+        finance.record_equity(475000, "v1 industry test capitalization")
 
     game_state.set_value("properties", "owned", true)
     game_state.set_value("properties", "stage", "Operational")
     game_state.set_value("properties", "catalog", [{"id":"test_property","name":"Test Property","type":"Warehouse"}])
     game_state.set_value("properties", "selected_property", 0)
-    game_state.set_value("economy", "cash", 500000)
+    if finance != null:
+        game_state.set_value("economy", "cash", int(finance.get("cash")))
 
     var business = Business.new()
     root.add_child(business)
@@ -57,7 +76,10 @@ func run() -> void:
         business.produce_goods()
         var after: float = business.supply_chain.stock(str(industry["product"]))
         check(after > before, "%s production succeeds" % str(industry["id"]))
-        check(str(business.production.last_run.get("industry_id", "")) == str(industry["id"]), "%s dispatches through industry_id" % str(industry["id"]))
+        var last_run: Dictionary = {}
+        if business.production != null and business.production.get("last_run") is Dictionary:
+            last_run = business.production.get("last_run")
+        check(str(last_run.get("industry_id", "")) == str(industry["id"]), "%s dispatches through industry_id" % str(industry["id"]))
 
     print("V1 INDUSTRY PRODUCTION RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)

@@ -19,7 +19,7 @@ func _init() -> void:
     call_deferred("run")
 
 func _state():
-    return get_node_or_null("/root/RenewGameState")
+    return root.get_node_or_null("RenewGameState")
 
 func _roster() -> Array:
     var state = _state()
@@ -29,17 +29,26 @@ func _roster() -> Array:
     return roster if roster is Array else []
 
 func _resource_stock() -> Dictionary:
+    var game = root.get_node_or_null("Renew")
+    if game != null and game.get("command_system") != null:
+        var business_system = game.command_system.get("business_system")
+        if business_system != null and business_system.get("supply_chain") != null:
+            var chain = business_system.get("supply_chain")
+            if chain.has_method("warehouse_snapshot"):
+                var snapshot: Dictionary = chain.warehouse_snapshot()
+                if not snapshot.is_empty():
+                    return snapshot
     var state = _state()
     if state == null:
         return {}
     var stock = state.get_value("supply_chain", "warehouse", {})
-    if stock is Dictionary:
+    if stock is Dictionary and not stock.is_empty():
         return stock
     stock = state.get_value("resources", "stock", {})
     return stock if stock is Dictionary else {}
 
 func _history() -> Array:
-    var history = get_node_or_null("/root/RenHistorySystem")
+    var history = root.get_node_or_null("RenewHistorySystem")
     if history == null:
         return []
     var timeline = history.get("timeline")
@@ -59,7 +68,7 @@ func _unique_history() -> bool:
     return true
 
 func _issue() -> Dictionary:
-    var news = get_node_or_null("/root/RenewNewsSystem")
+    var news = root.get_node_or_null("RenewNewsSystem")
     if news == null or not news.has_method("get_current_issue"):
         return {}
     var issue = news.get_current_issue()
@@ -108,7 +117,7 @@ func _check_day_60(state) -> void:
     check(int(state.get_value("economy", "cash", 0)) > -1000000000, "Day 60 growth remains bounded")
     check(_roster().size() >= 3, "Day 60 employee growth state remains valid")
     check(int(state.get_value("contracts", "contract_days", 0)) >= 0, "Day 60 contract state is valid")
-    var technology = get_node_or_null("/root/RenewTechnologySystem")
+    var technology = root.get_node_or_null("RenewTechnologySystem")
     check(technology != null, "Day 60 technology system remains available")
     if technology != null:
         check(technology.has_method("get_unlocked"), "Day 60 technology progression API remains available")
@@ -140,9 +149,9 @@ func _check_day_365(state) -> void:
         check(float(stock[key]) >= -0.0001, "Day 365 resource is never impossible negative: " + str(key))
     check(_roster().size() >= 1, "Day 365 employee data remains intact")
     check(_unique_history(), "Day 365 history contains no duplicate signatures")
-    var rivals = get_node_or_null("/root/RenewCompetitorReactionSystem")
+    var rivals = root.get_node_or_null("RenewCompetitorReactionSystem")
     check(rivals != null, "Day 365 competitor AI remains available")
-    var news = get_node_or_null("/root/RenewNewsSystem")
+    var news = root.get_node_or_null("RenewNewsSystem")
     check(news != null, "Day 365 NewsSystem remains available")
     var issue := _issue()
     check(issue.is_empty() or bool(issue.get("verified_only", false)), "Day 365 news remains verified-event-only")
@@ -198,8 +207,11 @@ func run() -> void:
 
     # Advance the real simulation one day at a time. This deliberately does
     # not bypass SimulationSystem, competitor reactions, events, employees,
-    # contracts, history or news.
-    while int(state.get_value("player", "day", 0)) < 365:
+    # contracts, history or news. Guarded so a stalled day transition fails
+    # through the day assertions instead of hanging forever.
+    var day_guard := 0
+    while int(state.get_value("player", "day", 0)) < 365 and day_guard < 1000:
+        day_guard += 1
         game.advance_day()
         await process_frame
         if int(state.get_value("player", "day", 0)) % 10 == 0:

@@ -19,7 +19,7 @@ func _init() -> void:
     call_deferred("run")
 
 func _state():
-    return get_node_or_null("/root/RenewGameState")
+    return root.get_node_or_null("RenewGameState")
 
 func _roster() -> Array:
     var state = _state()
@@ -34,14 +34,14 @@ func _selected_property(game) -> Dictionary:
     return {}
 
 func _history_events() -> Array:
-    var history = get_node_or_null("/root/RenewHistorySystem")
+    var history = root.get_node_or_null("RenewHistorySystem")
     if history == null:
         return []
     var timeline = history.get("timeline")
     return timeline if timeline is Array else []
 
 func _news_issue() -> Dictionary:
-    var news = get_node_or_null("/root/RenewNewsSystem")
+    var news = root.get_node_or_null("RenewNewsSystem")
     if news == null or not news.has_method("get_current_issue"):
         return {}
     var issue = news.get_current_issue()
@@ -78,8 +78,8 @@ func run() -> void:
     check(game.has_method("advance_day"), "Advance day command exists")
     check(game.has_method("save_game"), "Save command exists")
     check(game.has_method("load_game"), "Load command exists")
-    check(get_node_or_null("/root/RenewHistorySystem") != null, "HistorySystem is available")
-    check(get_node_or_null("/root/RenewNewsSystem") != null, "NewsSystem is available")
+    check(root.get_node_or_null("RenewHistorySystem") != null, "HistorySystem is available")
+    check(root.get_node_or_null("RenewNewsSystem") != null, "NewsSystem is available")
     check(game.get_node_or_null("UI/TutorialOverlay") != null, "Tutorial is present in the release scene")
     if state == null:
         game.free()

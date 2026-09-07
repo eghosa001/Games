@@ -1,8 +1,10 @@
 extends Node
-class_name RenewEmployeeSystem
+## class_name removed: "RenewEmployeeSystem" conflicts with project.godot autoload.
 
 const SYSTEM_VERSION := 3
 const JAMES_ID := "emp_james_001"
+const EXECUTIVE_SEATS := ["CEO", "COO", "CFO", "CTO"]
+const EXECUTIVE_BONUSES := {"COO": {"production": 1.10}, "CFO": {"operating_cost": 0.90}, "CTO": {"research": 1.25}, "CEO": {"hiring": 0.80}}
 var employees: Array = []
 var candidates: Array = []
 var next_id: int = 1
@@ -28,7 +30,7 @@ func _create_initial_roster() -> void:
     _record("emp_0003", "hired", {"reason":"founding roster"})
 
 func _make_employee(id:String,name:String,role:String,specialization:String,skills:Dictionary,experience:int,salary:int,loyalty:int,morale:int,productivity:float,ambition:int,level:int,assignment:String,hire_date:int)->Dictionary:
-    return {"id":id,"name":name,"role":role,"level":level,"skills":skills.duplicate(true),"experience":experience,"salary":salary,"loyalty":loyalty,"morale":morale,"productivity":clamp(productivity,0.2,1.0),"specialization":specialization,"status":"active","assignment":assignment,"ambition":ambition,"personality":_personality_for(name),"hire_date":hire_date,"promotion_date":0,"relationships":{},"history":[]}
+    return {"id":id,"name":name,"role":role,"level":level,"skills":skills.duplicate(true),"experience":experience,"salary":salary,"loyalty":loyalty,"morale":morale,"productivity":clamp(productivity,0.2,1.0),"specialization":specialization,"status":"active","assignment":assignment,"ambition":ambition,"executive_seat":"","personality":_personality_for(name),"hire_date":hire_date,"promotion_date":0,"relationships":{},"history":[]}
 
 func _personality_for(name:String)->String:
     match name:
@@ -45,6 +47,16 @@ func refresh_candidates()->void:
         var spec:String=SPECIALIZATIONS[(i+int(_day))%SPECIALIZATIONS.size()]
         var base_skill:int=40+((i*9+int(_day)*3)%31)
         candidates.append({"id":"candidate_%d_%d"%[int(_day),i],"name":n,"role":role,"level":1,"skills":{"production":base_skill,"logistics":max(20,base_skill-10),"management":max(10,base_skill-25)},"experience":3+i*4,"salary":360+i*55,"loyalty":50+i*4,"morale":70,"productivity":0.55+i*0.05,"ambition":50+i*7,"specialization":spec,"status":"candidate","assignment":"factory_001"})
+    if _reputation() >= 20:
+        candidates.append({"id":"candidate_exec_%d"%int(_day),"name":"Morgan","role":"Senior Manager","level":3,"skills":{"production":55,"logistics":60,"management":74},"experience":22,"salary":1500,"loyalty":55,"morale":72,"productivity":0.80,"ambition":85,"specialization":"operations","status":"candidate","assignment":"hq_001"})
+
+func _reputation() -> int:
+    if not is_inside_tree():
+        return 0
+    var state = get_node_or_null("/root/RenewGameState")
+    if state == null or not state.has_method("get_value"):
+        return 0
+    return int(state.get_value("player", "reputation", 0))
 
 func get_active_employee_count()->int:
     var count:=0
@@ -57,7 +69,8 @@ func get_daily_wage_total()->int:
     var total:=0
     for employee in employees:
         if employee.get("status","active")=="active": total+=int(employee.get("salary",0))
-    return total
+    # Salaries are stored as monthly rates; the daily simulation consumes 1/30.
+    return int(round(float(total) / 30.0))
 func total_productivity()->float:
     var total:=0.0
     for employee in employees:
@@ -75,6 +88,14 @@ func get_morale_multiplier()->float:
     if morale>=70.0: return 1.00
     if morale>=50.0: return 0.90
     return 0.75
+
+func _culture_effect(effect_name: String, fallback: float = 1.0) -> float:
+    if not is_inside_tree():
+        return fallback
+    var culture = get_node_or_null("/root/RenewCompanyCultureSystem")
+    if culture != null and culture.has_method("get_effects"):
+        return float(culture.get_effects().get(effect_name, fallback))
+    return fallback
 
 func _assignment_skill(employee:Dictionary,assignment:String)->float:
     var skills:Dictionary=employee.get("skills",{})
@@ -100,12 +121,68 @@ func get_productivity_multiplier(assignment:String="factory_001")->float:
     if total<=0.0:
         for employee in employees:
             if employee.get("status","active")=="active": total+=float(employee.get("productivity",0.75))*0.65
-    return clamp(total/max(1.0,float(active)),0.35,1.50)
+    return clamp(total/max(1.0,float(active)),0.35,1.50) * _culture_effect("productivity_multiplier", 1.0)
 
 func get_employee(employee_id:String)->Dictionary:
     for employee in employees:
         if employee.get("id","")==employee_id: return employee
     return {}
+
+func get_executives() -> Dictionary:
+    var seats: Dictionary = {}
+    for employee in employees:
+        if not employee is Dictionary:
+            continue
+        if employee.get("status", "active") != "active":
+            continue
+        var seat := str(employee.get("executive_seat", ""))
+        if seat != "" and EXECUTIVE_SEATS.has(seat):
+            seats[seat] = employee.duplicate(true)
+    return seats
+
+func executive_bonus_multiplier(kind: String) -> float:
+    var seats := get_executives()
+    match kind:
+        "production":
+            return float(EXECUTIVE_BONUSES["COO"].get("production", 1.0)) if seats.has("COO") else 1.0
+        "operating_cost":
+            return float(EXECUTIVE_BONUSES["CFO"].get("operating_cost", 1.0)) if seats.has("CFO") else 1.0
+        "research":
+            return float(EXECUTIVE_BONUSES["CTO"].get("research", 1.0)) if seats.has("CTO") else 1.0
+        "hiring":
+            return float(EXECUTIVE_BONUSES["CEO"].get("hiring", 1.0)) if seats.has("CEO") else 1.0
+    return 1.0
+
+func appoint_executive(employee_id: String, seat: String, day: int) -> Dictionary:
+    seat = seat.to_upper()
+    if not EXECUTIVE_SEATS.has(seat):
+        return {"ok": false, "message": "Unknown executive seat."}
+    var employee := get_employee(employee_id)
+    if employee.is_empty() or employee.get("status", "active") != "active":
+        return {"ok": false, "message": "Employee is not active."}
+    if int(employee.get("level", 1)) < 4:
+        return {"ok": false, "message": "%s needs career level 4 before joining the C-suite." % employee.get("name", "Employee")}
+    for other in employees:
+        if other is Dictionary and str(other.get("executive_seat", "")) == seat and str(other.get("id", "")) != employee_id:
+            other["executive_seat"] = ""
+            _record(str(other.get("id", "")), "executive_unseated", {"day": day, "seat": seat})
+    employee["executive_seat"] = seat
+    employee["role"] = seat
+    employee["assignment"] = "hq_001"
+    employee["morale"] = min(100, int(employee.get("morale", 70)) + 8)
+    employee["loyalty"] = min(100, int(employee.get("loyalty", 50)) + 10)
+    _record(employee_id, "executive_appointed", {"day": day, "seat": seat})
+    return {"ok": true, "employee": employee.duplicate(true), "seat": seat, "message": "%s appointed %s." % [employee["name"], seat]}
+
+func remove_executive_seat(employee_id: String, day: int) -> Dictionary:
+    var employee := get_employee(employee_id)
+    if employee.is_empty():
+        return {"ok": false, "message": "Employee not found."}
+    var seat := str(employee.get("executive_seat", ""))
+    employee["executive_seat"] = ""
+    if not seat.is_empty():
+        _record(employee_id, "executive_unseated", {"day": day, "seat": seat})
+    return {"ok": true, "seat": seat}
 
 func get_roster()->Array[Dictionary]:
     var roster: Array[Dictionary] = []
@@ -125,7 +202,8 @@ func hire_candidate(candidate_id:String,day:int)->Dictionary:
     for candidate in candidates:
         if candidate.get("id","")!=candidate_id: continue
         var id:="emp_%04d"%next_id; next_id+=1
-        var employee:=_make_employee(id,str(candidate["name"]),str(candidate["role"]),str(candidate["specialization"]),candidate.get("skills",{}),int(candidate["experience"]),int(candidate["salary"]),int(candidate["loyalty"]),int(candidate["morale"]),float(candidate["productivity"]),int(candidate["ambition"]),1,"factory_001",day)
+        var hire_level:=clampi(int(candidate.get("level",1)),1,3)
+        var employee:=_make_employee(id,str(candidate["name"]),str(candidate["role"]),str(candidate["specialization"]),candidate.get("skills",{}),int(candidate["experience"]),int(candidate["salary"]),int(candidate["loyalty"]),int(candidate["morale"]),float(candidate["productivity"]),int(candidate["ambition"]),hire_level,str(candidate.get("assignment","factory_001")),day)
         employees.append(employee); _record(id,"hired",{"candidate_id":candidate_id}); refresh_candidates()
         var recruitment_factor:=1.0+float(max(0,80-int(employee["loyalty"]))) / 200.0
         return {"ok":true,"employee":employee.duplicate(true),"cost":int(round((1200+(get_active_employee_count()-1)*250)*recruitment_factor))}
@@ -140,6 +218,7 @@ func fire_employee(employee_id:String,day:int)->Dictionary:
     if employee_id==JAMES_ID: return {"ok":false,"message":"James is a core story character and cannot be casually dismissed."}
     if employee.get("status","active")!="active": return {"ok":false,"message":"Employee is not active."}
     employee["status"]="fired"; employee["morale"]=max(0,int(employee["morale"])-20); employee["loyalty"]=max(0,int(employee["loyalty"])-30)
+    if str(employee.get("executive_seat",""))!="": employee["executive_seat"]=""; _record(employee_id,"executive_unseated",{"day":day,"seat":"dismissal"})
     _record(employee_id,"fired",{"day":day}); return {"ok":true,"message":"%s was dismissed. Remaining staff morale took a hit."%employee["name"]}
 
 func train_employee(employee_id:String,day:int,cost:int=900)->Dictionary:
@@ -252,6 +331,7 @@ func _normalize_roster()->void:
         if not employee.has("assignment"): employee["assignment"]="factory_001"
         if not employee.has("specialization"): employee["specialization"]="manufacturing"
         if not employee.has("relationships"): employee["relationships"]={}
+        if not employee.has("executive_seat"): employee["executive_seat"]=""
         if not employee.has("history"): employee["history"]=[]
         if not employee.has("loyalty"): employee["loyalty"]=50
         if not employee.has("morale"): employee["morale"]=70

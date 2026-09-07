@@ -1,4 +1,4 @@
-[gd_scene load_steps=46 format=3]
+﻿[gd_scene load_steps=49 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -8,6 +8,7 @@
 [ext_resource path="res://scripts/branch_controller.gd" type="Script" id="6"]
 [ext_resource path="res://scripts/renew_sims_ui_final.gd" type="Script" id="7"]
 [ext_resource path="res://scripts/rival_supply_controller.gd" type="Script" id="9"]
+[ext_resource path="res://scripts/supply_chain_controller.gd" type="Script" id="10"]
 [ext_resource path="res://scripts/world_view.gd" type="Script" id="11"]
 [ext_resource path="res://scripts/game_balance.gd" type="Script" id="12"]
 [ext_resource path="res://scripts/tutorial_overlay.gd" type="Script" id="13"]
@@ -30,6 +31,8 @@
 [ext_resource path="res://scripts/collection_ui.gd" type="Script" id="30"]
 [ext_resource path="res://scripts/liveops_ui.gd" type="Script" id="31"]
 [ext_resource path="res://scripts/customer_segments_ui.gd" type="Script" id="32"]
+[ext_resource path="res://scripts/diplomacy_ui.gd" type="Script" id="46"]
+[ext_resource path="res://scripts/infrastructure_ui.gd" type="Script" id="47"]
 [ext_resource path="res://scripts/contracts_ui.gd" type="Script" id="33"]
 [ext_resource path="res://scripts/property_visual.gd" type="Script" id="34"]
 [ext_resource path="res://scripts/technology_ui.gd" type="Script" id="35"]
@@ -43,6 +46,10 @@
 [ext_resource path="res://Assets/Art/premium_industrial_district.svg" type="Texture2D" id="43"]
 [ext_resource path="res://Assets/Art/premium_restoration_site.svg" type="Texture2D" id="44"]
 [ext_resource path="res://scripts/premium_ui_skin.gd" type="Script" id="45"]
+[ext_resource path="res://scripts/dashboard_ui.gd" type="Script" id="48"]
+[ext_resource path="res://scripts/finance_ui.gd" type="Script" id="49"]
+[ext_resource path="res://scripts/portfolio_ui.gd" type="Script" id="50"]
+[ext_resource path="res://scripts/corporations_ui.gd" type="Script" id="51"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -104,6 +111,8 @@ script = ExtResource("5")
 script = ExtResource("6")
 [node name="RivalSupplyController" type="Node2D" parent="World"]
 script = ExtResource("9")
+[node name="SupplyChainController" type="Node2D" parent="World"]
+script = ExtResource("10")
 
 [node name="Systems" type="Node" parent="."]
 [node name="ScarcitySystem" type="Node" parent="Systems"]
@@ -177,9 +186,26 @@ layer = 62
 [node name="CustomerSegmentsUI" type="CanvasLayer" parent="UI"]
 script = ExtResource("32")
 layer = 56
+[node name="RenewDiplomacyUI" type="CanvasLayer" parent="UI"]
+script = ExtResource("46")
+layer = 64
+[node name="InfrastructurePanel" type="Control" parent="UI"]
+script = ExtResource("47")
 [node name="ContractPanel" type="CanvasLayer" parent="UI"]
 script = ExtResource("33")
 layer = 57
 [node name="EmployeePanel" type="CanvasLayer" parent="UI"]
 script = ExtResource("36")
 layer = 75
+[node name="DashboardPanel" type="CanvasLayer" parent="UI"]
+script = ExtResource("48")
+layer = 63
+[node name="FinancePanel" type="CanvasLayer" parent="UI"]
+script = ExtResource("49")
+layer = 65
+[node name="PortfolioPanel" type="CanvasLayer" parent="UI"]
+script = ExtResource("50")
+layer = 66
+[node name="CorporationsPanel" type="CanvasLayer" parent="UI"]
+script = ExtResource("51")
+layer = 67

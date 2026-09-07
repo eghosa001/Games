@@ -24,8 +24,11 @@ func soak_days(days: int) -> void:
     var start_day := int(state.get_value("player", "day", 1)) if state != null else 1
     # advance_day is intentionally gated until a business is operating.
     # Bootstrap the smallest valid V1 business fixture instead of testing an
-    # impossible closed-business day transition.
-    game.cash = 500000
+    # impossible closed-business day transition. The fixture is funded to
+    # survive 365 unmanaged days (~1.6k/day idle burn) because this suite
+    # measures engine stability over time, not economic balance (covered by
+    # the dedicated day-30/365 balance suites).
+    game.cash = 1000000
     game.inspect_property()
     game.acquire_property()
     for _i in range(5):

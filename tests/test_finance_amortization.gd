@@ -21,6 +21,13 @@ func _finance() -> Node:
     root.add_child(finance)
     return finance
 
+func _fund(finance: Node, target_cash: int) -> void:
+    var current := int(finance.get("cash"))
+    if target_cash > current:
+        finance.record_equity(target_cash - current, "test capitalization")
+    elif target_cash < current:
+        finance.spend(current - target_cash, "test capitalization drain")
+
 func run() -> void:
     await test_loan_interest_follows_current_principal()
     await test_loan_term_counts_down_and_matures()
@@ -31,7 +38,7 @@ func run() -> void:
 
 func test_loan_interest_follows_current_principal() -> void:
     var finance = _finance()
-    finance.cash = 50000
+    _fund(finance, 50000)
     var loan = finance.create_loan(10000, 0.10, 20)
     check(bool(loan.get("ok", false)), "amortization loan created")
     var id := str(loan.get("id", ""))
@@ -48,7 +55,7 @@ func test_loan_interest_follows_current_principal() -> void:
 
 func test_loan_term_counts_down_and_matures() -> void:
     var finance = _finance()
-    finance.cash = 50000
+    _fund(finance, 50000)
     var loan = finance.create_loan(10000, 0.10, 3)
     var id := str(loan.get("id", ""))
     check(int(finance.financing[id]["remaining_periods"]) == 3, "loan starts at full term")
@@ -69,7 +76,7 @@ func test_loan_term_counts_down_and_matures() -> void:
 
 func test_bond_maturity_retires_principal() -> void:
     var finance = _finance()
-    finance.cash = 50000
+    _fund(finance, 50000)
     var bond = finance.issue_bond(5000, 0.08, 2)
     check(bool(bond.get("ok", false)), "bond created for maturity test")
     var id := ""
@@ -87,10 +94,10 @@ func test_bond_maturity_retires_principal() -> void:
 
 func test_missed_payment_does_not_consume_term() -> void:
     var finance = _finance()
-    finance.cash = 10000
+    _fund(finance, 10000)
     var loan = finance.create_loan(10000, 0.10, 3)
     var id := str(loan.get("id", ""))
-    finance.cash = 0
+    _fund(finance, 0)
     var missed = finance.settle_debt_day()
     check(bool(missed.get("missed", false)), "unfunded scheduled payment is marked missed")
     check(int(finance.financing[id]["remaining_periods"]) == 3, "missed payment does not consume loan term")

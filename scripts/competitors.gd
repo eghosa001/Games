@@ -21,7 +21,9 @@ var rivals: Variant = [
         "memory":[], "last_observation":{}, "last_evaluation":{},
         "last_strategy":"", "last_action":"", "last_result":{},
         "strategy_cooldown":0, "offer_cooldown":0, "deal":"none",
-        "deal_days":0, "retaliation":0
+        "deal_days":0, "retaliation":0,
+        "battle_active":false, "battle_player_bid":0, "battle_rival_bid":0,
+        "battle_rounds":0, "battle_opening_ask":0
     },
     {
         "id":"northstar_logistics", "name":"Northstar Logistics", "personality":"disciplined",
@@ -36,7 +38,9 @@ var rivals: Variant = [
         "memory":[], "last_observation":{}, "last_evaluation":{},
         "last_strategy":"", "last_action":"", "last_result":{},
         "strategy_cooldown":0, "offer_cooldown":0, "deal":"none",
-        "deal_days":0, "retaliation":0
+        "deal_days":0, "retaliation":0,
+        "battle_active":false, "battle_player_bid":0, "battle_rival_bid":0,
+        "battle_rounds":0, "battle_opening_ask":0
     },
     {
         "id":"greenbuild_industries", "name":"GreenBuild Industries", "personality":"premium",
@@ -51,11 +55,15 @@ var rivals: Variant = [
         "memory":[], "last_observation":{}, "last_evaluation":{},
         "last_strategy":"", "last_action":"", "last_result":{},
         "strategy_cooldown":0, "offer_cooldown":0, "deal":"none",
-        "deal_days":0, "retaliation":0
+        "deal_days":0, "retaliation":0,
+        "battle_active":false, "battle_player_bid":0, "battle_rival_bid":0,
+        "battle_rounds":0, "battle_opening_ask":0
     }
 ]
 
 func _normalize() -> void:
+    if _founding.is_empty():
+        _founding = rivals.duplicate(true)
     for r in rivals:
         if not r.has("id"):
             r["id"] = "corp_" + str(r.get("name", "rival")).to_lower().replace(" ", "_")
@@ -69,7 +77,9 @@ func _normalize() -> void:
             "strategic_priorities":[], "memory":[], "last_observation":{},
             "last_evaluation":{}, "last_strategy":"", "last_action":"", "last_result":{},
             "strategy_cooldown":0, "offer_cooldown":0, "deal":"none",
-            "deal_days":0, "retaliation":0
+            "deal_days":0, "retaliation":0,
+            "battle_active":false, "battle_player_bid":0, "battle_rival_bid":0,
+            "battle_rounds":0, "battle_opening_ask":0
         }
         for key in defaults:
             if not r.has(key): r[key] = defaults[key]
@@ -78,10 +88,102 @@ func _normalize() -> void:
         if not r.has("market_share"): r["market_share"] = 0.10
         if not r.has("reputation"): r["reputation"] = 50
 
+static var _founding: Array = []
+func reset_to_founding() -> void:
+    if not _founding.is_empty():
+        rivals = _founding.duplicate(true)
+    _normalize()
+func corporate_tier(rival: Dictionary) -> String:
+    var power := int(rival.get("assets", 1)) + int(rival.get("businesses", 1)) * 2
+    if power >= 20:
+        return "Global"
+    if power >= 8:
+        return "National"
+    return "Regional"
+
+func maybe_spawn_entrant(day: int, reputation: int) -> String:
+    _normalize()
+    for rival in rivals:
+        if str(rival.get("id", "")) == "helios_energy":
+            return ""
+    if day < 45 or reputation < 25:
+        return ""
+    rivals.append({
+        "id": "helios_energy", "name": "Helios Energy", "personality": "opportunistic",
+        "strategy": "energy_leverage", "cash": 90000, "debt": 30000,
+        "assets": 2, "businesses": 1, "employees": 28, "production": 52,
+        "inventory": 60, "technology": 2, "price": 122, "market_share": 0.08,
+        "reputation": 58, "relationship": 0, "stance": "Energy contender",
+        "strength": "energy", "districts": [1], "presence": 1,
+        "supplier_pressure": 0, "suppliers": ["Basin Coal Collective"],
+        "customers": ["Industrial Buyers", "Municipal Utilities"], "risk_tolerance": 0.60,
+        "strategic_priorities": ["energy", "market_share"],
+        "memory": [], "last_observation": {}, "last_evaluation": {},
+        "last_strategy": "", "last_action": "", "last_result": {},
+        "strategy_cooldown": 0, "offer_cooldown": 0, "deal": "none",
+        "deal_days": 0, "retaliation": 0, "tier": "Regional",
+        "battle_active": false, "battle_player_bid": 0, "battle_rival_bid": 0,
+        "battle_rounds": 0, "battle_opening_ask": 0
+    })
+    return "Helios Energy enters the market, cornering energy supply."
+func maybe_corporate_war(day: int) -> Dictionary:
+    _normalize()
+    if day < 30 or day % 12 != 0:
+        return {}
+    var living: Array = []
+    for rival in rivals:
+        if not bool(rival.get("eliminated", false)):
+            living.append(rival)
+    if living.size() < 2:
+        return {}
+    var attacker: Dictionary = living[0]
+    for rival in living:
+        if int(rival.get("assets", 0)) > int(attacker.get("assets", 0)):
+            attacker = rival
+    if int(attacker.get("cash", 0)) < 8000:
+        return {}
+    var target: Dictionary = living[0] if living[0] != attacker else living[1]
+    for rival in living:
+        if rival == attacker:
+            continue
+        if int(rival.get("businesses", 0)) < int(target.get("businesses", 0)):
+            target = rival
+    attacker["cash"] = int(attacker.get("cash", 0)) - 8000
+    attacker["businesses"] = int(attacker.get("businesses", 0)) + 1
+    attacker["market_share"] = min(0.65, float(attacker.get("market_share", 0.0)) + 0.01)
+    target["cash"] = max(0, int(target.get("cash", 0)) - 4000)
+    target["businesses"] = maxi(0, int(target.get("businesses", 0)) - 1)
+    target["market_share"] = max(0.02, float(target.get("market_share", 0.0)) - 0.01)
+    target["war_sale"] = true
+    target["war_sale_day"] = day
+    if int(target.get("share_price", 0)) <= 0:
+        target["share_price"] = _base_share_price(target)
+    target["share_price"] = maxi(50, int(float(target["share_price"]) * 0.80))
+    if int(attacker.get("share_price", 0)) <= 0:
+        attacker["share_price"] = _base_share_price(attacker)
+    attacker["share_price"] = int(float(attacker["share_price"]) * 1.05)
+    (attacker.get("memory", []) as Array).append({"day": day, "event": "war_attacker", "target": str(target.get("name", "rival"))})
+    (target.get("memory", []) as Array).append({"day": day, "event": "war_target", "attacker": str(attacker.get("name", "rival"))})
+    if int(target.get("businesses", 0)) <= 0 and int(target.get("assets", 0)) <= 2:
+        target["eliminated"] = true
+        return {"ok": true, "attacker": str(attacker.get("name", "")), "target": str(target.get("name", "")), "eliminated": true, "news": "CORPORATE WAR: %s absorbs the last of %s in a hostile takeover." % [attacker["name"], target["name"]]}
+    return {"ok": true, "attacker": str(attacker.get("name", "")), "target": str(target.get("name", "")), "eliminated": false, "news": "CORPORATE WAR: %s raids %s in a hostile takeover bid. %s shares trade at a fire-sale discount." % [attacker["name"], target["name"], target["name"]]}
+
 func daily_update(day: int) -> Array[String]:
     _normalize()
     var news: Array[String] = []
     for rival in rivals:
+        if bool(rival.get("eliminated", false)):
+            continue
+        var tier := corporate_tier(rival)
+        if str(rival.get("tier", "")) != "" and str(rival.get("tier", "")) != tier:
+            news.append("%s is now a %s corporation." % [rival["name"], tier])
+        rival["tier"] = tier
+        if tier == "Global":
+            rival["cash"] = int(rival["cash"]) + 800
+            rival["market_share"] = min(0.65, float(rival["market_share"]) + 0.002)
+        elif tier == "Regional":
+            rival["cash"] = max(0, int(rival["cash"]) - 200)
         var strategy: Variant = str(rival.get("strategy", "balanced"))
         # Baseline daily corporate activity. This is intentionally distinct for
         # each Phase 14 corporation so the market evolves even without player input.
@@ -106,6 +208,12 @@ func daily_update(day: int) -> Array[String]:
                 if day % 5 == 0:
                     rival["technology"] = int(rival["technology"]) + 1
                     news.append("GreenBuild Industries invests in premium technology and quality.")
+            "energy_leverage":
+                rival["cash"] += 2000
+                rival["inventory"] = min(200, int(rival["inventory"]) + 6)
+                if day % 4 == 0:
+                    rival["market_share"] = min(0.40, float(rival["market_share"]) + 0.004)
+                    news.append("Helios Energy tightens its grip on regional energy supply.")
             _:
                 rival["cash"] += 1200
 
@@ -120,14 +228,25 @@ func daily_update(day: int) -> Array[String]:
             if int(rival["deal_days"]) == 0:
                 rival["deal"] = "none"
                 news.append("%s strategic deal has expired." % rival["name"])
+        if bool(rival.get("war_sale", false)) and day - int(rival.get("war_sale_day", 0)) > 12:
+            rival["war_sale"] = false
+    var war := maybe_corporate_war(day)
+    if not war.is_empty():
+        news.append(str(war.get("news", "")))
+    _mark_to_market(day)
     return news
 
 # Full corporate AI loop: Observe -> Evaluate -> Select -> Execute -> Record -> Remember.
 func strategic_ai_update(day: int, player_state: Dictionary = {}) -> Array[String]:
     _normalize()
     var news: Array[String] = []
+    var entrant_news := maybe_spawn_entrant(day, int(player_state.get("reputation", 0)))
+    if not entrant_news.is_empty():
+        news.append(entrant_news)
     for i in range(rivals.size()):
         var r: Dictionary = rivals[i]
+        if bool(r.get("eliminated", false)):
+            continue
         var observation: Variant = _observe(r, day, player_state)
         var evaluation: Variant = _evaluate(r, observation)
         var strategy: Variant = _select_strategy(r, evaluation, day)
@@ -196,6 +315,10 @@ func _select_strategy(r: Dictionary, e: Dictionary, day: int) -> String:
             if e["threat"] >= 0.9 and int(r["relationship"]) >= 25: return "build_alliance"
             if day % 10 == 0: return "premium_branding"
             return "optimize_operations"
+        "energy_leverage":
+            if e["threat"] >= 0.6: return "corner_energy_market"
+            if e["liquidity"] > 0.8 and day % 8 == 0: return "expand_capacity"
+            return "optimize_operations"
         _:
             return "optimize_operations"
 
@@ -235,6 +358,13 @@ func _execute_strategy(r: Dictionary, strategy: String, o: Dictionary, day: int)
             r["price"] = max(110, int(r["price"]) + 2)
             r["strategy_cooldown"] = 4
             return "strengthen_premium_brand"
+        "corner_energy_market":
+            r["supplier_pressure"] = min(3, int(r["supplier_pressure"]) + 1)
+            r["inventory"] = min(260, int(r["inventory"]) + 10)
+            r["market_share"] = min(0.45, float(r["market_share"]) + 0.005)
+            r["cash"] = max(0, int(r["cash"]) - 3000)
+            r["strategy_cooldown"] = 4
+            return "corner_energy_market"
         "expand_capacity":
             if int(r["cash"]) >= 12000:
                 r["cash"] = int(r["cash"]) - 12000
@@ -294,6 +424,7 @@ func _record_result(r: Dictionary, action: String, o: Dictionary, e: Dictionary)
         "improve_delivery_network": result["news"] = "%s strengthened its logistics network." % r["name"]
         "upgrade_technology": result["news"] = "%s invested in technology and production quality." % r["name"]
         "strengthen_premium_brand": result["news"] = "%s strengthened its premium brand and reputation." % r["name"]
+        "corner_energy_market": result["news"] = "%s squeezed energy supply to pressure the market." % r["name"]
         "expand_capacity": result["news"] = "%s expanded production capacity." % r["name"]
         "open_regional_operation": result["news"] = "%s opened a new regional operation." % r["name"]
         "form_strategic_alliance": result["news"] = "%s is building a strategic alliance network." % r["name"]
@@ -312,7 +443,8 @@ func ai_status(index: int) -> Dictionary:
         "market_share":r["market_share"], "reputation":r["reputation"], "districts":r["districts"],
         "suppliers":r["suppliers"], "customers":r["customers"], "risk_tolerance":r["risk_tolerance"],
         "strategic_priorities":r["strategic_priorities"], "last_strategy":r["last_strategy"],
-        "last_action":r["last_action"], "memory_size":r["memory"].size()
+        "last_action":r["last_action"], "memory_size":r["memory"].size(), "tier":corporate_tier(r),
+        "eliminated":bool(r.get("eliminated", false)), "war_sale":bool(r.get("war_sale", false))
     }
 
 func retaliation_after_acquisition(index: int) -> Dictionary:
@@ -405,18 +537,141 @@ func reject_acquisition(index: int) -> Dictionary:
     r["relationship"] = max(-100, int(r["relationship"]) - 5)
     return {"ok":true,"message":"Acquisition rejected. %s will remember the decision." % r["name"]}
 
-func negotiate_acquisition(index: int, player_cash: int, reputation: int) -> Dictionary:
+func _base_share_price(r: Dictionary) -> int:
+    return 800 + int(r.get("presence", 1)) * 500 + int(r.get("technology", 1)) * 150
+func _share_price_target(r: Dictionary) -> int:
+    var base := float(_base_share_price(r))
+    var fundamentals := float(r.get("market_share", 0.10)) / 0.25 + float(r.get("technology", 1)) / 4.0 + float(r.get("cash", 0)) / 200000.0
+    return int(round(base * clampf(fundamentals / 3.0, 0.5, 2.0)))
+func _mark_to_market(day: int) -> void:
+    for rival in rivals:
+        if bool(rival.get("eliminated", false)):
+            rival["share_price"] = 0
+            continue
+        var current := int(rival.get("share_price", 0))
+        if current <= 0:
+            current = _base_share_price(rival)
+        var target := _share_price_target(rival)
+        rival["share_price"] = maxi(50, current + int(round(float(target - current) * 0.10)))
+        rival["share_price_day"] = day
+func share_price(index: int) -> int:
+    _normalize()
+    if index < 0 or index >= rivals.size():
+        return 0
+    var r: Dictionary = rivals[index]
+    if bool(r.get("eliminated", false)):
+        return 0
+    var price := int(r.get("share_price", 0))
+    if price <= 0:
+        price = _base_share_price(r)
+        r["share_price"] = price
+    if bool(r.get("war_sale", false)):
+        price = maxi(1, price / 2)
+    return price
+
+func negotiate_acquisition(index: int, player_cash: int, reputation: int, holdings: Array = []) -> Dictionary:
     if index < 0 or index >= rivals.size(): return {"ok":false,"message":"Unknown company."}
     var r: Dictionary = rivals[index]
+    if bool(r.get("eliminated", false)): return {"ok":false,"message":"That company was absorbed and no longer trades."}
     if reputation < 35: return {"ok":false,"message":"Your company needs 35 reputation to negotiate a major acquisition."}
     var cost: Variant = 45000 + int(r["presence"]) * 18000
     if int(r["relationship"]) < 10: cost += 15000
-    if player_cash < cost: return {"ok":false,"message":"Negotiation requires $%s available capital." % _money(cost),"cost":cost}
+    var held_shares := 0
+    for holding in holdings:
+        if holding is Dictionary and str(holding.get("rival_id", "")) == str(r.get("id", "")):
+            held_shares += int(holding.get("shares", 0))
+    var leverage := minf(0.30, 0.05 * float(held_shares) / 10.0)
+    if leverage > 0.0:
+        cost = int(round(float(cost) * (1.0 - leverage)))
+    if player_cash < cost: return {"ok":false,"message":"Negotiation requires $%s available capital." % _money(cost),"cost":cost,"leverage":leverage}
     r["cash"] = max(0, int(r["cash"]) - int(cost / 2))
     r["presence"] = max(1, int(r["presence"]) - 1)
     r["offer_cooldown"] = 20
     r["relationship"] = min(50, int(r["relationship"]) + 8)
-    return {"ok":true,"cost":cost,"message":"You acquired a strategic foothold from %s. Their remaining operations are still active." % r["name"]}
+    return {"ok":true,"cost":cost,"leverage":leverage,"message":"You acquired a strategic foothold from %s. Their remaining operations are still active." % r["name"]}
+
+func _battle_ask(rival: Dictionary) -> int:
+    var ask: int = 45000 + int(rival.get("presence", 1)) * 18000
+    if int(rival.get("relationship", 0)) < 10:
+        ask += 15000
+    return ask
+
+func start_acquisition_battle(index: int, player_cash: int, reputation: int) -> Dictionary:
+    _normalize()
+    if index < 0 or index >= rivals.size():
+        return {"ok":false,"message":"Unknown company."}
+    var r: Dictionary = rivals[index]
+    if reputation < 35:
+        return {"ok":false,"message":"Your company needs 35 reputation to negotiate a major acquisition."}
+    if int(r.get("offer_cooldown", 0)) > 0:
+        return {"ok":false,"message":"%s is cooling down after the last boardroom encounter." % r["name"]}
+    if bool(r.get("battle_active", false)):
+        return {"ok":false,"message":"Bidding is already underway for %s." % r["name"]}
+    var ask := _battle_ask(r)
+    if player_cash < ask:
+        return {"ok":false,"message":"Opening the bidding requires $%s available capital." % _money(ask),"cost":ask}
+    var rival_bid: int = ask + 5000 + int(r.get("presence", 1)) * 3000
+    r["battle_active"] = true
+    r["battle_opening_ask"] = ask
+    r["battle_player_bid"] = ask
+    r["battle_rival_bid"] = rival_bid
+    r["battle_rounds"] = 3
+    return {"ok":true,"player_bid":ask,"rival_bid":rival_bid,"rounds":3,"message":"Bidding opened for %s at $%s. Another buyer holds $%s with 3 rounds remaining." % [r["name"], _money(ask), _money(rival_bid)]}
+
+func raise_acquisition_bid(index: int, player_cash: int) -> Dictionary:
+    _normalize()
+    if index < 0 or index >= rivals.size():
+        return {"ok":false,"message":"Unknown company."}
+    var r: Dictionary = rivals[index]
+    if not bool(r.get("battle_active", false)):
+        return {"ok":false,"message":"No bidding battle is active for %s." % r["name"]}
+    var raised: int = int(r["battle_player_bid"]) + max(5000, int(int(r["battle_player_bid"]) * 0.10))
+    if player_cash < raised:
+        return {"ok":false,"message":"Raising to $%s exceeds your available capital. Walk away or wait." % _money(raised),"required":raised}
+    r["battle_player_bid"] = raised
+    r["battle_rounds"] = max(0, int(r.get("battle_rounds", 0)) - 1)
+    if int(r["battle_rounds"]) > 0:
+        r["battle_rival_bid"] = int(r["battle_rival_bid"]) + max(3000, int(int(r["battle_rival_bid"]) * 0.06))
+        return {"ok":true,"won":false,"player_bid":raised,"rival_bid":int(r["battle_rival_bid"]),"rounds":int(r["battle_rounds"]),"message":"You raised to $%s. The rival buyer counters at $%s (%d rounds left)." % [_money(raised), _money(int(r["battle_rival_bid"])), int(r["battle_rounds"])]}
+    return _resolve_acquisition_battle(index)
+
+func _resolve_acquisition_battle(index: int) -> Dictionary:
+    var r: Dictionary = rivals[index]
+    var player_bid := int(r.get("battle_player_bid", 0))
+    var rival_bid := int(r.get("battle_rival_bid", 0))
+    r["battle_active"] = false
+    r["battle_rounds"] = 0
+    if player_bid >= rival_bid:
+        r["cash"] = max(0, int(r["cash"]) - int(player_bid / 2))
+        r["presence"] = max(1, int(r["presence"]) - 1)
+        r["offer_cooldown"] = 20
+        r["relationship"] = min(50, int(r["relationship"]) + 8)
+        return {"ok":true,"won":true,"cost":player_bid,"message":"You outbid the rival buyer and acquired a strategic foothold from %s for $%s." % [r["name"], _money(player_bid)]}
+    r["offer_cooldown"] = 14
+    r["relationship"] = max(-100, int(r["relationship"]) - 3)
+    return {"ok":false,"won":false,"cost":0,"rival_bid":rival_bid,"message":"%s went to the rival buyer at $%s. Your board remembers the loss." % [r["name"], _money(rival_bid)]}
+
+func walk_away_acquisition(index: int) -> Dictionary:
+    _normalize()
+    if index < 0 or index >= rivals.size():
+        return {"ok":false,"message":"Unknown company."}
+    var r: Dictionary = rivals[index]
+    if not bool(r.get("battle_active", false)):
+        return {"ok":false,"message":"No bidding battle is active for %s." % r["name"]}
+    r["battle_active"] = false
+    r["battle_rounds"] = 0
+    r["offer_cooldown"] = 4
+    r["relationship"] = min(100, int(r["relationship"]) + 1)
+    return {"ok":true,"message":"You walked away from %s gracefully. Capital preserved for the next opportunity." % r["name"]}
+
+func battle_status(index: int) -> Dictionary:
+    _normalize()
+    if index < 0 or index >= rivals.size():
+        return {"ok":false,"message":"Unknown company."}
+    var r: Dictionary = rivals[index]
+    if bool(r.get("eliminated", false)):
+        return {"ok":false,"message":"That company was absorbed and no longer trades."}
+    return {"ok":true,"active":bool(r.get("battle_active", false)),"player_bid":int(r.get("battle_player_bid", 0)),"rival_bid":int(r.get("battle_rival_bid", 0)),"rounds":int(r.get("battle_rounds", 0)),"opening_ask":int(r.get("battle_opening_ask", 0))}
 
 func alliance_bonus(index: int) -> Dictionary:
     if index < 0 or index >= rivals.size(): return {"discount":0.0,"sales":0.0,"risk":0.0}

@@ -15,9 +15,9 @@ func run() -> void:
         root.add_child(model)
         await process_frame
         culture.set_dimension("quality", 40, 1, "demand integration baseline")
-        var low: Dictionary = model.calculate("furniture", 110.0, 120.0, 10, 75, 0, 0, 1.0, 1.0, 0.0, 0.0, 0.0)
+        var low: Dictionary = model.calculate("furniture", 160.0, 120.0, 10, 75, 0, 0, 1.0, 1.0, 0.0, 0.0, 0.0)
         culture.set_dimension("quality", 100, 1, "demand integration improvement")
-        var high: Dictionary = model.calculate("furniture", 110.0, 120.0, 10, 75, 0, 0, 1.0, 1.0, 0.0, 0.0, 0.0)
+        var high: Dictionary = model.calculate("furniture", 160.0, 120.0, 10, 75, 0, 0, 1.0, 1.0, 0.0, 0.0, 0.0)
         if not bool(low.get("ok", false)) or not bool(high.get("ok", false)):
             failures.append("Demand model must remain operational with culture integration")
         if int(high.get("demand", 0)) <= int(low.get("demand", 0)):

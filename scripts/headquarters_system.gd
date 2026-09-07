@@ -1,5 +1,5 @@
 extends Node
-class_name RenewHeadquartersSystem
+## class_name removed: "RenewHeadquartersSystem" conflicts with project.godot autoload.
 
 const STAGES := ["Small Office", "Headquarters", "Corporate Center", "Regional HQ", "Global Headquarters"]
 const STAGE_COSTS := [0, 15000, 40000, 90000, 200000]

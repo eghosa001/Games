@@ -131,4 +131,5 @@ func settle_debt_day() -> Dictionary:
     if debt == 0 and _total_financing_balance() <= 0.01:
         loan_payment = 0
     _update_credit_score(missed)
-    return {"interest": interest, "payment": payment, "missed": missed, "cash": cash, "debt": debt, "accrued_interest": _total_accrued_interest(), "credit_rating": credit_rating}
+    var matured_investments: Array = settle_term_deposits()
+    return {"interest": interest, "payment": payment, "missed": missed, "cash": cash, "debt": debt, "accrued_interest": _total_accrued_interest(), "credit_rating": credit_rating, "matured_investments": matured_investments}

@@ -53,7 +53,7 @@ func _layout_responsive() -> void:
     left_rail.visible = false
     selected_card.visible = false
     objective_card.visible = false
-    right_card.visible = false
+    if right_card != null: right_card.visible = false
     network_strip.visible = false
 
     # Compact top HUD. Keep all three values visible even on 320px devices.

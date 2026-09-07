@@ -45,7 +45,7 @@ func acquire_asset(acquirer_id: String, target_id: String, asset_index: int, pri
     if target.is_empty() or asset_index < 0 or asset_index >= target.get("assets", []).size() or price < 0.0: return {"ok": false, "error": "invalid_asset_purchase"}
     if cash_available < price: return {"ok": false, "error": "insufficient_cash"}
     if price > 0.0:
-        var spend := state_adapter.spend(int(ceil(price)), "asset acquisition")
+        var spend: Dictionary = state_adapter.spend(int(ceil(price)), "asset acquisition")
         if not bool(spend.get("ok", false)): return {"ok": false, "error": "insufficient_cash", "cash": int(state_adapter.get_value("economy", "cash", 0))}
     var asset = target["assets"][asset_index]
     target["assets"].remove_at(asset_index)
@@ -60,7 +60,7 @@ func acquire_company(acquirer_id: String, target_id: String, price: float, metho
     var diligence: Variant = due_diligence(target_id)
     var transferred: Variant = {"assets": target.get("assets", []).duplicate(true), "debt_assumed": float(target.get("debt", 0.0)) if assume_debt else 0.0, "liabilities_assumed": float(target.get("liabilities", 0.0)) if assume_liabilities else 0.0, "employees_transferred": int(target.get("employees", 0)) if retain_employees else 0, "contracts_transferred": target.get("contracts", []).duplicate(true) if transfer_contracts else [], "reputation_transfer": float(target.get("reputation", 0.0)) * reputation_transfer, "hidden_risks": target.get("hidden_risks", []).duplicate(true)}
     if price > 0.0:
-        var spend := state_adapter.spend(int(ceil(price)), "company acquisition: %s" % target_id)
+        var spend: Dictionary = state_adapter.spend(int(ceil(price)), "company acquisition: %s" % target_id)
         if not bool(spend.get("ok", false)): return {"ok": false, "error": "insufficient_cash", "cash": int(state_adapter.get_value("economy", "cash", 0)), "required": int(ceil(price))}
     var result: Variant = _record_transaction(method, acquirer_id, target_id, price, transferred)
     if bool(result.get("ok", false)):
@@ -96,7 +96,7 @@ func accumulate_shares(acquirer_id: String, target_id: String, shares: float, pr
     var current: Variant = float(owners.get(acquirer_id, 0.0))
     var new_percent: Variant = min(100.0, current + shares)
     if price > 0.0:
-        var spend := state_adapter.spend(int(ceil(price)), "share accumulation: %s" % target_id)
+        var spend: Dictionary = state_adapter.spend(int(ceil(price)), "share accumulation: %s" % target_id)
         if not bool(spend.get("ok", false)): return {"ok": false, "error": "insufficient_cash", "cash": int(state_adapter.get_value("economy", "cash", 0)), "required": int(ceil(price))}
     owners[acquirer_id] = new_percent
     if new_percent >= 50.1: target["status"] = "controlled"

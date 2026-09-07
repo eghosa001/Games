@@ -28,7 +28,7 @@ func run() -> void:
     await process_frame
     await process_frame
 
-    var state = get_node_or_null("/root/RenewGameState")
+    var state = root.get_node_or_null("RenewGameState")
     check(state != null, "Canonical GameState exists")
     if state == null:
         game.free()
@@ -40,6 +40,9 @@ func run() -> void:
     game.cash = 100000
     game.day = 1
     state.set_value("businesses", "business_open", true)
+    state.set_value("businesses", "business_purpose", "furniture_factory")
+    state.set_value("businesses", "industry_id", "furniture")
+    state.set_value("businesses", "business_name", "Furniture Factory")
 
     var employee_command = game.command_system.employee_system
     var starting_count := int(employee_command.get_active_employee_count())
@@ -68,11 +71,11 @@ func run() -> void:
 
     # Put the hired employee on the bench first, then assign to the factory.
     # This gives the integration test a real before/after production signal.
-    employee_command.assign_employee(hired_id, "bench_001", game.day)
+    employee_command.assign_employee(hired_id, "bench_001")
     employee_command.sync_roster()
     var productivity_before_factory := float(employee_command.get_productivity_multiplier("factory_001"))
 
-    employee_command.assign_employee(hired_id, "factory_001", game.day)
+    employee_command.assign_employee(hired_id, "factory_001")
     employee_command.sync_roster()
     var productivity_after_factory := float(employee_command.get_productivity_multiplier("factory_001"))
     check(productivity_after_factory > productivity_before_factory, "Assigning employee to factory increases production productivity")

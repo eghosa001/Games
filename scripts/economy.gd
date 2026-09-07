@@ -25,7 +25,7 @@ const LEGACY_RESOURCE_MIGRATION := {
 const MIN_PRICE := 10.0
 const MAX_PRICE := 500.0
 const PRICE_RESPONSE := 0.35
-const CUSTOMER_INPUT_DEMAND := {"furniture": {"timber": 1.0, "iron": 2.0, "energy": 2.5}}
+const CUSTOMER_INPUT_DEMAND := {"furniture": {"timber": 1.0, "iron": 2.0, "energy": 2.5}, "construction_materials": {"timber": 1.0, "iron": 1.5, "energy": 2.5}, "consumer_electronics": {"iron": 1.5, "electronics": 1.0, "energy": 3.0}}
 var resources: Dictionary = {}
 var market_multipliers: Variant = {}
 var suppliers: Variant = {}
@@ -99,8 +99,20 @@ func scarcity_snapshot()->Dictionary:
 func quote(resource:String,amount:int,choice:int=0)->Dictionary:
     if not resources.has(resource) or amount<=0: return {"ok":false,"cost":0,"supplier":"Unknown"}
     var supplier:Dictionary=supplier_for(resource,choice); if supplier.is_empty(): return {"ok":false,"cost":0,"supplier":"Unknown"}
-    var scarcity_state:Dictionary=scarcity(resource); var scarcity_factor:float=float(scarcity_state.get("price_multiplier",1.0)); var market_factor:float=float(market_multipliers.get(resource,1.0)); var market_price:float=current_price(resource); var effective_price:float=market_price*scarcity_factor; var cost:int=int(round(effective_price*amount*float(supplier["markup"])*market_factor))
-    return {"ok":true,"cost":cost,"unit_price":effective_price,"market_price":market_price,"supplier":supplier["name"],"reliability":supplier["reliability"],"market_factor":market_factor,"scarcity_multiplier":scarcity_factor,"region":resources[resource]["region"]}
+    var scarcity_state:Dictionary=scarcity(resource); var scarcity_factor:float=float(scarcity_state.get("price_multiplier",1.0)); var market_factor:float=float(market_multipliers.get(resource,1.0)); var market_price:float=current_price(resource); var effective_price:float=market_price*scarcity_factor; var world_factor:float=world_cost_multiplier(resource); var cost:int=int(round(effective_price*amount*float(supplier["markup"])*market_factor*world_factor))
+    return {"ok":true,"cost":cost,"unit_price":effective_price,"market_price":market_price,"supplier":supplier["name"],"reliability":supplier["reliability"],"market_factor":market_factor,"scarcity_multiplier":scarcity_factor,"world_factor":world_factor,"region":resources[resource]["region"]}
+func world_cost_multiplier(resource:String)->float:
+    var game = _world_game_state()
+    if game == null: return 1.0
+    var mult:float = float(game.get_world_modifier("input_cost",1.0))*float(game.get_world_modifier("factory_cost",1.0))*float(game.get_world_modifier("logistics_cost",1.0))
+    if resource == "energy": mult *= float(game.get_world_modifier("energy_price",1.0))
+    return clampf(mult,0.5,3.0)
+func _world_game_state():
+    var loop: Variant = Engine.get_main_loop()
+    if loop == null or not (loop is SceneTree): return null
+    var game = (loop as SceneTree).root.get_node_or_null("/root/RenewGameState")
+    if game != null and game.has_method("get_world_modifier"): return game
+    return null
 func production_cost(orders:Array,choice:int=0)->Dictionary:
     var total:int=0; var quotes:Array=[]
     for order in orders:
@@ -155,3 +167,11 @@ func end_market_day()->void:
     _ensure_resources()
     for key in resources:
         var d:Dictionary=resources[key]; var stock:float=max(0.0,float(d.get("stock",0.0))); var production:float=max(0.0,float(d.get("production_rate",0.0))); var baseline_demand:float=max(0.0,float(d.get("consumption_rate",0.0))); var daily_supply:float=max(0.0,production+randi_range(-2,4)); var baseline_market_demand:float=estimate_demand(String(key),current_price(String(key))); d["supply"]=daily_supply; d["demand"]=max(baseline_demand,baseline_market_demand); stock=max(0.0,stock-d["demand"]+daily_supply); d["stock"]=stock; d["consumption_rate"]=baseline_demand; resources[key]=d; _recalculate_price(String(key))
+func capture_state()->Dictionary:
+    return {"resources":resources.duplicate(true),"market_multipliers":market_multipliers.duplicate(true),"suppliers":suppliers.duplicate(true)}
+func restore_state(snapshot:Dictionary)->void:
+    if snapshot.is_empty():return
+    var saved_resources=snapshot.get("resources",{});if saved_resources is Dictionary:resources=(saved_resources as Dictionary).duplicate(true)
+    var saved_multipliers=snapshot.get("market_multipliers",{});if saved_multipliers is Dictionary:market_multipliers=(saved_multipliers as Dictionary).duplicate(true)
+    var saved_suppliers=snapshot.get("suppliers",{});if saved_suppliers is Dictionary:suppliers=(saved_suppliers as Dictionary).duplicate(true)
+    _ensure_resources()

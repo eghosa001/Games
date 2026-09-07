@@ -84,7 +84,9 @@ func _apply_scene_visibility() -> void:
     var hud := renew.get_node_or_null("UI/MainHUD")
     var tab := int(hud.get("active_tab")) if hud != null else 0
 
-    var infrastructure_ui := get_node_or_null("/root/RenewInfrastructureUI")
+    var infrastructure_ui := renew.get_node_or_null("UI/InfrastructurePanel")
+    if infrastructure_ui == null:
+        infrastructure_ui = get_node_or_null("/root/RenewInfrastructureUI")
     if infrastructure_ui is CanvasItem:
         infrastructure_ui.visible = tab == 3
 

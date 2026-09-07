@@ -23,10 +23,29 @@ func run() -> void:
         quit(1)
         return
 
-    var state = State.new()
-    state.name = "RenewGameState"
-    root.add_child(state)
-    await process_frame
+    # Reuse the canonical autoloads so the business under test resolves the
+    # same GameState/FinanceSystem through its DomainSystem bridge.
+    var state = root.get_node_or_null("RenewGameState")
+    if state == null:
+        state = State.new()
+        state.name = "RenewGameState"
+        root.add_child(state)
+        await process_frame
+    elif state.has_method("clear"):
+        state.clear()
+        await process_frame
+    var finance = root.get_node_or_null("RenewFinanceSystem")
+    if finance != null and finance.has_method("record_equity"):
+        finance.financing = {}
+        finance.debt = 0
+        finance.loan_payment = 0
+        finance.revenue = 0.0
+        finance.operating_expenses = 0.0
+        finance.interest_expense = 0.0
+        finance.retained_earnings = 0.0
+        finance.equity_contributed = 25000.0
+        finance.cash = 25000
+        state.set_value("economy", "cash", 25000)
 
     var catalog := [{"id":"warehouse_001","name":"Riverside Warehouse","type":"Warehouse","condition":100,"cleaning":100,"repair":100,"painting":100,"furnishing":100,"value":65000,"capacity":80,"industry_compatibility":["Logistics","Manufacturing","Wholesale"]}]
     state.set_value("properties", "catalog", catalog)
@@ -34,7 +53,6 @@ func run() -> void:
     state.set_value("properties", "owned", true)
     state.set_value("properties", "stage", "Operational")
     state.set_value("properties", "restoration", 100)
-    state.set_value("economy", "cash", 25000)
 
     var business = Business.new()
     root.add_child(business)
@@ -45,7 +63,7 @@ func run() -> void:
     check(business.get_industry("construction_materials").get("name", "") == "Construction Materials", "Construction Materials industry exists")
     check(business.get_industry("consumer_electronics").get("name", "") == "Consumer Electronics", "Consumer Electronics industry exists")
     for industry_id in ["furniture", "construction_materials", "consumer_electronics"]:
-        var industry := business.get_industry(industry_id)
+        var industry: Dictionary = business.get_industry(industry_id)
         check(industry.get("inputs", {}) is Dictionary and not industry.get("inputs", {}).is_empty(), "%s has inputs" % industry.get("name", industry_id))
         check(industry.get("output", {}) is Dictionary and not industry.get("output", {}).is_empty(), "%s has output" % industry.get("name", industry_id))
         check(int(industry.get("workers", 0)) > 0, "%s has workers" % industry.get("name", industry_id))

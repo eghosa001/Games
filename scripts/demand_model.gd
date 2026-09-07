@@ -2,7 +2,7 @@ extends Node
 class_name RenewDemandModel
 const CustomerSegmentSystem=preload("res://scripts/customer_segment_system.gd")
 var customer_segments=CustomerSegmentSystem.new()
-const PRODUCT_CONFIG={"consumer_goods":{"base_demand":55.0,"min_demand":0.0,"max_demand":100.0,"price_strength":0.90},"furniture":{"base_demand":42.0,"min_demand":0.0,"max_demand":100.0,"price_strength":1.15},"appliance":{"base_demand":34.0,"min_demand":0.0,"max_demand":80.0,"price_strength":1.35}}
+const PRODUCT_CONFIG={"consumer_goods":{"base_demand":55.0,"min_demand":0.0,"max_demand":100.0,"price_strength":0.90},"furniture":{"base_demand":42.0,"min_demand":0.0,"max_demand":100.0,"price_strength":1.15},"appliance":{"base_demand":34.0,"min_demand":0.0,"max_demand":80.0,"price_strength":1.35},"construction_materials":{"base_demand":48.0,"min_demand":0.0,"max_demand":110.0,"price_strength":1.05},"consumer_electronics":{"base_demand":36.0,"min_demand":0.0,"max_demand":90.0,"price_strength":1.30}}
 func get_product_config(product:String="consumer_goods")->Dictionary:return PRODUCT_CONFIG.get(product,{}).duplicate(true)
 func product_ids()->Array:return PRODUCT_CONFIG.keys()
 func get_customer_segments()->Dictionary:return customer_segments.get_segments()
@@ -23,7 +23,10 @@ func calculate(product:String,player_price:float,competitor_price:float,reputati
     var employee_modifier:float=clampf(employee_productivity,0.45,1.55)
     var relationship_modifier:float=clampf(1.0+alliance_sales*0.45+deal_sales*0.50,0.50,1.90)
     var demand_float:float=float(segment_result.get("raw_demand",0.0))*employee_modifier*relationship_modifier
-    var market_multiplier:float=tech.market_demand_multiplier() if tech!=null else 1.0
+    var market_multiplier:float=1.0
+    var tech_node: Node = null
+    if is_inside_tree(): tech_node = get_node_or_null("/root/RenewTechnologySystem")
+    if tech_node != null and tech_node.has_method("market_demand_multiplier"): market_multiplier = tech_node.market_demand_multiplier()
     var event_multiplier:float=1.0
     var state:Node=tech_root.get_node_or_null("RenewGameState") if tech_root!=null else null
     if state!=null:

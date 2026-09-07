@@ -26,19 +26,49 @@ func get_future_contract_offer(reputation: int, customer_id: String = DEFAULT_CU
     return {"ok": true, "eligible": true, "relationship": relationship, "quantity": quantity, "price": price, "duration_days": duration, "competitor_bid_pressure": competitor_pressure, "message": "Customer contract offer available."}
 func _new_id() -> String:
     var value: Variant = "contract_%04d" % next_contract_id; next_contract_id += 1; return value
-func create_customer_contract(parties: Array, product: String, quantity: int, price: int, quality_requirement: int, delivery_schedule: Dictionary, destination: String, penalty: int, cancellation: Dictionary, renewal: Dictionary, reputation_impact: Dictionary) -> Dictionary:
+func create_customer_contract(parties: Array, product: String, quantity: int, price: int, quality_requirement: int, delivery_schedule: Dictionary, destination: String, penalty: int, cancellation: Dictionary, renewal: Dictionary, reputation_impact: Dictionary, kind: String = "standard") -> Dictionary:
     if parties.size() < 2 or product.is_empty() or quantity <= 0 or price <= 0 or quality_requirement < 0 or quality_requirement > 100 or destination.is_empty() or penalty < 0: return {"ok": false, "message": "Invalid contract terms."}
     var customer_id: Variant = _customer_id(parties)
     if _get_relationship(customer_id) < 20: return {"ok": false, "message": "Customer relationship is too weak for this contract."}
     var duration: Variant = max(1, int(delivery_schedule.get("duration_days", 1))); var frequency := str(delivery_schedule.get("frequency", "daily")); var quantity_per_delivery := max(1, int(delivery_schedule.get("quantity_per_delivery", quantity))); var id := _new_id()
-    var contract: Variant = {"id": id, "parties": parties.duplicate(true), "customer_id": customer_id, "resource_product": product, "quantity": quantity, "price": price, "quality_requirement": quality_requirement, "delivery_schedule": delivery_schedule.duplicate(true), "destination": destination, "penalty": penalty, "cancellation": cancellation.duplicate(true), "renewal": renewal.duplicate(true), "reputation_impact": reputation_impact.duplicate(true), "execution_status": "active", "signed_day": int(delivery_schedule.get("start_day", 1)), "days_elapsed": 0, "quantity_delivered": 0, "quantity_due": 0, "quality_delivered": 0, "revenue_earned": 0, "penalties_paid": 0, "missed_deliveries": 0, "cancel_reason": "", "renewal_offered": false, "renewed_contract_id": "", "last_execution": {}, "next_delivery_day": int(delivery_schedule.get("start_day", 1)), "schedule_frequency": frequency, "schedule_quantity": quantity_per_delivery, "customer_relationship_at_signing": _get_relationship(customer_id), "competitor_bid_pressure_at_signing": _competitor_bid_modifier()}
+    var contract: Variant = {"id": id, "kind": kind, "parties": parties.duplicate(true), "customer_id": customer_id, "resource_product": product, "quantity": quantity, "price": price, "quality_requirement": quality_requirement, "delivery_schedule": delivery_schedule.duplicate(true), "destination": destination, "penalty": penalty, "cancellation": cancellation.duplicate(true), "renewal": renewal.duplicate(true), "reputation_impact": reputation_impact.duplicate(true), "execution_status": "active", "signed_day": int(delivery_schedule.get("start_day", 1)), "days_elapsed": 0, "quantity_delivered": 0, "quantity_due": 0, "quality_delivered": 0, "revenue_earned": 0, "penalties_paid": 0, "missed_deliveries": 0, "cancel_reason": "", "renewal_offered": false, "renewed_contract_id": "", "last_execution": {}, "next_delivery_day": int(delivery_schedule.get("start_day", 1)), "schedule_frequency": frequency, "schedule_quantity": quantity_per_delivery, "customer_relationship_at_signing": _get_relationship(customer_id), "competitor_bid_pressure_at_signing": _competitor_bid_modifier()}
     active_contracts[id] = contract; _record("signed", id, {"customer": customer_id, "product": product, "quantity": quantity, "relationship": _get_relationship(customer_id)}); return {"ok": true, "contract": contract.duplicate(true)}
 func create_default_customer_contract(day: int, reputation: int, product: String = "consumer_goods") -> Dictionary:
     var offer: Variant = get_future_contract_offer(reputation)
     if not bool(offer.get("eligible", false)): return offer
     if product.is_empty(): product = "consumer_goods"
     var quantity: Variant = int(offer.get("quantity", 25)); var duration := int(offer.get("duration_days", 5)); var per_delivery := int(ceil(float(quantity) / float(duration)))
-    return create_customer_contract(["RENEW Goods", DEFAULT_CUSTOMER], product, quantity, int(offer.get("price", 180)), 70, {"frequency": "daily", "quantity_per_delivery": per_delivery, "duration_days": duration, "start_day": day}, "Harbor District Retail Hub", 600, {"player_can_cancel": true, "notice_days": 1, "fee": 900}, {"eligible": true, "term_days": duration, "price_adjustment": 0.05}, {"on_fulfilled": 10, "on_missed": -2, "on_cancelled": -4, "on_failed": -20})
+    return create_customer_contract(["RENEW Goods", DEFAULT_CUSTOMER], product, quantity, int(offer.get("price", 180)), 70, {"frequency": "daily", "quantity_per_delivery": per_delivery, "duration_days": duration, "start_day": day}, "Harbor District Retail Hub", 600, {"player_can_cancel": true, "notice_days": 1, "fee": 900}, {"eligible": true, "term_days": duration, "price_adjustment": 0.05}, {"on_fulfilled": 10, "on_missed": -2, "on_cancelled": -4, "on_failed": -20}, "standard")
+func create_exclusive_contract(day: int, reputation: int, product: String = "consumer_goods") -> Dictionary:
+    var offer: Variant = get_future_contract_offer(reputation)
+    if not bool(offer.get("eligible", false)): return offer
+    if product.is_empty(): product = "consumer_goods"
+    var quantity: Variant = int(offer.get("quantity", 25)); var duration := int(offer.get("duration_days", 5)); var per_delivery := int(ceil(float(quantity) / float(duration)))
+    var price := int(round(float(offer.get("price", 180)) * 1.25))
+    return create_customer_contract(["RENEW Goods", DEFAULT_CUSTOMER], product, quantity, price, 70, {"frequency": "daily", "quantity_per_delivery": per_delivery, "duration_days": duration, "start_day": day}, "Harbor District Retail Hub", 1200, {"player_can_cancel": true, "notice_days": 1, "fee": 1800}, {"eligible": true, "term_days": duration, "price_adjustment": 0.05}, {"on_fulfilled": 15, "on_missed": -3, "on_cancelled": -6, "on_failed": -25}, "exclusive")
+func create_construction_contract(day: int, reputation: int, product: String = "consumer_goods") -> Dictionary:
+    var offer: Variant = get_future_contract_offer(reputation)
+    if not bool(offer.get("eligible", false)): return offer
+    if product.is_empty(): product = "consumer_goods"
+    var quantity := 50; var duration := 6; var per_delivery := int(ceil(float(quantity) / float(duration)))
+    var price := int(round(float(offer.get("price", 180)) * 1.10))
+    return create_customer_contract(["RENEW Goods", DEFAULT_CUSTOMER], product, quantity, price, 70, {"frequency": "daily", "quantity_per_delivery": per_delivery, "duration_days": duration, "start_day": day}, "Civic Construction Yard", 900, {"player_can_cancel": true, "notice_days": 1, "fee": 1200}, {"eligible": true, "term_days": duration, "price_adjustment": 0.05}, {"on_fulfilled": 12, "on_missed": -2, "on_cancelled": -5, "on_failed": -22}, "construction")
+func create_government_contract(day: int, reputation: int, product: String = "consumer_goods") -> Dictionary:
+    if reputation < 40: return {"ok": false, "eligible": false, "message": "Government contracts require 40 reputation."}
+    var offer: Variant = get_future_contract_offer(reputation)
+    if not bool(offer.get("eligible", false)): return offer
+    if product.is_empty(): product = "consumer_goods"
+    var quantity := 100; var duration := 10; var per_delivery := int(ceil(float(quantity) / float(duration)))
+    var price := int(round(float(offer.get("price", 180)) * 1.15))
+    return create_customer_contract(["RENEW Goods", "Regional Government"], product, quantity, price, 70, {"frequency": "daily", "quantity_per_delivery": per_delivery, "duration_days": duration, "start_day": day}, "Capital Civic Works", 1500, {"player_can_cancel": true, "notice_days": 2, "fee": 2500}, {"eligible": true, "term_days": duration, "price_adjustment": 0.05}, {"on_fulfilled": 20, "on_missed": -4, "on_cancelled": -8, "on_failed": -30}, "government")
+func create_export_contract(day: int, reputation: int, product: String = "consumer_goods") -> Dictionary:
+    if reputation < 20: return {"ok": false, "eligible": false, "message": "Foreign buyers need 20 reputation before signing."}
+    var offer: Variant = get_future_contract_offer(reputation)
+    if not bool(offer.get("eligible", false)): return offer
+    if product.is_empty(): product = "consumer_goods"
+    var quantity := 60; var duration := 8; var per_delivery := int(ceil(float(quantity) / float(duration)))
+    var price := int(round(float(offer.get("price", 180)) * 1.35))
+    return create_customer_contract(["RENEW Goods", "Meridian Overseas"], product, quantity, price, 70, {"frequency": "daily", "quantity_per_delivery": per_delivery, "duration_days": duration, "start_day": day}, "Foreign Port", 1200, {"player_can_cancel": true, "notice_days": 2, "fee": 2000}, {"eligible": true, "term_days": duration, "price_adjustment": 0.05}, {"on_fulfilled": 16, "on_missed": -3, "on_cancelled": -6, "on_failed": -26}, "export")
 func execute_day(contract_id: String, available_quantity: int, average_quality: int, day: int) -> Dictionary:
     if not active_contracts.has(contract_id): return {"ok": false, "message": "Contract not found."}
     var contract: Dictionary = active_contracts[contract_id]

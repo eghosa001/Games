@@ -1,5 +1,5 @@
 extends Node
-class_name RenewCollectionSystem
+## class_name removed: "RenewCollectionSystem" conflicts with project.godot autoload.
 
 ## Corporate collections are permanent, gameplay-relevant assets rather than badges.
 const TYPES := ["historic_properties", "rare_machinery", "landmark_businesses", "unique_technologies", "special_contracts", "famous_employees", "world_event_artifacts"]

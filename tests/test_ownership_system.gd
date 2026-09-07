@@ -63,7 +63,7 @@ func run() -> void:
     var dividend = ownership.distribute_dividend("renew_co", 10000.0)
     check(bool(dividend["ok"]), "Dividend distribution succeeds")
     check(abs(float(dividend["paid"]) - 10000.0) < 0.01, "Dividend distributes the full declared amount")
-    check(abs(float(dividend["payouts"].get("founder", 0.0)) + float(dividend["payouts"].get("fund_a", 0.0)) + float(dividend["payouts"].get("fund_c", 0.0)) - 10000.0) < 0.01, "Dividend payouts reconcile to declared amount")
+    check(abs(float(dividend["payouts"].get("founder", 0.0)) + float(dividend["payouts"].get("fund_a", 0.0)) + float(dividend["payouts"].get("fund_b", 0.0)) + float(dividend["payouts"].get("fund_c", 0.0)) - 10000.0) < 0.01, "Dividend payouts reconcile to declared amount")
 
     check(bool(ownership.adjust_investor_confidence("renew_co", 15.0, "strong earnings")["ok"]), "Investor confidence is adjustable")
     check(float(ownership.get_entity("renew_co")["investor_confidence"]) == 65.0, "Investor confidence remains bounded and persisted")

@@ -39,7 +39,13 @@ func get_business_purposes() -> Array: return PURPOSES.get(_origin_property_type
 func get_business_purpose(purpose) -> Dictionary:
     var choices: Array = get_business_purposes()
     if purpose is int:
-        var index: int = int(purpose); if index < 0 or index >= choices.size(): return {}; return choices[index].duplicate(true)
+        var index: int = int(purpose)
+        if index < 0 or index >= choices.size():
+            return {}
+        var item = choices[index]
+        if item is Dictionary:
+            return (item as Dictionary).duplicate(true)
+        return {}
     for choice in choices:
         if str(choice.get("id", "")) == str(purpose): return choice.duplicate(true)
     return {}
@@ -59,7 +65,7 @@ func create_business(purpose_id: String = "") -> void:
     if bool(state_adapter.get_value("businesses", "business_open", false)): state_adapter.message("%s is already open." % _business_name()); return
     var purpose: Dictionary = get_business_purpose(purpose_id if not purpose_id.is_empty() else str(state_adapter.get_value("businesses", "business_purpose", ""))); if purpose.is_empty(): state_adapter.message("Choose a business purpose first: press 4, 5 or 6."); return
     var cost := 3000; var cash: int = int(state_adapter.get_value("economy", "cash", 25000)); if cash < cost: state_adapter.message("Need $3,000 working capital to launch the business."); return
-    var property: Dictionary = _selected_property(); var property_id: String = str(property.get("id", "")); var business_id: String = "%s_%s" % [purpose.get("id", "business"), property_id]; var spend := state_adapter.spend(cost, "business launch")
+    var property: Dictionary = _selected_property(); var property_id: String = str(property.get("id", "")); var business_id: String = "%s_%s" % [purpose.get("id", "business"), property_id]; var spend: Dictionary = state_adapter.spend(cost, "business launch")
     if not bool(spend.get("ok", false)): state_adapter.message(str(spend.get("message", "Unable to fund the business launch."))); return
     state_adapter.set_value("businesses", "business_open", true); state_adapter.set_value("businesses", "business_id", business_id); state_adapter.set_value("businesses", "business_name", str(purpose.get("name", "Business"))); state_adapter.set_value("businesses", "business_type", str(purpose.get("type", "Business"))); state_adapter.set_value("businesses", "business_purpose", str(purpose.get("id", ""))); state_adapter.set_value("businesses", "industry_id", str(purpose.get("industry_id", "furniture"))); state_adapter.set_value("businesses", "origin_property_id", property_id); state_adapter.set_value("businesses", "origin_property_name", str(property.get("name", "Property"))); state_adapter.set_value("businesses", "origin_property_type", str(property.get("type", "Property"))); state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + 2)
     state_adapter.message("%s created inside %s. The restored property is now the origin of your business." % [purpose.get("name", "Business"), property.get("name", "Property")]); state_adapter.log_message("BUSINESS CREATED: %s — origin %s (%s)." % [purpose.get("name", "Business"), property.get("name", "Property"), property_id])
@@ -67,28 +73,45 @@ func _selected_property() -> Dictionary:
     var catalog = state_adapter.get_value("properties", "catalog", []); if not catalog is Array or catalog.is_empty(): return {}
     var index: int = clampi(int(state_adapter.get_value("properties", "selected_property", 0)), 0, catalog.size() - 1); return catalog[index].duplicate(true)
 func _origin_property_type() -> String:
-    var stored: String = str(state_adapter.get_value("businesses", "origin_property_type", "")); if not stored.is_empty(): return stored; return str(_selected_property().get("type", ""))
+    var stored: String = str(state_adapter.get_value("businesses", "origin_property_type", ""))
+    if not stored.is_empty(): return stored
+    return str(_selected_property().get("type", ""))
 func _origin_property_name() -> String:
-    var stored: String = str(state_adapter.get_value("businesses", "origin_property_name", "")); if not stored.is_empty(): return stored; return str(_selected_property().get("name", "Property"))
+    var stored: String = str(state_adapter.get_value("businesses", "origin_property_name", ""))
+    if not stored.is_empty(): return stored
+    return str(_selected_property().get("name", "Property"))
 func _business_name() -> String: return str(state_adapter.get_value("businesses", "business_name", "RENEW Goods"))
 func upgrade_business() -> void:
     if not bool(state_adapter.get_value("businesses", "business_open", false)): state_adapter.message("Create the business first."); return
     var level: int = int(state_adapter.get_value("businesses", "capacity_level", 1)); var cost: int = 4500 * level; var cash: int = int(state_adapter.get_value("economy", "cash", 25000)); if cash < cost: state_adapter.message("Capacity upgrade requires $%s." % state_adapter.money(cost)); return
-    var spend := state_adapter.spend(cost, "business capacity upgrade"); if not bool(spend.get("ok", false)): state_adapter.message(str(spend.get("message", "Capacity upgrade failed."))); return
+    var spend: Dictionary = state_adapter.spend(cost, "business capacity upgrade"); if not bool(spend.get("ok", false)): state_adapter.message(str(spend.get("message", "Capacity upgrade failed."))); return
     state_adapter.set_value("businesses", "capacity_level", level + 1); state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + 2); state_adapter.log_message("UPGRADE: %s capacity level %d." % [_business_name(), level + 1]); state_adapter.message("%s production capacity upgraded to level %d." % [_business_name(), level + 1])
 func marketing_campaign() -> void:
     if not bool(state_adapter.get_value("businesses", "business_open", false)): state_adapter.message("Create the business first."); return
     var level: int = int(state_adapter.get_value("businesses", "marketing_level", 0)); var cost: int = 1800 + level * 700; var cash: int = int(state_adapter.get_value("economy", "cash", 25000)); if cash < cost: state_adapter.message("Marketing requires $%s." % state_adapter.money(cost)); return
-    var spend := state_adapter.spend(cost, "marketing campaign"); if not bool(spend.get("ok", false)): state_adapter.message(str(spend.get("message", "Marketing payment failed."))); return
-    state_adapter.set_value("businesses", "marketing_level", level + 1); state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + 2); state_adapter.log_message("MARKETING: %s campaign %d launched (-$%s)." % [_business_name(), level + 1, state_adapter.money(cost)]); state_adapter.message("Brand strength increased.")
+    var spend: Dictionary = state_adapter.spend(cost, "marketing campaign"); if not bool(spend.get("ok", false)): state_adapter.message(str(spend.get("message", "Marketing payment failed."))); return
+    state_adapter.set_value("businesses", "marketing_level", level + 1); state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + 2); state_adapter.log_message("MARKETING: %s campaign %d launched (-$%s)." % [_business_name(), level + 1, state_adapter.money(cost)]);     state_adapter.message("Brand strength increased."); var _rs=get_node_or_null("/root/RenewReputationSystem");if _rs!=null and _rs.has_method("adjust"):_rs.adjust("public",3)
 func change_price() -> void:
-    if not bool(state_adapter.get_value("businesses", "business_open", false)): state_adapter.message("Create the business first."); return
-    var price: int = int(state_adapter.get_value("businesses", "player_price", 110)) + 10; if price > 160: price = 80; state_adapter.set_value("businesses", "player_price", price); state_adapter.message("Selling price is now $%s." % state_adapter.money(price))
+    if not bool(state_adapter.get_value("businesses", "business_open", false)):
+        state_adapter.message("Create the business first.")
+        return
+    var price: int = int(state_adapter.get_value("businesses", "player_price", 110)) + 10
+    if price > 160:
+        price = 80
+    state_adapter.set_value("businesses", "player_price", price)
+    state_adapter.message("Selling price is now $%s." % state_adapter.money(price))
 func _property_condition_multiplier() -> float:
     var restoration: int = int(state_adapter.get_value("properties", "restoration", 100)); return clamp(0.70 + float(restoration) / 100.0 * 0.30, 0.70, 1.0)
 func _technology_multiplier() -> float:
-    var technology = state_adapter.get_value("technology", "technology", {}); if not technology is Dictionary: return 1.0
-    var level: int = 0; for key in technology.keys(): level += int(technology[key]); return clamp(1.0 + float(level) * 0.025, 1.0, 1.35)
+    var technology = state_adapter.get_value("technology", "technology", {})
+    if not technology is Dictionary: return 1.0
+    var level: int = 0
+    for key in technology.keys(): level += int(technology[key])
+    return clamp(1.0 + float(level) * 0.025, 1.0, 1.35)
+func _world_modifier(key: String) -> float:
+    var game = get_node_or_null("/root/RenewGameState")
+    if game == null or not game.has_method("get_world_modifier"): return 1.0
+    return clampf(float(game.get_world_modifier(key, 1.0)), 0.5, 3.0)
 func _industry_production_config(industry_id: String) -> Dictionary: return INDUSTRY_PRODUCTION.get(industry_id, {}).duplicate(true)
 
 # BusinessSystem owns the production transaction. Every cross-ledger mutation
@@ -131,16 +154,25 @@ func _produce_goods_impl() -> Dictionary:
     var industry_id: String = str(state_adapter.get_value("businesses", "industry_id", "furniture")); var config: Dictionary = _industry_production_config(industry_id); if config.is_empty(): return _production_failure("Unknown V1 industry: %s." % industry_id)
     var employee_count: int = 3; var employee_factor: float = 1.0; var morale_multiplier: float = 1.0
     if employee_system != null: employee_count = employee_system.get_active_employee_count(); employee_factor = employee_system.get_productivity_multiplier("factory_001"); morale_multiplier = employee_system.get_morale_multiplier()
-    var capacity: int = int(state_adapter.get_value("businesses", "capacity_level", 1)); var business_efficiency: float = clamp(0.85 + float(capacity) * 0.10, 0.85, 1.50); var base_output: int = max(1, employee_count + capacity - 1); var output_factor: float = employee_factor * business_efficiency * _technology_multiplier() * _property_condition_multiplier() * morale_multiplier; var cycles: int = max(1, int(floor(float(base_output) * output_factor))); var inputs: Dictionary = config.get("inputs", {}).duplicate(true); var cash: int = int(state_adapter.get_value("economy", "cash", 25000)); var orders: Array = []
-    for resource in inputs:
-        var input_name: String = str(resource); if input_name == "metal": continue
-        var needed: float = float(inputs[resource]) * float(cycles); var current_stock: float = supply_chain.stock(input_name); if current_stock < needed: orders.append({"resource":input_name,"amount":needed-current_stock})
+    var capacity: int = int(state_adapter.get_value("businesses", "capacity_level", 1)); var business_efficiency: float = clamp(0.85 + float(capacity) * 0.10, 0.85, 1.50); var base_output: int = max(1, employee_count + capacity - 1); var output_factor: float = employee_factor * business_efficiency * _technology_multiplier() * _property_condition_multiplier() * morale_multiplier * state_adapter.executive_bonus("production") * state_adapter.infra_modifier("production") * _world_modifier("production"); var cycles: int = max(1, int(floor(float(base_output) * output_factor))); var inputs: Dictionary = config.get("inputs", {}).duplicate(true); var cash: int = int(state_adapter.get_value("economy", "cash", 25000)); var orders: Array = []
     var metal_needed: float = float(inputs.get("metal", 0.0)) * float(cycles)
+    var metal_make: int = 0
     if metal_needed > supply_chain.stock("metal"):
-        var metal_cycles: int = int(ceil(metal_needed - supply_chain.stock("metal"))); var iron_needed: float = float(metal_cycles)*2.0; var energy_needed: float = float(metal_cycles)*0.5
-        if supply_chain.stock("iron") < iron_needed: orders.append({"resource":"iron","amount":iron_needed-supply_chain.stock("iron")})
-        if supply_chain.stock("energy") < energy_needed: orders.append({"resource":"energy","amount":energy_needed-supply_chain.stock("energy")})
-    var operating_cost: int = int(config.get("operating_cost", 0)); var finance = get_node_or_null("/root/RenewFinanceSystem")
+        metal_make = int(ceil(metal_needed - supply_chain.stock("metal")))
+    var needed: Dictionary = {}
+    for resource in inputs:
+        var input_name: String = str(resource)
+        if input_name == "metal":
+            continue
+        needed[input_name] = float(inputs[resource]) * float(cycles)
+    if metal_make > 0:
+        needed["iron"] = float(needed.get("iron", 0.0)) + float(metal_make) * 2.0
+        needed["energy"] = float(needed.get("energy", 0.0)) + float(metal_make) * 0.5
+    for input_name in needed:
+        var shortfall: float = float(needed[input_name]) - supply_chain.stock(str(input_name))
+        if shortfall > 0.0:
+            orders.append({"resource": str(input_name), "amount": shortfall})
+    var operating_cost: int = int(config.get("operating_cost", 0)); operating_cost = int(round(float(operating_cost) * state_adapter.executive_bonus("operating_cost"))); operating_cost = int(round(float(operating_cost) / max(1.0, state_adapter.infra_modifier("energy")))); var finance = get_node_or_null("/root/RenewFinanceSystem")
     if finance != null and operating_cost > int(finance.get("cash")): return _production_failure("%s stopped: $%d operating cost is unaffordable." % [_business_name(), operating_cost])
     if not orders.is_empty():
         var transport_level: int = int(state_adapter.get_value("supply_chain", "transport_level", 1)); var delivery: Dictionary = supply_chain.procure_bundle(orders, cash, transport_level)
@@ -152,7 +184,7 @@ func _produce_goods_impl() -> Dictionary:
                 if economy.resources.has(resource): economy.resources[resource]["stock"] = float(economy.resources[resource].get("stock", 0.0)) + amount
                 warehouse_restore(resource, delivered_amount)
             return _production_failure("%s stopped: supply and operating costs are unaffordable." % _business_name())
-        var spend := state_adapter.spend(delivery_cost, "supply delivery")
+        var spend: Dictionary = state_adapter.spend(delivery_cost, "supply delivery")
         if not bool(spend.get("ok", false)):
             for delivered in delivery.get("delivered", []):
                 var resource := str(delivered.get("resource", "")); var amount := float(delivered.get("amount", 0.0)); var delivered_amount := float(delivered.get("delivered_amount", amount))

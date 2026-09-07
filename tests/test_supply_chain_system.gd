@@ -75,7 +75,7 @@ func run() -> void:
     var invalid_sale = chain.sell_product("furniture", 1, -1)
     check(not bool(invalid_sale.get("ok", false)) and chain.stock("furniture") == 0.0, "Negative sale price is rejected without inventory loss")
 
-    var output_overflow = chain.receive_product("furniture", int(WAREHOUSE_LIMIT))
+    var output_overflow = chain.receive_product("furniture", int(chain.WAREHOUSE_LIMIT) + 1)
     check(not bool(output_overflow.get("ok", false)) and output_overflow.get("reason", "") == "warehouse_capacity", "Produced goods cannot overflow warehouse")
     check(chain.stock("furniture") == 0.0, "Rejected output overflow preserves inventory")
 
@@ -90,10 +90,10 @@ func run() -> void:
     var over_capacity = chain.procure("timber", 1000.0, 100000, 1)
     check(not bool(over_capacity.get("ok", false)) and over_capacity.get("reason", "") == "transport_capacity", "Transport capacity rejects oversized shipment")
 
-    var resources_before_invalid_bundle := economy.resources.duplicate(true)
-    var warehouse_before_invalid_bundle := chain.warehouse_snapshot()
-    var freight_before_invalid_bundle := chain.total_freight_cost
-    var invalid_bundle := chain.procure_bundle([
+    var resources_before_invalid_bundle: Dictionary = economy.resources.duplicate(true)
+    var warehouse_before_invalid_bundle: Dictionary = chain.warehouse_snapshot()
+    var freight_before_invalid_bundle: int = chain.total_freight_cost
+    var invalid_bundle: Dictionary = chain.procure_bundle([
         {"resource": "timber", "amount": 1.0},
         {"resource": "not_a_real_resource", "amount": 1.0}
     ], 100000, 1)
@@ -102,9 +102,16 @@ func run() -> void:
     check(chain.warehouse == warehouse_before_invalid_bundle, "Rejected bundle leaves warehouse unchanged")
     check(chain.total_freight_cost == freight_before_invalid_bundle, "Rejected bundle leaves freight totals unchanged")
 
+    economy.resources["timber"]["stock"] = 10000.0
+    var fill_guard := 0
+    while chain.stock("timber") < chain.WAREHOUSE_LIMIT - 10.0 and fill_guard < 60:
+        var fill: Dictionary = chain.procure("timber", 10.0, 100000, 1)
+        if not bool(fill.get("ok", false)):
+            break
+        fill_guard += 1
     var timber_stock_before_capacity := float(economy.resources["timber"]["stock"])
-    var timber_warehouse_before_capacity := chain.stock("timber")
-    var capacity_failure := chain.procure("timber", WAREHOUSE_LIMIT, 100000, 1)
+    var timber_warehouse_before_capacity: float = chain.stock("timber")
+    var capacity_failure: Dictionary = chain.procure("timber", 20.0, 100000, 1)
     check(not bool(capacity_failure.get("ok", false)) and capacity_failure.get("reason", "") == "warehouse_capacity", "Warehouse capacity rejects overflow")
     check(float(economy.resources["timber"]["stock"]) == timber_stock_before_capacity, "Warehouse overflow does not remove market stock")
     check(chain.stock("timber") == timber_warehouse_before_capacity, "Warehouse overflow does not add partial stock")

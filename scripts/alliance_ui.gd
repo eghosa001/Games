@@ -30,7 +30,7 @@ func _build() -> void:
     close_button = Button.new(); close_button.text = "CLOSE"; close_button.custom_minimum_size = Vector2(80,46); close_button.focus_mode = Control.FOCUS_NONE; close_button.pressed.connect(_close); panel.add_child(close_button)
     status = Label.new(); status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; status.add_theme_font_size_override("font_size", 11); panel.add_child(status)
     project = Label.new(); project.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; project.add_theme_font_size_override("font_size", 11); project.add_theme_color_override("font_color", Color("d5b56b")); panel.add_child(project)
-    _add_button("CREATE ALLIANCE  •  $1,000", _create_alliance); _add_button("CONTRIBUTE $1,000", _contribute); _add_button("START RAILWAY", _project); _add_button("BUILD INFRA  •  $5,000", _infra); _add_button("FUND RESEARCH  •  $5,000", _research)
+    _add_button("CREATE ALLIANCE  •  $1,000", _create_alliance); _add_button("CONTRIBUTE $1,000", _contribute); _add_button("START RAILWAY", _project); _add_button("ALLOCATE $5,000 → RAILWAY", _allocate);     _add_button("ENTER CHALLENGE", _challenge); _add_button("GOVERN: VOTE", _govern); _add_button("BUILD INFRA  •  $5,000", _infra); _add_button("FUND RESEARCH  •  $5,000", _research)
     var partners_title := Label.new(); partners_title.name = "PartnersTitle"; partners_title.text = "CORPORATE PARTNERS"; partners_title.add_theme_font_size_override("font_size", 10); partners_title.add_theme_color_override("font_color", Color("829a9c")); panel.add_child(partners_title)
     partner_scroll = ScrollContainer.new(); partner_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; partner_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; panel.add_child(partner_scroll)
     partner_box = HBoxContainer.new(); partner_box.add_theme_constant_override("separation", 8); partner_scroll.add_child(partner_box)
@@ -63,6 +63,39 @@ func _project() -> void:
     if alliance_system != null and alliance_system.has_method("start_cooperative_project"):
         _message(String(alliance_system.start_cooperative_project(PLAYER_ID, "Regional Railway Project").get("message", "Project could not be started.")))
     else: _message("Cooperative project system is unavailable.")
+func _allocate() -> void:
+    var alliance := _player_alliance()
+    if alliance_system == null or alliance.is_empty(): _message("Create an alliance before allocating treasury funds."); return
+    if not alliance_system.has_method("allocate_treasury_to_railway"): _message("Treasury allocation is unavailable."); return
+    _message(str(alliance_system.allocate_treasury_to_railway(PLAYER_ID, 5000).get("message", "Allocation could not be completed.")))
+func _challenge() -> void:
+    var alliance := _player_alliance()
+    if alliance_system == null or alliance.is_empty(): _message("Create an alliance before entering challenges."); return
+    if not alliance_system.has_method("run_alliance_challenge"): _message("Alliance challenges are unavailable."); return
+    _message(str(alliance_system.run_alliance_challenge(PLAYER_ID).get("message", "Challenge could not be run.")))
+func _govern() -> void:
+    var alliance := _player_alliance()
+    if alliance_system == null or alliance.is_empty(): _message("Create an alliance before governing it."); return
+    if not alliance_system.has_method("open_motion") or not alliance_system.has_method("vote_motion"): _message("Alliance motions are unavailable."); return
+    var open_index := -1
+    var motions: Array = alliance.get("motions", [])
+    for i in range(motions.size()):
+        if motions[i] is Dictionary and str(motions[i].get("status", "")) == "open":
+            open_index = i
+    if open_index >= 0:
+        _message(str(alliance_system.vote_motion(PLAYER_ID, open_index, true).get("message", "Vote could not be cast.")))
+        return
+    var target := ""
+    var worst := 1000
+    for member_id in alliance.get("members", {}).keys():
+        if str(member_id) == PLAYER_ID:
+            continue
+        var trust := int(alliance.get("member_trust", {}).get(member_id, 50))
+        if trust < worst:
+            worst = trust
+            target = str(member_id)
+    if target.is_empty(): _message("No member to bring a motion against."); return
+    _message(str(alliance_system.open_motion(PLAYER_ID, "sanction", target).get("message", "Motion could not be opened.")))
 func _infra() -> void:
     var alliance := _player_alliance()
     if alliance_system == null or alliance.is_empty(): _message("Create an alliance before building shared infrastructure."); return
@@ -80,6 +113,17 @@ func _invite_partner(partner_id: String, partner_name: String) -> void:
     if alliance_system == null or alliance.is_empty(): _message("Create the Restoration Consortium before inviting corporate partners."); return
     var result: Dictionary = alliance_system.invite_member(str(alliance.get("id", "")), PLAYER_ID, partner_id) if alliance_system.has_method("invite_member") else {"ok": false, "message": "Partner invitations are unavailable."}
     _message("Invitation sent to %s." % partner_name if bool(result.get("ok", false)) else str(result.get("message", "Partner invitation failed.")))
+func _members_line(alliance: Dictionary) -> String:
+    var parts: Array[String] = []
+    var trust: Dictionary = alliance.get("member_trust", {})
+    for member_id in alliance.get("members", {}).keys():
+        var role := str(alliance["members"][member_id].get("role", "member"))
+        parts.append("%s(%s:%d)" % [str(member_id), role.left(1).to_upper(), int(trust.get(member_id, 50))])
+        if parts.size() >= 4:
+            break
+    if parts.is_empty():
+        return "No members yet."
+    return " ".join(parts)
 func _close() -> void:
     var manager = get_node_or_null("/root/RenewUIScreenManager"); if manager != null and manager.has_method("hide_all_screens"): manager.hide_all_screens()
 func _refresh() -> void:
@@ -89,7 +133,7 @@ func _refresh() -> void:
         status.text = "NO ACTIVE ALLIANCE\nFounding contribution  $1,000  •  Invite specialist corporations to share materials, logistics, research and infrastructure."
         project.text = "NEXT  CREATE ALLIANCE  →  INVITE PARTNERS  →  START REGIONAL RAILWAY"
         return
-    status.text = "%s\nMembers %d/6  •  Treasury $%d  •  Trust %.0f  •  Reputation %.0f" % [str(alliance.get("name", "Alliance")), alliance.get("members", {}).size(), int(alliance.get("treasury", 0)), float(alliance.get("trust", 0)), float(alliance.get("reputation", 0))]
+    status.text = "%s  •  Level %d\nMembers %d/6  •  Treasury $%d  •  Trust %.0f  •  Reputation %.0f\n%s" % [str(alliance.get("name", "Alliance")), int(alliance.get("level", 1)), alliance.get("members", {}).size(), int(alliance.get("treasury", 0)), float(alliance.get("trust", 0)), float(alliance.get("reputation", 0)), _members_line(alliance)]
     var projects: Array = alliance.get("projects", [])
     if projects.is_empty(): project.text = "REGIONAL RAILWAY  •  Not started  •  Build a shared logistics backbone for the restoration economy."
     else:

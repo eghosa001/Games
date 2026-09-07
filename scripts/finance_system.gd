@@ -34,6 +34,7 @@ var other_liabilities: float = 0.0
 var retained_earnings: float = 0.0
 var equity_contributed: float = OPENING_EQUITY
 var financing: Dictionary = {}
+var term_deposits: Dictionary = {}
 var cash_flow_history: Array = []
 var credit_rating: String = "BBB"
 var credit_score: float = 70.0
@@ -139,6 +140,50 @@ func invest(amount: int, asset_name: String = "investment") -> Dictionary:
     _record_cash_flow("investing", -amount, asset_name)
     return {"ok": true, "amount": amount, "cash": cash, "investments": investments}
 
+func place_term_deposit(amount: int, days: int, annual_rate: float) -> Dictionary:
+    if amount <= 0 or days <= 0 or annual_rate < 0.0: return {"ok": false, "message": "Invalid term deposit."}
+    if cash < amount: return {"ok": false, "message": "Insufficient cash for investment."}
+    var id := "deposit_%d_%d" % [Time.get_unix_time_from_system(), term_deposits.size()]
+    cash -= amount
+    investments += float(amount)
+    term_deposits[id] = {"id": id, "principal": float(amount), "annual_rate": annual_rate, "days_left": days, "total_days": days}
+    _record("term_deposit", amount, "term deposit %s (%dd @ %.1f%%)" % [id, days, annual_rate * 100.0])
+    _record_cash_flow("investing", -amount, "term deposit placed")
+    return {"ok": true, "id": id, "amount": amount, "days": days, "rate": annual_rate, "cash": cash}
+
+func break_term_deposit(deposit_id: String) -> Dictionary:
+    if not term_deposits.has(deposit_id): return {"ok": false, "message": "Term deposit not found."}
+    var deposit: Dictionary = term_deposits[deposit_id]
+    var principal := int(round(float(deposit.get("principal", 0.0))))
+    term_deposits.erase(deposit_id)
+    cash += principal
+    investments = max(0.0, investments - float(principal))
+    _record("deposit_break", principal, "term deposit broken early (no interest)")
+    _record_cash_flow("investing", principal, "term deposit broken early")
+    return {"ok": true, "amount": principal, "cash": cash}
+
+func settle_term_deposits() -> Array:
+    var matured: Array = []
+    var done: Array = []
+    for id in term_deposits:
+        var deposit: Dictionary = term_deposits[id]
+        deposit["days_left"] = max(0, int(deposit.get("days_left", 0)) - 1)
+        term_deposits[id] = deposit
+        if int(deposit.get("days_left", 0)) > 0:
+            continue
+        var principal := int(round(float(deposit.get("principal", 0.0))))
+        var interest := int(round(float(principal) * float(deposit.get("annual_rate", 0.0)) * float(deposit.get("total_days", 0)) / 365.0))
+        done.append(id)
+        cash += principal + interest
+        investments = max(0.0, investments - float(principal))
+        retained_earnings += float(interest)
+        _record("deposit_matured", principal + interest, "term deposit matured (+$%d interest)" % interest)
+        _record_cash_flow("investing", principal + interest, "term deposit matured")
+        matured.append({"id": id, "principal": principal, "interest": interest, "total": principal + interest})
+    for id in done:
+        term_deposits.erase(id)
+    return matured
+
 func record_equity(amount: int, source: String = "equity issuance") -> Dictionary:
     if amount <= 0: return {"ok": false, "message": "Invalid equity amount."}
     cash += amount
@@ -219,7 +264,8 @@ func settle_debt_day() -> Dictionary:
             missed = true
     if debt == 0 and _total_financing_balance() <= 0.01: loan_payment = 0
     _update_credit_score(missed)
-    return {"interest": interest, "payment": payment, "missed": missed, "cash": cash, "debt": debt, "accrued_interest": _total_accrued_interest(), "credit_rating": credit_rating}
+    var matured_investments: Array = settle_term_deposits()
+    return {"interest": interest, "payment": payment, "missed": missed, "cash": cash, "debt": debt, "accrued_interest": _total_accrued_interest(), "credit_rating": credit_rating, "matured_investments": matured_investments}
 
 func _allocate_repayment(amount: int) -> Dictionary:
     var remaining := max(0, amount)
@@ -336,12 +382,12 @@ func _update_credit_score(missed: bool) -> void:
     update_credit_rating()
 
 func capture_state() -> Dictionary:
-    return {"system_version": SYSTEM_VERSION, "cash": cash, "debt": debt, "loan_payment": loan_payment, "last_sales": last_sales, "last_profit": last_profit, "total_profit": total_profit, "history": history.duplicate(true), "revenue": revenue, "operating_expenses": operating_expenses, "depreciation": depreciation, "interest_expense": interest_expense, "taxes": taxes, "accounts_receivable": accounts_receivable, "inventory": inventory, "fixed_assets": fixed_assets, "investments": investments, "accounts_payable": accounts_payable, "other_liabilities": other_liabilities, "retained_earnings": retained_earnings, "equity_contributed": equity_contributed, "financing": financing.duplicate(true), "cash_flow_history": cash_flow_history.duplicate(true), "credit_rating": credit_rating, "credit_score": credit_score}
+    return {"system_version": SYSTEM_VERSION, "cash": cash, "debt": debt, "loan_payment": loan_payment, "last_sales": last_sales, "last_profit": last_profit, "total_profit": total_profit, "history": history.duplicate(true), "revenue": revenue, "operating_expenses": operating_expenses, "depreciation": depreciation, "interest_expense": interest_expense, "taxes": taxes, "accounts_receivable": accounts_receivable, "inventory": inventory, "fixed_assets": fixed_assets, "investments": investments, "accounts_payable": accounts_payable, "other_liabilities": other_liabilities, "retained_earnings": retained_earnings, "equity_contributed": equity_contributed, "financing": financing.duplicate(true), "term_deposits": term_deposits.duplicate(true), "cash_flow_history": cash_flow_history.duplicate(true), "credit_rating": credit_rating, "credit_score": credit_score}
 
 func restore_state(snapshot: Dictionary) -> void:
     if snapshot.is_empty(): return
     cash = int(snapshot.get("cash", cash)); debt = int(snapshot.get("debt", debt)); loan_payment = int(snapshot.get("loan_payment", loan_payment)); last_sales = int(snapshot.get("last_sales", last_sales)); last_profit = int(snapshot.get("last_profit", last_profit)); total_profit = int(snapshot.get("total_profit", total_profit)); history = snapshot.get("history", []).duplicate(true)
-    revenue = float(snapshot.get("revenue", revenue)); operating_expenses = float(snapshot.get("operating_expenses", operating_expenses)); depreciation = float(snapshot.get("depreciation", depreciation)); interest_expense = float(snapshot.get("interest_expense", interest_expense)); taxes = float(snapshot.get("taxes", taxes)); accounts_receivable = float(snapshot.get("accounts_receivable", accounts_receivable)); inventory = float(snapshot.get("inventory", inventory)); fixed_assets = float(snapshot.get("fixed_assets", fixed_assets)); investments = float(snapshot.get("investments", investments)); accounts_payable = float(snapshot.get("accounts_payable", accounts_payable)); other_liabilities = float(snapshot.get("other_liabilities", other_liabilities)); retained_earnings = float(snapshot.get("retained_earnings", retained_earnings)); equity_contributed = float(snapshot.get("equity_contributed", equity_contributed)); financing = snapshot.get("financing", {}).duplicate(true); cash_flow_history = snapshot.get("cash_flow_history", []).duplicate(true); credit_rating = str(snapshot.get("credit_rating", credit_rating)); credit_score = float(snapshot.get("credit_score", credit_score)); _migrate_financing_snapshot()
+    revenue = float(snapshot.get("revenue", revenue)); operating_expenses = float(snapshot.get("operating_expenses", operating_expenses)); depreciation = float(snapshot.get("depreciation", depreciation)); interest_expense = float(snapshot.get("interest_expense", interest_expense)); taxes = float(snapshot.get("taxes", taxes)); accounts_receivable = float(snapshot.get("accounts_receivable", accounts_receivable)); inventory = float(snapshot.get("inventory", inventory)); fixed_assets = float(snapshot.get("fixed_assets", fixed_assets)); investments = float(snapshot.get("investments", investments)); accounts_payable = float(snapshot.get("accounts_payable", accounts_payable)); other_liabilities = float(snapshot.get("other_liabilities", other_liabilities));     retained_earnings = float(snapshot.get("retained_earnings", retained_earnings)); equity_contributed = float(snapshot.get("equity_contributed", equity_contributed)); financing = snapshot.get("financing", {}).duplicate(true); term_deposits = snapshot.get("term_deposits", {}).duplicate(true); cash_flow_history = snapshot.get("cash_flow_history", []).duplicate(true); credit_rating = str(snapshot.get("credit_rating", credit_rating)); credit_score = float(snapshot.get("credit_score", credit_score)); _migrate_financing_snapshot()
 
 func _migrate_financing_snapshot() -> void:
     for id in financing:
@@ -372,6 +418,10 @@ func validate_invariants() -> Dictionary:
         if abs(balance - principal - accrued) > 0.01: return {"ok": false, "error": "instrument_balance_mismatch", "id": id}
         if abs(accrued - round(accrued)) > 0.01: return {"ok": false, "error": "fractional_accrued_interest", "id": id, "accrued_interest": accrued}
         if abs(principal - round(principal)) > 0.01: return {"ok": false, "error": "fractional_principal", "id": id, "principal": principal}
+    var deposit_total := 0.0
+    for id in term_deposits:
+        deposit_total += max(0.0, float(term_deposits[id].get("principal", 0.0)))
+    if deposit_total - float(investments) > 0.01: return {"ok": false, "error": "deposit_investment_mismatch", "deposits": deposit_total, "investments": investments}
     if abs(principal_total - float(debt)) > 0.01: return {"ok": false, "error": "principal_debt_mismatch", "principal": principal_total, "debt": debt}
     if abs(balance_total - principal_total - accrued_total) > 0.01: return {"ok": false, "error": "financing_total_mismatch"}
     var bs := balance_sheet()
@@ -391,3 +441,17 @@ func _record_cash_flow(kind: String, amount: float, reason: String) -> void:
 func _current_day() -> int:
     var state = get_node_or_null("/root/RenewGameState")
     return int(state.get_value("player", "day", 1)) if state != null else 1
+func reconcile_books() -> Dictionary:
+    var check := validate_invariants()
+    if bool(check.get("ok", false)):
+        return {"ok": true, "repaired": false}
+    if str(check.get("error", "")) != "accounting_equation_mismatch":
+        return {"ok": false, "repaired": false, "error": str(check.get("error", "unknown"))}
+    var difference := float(check.get("difference", 0.0))
+    retained_earnings += difference
+    _record("reconcile", int(round(difference)), "one-time books repair (accounting equation)")
+    var after := validate_invariants()
+    if bool(after.get("ok", false)):
+        return {"ok": true, "repaired": true, "plugged": difference}
+    retained_earnings -= difference
+    return {"ok": false, "repaired": false, "error": "repair_failed"}

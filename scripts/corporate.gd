@@ -54,10 +54,14 @@ func _ready() -> void:
     queue_redraw()
 
 func _process(_delta: float) -> void:
-    if parent == null: return
+    _resolve_deps()
+    if parent == null:
+        return
     if parent.day != last_processed_day:
         last_processed_day = parent.day
         process_day()
+    if ownership == null:
+        return
     _recalculate()
     queue_redraw()
 
@@ -67,7 +71,7 @@ func _company() -> Dictionary:
 
 func _ensure_company() -> void:
     if ownership == null or ownership.has_entity(COMPANY_ID): return
-    var created: Variant = ownership.register_entity(COMPANY_ID, OwnershipSystem.ENTITY_COMPANY, 1000000)
+    var created: Variant = ownership.register_entity(COMPANY_ID, OwnershipSystem.ENTITY_COMPANY, 10000000)
     if bool(created.get("ok", false)):
         ownership.issue_shares(COMPANY_ID, FOUNDER_ID, 1000000, OwnershipSystem.VOTE_ORDINARY, "corporate_initialization")
 
@@ -209,7 +213,33 @@ func pay_dividend() -> void:
     ownership.adjust_investor_confidence(COMPANY_ID, 5.0, "dividend_paid")
     _persist()
     parent.message = "Paid $%s dividend through OwnershipSystem. Investors are happier, but growth capital is lower." % parent._money(payout)
-    parent._log("DIVIDEND: $%s distributed according to ownership." % parent._money(payout))
+    parent._log("DIVIDEND: $%s distributed according to ownership." % parent._money(payout)); var _rs=get_node_or_null("/root/RenewReputationSystem");if _rs!=null and _rs.has_method("adjust"):_rs.adjust("investor",3)
+func go_public() -> void:
+    _recalculate()
+    if ownership == null or not ownership.has_entity(COMPANY_ID): parent.message = "Corporate ledger is unavailable."; return
+    if float(ownership.get_ownership_percent(COMPANY_ID, "public_float")) > 0.0: parent.message = "RENEW Co. is already listed."; return
+    if int(valuation) < 250000: parent.message = "Listing requires a $250K valuation (now $%s)." % parent._money(valuation); return
+    if int(parent.reputation) < 40: parent.message = "Listing requires 40 reputation for investor trust."; return
+    var moved: Variant = ownership.transfer_shares(COMPANY_ID, FOUNDER_ID, "public_float", 200000, OwnershipSystem.VOTE_ORDINARY, "ipo_float")
+    if not bool(moved.get("ok", false)): parent.message = "Listing failed: %s." % str(moved.get("error", "unknown")); return
+    var proceeds := int(round(float(valuation) * 0.20))
+    parent.cash += proceeds
+    ownership.adjust_investor_confidence(COMPANY_ID, 5.0, "ipo")
+    _persist()
+    parent.message = "IPO: 200,000 shares listed (+$%s). The public owns %.1f%%; founders keep voting control." % [parent._money(proceeds), float(ownership.get_ownership_percent(COMPANY_ID, "public_float"))]
+    parent._log("IPO: public float created; $%s raised at $%.2f/share." % [parent._money(proceeds), public_share_price()])
+func public_share_price() -> float:
+    _recalculate()
+    return maxf(0.01, float(valuation) * 0.20 / 200000.0)
+func cap_table_text() -> String:
+    _recalculate()
+    if ownership == null or not ownership.has_entity(COMPANY_ID): return "Cap table unavailable."
+    var bits: Array = []
+    for holder in ownership.holders(COMPANY_ID):
+        if holder is Dictionary:
+            bits.append("%s %.1f%%" % [str(holder.get("holder_id", "?")), float(holder.get("ownership", 0.0))])
+    var listed := "listed @ $%.2f" % public_share_price() if float(ownership.get_ownership_percent(COMPANY_ID, "public_float")) > 0.0 else "private"
+    return "CAP TABLE (%s, valuation $%s): %s." % [listed, parent._money(valuation), ", ".join(bits)]
 
 func strengthen_defense() -> void:
     _recalculate()
@@ -347,8 +377,23 @@ func process_day() -> void:
     _check_milestones()
     _persist()
 
+func _resolve_deps() -> void:
+    if parent == null:
+        parent = get_tree().root.get_node_or_null("Renew")
+    if ownership == null:
+        ownership = RuntimeResolver.resolve("RenewOwnershipSystem", "Systems/OwnershipSystem")
+        if ownership != null:
+            _ensure_company()
+    if parent != null and last_processed_day <= 0:
+        last_processed_day = parent.day
+
 func get_summary() -> Dictionary:
+    _resolve_deps()
+    if parent == null:
+        return {"valuation":valuation,"share_price":share_price,"founder":founder_stake,"investors":investor_stake,"treasury":treasury_shares,"control":control_score,"risk":takeover_risk,"defense":defense_level,"trust":board_trust,"influence":board_influence,"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"dividends":dividends_paid,"milestone":milestone_level,"milestone_name":_milestone_target(milestone_level),"ownership_snapshot":{}}
     _recalculate()
+    if ownership == null or not ownership.has_entity(COMPANY_ID):
+        return {"valuation":int(valuation),"share_price":int(share_price),"founder":float(founder_stake),"investors":float(investor_stake),"treasury":int(treasury_shares),"control":float(control_score),"risk":float(takeover_risk),"defense":int(defense_level),"trust":float(board_trust),"influence":int(board_influence),"takeover_wins":int(takeover_wins),"hostile_attempts":int(hostile_attempts),"dividends":float(dividends_paid),"milestone":int(milestone_level),"milestone_name":_milestone_target(milestone_level),"ownership_snapshot":{}}
     var snapshot: Variant = ownership.get_control_snapshot(COMPANY_ID)
     return {"valuation":valuation,"share_price":share_price,"founder":founder_stake,"investors":investor_stake,"treasury":treasury_shares,"control":control_score,"risk":takeover_risk,"defense":defense_level,"trust":board_trust,"influence":ownership.get_board_seats(COMPANY_ID, FOUNDER_ID),"takeover_wins":takeover_wins,"hostile_attempts":hostile_attempts,"dividends":dividends_paid,"milestone":milestone_level,"milestone_name":_milestone_target(milestone_level),"ownership_snapshot":snapshot}
 
@@ -381,13 +426,16 @@ func _load_persistent_state() -> void:
 func _draw() -> void:
     if parent == null: return
     var s: Variant = get_summary()
+    if not (s is Dictionary) or s.is_empty(): return
+    var valuation_value := int(s.get("valuation", valuation))
+    var share_value := int(s.get("share_price", share_price))
     var panel: Variant = Rect2(855, 350, 385, 360)
     draw_rect(panel, Color("101923"), true)
     draw_rect(panel, Color("516b7d"), false, 2.0)
     draw_string(ThemeDB.fallback_font, Vector2(870, 375), "CORPORATE CONTROL", HORIZONTAL_ALIGNMENT_LEFT, -1, 19, Color("f0f4f7"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 399), "Valuation: $%s   Share: $%s" % [parent._money(int(s["valuation"])), parent._money(int(s["share_price"]))], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d6e0e7"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 421), "Founder: %.1f%%   Investors: %.1f%%" % [s["founder"], s["investors"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("d6e0e7"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 443), "Voting control %.1f | Risk %.0f | Defense L%d" % [_voting_percent(FOUNDER_ID), s["risk"], s["defense"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("8ee6a8"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 465), "Investor confidence %d | Founder board %d" % [s["trust"], s["influence"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("b7d7ff"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 487), "Takeover wins %d | Attempts %d" % [s["takeover_wins"], s["hostile_attempts"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("ffad8f"))
-    draw_string(ThemeDB.fallback_font, Vector2(870, 509), "Tier %d: %s" % [s["milestone"], s["milestone_name"]], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("ffd27f"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 399), "Valuation: $%s   Share: $%s" % [parent._money(valuation_value), parent._money(share_value)], HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color("d6e0e7"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 421), "Founder: %.1f%%   Investors: %.1f%%" % [float(s.get("founder", founder_stake)), float(s.get("investors", investor_stake))], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("d6e0e7"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 443), "Voting control %.1f | Risk %.0f | Defense L%d" % [_voting_percent(FOUNDER_ID), float(s.get("risk", takeover_risk)), int(s.get("defense", defense_level))], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("8ee6a8"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 465), "Investor confidence %d | Founder board %d" % [int(s.get("trust", board_trust)), int(s.get("influence", board_influence))], HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color("b7d7ff"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 487), "Takeover wins %d | Attempts %d" % [int(s.get("takeover_wins", takeover_wins)), int(s.get("hostile_attempts", hostile_attempts))], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("ffad8f"))
+    draw_string(ThemeDB.fallback_font, Vector2(870, 509), "Tier %d: %s" % [int(s.get("milestone", milestone_level)), str(s.get("milestone_name", _milestone_target(milestone_level)))], HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color("ffd27f"))
