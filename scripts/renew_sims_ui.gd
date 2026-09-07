@@ -172,10 +172,15 @@ func _layout_responsive() -> void:
         feedback_label.position = Vector2(10, 8); feedback_label.size = Vector2(maxf(40.0, w - 52.0), 40)
         goal_label.position = Vector2(8, 194); goal_label.size = Vector2(w - 16, 40)
     else:
-        status_label.position = Vector2(8, 344); status_label.size = Vector2(240, 24)
-        feedback_panel.position = Vector2(8, 372); feedback_panel.size = Vector2(300, 80)
-        feedback_label.position = Vector2(10, 8); feedback_label.size = Vector2(280, 64)
-        goal_label.position = Vector2(8, 456); goal_label.size = Vector2(300, 44)
+        var dock_bottom := action_dock.position.y + action_dock.size.y
+        status_label.position = Vector2(8, dock_bottom + 4.0)
+        status_label.size = Vector2(240, 24)
+        feedback_panel.position = Vector2(8, status_label.position.y + 32.0)
+        feedback_panel.size = Vector2(300, 80)
+        feedback_label.position = Vector2(10, 8)
+        feedback_label.size = Vector2(280, 64)
+        goal_label.position = Vector2(8, feedback_panel.position.y + 88.0)
+        goal_label.size = Vector2(300, 44)
 
 func _set_tab(index: int) -> void:
     active_tab = clampi(index, 0, 3); _refresh()
