@@ -2,8 +2,7 @@ extends Control
 
 ## Presentation-only visual skin for the command HUD.
 ## It deliberately leaves gameplay callbacks, node names and screen management untouched.
-## The goal is to move the interface away from generic dashboard rectangles toward a
-## compact, game-first command deck inspired by polished city/tycoon simulators.
+## The goal is a compact, game-first command deck inspired by polished city/tycoon simulators.
 
 const DEEP := Color("09171d")
 const SURFACE := Color("0c2028")
@@ -27,8 +26,6 @@ func _process(delta: float) -> void:
     pulse += delta
     if size != viewport_size:
         viewport_size = size
-    # The command-deck status dots are animated from `pulse`; redraw every frame
-    # so that animation is actually visible rather than only updating on resize.
     queue_redraw()
 
 func _install() -> void:
@@ -115,7 +112,8 @@ func _decorate_button_text(value: String) -> String:
     elif t.contains("WORLD") or t.contains("MARKET") or t.contains("INFRA"):
         icon = "◎"
     elif t.contains("FINANCE") or t.contains("LOAN"):
-        icon = "₿"
+        # Neutral finance mark: avoid implying that the in-game finance system is cryptocurrency.
+        icon = "¤"
     elif t.contains("EMPLOYEE") or t.contains("HIRE"):
         icon = "●"
     elif t.contains("TECHNOLOGY"):
