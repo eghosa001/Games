@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 17:06:14 UTC 2026
+// Generated on: Tue Sep  8 17:07:38 UTC 2026
 
-// Source snapshot commit: 0543c7bcc10510530a197af636f90198c6437400
+// Source snapshot commit: 493ca3dfdc8d3fbc2fdde009aef2cb19a45a0e6c
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -24168,7 +24168,7 @@ static func resolve_autoload_or_scene(autoload_name: String, scene_path: String 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/save_load_ui.gd
-Lines: 222
+Lines: 220
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 
@@ -24357,15 +24357,13 @@ func _request_new() -> void:
 
 func _confirm_new() -> void:
     if parent == null or not parent.has_method("found_new_company"): return
-    var result = parent.found_new_company()
+    parent.found_new_company()
     confirm_new = false
-    if result is Dictionary and not bool(result.get("ok", false)):
-        status.text = str(result.get("message", "A new dynasty could not be started."))
-    elif result is Dictionary:
-        status.text = "NEW DYNASTY STARTED — legacy bonuses applied."
-    else:
-        status.text = "NEW DYNASTY STARTED."
+    var result_message := str(parent.get("message"))
     _refresh()
+    if result_message.is_empty():
+        result_message = "NEW DYNASTY COMMAND COMPLETED."
+    status.text = result_message
 
 func _cancel_new() -> void:
     confirm_new = false
