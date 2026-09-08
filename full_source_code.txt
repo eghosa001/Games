@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 13:12:38 UTC 2026
+// Generated on: Tue Sep  8 13:27:39 UTC 2026
 
-// Source snapshot commit: 52e6d40132179cce0c72fba3541da0a22abe51e3
+// Source snapshot commit: 415189cd8034f548f471eeea5a8a08093b2d8ec7
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -598,6 +598,36 @@ Lines: 13
 <text x="210" y="287" text-anchor="middle" fill="#d9e7e2" font-family="sans-serif" font-size="16" letter-spacing="4">RENEW GOODS</text>
 </svg>
 
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: Assets/Art/resource_electronics.svg
+Lines: 0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#17212b"/><circle cx="64" cy="64" r="42" fill="#243746"/><rect x="38" y="38" width="52" height="52" rx="8" fill="#516b80"/><rect x="48" y="48" width="32" height="32" rx="4" fill="#17212b"/><path d="M56 64h16M64 56v16M38 52H29M38 76H29M90 52h9M90 76h9M52 38v-9M76 38v-9M52 90v9M76 90v9" stroke="#8fd3ff" stroke-width="5" stroke-linecap="round"/></svg>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: Assets/Art/resource_energy.svg
+Lines: 0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#17212b"/><circle cx="64" cy="64" r="42" fill="#243746"/><path d="M72 25L40 68h24l-8 35 32-48H64z" fill="#f2c94c"/><path d="M72 25L40 68h24" fill="none" stroke="#fff2a8" stroke-width="4" stroke-linejoin="round"/></svg>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: Assets/Art/resource_food.svg
+Lines: 0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#17212b"/><circle cx="64" cy="64" r="42" fill="#243746"/><path d="M37 76c13-20 29-30 54-29-4 22-19 39-42 40z" fill="#77b85a"/><path d="M64 86c0-18 5-32 18-44M54 75c-7-6-13-8-21-8M67 62c7-6 13-9 21-9" fill="none" stroke="#b7e38f" stroke-width="5" stroke-linecap="round"/></svg>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: Assets/Art/resource_iron.svg
+Lines: 0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#17212b"/><circle cx="64" cy="64" r="42" fill="#243746"/><path d="M35 79l12-39 35-7 13 31-18 27-33 1z" fill="#82909b"/><path d="M47 40l18 12 17-19M45 78l20-26 29 12M64 52l1 39" fill="none" stroke="#c4ced5" stroke-width="5" stroke-linejoin="round"/><path d="M41 88h46" stroke="#5b6872" stroke-width="7" stroke-linecap="round"/></svg>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: Assets/Art/resource_timber.svg
+Lines: 0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#17212b"/><circle cx="64" cy="64" r="42" fill="#243746"/><path d="M43 86c7-16 12-32 17-49 2-7 9-9 14-4 6 5 7 13 3 20-8 13-15 23-23 33z" fill="#c58a52"/><path d="M67 36l11-11M76 47l14-9M58 58l-15-7" stroke="#e5b77d" stroke-width="6" stroke-linecap="round"/><path d="M39 92h50" stroke="#8b5e3c" stroke-width="8" stroke-linecap="round"/></svg>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: Assets/renew_icon.svg
@@ -29656,6 +29686,33 @@ func run() -> void:
 		game.free()
 	print("RELEASE SMOKE RESULT: %d passed, %d failed" % [passed, failed])
 	quit(1 if failed > 0 else 0)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: tests/test_resource_art_assets.gd
+Lines: 21
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+extends SceneTree
+
+const ASSETS := [
+    "res://Assets/Art/resource_timber.svg",
+    "res://Assets/Art/resource_iron.svg",
+    "res://Assets/Art/resource_energy.svg",
+    "res://Assets/Art/resource_food.svg",
+    "res://Assets/Art/resource_electronics.svg",
+]
+
+func _init() -> void:
+    var failures := 0
+    for path in ASSETS:
+        if not FileAccess.file_exists(path):
+            failures += 1
+            push_error("Missing resource art asset: %s" % path)
+    if failures == 0:
+        print("RESOURCE_ART_ASSETS: PASS")
+    else:
+        print("RESOURCE_ART_ASSETS: FAIL (%d missing)" % failures)
+    quit(failures)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
