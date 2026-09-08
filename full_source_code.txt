@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 17:08:46 UTC 2026
+// Generated on: Tue Sep  8 17:09:32 UTC 2026
 
-// Source snapshot commit: f14614b6dd0c29d5685dfe05a90d1c2d8d67928e
+// Source snapshot commit: 7ce25286dd637f4af5e4a69d3375178a8bde44bc
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -16334,7 +16334,7 @@ func clear_world_modifiers() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/gameplay_command_system.gd
-Lines: 247
+Lines: 240
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 const PropertySystem=preload("res://scripts/property_system.gd")
@@ -16381,10 +16381,6 @@ func _ownership_node():
         node=scene.get_node_or_null("Systems/OwnershipSystem")
         if node==null:node=scene.get_node_or_null("OwnershipSystem")
     return node
-
-# Production is a cross-ledger operation. BusinessSystem predates the current
-# transaction boundary, so the gameplay command captures every mutable ledger
-# before entering it and restores all of them if the operation reports failure.
 func _production_transaction_participants()->Array:
     return [{"name":"game_state","node":get_node_or_null("/root/RenewGameState")},{"name":"finance","node":get_node_or_null("/root/RenewFinanceSystem")},{"name":"production","node":business_system.production},{"name":"economy","node":supply_system.economy},{"name":"supply_chain","node":business_system.supply_chain},{"name":"business","node":business_system}]
 func _capture_production_transaction()->Dictionary:
@@ -16401,7 +16397,7 @@ func _capture_production_transaction()->Dictionary:
     return {"ok":true,"snapshot":snapshot}
 func _restore_production_transaction(snapshot:Dictionary)->void:
     var participants:Dictionary=snapshot.get("participants",{});var ordered:Array=["business","supply_chain","economy","production","finance","game_state"];var by_name:Dictionary={}
-    for participant in _production_transaction_participants():by_name[str(participant.get("name","unknown"))]=participant.get("node")
+    for participant in _production_transaction_participants():by_name[str(participant.get("name","unknown") )]=participant.get("node")
     for name in ordered:
         var node=by_name.get(name);var state=participants.get(name,null)
         if node==null or not state is Dictionary:continue
@@ -16435,11 +16431,14 @@ func victory_progress()->void:
     var victory=get_node_or_null("/root/RenewVictorySystem")
     if victory==null or not victory.has_method("progress_text"):_set_state("company","message","Victory tracking is unavailable.");return
     _set_state("company","message",str(victory.progress_text()))
-func found_new_company()->void:
+func found_new_company()->Dictionary:
     var victory=get_node_or_null("/root/RenewVictorySystem")
-    if victory==null or not victory.has_method("found_new_company"):_set_state("company","message","New dynasties are unavailable.");return
+    if victory==null or not victory.has_method("found_new_company"):
+        _set_state("company","message","New dynasties are unavailable.")
+        return {"ok":false,"message":"New dynasties are unavailable."}
     var result:Dictionary=victory.found_new_company()
     if not bool(result.get("ok",false)):_set_state("company","message",str(result.get("message","A new dynasty cannot begin yet.")))
+    return result
 func identity_status()->void:
     var identity=get_node_or_null("/root/RenewIdentitySystem")
     if identity==null or not identity.has_method("status_text"):_set_state("company","message","Identities are unavailable.");return
@@ -16455,8 +16454,7 @@ func world_power()->void:
 func check_notifications()->void:
     var news=get_node_or_null("/root/RenewNewsSystem")
     if news==null or not news.has_method("read_notifications"):_set_state("company","message","Notifications are unavailable.");return
-    var result:Dictionary=news.read_notifications()
-    var total:=int(result.get("unread",0))
+    var result:Dictionary=news.read_notifications();var total:=int(result.get("unread",0))
     if total<=0:_set_state("company","message","NOTICES: caught up. No unread developments.");return
     var bits:Array=[]
     for section in (result.get("sections",{}) as Dictionary).keys():bits.append("%s %d"%[section,int((result.get("sections",{}) as Dictionary)[section])])
@@ -16527,20 +16525,16 @@ func _restore_daily_transaction(snapshot:Dictionary)->void:
         var node=participant.get("node");var name:=str(participant.get("name","unknown"));var state=participants.get(name,null)
         if node==null or not state is Dictionary:continue
         if name=="game_state" and node.has_method("restore"):node.restore(state)
-        elif name=="ownership" and not node.has_method("restore_state") and node.has_method("load_state"):
-            node.load_state(state)
-        elif node.has_method("restore_state"):
-            node.restore_state(state)
+        elif name=="ownership" and not node.has_method("restore_state") and node.has_method("load_state"):node.load_state(state)
+        elif node.has_method("restore_state"):node.restore_state(state)
 func _reconcile_books_once()->Dictionary:
     var finance=get_node_or_null("/root/RenewFinanceSystem")
     if finance==null or not finance.has_method("reconcile_books"):return {}
     return finance.reconcile_books()
-func _money_text(amount:int)->String:
-    return str(amount)
+func _money_text(amount:int)->String:return str(amount)
 func advance_day()->void:
     var simulation=get_node_or_null("/root/RenewSimulationSystem");if simulation==null:_set_state("company","message","SimulationSystem is unavailable.");return
-    var repair:=_reconcile_books_once()
-    var transaction:=_capture_daily_transaction()
+    var repair:=_reconcile_books_once();var transaction:=_capture_daily_transaction()
     if not bool(transaction.get("ok",false)):_set_state("company","message",str(transaction.get("message","Daily transaction could not start.")));return
     var context={"economy":supply_system.economy,"rivals":relationship_system.rivals,"events":_events(),"expansion":expansion_system.expansion,"districts":expansion_system.districts,"employee_system":employee_system,"business_system":business_system,"production":business_system.production,"contracts":get_node_or_null("/root/RenewContractSystem")}
     var result:Dictionary=simulation.advance_day(_simulation_state(),context)
@@ -16553,16 +16547,15 @@ func advance_day()->void:
     var player_price:=max(1,int(_state_value("businesses","player_price",110)));var units_sold:=int(floor(float(_state_value("economy","last_sales",0))/float(player_price)))
     if units_sold>0:
         var sold_product := str(_state_value("businesses","industry_id","furniture"))
-        if not (sold_product in ["furniture","construction_materials","consumer_electronics"]):
-            sold_product = "furniture"
+        if not (sold_product in ["furniture","construction_materials","consumer_electronics"]):sold_product="furniture"
         var demand_result:Dictionary=supply_system.economy.register_customer_demand(sold_product,units_sold)
         if bool(demand_result.get("ok",false)):_log("MARKET: customers bought %d %s; upstream resource demand increased."%[units_sold,sold_product.replace("_"," ")])
     if business_system.supply_chain.has_method("_sync_production_mirror"):business_system.supply_chain._sync_production_mirror(business_system.supply_chain.warehouse.keys())
-    var victory = get_node_or_null("/root/RenewVictorySystem")
-    if victory != null and victory.has_method("check_victory"): victory.check_victory()
-    if victory != null and victory.has_method("maybe_endgame_crisis"): victory.maybe_endgame_crisis()
-    var identity = get_node_or_null("/root/RenewIdentitySystem")
-    if identity != null and identity.has_method("evaluate"): identity.evaluate()
+    var victory=get_node_or_null("/root/RenewVictorySystem")
+    if victory!=null and victory.has_method("check_victory"):victory.check_victory()
+    if victory!=null and victory.has_method("maybe_endgame_crisis"):victory.maybe_endgame_crisis()
+    var identity=get_node_or_null("/root/RenewIdentitySystem")
+    if identity!=null and identity.has_method("evaluate"):identity.evaluate()
     if bool(repair.get("repaired",false)):_set_state("company","message","BOOKS RECONCILED: one-time repair plugged $%s into retained earnings. The save advances again."%_money_text(int(abs(float(repair.get("plugged",0.0))))));_log("BOOKS RECONCILED: one-time repair plugged $%s into retained earnings."%_money_text(int(abs(float(repair.get("plugged",0.0))))))
 func _events():
     if not has_meta("events_model"):set_meta("events_model",load("res://scripts/events.gd").new())
