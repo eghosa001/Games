@@ -136,6 +136,9 @@ func _is_failure(text: String) -> bool:
     return text.contains("failed") or text.contains("unable") or text.contains("not enough") or text.contains("cannot") or text.contains("can't") or text.contains("no save") or text.contains("save failed") or text.contains("insufficient")
 
 func _on_node_added(node: Node) -> void:
+    # Guard against tree teardown — nodes may be mid-destruction.
+    var root := get_tree().root
+    if root == null or not root.is_inside_tree(): return
     if node is BaseButton:
         _hook_button(node as BaseButton)
 

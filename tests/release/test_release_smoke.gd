@@ -66,6 +66,9 @@ func run() -> void:
     var snapshot: Dictionary = state.capture()
     check(int(snapshot.get("schema_version", 0)) == 8, "Release save uses schema 8")
     game.free()
-    await process_frame
+    current_scene = null
+    # Wait for deferred tree teardown to complete.
+    for _i in range(8):
+        await process_frame
     print("RELEASE SMOKE RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)

@@ -61,9 +61,21 @@ func _process(_delta: float) -> void:
     if _initializing:
         _try_initialize()
         return
+    # Guard against running during tree teardown — nodes may be partially freed.
+    var tree := get_tree()
+    if tree == null: return
+    var root := tree.root
+    if root == null or not root.is_inside_tree() or root.is_queued_for_deletion():
+        return
     _enforce_single_screen()
 
 func _input(event: InputEvent) -> void:
+    # Guard against running during tree teardown.
+    var tree := get_tree()
+    if tree == null: return
+    var root := tree.root
+    if root == null or not root.is_inside_tree() or root.is_queued_for_deletion():
+        return
     # Some complex CanvasLayer/control stacks can intercept a button event
     # before the individual screen script receives its pressed signal. The
     # screen manager therefore owns a narrow emergency close path: if the
@@ -90,6 +102,12 @@ func _input(event: InputEvent) -> void:
         get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
+    # Guard against running during tree teardown.
+    var tree := get_tree()
+    if tree == null: return
+    var root := tree.root
+    if root == null or not root.is_inside_tree() or root.is_queued_for_deletion():
+        return
     if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and _active_screen != null:
         hide_all_screens(); get_viewport().set_input_as_handled()
 
