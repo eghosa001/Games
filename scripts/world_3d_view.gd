@@ -20,11 +20,19 @@ var status_label: Label
 var objects: Array[Node3D] = []
 var previous_2d_visibility: Dictionary = {}
 var is_open := false
+var camera_target := Vector3(0.0, 1.0, 0.0)
+var camera_yaw := 0.0
+var camera_pitch := -48.0
+var camera_distance := 38.0
+var camera_dragging := false
+var last_pointer := Vector2.ZERO
+var map_button: Button
 
 func _ready() -> void:
 	visible = false
 	_build_world()
 	_build_overlay()
+	_apply_camera()
 
 func _build_world() -> void:
 	var world_environment := Environment.new()
@@ -45,8 +53,6 @@ func _build_world() -> void:
 
 	var camera_node := Camera3D.new()
 	camera_node.name = "World3DCamera"
-	camera_node.position = Vector3(0.0, 26.0, 28.0)
-	camera_node.rotation_degrees = Vector3(-48.0, 0.0, 0.0)
 	camera_node.current = true
 	add_child(camera_node)
 	camera = camera_node
@@ -134,7 +140,7 @@ func _build_overlay() -> void:
 	var panel := PanelContainer.new()
 	panel.name = "World3DStatus"
 	panel.position = Vector2(16, 70)
-	panel.size = Vector2(410, 118)
+	panel.size = Vector2(430, 158)
 	layer.add_child(panel)
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 5)
@@ -151,13 +157,41 @@ func _build_overlay() -> void:
 	selected_label = Label.new()
 	selected_label.text = "No property selected"
 	selected_label.add_theme_font_size_override("font_size", 11)
+	selected_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(selected_label)
+	var controls := HBoxContainer.new()
+	controls.add_theme_constant_override("separation", 5)
+	box.add_child(controls)
+	var zoom_out := _make_overlay_button("−")
+	zoom_out.tooltip_text = "Zoom out"
+	zoom_out.pressed.connect(_zoom_out)
+	controls.add_child(zoom_out)
+	var reset := _make_overlay_button("RESET VIEW")
+	reset.pressed.connect(_reset_camera)
+	controls.add_child(reset)
+	var zoom_in := _make_overlay_button("+")
+	zoom_in.tooltip_text = "Zoom in"
+	zoom_in.pressed.connect(_zoom_in)
+	controls.add_child(zoom_in)
+	map_button = _make_overlay_button("OPEN PROPERTY MAP")
+	map_button.disabled = true
+	map_button.pressed.connect(_open_property_map)
+	controls.add_child(map_button)
+
+func _make_overlay_button(text_value: String) -> Button:
+	var button := Button.new()
+	button.text = text_value
+	button.custom_minimum_size = Vector2(58, 38)
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_font_size_override("font_size", 10)
+	return button
 
 func open_world() -> void:
 	is_open = true
 	visible = true
 	_sync_2d_world(false)
 	status_label.text = "Strategic region • 3D presentation active"
+	_apply_camera()
 
 func close_world() -> void:
 	is_open = false
@@ -165,6 +199,8 @@ func close_world() -> void:
 	_sync_2d_world(true)
 	selected_entity_id = ""
 	selected_label.text = "No property selected"
+	map_button.disabled = true
+	camera_dragging = false
 
 func toggle_world() -> void:
 	if is_open:
@@ -191,6 +227,31 @@ func _sync_2d_world(should_show: bool) -> void:
 		previous_2d_visibility[node_name] = node.visible
 		node.visible = false
 
+func _apply_camera() -> void:
+	if camera == null:
+		return
+	camera_pitch = clampf(camera_pitch, -78.0, -25.0)
+	camera_distance = clampf(camera_distance, 18.0, 55.0)
+	var yaw := deg_to_rad(camera_yaw)
+	var pitch := deg_to_rad(camera_pitch)
+	var offset := Vector3(cos(pitch) * sin(yaw), -sin(pitch), cos(pitch) * cos(yaw)) * camera_distance
+	camera.position = camera_target + offset
+	camera.look_at(camera_target, Vector3.UP)
+
+func _reset_camera() -> void:
+	camera_yaw = 0.0
+	camera_pitch = -48.0
+	camera_distance = 38.0
+	_apply_camera()
+
+func _zoom_in() -> void:
+	camera_distance = maxf(18.0, camera_distance - 4.0)
+	_apply_camera()
+
+func _zoom_out() -> void:
+	camera_distance = minf(55.0, camera_distance + 4.0)
+	_apply_camera()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not is_open:
 		return
@@ -198,8 +259,47 @@ func _unhandled_input(event: InputEvent) -> void:
 		close_world()
 		get_viewport().set_input_as_handled()
 		return
-	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		_select_at_screen(event.position)
+	if event is InputEventMouseButton:
+		var click: InputEventMouseButton = event
+		if click.button_index == MOUSE_BUTTON_LEFT:
+			if click.pressed:
+				last_pointer = click.position
+				camera_dragging = true
+				_select_at_screen(click.position)
+			else:
+				camera_dragging = false
+			get_viewport().set_input_as_handled()
+			return
+		if click.pressed and click.button_index == MOUSE_BUTTON_WHEEL_UP:
+			_zoom_in()
+			get_viewport().set_input_as_handled()
+			return
+		if click.pressed and click.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			_zoom_out()
+			get_viewport().set_input_as_handled()
+			return
+	if event is InputEventMouseMotion and camera_dragging:
+		var motion: InputEventMouseMotion = event
+		camera_yaw -= motion.relative.x * 0.35
+		camera_pitch = clampf(camera_pitch - motion.relative.y * 0.22, -78.0, -25.0)
+		_apply_camera()
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventScreenTouch:
+		var touch: InputEventScreenTouch = event
+		if touch.pressed:
+			last_pointer = touch.position
+			camera_dragging = true
+			_select_at_screen(touch.position)
+		else:
+			camera_dragging = false
+		get_viewport().set_input_as_handled()
+		return
+	if event is InputEventScreenDrag and camera_dragging:
+		var drag: InputEventScreenDrag = event
+		camera_yaw -= drag.relative.x * 0.35
+		camera_pitch = clampf(camera_pitch - drag.relative.y * 0.22, -78.0, -25.0)
+		_apply_camera()
 		get_viewport().set_input_as_handled()
 
 func _select_at_screen(screen_position: Vector2) -> void:
@@ -213,6 +313,7 @@ func _select_at_screen(screen_position: Vector2) -> void:
 		selected_entity_id = ""
 		selected_label.text = "No property selected"
 		status_label.text = "Strategic region • Select a property"
+		map_button.disabled = true
 		return
 	var collider: Object = hit.get("collider")
 	if collider == null or not collider.has_meta("entity_id"):
@@ -223,6 +324,7 @@ func _select_at_screen(screen_position: Vector2) -> void:
 	selected_entity_id = entity_id
 	var display_name := str(collider.get_meta("display_name", entity_id))
 	selected_label.text = "Selected: %s  [%s]" % [display_name, entity_id]
+	map_button.disabled = false
 	_bind_selection_to_state(entity_id)
 
 func _bind_selection_to_state(entity_id: String) -> void:
@@ -238,6 +340,21 @@ func _bind_selection_to_state(entity_id: String) -> void:
 		var entry: Variant = catalog[index]
 		if entry is Dictionary and str(entry.get("id", "")) == entity_id:
 			state.set_value("properties", "selected_property", index)
-			status_label.text = "Selected property is synchronized with GameState. Open Property Map for management."
+			status_label.text = "Selected property is synchronized with GameState."
 			return
 	status_label.text = "Prototype object selected: %s" % entity_id
+
+func _open_property_map() -> void:
+	if selected_entity_id.is_empty():
+		return
+	var root := get_node_or_null("/root/Renew/World")
+	if root == null:
+		return
+	var property_map := root.get_node_or_null("PropertyMap")
+	if property_map == null:
+		return
+	close_world()
+	property_map.visible = true
+	if property_map.has_method("queue_redraw"):
+		property_map.queue_redraw()
+	status_label.text = ""
