@@ -27,7 +27,7 @@ func take_loan(amount: int) -> Dictionary:
     var finance = _finance()
     return finance.take_loan(amount) if finance != null else {"ok": false, "message": "FinanceSystem unavailable."}
 
-func create_loan(amount: int, annual_rate: float = 0.12, term_periods: int = 365) -> Dictionary:
+func create_loan(amount: int, annual_rate: float = 0.12, term_periods: int = 20) -> Dictionary:
     var finance = _finance()
     return finance.create_loan(amount, annual_rate, term_periods) if finance != null else {"ok": false, "message": "FinanceSystem unavailable."}
 
