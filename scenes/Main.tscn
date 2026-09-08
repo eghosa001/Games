@@ -1,4 +1,4 @@
-[gd_scene load_steps=47 format=3]
+[gd_scene load_steps=48 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -49,6 +49,7 @@
 [ext_resource path="res://scripts/property_map.gd" type="Script" id="52"]
 [ext_resource path="res://scripts/regions_ui.gd" type="Script" id="53"]
 [ext_resource path="res://scripts/regions_launcher.gd" type="Script" id="54"]
+[ext_resource path="res://scripts/world_opportunities_ui.gd" type="Script" id="55"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -197,3 +198,6 @@ layer = 67
 [node name="RegionsPanel" type="CanvasLayer" parent="UI"]
 layer = 68
 script = ExtResource("53")
+[node name="WorldOpportunitiesPanel" type="CanvasLayer" parent="UI"]
+layer = 69
+script = ExtResource("55")
