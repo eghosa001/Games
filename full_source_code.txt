@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 07:17:46 UTC 2026
+// Generated on: Tue Sep  8 07:31:51 UTC 2026
 
-// Source snapshot commit: a23dd9af816807360334dd2b68cc12b671b2b1d5
+// Source snapshot commit: 86cb3430266c37fa322dcbe5aad8830562dc897e
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -19635,7 +19635,7 @@ func lease_property() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/property_visual.gd
-Lines: 182
+Lines: 163
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node2D
 
@@ -19800,25 +19800,6 @@ func _draw_certification_mark(card: Rect2) -> void:
     draw_circle(center, 6.0, PANEL)
     draw_line(center + Vector2(-3, 0), center + Vector2(-1, 3), GOLD, 1.5)
     draw_line(center + Vector2(-1, 3), center + Vector2(4, -3), GOLD, 1.5)
-
-func _business_purposes() -> Array:
-    var state = get_node_or_null("/root/RenewGameState")
-    if state == null:
-        return []
-    var type := ""
-    var catalog = state.get_value("properties", "catalog", [])
-    if catalog is Array and not catalog.is_empty():
-        var index := clampi(int(state.get_value("properties", "selected_property", 0)), 0, catalog.size() - 1)
-        type = str(catalog[index].get("type", ""))
-    var options := {
-        "Warehouse": ["Furniture Factory", "Distribution Center", "Wholesale Hub"],
-        "Workshop": ["Furniture Factory", "Metalworks", "Construction Workshop"],
-        "Commercial Building": ["Retail Store", "Service Office", "Showroom"]
-    }
-    var result: Array = []
-    for name in options.get(type, []):
-        result.append({"name": name})
-    return result
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -21169,7 +21150,7 @@ func summary() -> String:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/rich_world_scenery.gd
-Lines: 162
+Lines: 164
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node2D
 ## Rich presentation-only world scenery.
@@ -21189,7 +21170,9 @@ const MUTED := Color("6f858a")
 var _time := 0.0
 
 func _ready() -> void:
-    z_index = -15
+    # Must sit below PremiumWorldBackdrop (-30) and both SVG scenes (-28/-27)
+    # so the authored premium city remains visible. Never move above -31.
+    z_index = -40
     queue_redraw()
 
 func _process(delta: float) -> void:
