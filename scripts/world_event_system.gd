@@ -57,13 +57,15 @@ func choose(instance_id: String, choice_id: String) -> Dictionary:
         if str(choice.get("id","")) == choice_id:
             var picked: Dictionary = (choice as Dictionary).duplicate(true)
             var merged: Dictionary = (e.get("effects", {}) as Dictionary).duplicate(true)
-            for key in (picked.get("effects", {}) as Dictionary).keys():
-                merged[key] = ((picked.get("effects", {}) as Dictionary)[key])
+            var picked_effects: Dictionary = (picked.get("effects", {}) as Dictionary).duplicate(true)
+            if not _apply_effects(picked_effects):
+                return {"ok":false,"error":"effect_application_failed"}
+            for key in picked_effects.keys():
+                merged[key] = picked_effects[key]
             e["effects"] = merged
             e["resolution"] = {"choice":choice_id,"day":_current_day()}
             active_events[instance_id] = e
             _sync_modifiers()
-            _apply_effects((picked.get("effects", {}) as Dictionary).duplicate(true))
             _replace_history(e)
             return {"ok":true,"event":e.duplicate(true)}
     return {"ok":false,"error":"choice_not_found"}
@@ -76,8 +78,17 @@ func resolve(instance_id: String, resolution: Dictionary = {}) -> Dictionary:
     e["resolution"]["day"] = _current_day()
     active_events.erase(instance_id)
     _sync_modifiers()
-    _apply_effects(e.get("effects",{}))
-    _apply_effects(resolution.get("effects",{}))
+    var chosen: String = str(e["resolution"].get("choice", ""))
+    # A chosen option is applied immediately in choose(). Do not apply the
+    # merged event effects again here or cash/reputation rewards are duplicated.
+    # Automatic/no-choice resolution still needs the event's base effects.
+    if chosen.is_empty() or chosen == "automatic":
+        if not _apply_effects(e.get("effects", {})):
+            active_events[instance_id] = e
+            _sync_modifiers()
+            return {"ok":false,"error":"effect_application_failed"}
+    if not _apply_effects(resolution.get("effects", {})):
+        return {"ok":false,"error":"resolution_effect_application_failed"}
     _queue_followups(e)
     _replace_history(e)
     return {"ok":true,"event":e.duplicate(true)}
@@ -163,12 +174,24 @@ func _roll_scheduled_events(day: int) -> void:
     if day > 1 and day % 23 == 0: trigger("supply_disruption", {"cause":"world_logistics_stress"}, day)
     if day > 1 and day % 31 == 0: trigger("financial_crisis", {"cause":"credit_cycle"}, day)
 
-func _apply_effects(effects: Dictionary) -> void:
-    var main: Variant = get_tree().current_scene if get_tree() != null else null
-    if main == null: return
+func _apply_effects(effects: Dictionary) -> bool:
     var game = get_node_or_null("/root/RenewGameState")
-    if effects.has("cash") and main.get("cash") != null: main.set("cash", float(main.get("cash")) + float(effects["cash"]))
-    if effects.has("reputation") and main.get("reputation") != null: main.set("reputation", int(main.get("reputation")) + int(effects["reputation"]))
+    var finance = get_node_or_null("/root/RenewFinanceSystem")
+    if effects.has("cash"):
+        if finance == null:
+            return false
+        var cash_delta := float(effects["cash"])
+        var cash_result: Dictionary
+        if cash_delta >= 0.0:
+            cash_result = finance.receive(int(round(cash_delta)), "world event effect")
+        else:
+            cash_result = finance.spend(int(round(-cash_delta)), "world event effect")
+        if not bool(cash_result.get("ok", false)):
+            return false
+    if effects.has("reputation") and game != null:
+        var current_rep := int(game.get_value("player", "reputation", 0))
+        game.set_value("player", "reputation", current_rep + int(effects["reputation"]))
+    return true
 
 func _sync_modifiers() -> void:
     var game = get_node_or_null("/root/RenewGameState")
