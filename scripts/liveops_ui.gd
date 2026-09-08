@@ -44,6 +44,7 @@ func _build_ui() -> void:
     close_button.text = "CLOSE"
     close_button.custom_minimum_size = Vector2(84, 46)
     close_button.focus_mode = Control.FOCUS_NONE
+    close_button.mouse_filter = Control.MOUSE_FILTER_STOP
     close_button.pressed.connect(_close)
     panel.add_child(close_button)
     scroll = ScrollContainer.new()
@@ -200,11 +201,16 @@ func _add_progress_card(title: String, progress: float, target: float, pct: floa
         box.add_child(expiry_label)
 
 func _close() -> void:
+    # Hide the local panel immediately, then synchronize the central screen manager.
+    # The direct hide prevents the panel from remaining visible if another input or
+    # manager pass occurs in the same frame.
+    if panel != null:
+        panel.visible = false
+    refresh_clock = 0.0
     var manager = get_node_or_null("/root/RenewUIScreenManager")
     if manager != null and manager.has_method("hide_all_screens"):
         manager.hide_all_screens()
-    elif panel != null:
-        panel.visible = false
+    get_viewport().set_input_as_handled()
 
 func _layout() -> void:
     if panel == null: return
