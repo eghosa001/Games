@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 07:31:51 UTC 2026
+// Generated on: Tue Sep  8 07:35:55 UTC 2026
 
-// Source snapshot commit: 86cb3430266c37fa322dcbe5aad8830562dc897e
+// Source snapshot commit: 949ffc0c7f5d99fdc149ad53e5d0f7b2a20bc956
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -12116,7 +12116,7 @@ func restore_state(snapshot:Dictionary)->void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/empire_controller.gd
-Lines: 238
+Lines: 241
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node2D
 
@@ -12143,6 +12143,9 @@ func _process(_delta: float) -> void:
 
 func _input(event: InputEvent) -> void:
     if not (event is InputEventKey) or not event.pressed or event.echo: return
+    # Only process keys when an expansion is active; otherwise main.gd owns
+    # these keys and empire_controller must not fire as well.
+    if parent == null or parent.expansion == null: return
     match event.keycode:
         KEY_7: select_business(0)
         KEY_8: select_business(1)
