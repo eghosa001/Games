@@ -1,12 +1,13 @@
 extends Node
 
-## Persistent entry points for World Command, Business Operations, Production, Supply Chain, Empire, Intelligence, Progression, Identity, Notifications, Headquarters and Company Control.
+## Persistent entry points for World Command, Business Operations, Production, Supply Chain, Empire, Intelligence, Progression, Identity, Notifications, Headquarters, Company Control and the 3D World prototype.
 const BUSINESS_UI := preload("res://scripts/business_operations_ui.gd")
 const EXPANSION_UI := preload("res://scripts/expansion_ui.gd")
 const INTELLIGENCE_UI := preload("res://scripts/empire_intelligence_ui.gd")
 const PROGRESSION_UI := preload("res://scripts/empire_progression_ui.gd")
 const IDENTITY_UI := preload("res://scripts/empire_identity_ui.gd")
 const NOTIFICATIONS_UI := preload("res://scripts/notifications_center_ui.gd")
+const WORLD_3D := preload("res://scripts/world_3d_view.gd")
 var button: Button
 var operations_button: Button
 var production_button: Button
@@ -18,6 +19,7 @@ var identity_button: Button
 var notifications_button: Button
 var headquarters_button: Button
 var system_button: Button
+var world_button: Button
 var hud: CanvasLayer
 
 func _ready() -> void:
@@ -26,10 +28,10 @@ func _ready() -> void:
 
 func _build() -> void:
     if hud == null: return
-    button=_make_button("REGIONS"); operations_button=_make_button("OPS"); production_button=_make_button("PROD"); supply_button=_make_button("SUPPLY"); expansion_button=_make_button("EMPIRE"); intelligence_button=_make_button("INTEL"); progression_button=_make_button("PROG"); identity_button=_make_button("IDENT"); notifications_button=_make_button("NOTICES"); headquarters_button=_make_button("HQ"); system_button=_make_button("SYSTEM")
-    button.name="RegionsLauncherButton"; operations_button.name="BusinessOperationsLauncherButton"; production_button.name="ProductionControlLauncherButton"; supply_button.name="SupplyChainLauncherButton"; expansion_button.name="EmpireExpansionLauncherButton"; intelligence_button.name="EmpireIntelligenceLauncherButton"; progression_button.name="EmpireProgressionLauncherButton"; identity_button.name="EmpireIdentityLauncherButton"; notifications_button.name="NotificationsCenterLauncherButton"; headquarters_button.name="HeadquartersLauncherButton"; system_button.name="CompanyControlLauncherButton"
-    hud.add_child(button); hud.add_child(operations_button); hud.add_child(production_button); hud.add_child(supply_button); hud.add_child(expansion_button); hud.add_child(intelligence_button); hud.add_child(progression_button); hud.add_child(identity_button); hud.add_child(notifications_button); hud.add_child(headquarters_button); hud.add_child(system_button)
-    button.pressed.connect(_open_regions); operations_button.pressed.connect(_open_operations); production_button.pressed.connect(_open_production); supply_button.pressed.connect(_open_supply); expansion_button.pressed.connect(_open_expansion); intelligence_button.pressed.connect(_open_intelligence); progression_button.pressed.connect(_open_progression); identity_button.pressed.connect(_open_identity); notifications_button.pressed.connect(_open_notifications); headquarters_button.pressed.connect(_open_headquarters); system_button.pressed.connect(_open_system)
+    button=_make_button("REGIONS"); operations_button=_make_button("OPS"); production_button=_make_button("PROD"); supply_button=_make_button("SUPPLY"); expansion_button=_make_button("EMPIRE"); intelligence_button=_make_button("INTEL"); progression_button=_make_button("PROG"); identity_button=_make_button("IDENT"); notifications_button=_make_button("NOTICES"); headquarters_button=_make_button("HQ"); world_button=_make_button("3D WORLD"); system_button=_make_button("SYSTEM")
+    button.name="RegionsLauncherButton"; operations_button.name="BusinessOperationsLauncherButton"; production_button.name="ProductionControlLauncherButton"; supply_button.name="SupplyChainLauncherButton"; expansion_button.name="EmpireExpansionLauncherButton"; intelligence_button.name="EmpireIntelligenceLauncherButton"; progression_button.name="EmpireProgressionLauncherButton"; identity_button.name="EmpireIdentityLauncherButton"; notifications_button.name="NotificationsCenterLauncherButton"; headquarters_button.name="HeadquartersLauncherButton"; world_button.name="World3DLauncherButton"; system_button.name="CompanyControlLauncherButton"
+    hud.add_child(button); hud.add_child(operations_button); hud.add_child(production_button); hud.add_child(supply_button); hud.add_child(expansion_button); hud.add_child(intelligence_button); hud.add_child(progression_button); hud.add_child(identity_button); hud.add_child(notifications_button); hud.add_child(headquarters_button); hud.add_child(world_button); hud.add_child(system_button)
+    button.pressed.connect(_open_regions); operations_button.pressed.connect(_open_operations); production_button.pressed.connect(_open_production); supply_button.pressed.connect(_open_supply); expansion_button.pressed.connect(_open_expansion); intelligence_button.pressed.connect(_open_intelligence); progression_button.pressed.connect(_open_progression); identity_button.pressed.connect(_open_identity); notifications_button.pressed.connect(_open_notifications); headquarters_button.pressed.connect(_open_headquarters); world_button.pressed.connect(_open_world_3d); system_button.pressed.connect(_open_system)
     var ui_root:=hud.get_parent()
     if ui_root!=null and ui_root.get_node_or_null("BusinessOperationsPanel")==null: var p:=BUSINESS_UI.new(); p.name="BusinessOperationsPanel"; ui_root.add_child(p)
     if ui_root!=null and ui_root.get_node_or_null("EmpireExpansionPanel")==null: var e:=EXPANSION_UI.new(); e.name="EmpireExpansionPanel"; ui_root.add_child(e)
@@ -37,28 +39,36 @@ func _build() -> void:
     if ui_root!=null and ui_root.get_node_or_null("EmpireProgressionPanel")==null: var p2:=PROGRESSION_UI.new(); p2.name="EmpireProgressionPanel"; ui_root.add_child(p2)
     if ui_root!=null and ui_root.get_node_or_null("EmpireIdentityPanel")==null: var idp:=IDENTITY_UI.new(); idp.name="EmpireIdentityPanel"; ui_root.add_child(idp)
     if ui_root!=null and ui_root.get_node_or_null("NotificationsCenterPanel")==null: var n:=NOTIFICATIONS_UI.new(); n.name="NotificationsCenterPanel"; ui_root.add_child(n)
+    _ensure_world_3d()
     _layout()
     if not get_viewport().size_changed.is_connected(_layout): get_viewport().size_changed.connect(_layout)
+
+func _ensure_world_3d() -> void:
+    var root:=get_tree().root.get_node_or_null("Renew")
+    if root==null or root.get_node_or_null("World3D"): return
+    var world:=WORLD_3D.new()
+    world.name="World3D"
+    root.add_child(world)
 
 func _make_button(label:String)->Button:
     var b:=Button.new(); b.text=label; b.custom_minimum_size=Vector2(76,44); b.focus_mode=Control.FOCUS_NONE; b.add_theme_font_size_override("font_size",9); b.add_theme_color_override("font_color",Color("edf6f3")); b.add_theme_stylebox_override("normal",_style(Color("102a31"),Color("31565d"),9)); b.add_theme_stylebox_override("hover",_style(Color("1b3b40"),Color("d8b76d"),9)); b.add_theme_stylebox_override("pressed",_style(Color("18363a"),Color("d8b76d"),9)); return b
 
 func _layout()->void:
-    if button==null or operations_button==null or production_button==null or supply_button==null or expansion_button==null or intelligence_button==null or progression_button==null or identity_button==null or notifications_button==null or headquarters_button==null or system_button==null:return
+    if button==null or operations_button==null or production_button==null or supply_button==null or expansion_button==null or intelligence_button==null or progression_button==null or identity_button==null or notifications_button==null or headquarters_button==null or world_button==null or system_button==null:return
     var size:=get_viewport().get_visible_rect().size; var narrow:=size.x<700.0
-    var buttons:Array[Button]=[button,operations_button,production_button,supply_button,expansion_button,intelligence_button,progression_button,identity_button,notifications_button,headquarters_button]
-    var full:Array[String]=["REGIONS","OPS","PROD","SUPPLY","EMPIRE","INTEL","PROG","IDENT","NOTICES","HQ"]
-    var compact:Array[String]=["REG","OPS","PRD","SUP","EMP","INT","PROG","ID","NOT","HQ"]
+    var buttons:Array[Button]=[button,operations_button,production_button,supply_button,expansion_button,intelligence_button,progression_button,identity_button,notifications_button,headquarters_button,world_button]
+    var full:Array[String]=["REGIONS","OPS","PROD","SUPPLY","EMPIRE","INTEL","PROG","IDENT","NOTICES","HQ","3D WORLD"]
+    var compact:Array[String]=["REG","OPS","PRD","SUP","EMP","INT","PROG","ID","NOT","HQ","3D"]
     if narrow:
         var gap_x:=4.0; var gap_y:=4.0; var width:=maxf(48.0,(size.x-12.0-gap_x*4.0)/5.0); var y:=64.0
         for i in range(buttons.size()):
             var row:=i / 5; var col:=i % 5
             buttons[i].text=compact[i]; buttons[i].size=Vector2(width,44); buttons[i].position=Vector2(6.0+col*(width+gap_x), y+row*(44.0+gap_y)); buttons[i].add_theme_font_size_override("font_size",8)
-        system_button.text="SYSTEM"; system_button.size=Vector2(minf(118.0,maxf(92.0,size.x-12.0)),40); system_button.position=Vector2(6.0,160.0); system_button.add_theme_font_size_override("font_size",8)
+        system_button.text="SYSTEM"; system_button.size=Vector2(minf(118.0,maxf(92.0,size.x-12.0)),40); system_button.position=Vector2(6.0,208.0); system_button.add_theme_font_size_override("font_size",8)
     else:
-        var gap:=4.0; var widths:Array[float]=[70,60,68,74,78,68,62,66,76,48]; var total:=0.0
+        var gap:=4.0; var widths:Array[float]=[70,60,68,74,78,68,62,66,76,48,78]; var total:=0.0
         for w in widths: total+=w
-        total+=gap*9.0; var start:=maxf(8.0,size.x-total-8.0); var x:=start
+        total+=gap*10.0; var start:=maxf(8.0,size.x-total-8.0); var x:=start
         for i in range(buttons.size()):
             buttons[i].text=full[i]; buttons[i].size=Vector2(widths[i],42); buttons[i].position=Vector2(x,66.0); buttons[i].add_theme_font_size_override("font_size",9); x+=widths[i]+gap
         system_button.text="SYSTEM"; system_button.size=Vector2(82,40); system_button.position=Vector2(start,112.0); system_button.add_theme_font_size_override("font_size",9)
@@ -75,7 +85,13 @@ func _open_notifications(): _show("NotificationsCenterPanel")
 func _open_headquarters(): _show("HeadquartersPanel")
 func _open_system(): _show("SaveLoadPanel")
 
+func _open_world_3d() -> void:
+    var world:=get_tree().root.get_node_or_null("Renew/World3D")
+    if world!=null and world.has_method("toggle_world"): world.toggle_world()
+
 func _show(name:String):
+    var world:=get_tree().root.get_node_or_null("Renew/World3D")
+    if world!=null and world.has_method("close_world") and world.is_open: world.close_world()
     var manager:=get_node_or_null("/root/RenewUIScreenManager")
     if manager!=null and manager.has_method("show_screen"):
         manager.show_screen(name)
