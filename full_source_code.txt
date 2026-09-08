@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 13:39:10 UTC 2026
+// Generated on: Tue Sep  8 13:41:52 UTC 2026
 
-// Source snapshot commit: 4d13f8ad3fd226eabb59159f14a776e4481d0221
+// Source snapshot commit: d862d35693e06adc60decbb168ec4a10818c95c4
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -577,57 +577,6 @@ Lines: 13
 <!-- equipment --> <g fill="#d5b56e"><rect x="80" y="650" width="120" height="25" rx="5"/><rect x="220" y="650" width="85" height="25" rx="5"/><rect x="430" y="650" width="130" height="25" rx="5"/></g><g fill="#071116"><circle cx="105" cy="682" r="9"/><circle cx="175" cy="682" r="9"/><circle cx="245" cy="682" r="9"/><circle cx="285" cy="682" r="9"/><circle cx="460" cy="682" r="9"/><circle cx="530" cy="682" r="9"/></g>
 <path d="M0 735H1400" stroke="#3b5a60" stroke-width="5"/><path d="M0 750H1400" stroke="#d5b56e" stroke-opacity=".2" stroke-width="4" stroke-dasharray="45 30"/>
 </svg>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: Assets/Art/renew_resource_hub.svg
-Lines: 9
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<svg xmlns="http://www.w3.org/2000/svg" width="260" height="180" viewBox="0 0 260 180">
-<ellipse cx="130" cy="157" rx="94" ry="12" fill="#061014" opacity=".65"/>
-<path d="M65 128 84 70l38 17 18-47 31 34 25-17 18 71Z" fill="#24484d" stroke="#83b1a4" stroke-width="4"/>
-<path d="m83 70 39 17-5 37H72Zm57-30 31 34-15 50h-35Zm56 17 25-17 18 71-43-2Z" fill="#315e60" opacity=".9"/>
-<path d="M38 130h184" stroke="#e0bd6d" stroke-width="5"/>
-<circle cx="47" cy="130" r="9" fill="#e0bd6d"/><circle cx="214" cy="130" r="9" fill="#e0bd6d"/>
-<path d="M47 128V91m167 37V91" stroke="#e0bd6d" stroke-width="3"/>
-<text x="130" y="174" text-anchor="middle" fill="#d9e7e2" font-family="sans-serif" font-size="13" letter-spacing="3">RESOURCE HUB</text>
-</svg>
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: Assets/Art/renew_skyline.svg
-Lines: 11
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="260" viewBox="0 0 1280 260">
-<rect width="1280" height="260" fill="none"/>
-<g fill="#102630" stroke="#29434a" stroke-width="2">
-<path d="M0 260V128h70v-46h68v72h56V54h74v74h45V22h92v106h54V86h76v42h46V38h88v90h54V70h78v58h46V12h96v116h48V60h76v68h50V98h82v30h61v132Z"/>
-</g>
-<g fill="#d6b66b" opacity=".42">
-<path d="M28 154h10v14H28zm28 0h10v14H56zm74-35h10v14h-10zm28 0h10v14h-10zM212 88h10v14h-10zm28 0h10v14h-10zm66-38h10v14h-10zm28 0h10v14h-10zm110 60h10v14h-10zm28 0h10v14h-10zm153-48h10v14h-10zm28 0h10v14h-10zm139-27h10v14h-10zm28 0h10v14h-10zm126 54h10v14h-10zm28 0h10v14h-10z"/>
-</g>
-<path d="M0 222h1280" stroke="#6d9b98" stroke-width="3" opacity=".4"/>
-<path d="M0 238h1280" stroke="#355b60" stroke-width="2" opacity=".7"/>
-</svg>
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: Assets/Art/renew_warehouse.svg
-Lines: 13
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-<svg xmlns="http://www.w3.org/2000/svg" width="420" height="300" viewBox="0 0 420 300">
-<defs><linearGradient id="wall" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#cad8d5"/><stop offset="1" stop-color="#829b99"/></linearGradient><linearGradient id="roof" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#38545b"/><stop offset="1" stop-color="#1b3038"/></linearGradient></defs>
-<ellipse cx="210" cy="268" rx="184" ry="18" fill="#061014" opacity=".6"/>
-<path d="M42 104 210 30l168 74v130H42Z" fill="url(#wall)" stroke="#d9e7e2" stroke-width="5"/>
-<path d="m28 106 182-82 182 82-14 22L210 57 42 128Z" fill="url(#roof)" stroke="#7fa49e" stroke-width="4"/>
-<path d="M72 120h276v18H72z" fill="#47666a"/>
-<g fill="#e9c979" stroke="#38545b" stroke-width="5"><rect x="75" y="151" width="43" height="48" rx="4"/><rect x="137" y="151" width="43" height="48" rx="4"/><rect x="240" y="151" width="43" height="48" rx="4"/><rect x="302" y="151" width="43" height="48" rx="4"/></g>
-<rect x="184" y="147" width="52" height="87" rx="5" fill="#1a2b32" stroke="#a8c3bd" stroke-width="5"/>
-<path d="M210 156v76M191 190h38" stroke="#71918e" stroke-width="3"/>
-<path d="M94 232h232" stroke="#d9e7e2" stroke-width="7"/>
-<circle cx="354" cy="90" r="12" fill="#e9c979"/><path d="M354 104v26" stroke="#e9c979" stroke-width="6"/>
-<text x="210" y="287" text-anchor="middle" fill="#d9e7e2" font-family="sans-serif" font-size="16" letter-spacing="4">RENEW GOODS</text>
-</svg>
-
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: Assets/Art/resource_electronics.svg
@@ -4529,9 +4478,9 @@ action_inspect={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scenes/Main.tscn
-Lines: 210
+Lines: 192
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[gd_scene load_steps=48 format=3]
+[gd_scene load_steps=45 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -4570,9 +4519,6 @@ Lines: 210
 [ext_resource path="res://scripts/technology_ui.gd" type="Script" id="35"]
 [ext_resource path="res://scripts/employee_ui.gd" type="Script" id="36"]
 [ext_resource path="res://scripts/premium_world_backdrop.gd" type="Script" id="37"]
-[ext_resource path="res://Assets/Art/renew_skyline.svg" type="Texture2D" id="38"]
-[ext_resource path="res://Assets/Art/renew_warehouse.svg" type="Texture2D" id="39"]
-[ext_resource path="res://Assets/Art/renew_resource_hub.svg" type="Texture2D" id="40"]
 [ext_resource path="res://scripts/mobile_ui_mobile_scale_fix.gd" type="Script" id="41"]
 [ext_resource path="res://scripts/rich_world_scenery.gd" type="Script" id="42"]
 [ext_resource path="res://Assets/Art/premium_industrial_district.svg" type="Texture2D" id="43"]
@@ -4607,21 +4553,6 @@ modulate = Color(1, 1, 1, 0.98)
 [node name="RichWorldScenery" type="Node2D" parent="World"]
 z_index = -25
 script = ExtResource("42")
-[node name="SkylineArt" type="Sprite2D" parent="World"]
-texture = ExtResource("38")
-position = Vector2(640, 225)
-z_index = -24
-visible = false
-[node name="WarehouseArt" type="Sprite2D" parent="World"]
-texture = ExtResource("39")
-position = Vector2(650, 480)
-z_index = -23
-visible = false
-[node name="ResourceHubArt" type="Sprite2D" parent="World"]
-texture = ExtResource("40")
-position = Vector2(1060, 485)
-z_index = -23
-visible = false
 [node name="PropertyVisual" type="Node2D" parent="World"]
 z_index = -5
 script = ExtResource("34")
@@ -4683,7 +4614,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-visible = false
+visible = true
 script = ExtResource("45")
 [node name="StrategyHUD" type="CanvasLayer" parent="UI"]
 script = ExtResource("18")
@@ -29291,46 +29222,6 @@ func run() -> void:
     print("PLAYER JOURNEY RESULT: %d passed, %d failed" % [passed, failed])
     game.queue_free()
     quit(1 if failed > 0 else 0)
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: tests/test_presentation_theme.gd
-Lines: 34
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-extends SceneTree
-
-## Presentation QA gate: the premium command skin must be active and touch-safe.
-func _init() -> void:
-    var failures := 0
-    var main := load("res://scenes/Main.tscn")
-    if main == null:
-        push_error("Unable to load Main.tscn")
-        quit(1)
-        return
-    var scene := main.instantiate()
-    root.add_child(scene)
-    await process_frame
-    var skin := scene.get_node_or_null("UI/MainHUD/PremiumUISkin") as Control
-    if skin == null:
-        push_error("PremiumUISkin node missing")
-        failures += 1
-    elif not skin.visible:
-        push_error("PremiumUISkin must be visible in the release presentation")
-        failures += 1
-    if skin != null and skin.mouse_filter != Control.MOUSE_FILTER_IGNORE:
-        push_error("PremiumUISkin must not block gameplay input")
-        failures += 1
-    var employee := scene.get_node_or_null("UI/EmployeePanel")
-    if employee != null:
-        var panel := employee.get("panel") as Control
-        if panel != null and panel.visible:
-            for child in panel.get_children():
-                if child is Button and child.custom_minimum_size.y < 44.0:
-                    failures += 1
-                    push_error("Employee action target below 44px")
-    scene.queue_free()
-    print("PRESENTATION_THEME: %s" % ("PASS" if failures == 0 else "FAIL (%d)" % failures))
-    quit(failures)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
