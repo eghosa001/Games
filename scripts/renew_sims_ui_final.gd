@@ -155,11 +155,30 @@ func _action_hint(text: String) -> String:
         _:
             return "Execute %s." % text.to_lower()
 
+func _tab_subtitle() -> String:
+    match active_tab:
+        0: return "Manage property, restoration and your first operating site."
+        1: return "Run production, staffing, pricing, contracts and finance."
+        2: return "Manage rivals, alliances, investment, shares and corporate power."
+        3: return "Expand regions, infrastructure, logistics, technology and world activity."
+        _: return "Choose an action."
+
+func _mobile_context() -> String:
+    if parent == null:
+        return "PROPERTY • INITIALIZING"
+    var ownership := "OWNED" if bool(parent.owned) else "AVAILABLE"
+    var business := "OPEN" if bool(parent.business_open) else "CLOSED"
+    return "PROPERTY %s • %d%% RESTORED • BUSINESS %s" % [ownership, int(parent.restoration), business]
+
 func _process(delta: float) -> void:
     super._process(delta)
     if parent == null:
         return
+    if action_subtitle != null:
+        action_subtitle.text = _tab_subtitle()
     if selected_title != null:
         selected_title.text = _selected_title()
     if selected_meta != null:
         selected_meta.text = _selected_meta()
+    if narrow and status_label != null:
+        status_label.text = _mobile_context()
