@@ -16,7 +16,9 @@ const MUTED := Color("6f858a")
 var _time := 0.0
 
 func _ready() -> void:
-    z_index = -15
+    # Must sit below PremiumWorldBackdrop (-30) and both SVG scenes (-28/-27)
+    # so the authored premium city remains visible. Never move above -31.
+    z_index = -40
     queue_redraw()
 
 func _process(delta: float) -> void:

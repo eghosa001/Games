@@ -161,22 +161,3 @@ func _draw_certification_mark(card: Rect2) -> void:
     draw_circle(center, 6.0, PANEL)
     draw_line(center + Vector2(-3, 0), center + Vector2(-1, 3), GOLD, 1.5)
     draw_line(center + Vector2(-1, 3), center + Vector2(4, -3), GOLD, 1.5)
-
-func _business_purposes() -> Array:
-    var state = get_node_or_null("/root/RenewGameState")
-    if state == null:
-        return []
-    var type := ""
-    var catalog = state.get_value("properties", "catalog", [])
-    if catalog is Array and not catalog.is_empty():
-        var index := clampi(int(state.get_value("properties", "selected_property", 0)), 0, catalog.size() - 1)
-        type = str(catalog[index].get("type", ""))
-    var options := {
-        "Warehouse": ["Furniture Factory", "Distribution Center", "Wholesale Hub"],
-        "Workshop": ["Furniture Factory", "Metalworks", "Construction Workshop"],
-        "Commercial Building": ["Retail Store", "Service Office", "Showroom"]
-    }
-    var result: Array = []
-    for name in options.get(type, []):
-        result.append({"name": name})
-    return result
