@@ -185,15 +185,13 @@ func _request_new() -> void:
 
 func _confirm_new() -> void:
     if parent == null or not parent.has_method("found_new_company"): return
-    var result = parent.found_new_company()
+    parent.found_new_company()
     confirm_new = false
-    if result is Dictionary and not bool(result.get("ok", false)):
-        status.text = str(result.get("message", "A new dynasty could not be started."))
-    elif result is Dictionary:
-        status.text = "NEW DYNASTY STARTED — legacy bonuses applied."
-    else:
-        status.text = "NEW DYNASTY STARTED."
+    var result_message := str(parent.get("message"))
     _refresh()
+    if result_message.is_empty():
+        result_message = "NEW DYNASTY COMMAND COMPLETED."
+    status.text = result_message
 
 func _cancel_new() -> void:
     confirm_new = false
