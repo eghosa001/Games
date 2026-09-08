@@ -27,7 +27,9 @@ func _process(delta: float) -> void:
     pulse += delta
     if size != viewport_size:
         viewport_size = size
-        queue_redraw()
+    # The command-deck status dots are animated from `pulse`; redraw every frame
+    # so that animation is actually visible rather than only updating on resize.
+    queue_redraw()
 
 func _install() -> void:
     var main_hud := get_node_or_null("/root/Ren/UI/MainHUD")
