@@ -1,7 +1,9 @@
 extends Node
 
-## Small persistent entry point for the World Command surface.
+## Persistent entry points for the World Command and Business Operations surfaces.
+const BUSINESS_UI := preload("res://scripts/business_operations_ui.gd")
 var button: Button
+var operations_button: Button
 var hud: CanvasLayer
 
 func _ready() -> void:
@@ -10,32 +12,53 @@ func _ready() -> void:
 
 func _build() -> void:
     if hud == null: return
-    button = Button.new()
-    button.name = "RegionsLauncher"
-    button.text = "REGIONS"
-    button.custom_minimum_size = Vector2(92, 44)
-    button.focus_mode = Control.FOCUS_NONE
-    button.add_theme_font_size_override("font_size", 10)
-    button.add_theme_color_override("font_color", Color("edf6f3"))
-    button.add_theme_stylebox_override("normal", _style(Color("102a31"), Color("31565d"), 9))
-    button.add_theme_stylebox_override("hover", _style(Color("1b3b40"), Color("d8b76d"), 9))
-    button.add_theme_stylebox_override("pressed", _style(Color("18363a"), Color("d8b76d"), 9))
+    button = _make_button("REGIONS")
+    button.name = "RegionsLauncherButton"
+    operations_button = _make_button("OPS")
+    operations_button.name = "BusinessOperationsLauncherButton"
     hud.add_child(button)
-    button.pressed.connect(_open)
+    hud.add_child(operations_button)
+    button.pressed.connect(_open_regions)
+    operations_button.pressed.connect(_open_operations)
+    var ui_root := hud.get_parent()
+    if ui_root != null and ui_root.get_node_or_null("BusinessOperationsPanel") == null:
+        var panel := BUSINESS_UI.new()
+        panel.name = "BusinessOperationsPanel"
+        ui_root.add_child(panel)
     _layout()
     get_viewport().size_changed.connect(_layout)
 
+func _make_button(label: String) -> Button:
+    var b := Button.new()
+    b.text = label
+    b.custom_minimum_size = Vector2(92, 44)
+    b.focus_mode = Control.FOCUS_NONE
+    b.add_theme_font_size_override("font_size", 10)
+    b.add_theme_color_override("font_color", Color("edf6f3"))
+    b.add_theme_stylebox_override("normal", _style(Color("102a31"), Color("31565d"), 9))
+    b.add_theme_stylebox_override("hover", _style(Color("1b3b40"), Color("d8b76d"), 9))
+    b.add_theme_stylebox_override("pressed", _style(Color("18363a"), Color("d8b76d"), 9))
+    return b
+
 func _layout() -> void:
-    if button == null: return
+    if button == null or operations_button == null: return
     var size := get_viewport().get_visible_rect().size
     var narrow := size.x < 700.0
-    button.position = Vector2(size.x - 102.0, 64.0 if narrow else 66.0)
+    var y := 64.0 if narrow else 66.0
+    button.position = Vector2(size.x - 102.0, y)
     button.size = Vector2(94.0, 44.0)
+    operations_button.position = Vector2(size.x - 202.0, y)
+    operations_button.size = Vector2(92.0, 44.0)
 
-func _open() -> void:
+func _open_regions() -> void:
     var manager := get_node_or_null("/root/RenewUIScreenManager")
     if manager != null and manager.has_method("show_screen"):
         manager.show_screen("RegionsPanel")
+
+func _open_operations() -> void:
+    var manager := get_node_or_null("/root/RenewUIScreenManager")
+    if manager != null and manager.has_method("show_screen"):
+        manager.show_screen("BusinessOperationsPanel")
 
 func _style(bg: Color, border: Color, radius: int) -> StyleBoxFlat:
     var style := StyleBoxFlat.new()
