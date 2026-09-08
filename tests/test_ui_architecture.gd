@@ -35,27 +35,23 @@ func _run() -> void:
         "PortfolioPanel", "CorporationsPanel", "RegionsPanel", "WorldOpportunitiesPanel",
         "BusinessOperationsPanel", "ProductionControlPanel", "SupplyChainPanel",
         "EmpireExpansionPanel", "EmpireIntelligencePanel", "EmpireProgressionPanel",
-        "EmpireIdentityPanel", "NotificationsCenterPanel", "RenewDiplomacyUI",
-        "CustomerSegmentsUI"
+        "EmpireIdentityPanel", "NotificationsCenterPanel", "SaveLoadPanel",
+        "RenewDiplomacyUI", "CustomerSegmentsUI"
     ]
     for screen_name in expected_screens:
         check("screen node resolves: %s" % screen_name, _find_screen(scene, screen_name) != null)
 
-    # Customer Segments is a scene-owned managed screen. There must be exactly
-    # one instance; main.gd previously created a second runtime copy.
     check("exactly one CustomerSegmentsUI instance exists", _count_named_nodes(scene, "CustomerSegmentsUI") == 1)
+    check("company control panel exposes open handler", scene.get_node_or_null("UI/SaveLoadPanel") != null and scene.get_node("UI/SaveLoadPanel").has_method("open_screen"))
+    check("company control panel exposes save command", scene.get_node_or_null("UI/SaveLoadPanel") != null and scene.get_node("UI/SaveLoadPanel").has_method("_save"))
+    check("company control panel exposes load command", scene.get_node_or_null("UI/SaveLoadPanel") != null and scene.get_node("UI/SaveLoadPanel").has_method("_load"))
 
-    # Screen routing is the contract: exactly one managed screen is rendered
-    # after every explicit open. Exercise every registered panel, including the
-    # newer V1 management surfaces, rather than only the legacy subset.
     for screen_name in expected_screens:
         manager.show_screen(screen_name)
         await process_frame
         check("active screen is %s" % screen_name, manager.get_active_screen_name() == screen_name)
         check("only one managed screen visible after %s" % screen_name, _visible_screen_count(manager) == 1)
 
-    # Legacy MarketPanel is intentionally retained only as a routing alias for
-    # CustomerSegmentsUI so old callers cannot silently break during migration.
     manager.show_screen("MarketPanel")
     await process_frame
     check("legacy MarketPanel alias resolves to CustomerSegmentsUI", manager.get_active_screen_name() == "CustomerSegmentsUI")
@@ -65,15 +61,11 @@ func _run() -> void:
     await process_frame
     check("hide_all_screens clears every managed screen", _visible_screen_count(manager) == 0)
 
-    # The world renderer owns the region controller under World; this path was
-    # previously wrong and silently removed regional artwork from the renderer.
     var world_view := scene.get_node_or_null("World/WorldView")
     var region_controller := scene.get_node_or_null("World/RegionController")
     check("world renderer exists", world_view != null)
     check("world renderer resolves world-owned RegionController", world_view != null and region_controller != null and world_view.get("game") == scene)
 
-    # Validate the highest-risk UI action boundaries that previously bypassed
-    # canonical state or used an invalid parent path.
     var hq := scene.get_node_or_null("UI/HeadquartersPanel")
     check("HQ UI resolves game root", hq != null and hq.get("main") == scene)
     var employee := scene.get_node_or_null("UI/EmployeePanel")
@@ -81,8 +73,6 @@ func _run() -> void:
     if employee != null:
         check("employee UI exposes action handler", employee.has_method("_action"))
 
-    # Save validation must reject incomplete domain payloads instead of writing
-    # a file that can never be restored successfully.
     var save_script: Script = load("res://scripts/save_system.gd")
     check("SaveSystem loads", save_script != null)
     if save_script != null:
