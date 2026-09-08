@@ -9,7 +9,7 @@ var list_scroll: ScrollContainer
 var list: VBoxContainer
 var detail_panel: Panel
 var detail_label: Label
-var action_row: HBoxContainer
+var action_row: GridContainer
 var buy_button: Button
 var upgrade_button: Button
 var transport_button: Button
@@ -89,7 +89,7 @@ func _build_ui() -> void:
     list = VBoxContainer.new(); list.add_theme_constant_override("separation",7); list_scroll.add_child(list)
     detail_panel = Panel.new(); detail_panel.add_theme_stylebox_override("panel",_style(SURFACE_3,BORDER,10)); panel.add_child(detail_panel)
     detail_label = _label("",11,TEXT); detail_panel.add_child(detail_label)
-    action_row = HBoxContainer.new(); action_row.add_theme_constant_override("separation",7); panel.add_child(action_row)
+    action_row = GridContainer.new(); action_row.columns = 3; action_row.add_theme_constant_override("h_separation",7); action_row.add_theme_constant_override("v_separation",7); panel.add_child(action_row)
     buy_button = _button("ACQUIRE",_buy); upgrade_button = _button("UPGRADE",_upgrade); transport_button = _button("TRANSPORT",_transport)
     action_row.add_child(buy_button); action_row.add_child(upgrade_button); action_row.add_child(transport_button)
 
@@ -182,17 +182,17 @@ func _layout() -> void:
     status_label.position=Vector2(14,39); status_label.size=Vector2(width-28,20); status_label.add_theme_font_size_override("font_size",9 if phone else 10)
     close_button.position=Vector2(width-92,7); close_button.size=Vector2(82,46)
     summary_label.position=Vector2(14,62); summary_label.size=Vector2(width-28,40); summary_label.add_theme_font_size_override("font_size",9 if phone else 11)
-    var action_bottom:=height-6.0
     if phone:
-        # Stack the three primary actions so every touch target remains usable on small phones.
-        transport_button.position=Vector2(12,action_bottom-48); transport_button.size=Vector2(width-24,46)
-        upgrade_button.position=Vector2(12,action_bottom-101); upgrade_button.size=Vector2(width-24,46)
-        buy_button.position=Vector2(12,action_bottom-154); buy_button.size=Vector2(width-24,46)
-        action_row.position=Vector2(0,0); action_row.size=Vector2(width,0)
+        action_row.columns=1
+        action_row.position=Vector2(12,height-164); action_row.size=Vector2(width-24,156)
     else:
+        action_row.columns=3
         action_row.position=Vector2(12,height-54); action_row.size=Vector2(width-24,48)
-        for b in [buy_button,upgrade_button,transport_button]: b.custom_minimum_size=Vector2(0,46)
-    var detail_bottom:=height-(170.0 if phone else 116.0)
-    detail_panel.position=Vector2(12,detail_bottom); detail_panel.size=Vector2(width-24,108 if not phone else 148)
+    for b in [buy_button,upgrade_button,transport_button]:
+        b.custom_minimum_size=Vector2(0,46)
+        b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+        b.add_theme_font_size_override("font_size",9 if phone else 10)
+    var detail_bottom:=height-(174.0 if phone else 116.0)
+    detail_panel.position=Vector2(12,detail_bottom); detail_panel.size=Vector2(width-24,112 if not phone else 148)
     detail_label.position=Vector2(10,8); detail_label.size=Vector2(width-44,detail_panel.size.y-16); detail_label.add_theme_font_size_override("font_size",10 if phone else 11)
     list_scroll.position=Vector2(12,108); list_scroll.size=Vector2(width-24,maxf(90.0,detail_panel.position.y-116.0)); list.custom_minimum_size.x=width-24
