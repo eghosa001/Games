@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 15:49:56 UTC 2026
+// Generated on: Tue Sep  8 15:51:06 UTC 2026
 
-// Source snapshot commit: 807c5c9e3f4f157d5ad1b7886194dd9e13346574
+// Source snapshot commit: f8e27ac1fc63cedc6b3be4ddc38217cfcd486e12
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4478,9 +4478,9 @@ action_inspect={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scenes/Main.tscn
-Lines: 203
+Lines: 207
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[gd_scene load_steps=48 format=3]
+[gd_scene load_steps=49 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -4532,6 +4532,7 @@ Lines: 203
 [ext_resource path="res://scripts/regions_ui.gd" type="Script" id="53"]
 [ext_resource path="res://scripts/regions_launcher.gd" type="Script" id="54"]
 [ext_resource path="res://scripts/world_opportunities_ui.gd" type="Script" id="55"]
+[ext_resource path="res://scripts/production_control_ui.gd" type="Script" id="56"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -4683,6 +4684,9 @@ script = ExtResource("53")
 [node name="WorldOpportunitiesPanel" type="CanvasLayer" parent="UI"]
 layer = 69
 script = ExtResource("55")
+[node name="ProductionControlPanel" type="CanvasLayer" parent="UI"]
+layer = 71
+script = ExtResource("56")
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -25355,7 +25359,7 @@ extends Node
 
 ## Central presentation guard. Primary screens are mutually exclusive; screen
 ## scripts remain responsible for their own content and gameplay integration.
-const SCREEN_NAMES := ["ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel", "InfrastructurePanel", "DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel", "RegionsPanel", "WorldOpportunitiesPanel", "BusinessOperationsPanel"]
+const SCREEN_NAMES := ["ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel", "InfrastructurePanel", "DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel", "RegionsPanel", "WorldOpportunitiesPanel", "BusinessOperationsPanel", "ProductionControlPanel"]
 const ROOT_SCREEN_NAMES := ["RenewDiplomacyUI", "CustomerSegmentsUI"]
 const SCREEN_ALIASES := {"MarketPanel": "CustomerSegmentsUI"}
 var _previous_visible: Dictionary = {}
