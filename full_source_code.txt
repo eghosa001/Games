@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 13:10:18 UTC 2026
+// Generated on: Tue Sep  8 13:12:38 UTC 2026
 
-// Source snapshot commit: c3f7775cbf7cc073e844f9ece4602113407dcd38
+// Source snapshot commit: 52e6d40132179cce0c72fba3541da0a22abe51e3
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4252,7 +4252,7 @@ Lines: 95
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: export_presets.cfg
-Lines: 69
+Lines: 67
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [preset.0]
 
@@ -4273,8 +4273,6 @@ custom_template/debug=""
 custom_template/release=""
 gradle_build/use_gradle_build=false
 gradle_build/target_build_type="debug"
-gradle_build/min_sdk="24"
-gradle_build/target_sdk="35"
 architectures/armeabi-v7a=false
 architectures/arm64-v8a=true
 architectures/x86=false
@@ -4327,7 +4325,7 @@ progressive_web_app/ensure_cross_origin_isolation_headers=false
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: project.godot
-Lines: 137
+Lines: 138
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [application]
 
@@ -4348,7 +4346,6 @@ RenewGameState="*res://scripts/game_state.gd"
 RenewAutosave="*res://scripts/autosave.gd"
 
 RenewFinanceSystem="*res://scripts/finance_system_fixed.gd"
-
 RenewSimulationSystem="*res://scripts/simulation_system.gd"
 RenewUIRegionCoordinator="*res://scripts/ui_region_coordinator.gd"
 
@@ -4457,6 +4454,8 @@ gdscript/warnings/inference_on_variant=1
 renderer/rendering_method="gl_compatibility"
 
 renderer/rendering_method.mobile="gl_compatibility"
+
+textures/vram_compression/import_etc2_astc=true
 
 environment/defaults/default_clear_color=Color(0.03, 0.05, 0.06, 1)
 
