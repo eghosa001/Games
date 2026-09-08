@@ -18,6 +18,7 @@ var accept_button: Button
 var decline_button: Button
 var close_button: Button
 var opened := false
+var _last_active := false
 
 const BG := Color("08141bf5")
 const CARD := Color("10232b")
@@ -115,6 +116,20 @@ func _layout() -> void:
     accept_button.position = Vector2(14, by); accept_button.size = Vector2((pw - 36) * 0.65, 46)
     decline_button.position = Vector2(22 + (pw - 36) * 0.65, by); decline_button.size = Vector2((pw - 36) * 0.35, 46)
     status.position = Vector2(14, ph - 54); status.size = Vector2(pw - 28, 42)
+
+func _process(_delta: float) -> void:
+    if missions == null and game != null:
+        missions = game.get_node_or_null("World/WorldMissions")
+    if missions == null:
+        return
+    var active := bool(missions.active)
+    if active and not _last_active and not opened:
+        var manager := get_node_or_null("/root/RenewUIScreenManager")
+        if manager != null and manager.has_method("show_screen"):
+            manager.show_screen("WorldOpportunitiesPanel")
+        else:
+            open_screen()
+    _last_active = active
 
 func open_screen() -> void:
     opened = true; visible = true
