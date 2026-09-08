@@ -8,6 +8,7 @@ const TEXT := Color("e7f2ef")
 const MUTED := Color("78949a")
 const ACCENT := Color("d5b56e")
 const STATUS_GREEN := Color("5fe08a")
+const STATUS_WARN := Color("ffad8f")
 const SCRIM := Color(0.02, 0.08, 0.10, 0.72)
 var dimmer: ColorRect
 var panel: Panel
@@ -15,21 +16,23 @@ var title_label: Label
 var status_label: Label
 var close_button: Button
 var summary_label: Label
+var feedback_label: Label
 var scroll: ScrollContainer
 var list: VBoxContainer
 var refresh_clock := 0.0
 var last_signature := ""
+var feedback := ""
 
 func _ready() -> void:
     layer = 100
-    _build_ui(); _layout(); _refresh()
+    _build_ui(); _layout(); _refresh(true)
     if not get_viewport().size_changed.is_connected(_layout): get_viewport().size_changed.connect(_layout)
 
 func _process(delta: float) -> void:
     if panel == null or not panel.visible: return
     refresh_clock += delta
     if refresh_clock >= 1.0:
-        refresh_clock = 0.0; _refresh()
+        refresh_clock = 0.0; _refresh(false)
 
 func _style(bg: Color, border: Color = BORDER, radius := 12) -> StyleBoxFlat:
     var s := StyleBoxFlat.new(); s.bg_color = bg; s.border_color = border; s.set_border_width_all(1); s.set_corner_radius_all(radius); return s
@@ -41,19 +44,21 @@ func _build_ui() -> void:
     status_label = Label.new(); status_label.text = "RESEARCH PROGRAM"; status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT; status_label.add_theme_font_size_override("font_size", 10); status_label.add_theme_color_override("font_color", ACCENT); panel.add_child(status_label)
     close_button = Button.new(); close_button.text = "CLOSE"; close_button.custom_minimum_size = Vector2(80, 46); close_button.focus_mode = Control.FOCUS_NONE; close_button.pressed.connect(_close); panel.add_child(close_button)
     summary_label = Label.new(); summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; summary_label.add_theme_font_size_override("font_size", 11); summary_label.add_theme_color_override("font_color", MUTED); panel.add_child(summary_label)
+    feedback_label = Label.new(); feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; feedback_label.add_theme_font_size_override("font_size", 10); feedback_label.add_theme_color_override("font_color", STATUS_GREEN); panel.add_child(feedback_label)
     scroll = ScrollContainer.new(); scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; panel.add_child(scroll)
     list = VBoxContainer.new(); list.add_theme_constant_override("separation", 8); scroll.add_child(list)
 
-func _refresh() -> void:
+func _refresh(force: bool = false) -> void:
     var state := get_node_or_null("/root/RenewGameState"); var tech := get_node_or_null("/root/RenewTechnologySystem")
     if panel == null or state == null or tech == null: return
     var rp := int(state.get_value("technology", "research_points", 20)); var cash := int(state.get_value("economy", "cash", 25000))
     summary_label.text = "RESEARCH %d RP   •   CASH $%s\nResearch costs, prerequisites and timing are validated by the technology system." % [rp, _money(cash)]
-    var signature := "%d:%d" % [rp, cash]
+    feedback_label.text = feedback
+    var signature := "%d:%d:%s" % [rp, cash, feedback]
     for item in tech.get_technologies():
         var id := str(item.id); var researched := bool(tech.is_unlocked(id)); var can: Dictionary = tech.can_research(id)
         signature += ":" + id + ("=R" if researched else ("=Y" if bool(can.get("ok", false)) else "=L")) + ":" + str(can.get("reason", ""))
-    if signature == last_signature: return
+    if signature == last_signature and not force: return
     last_signature = signature
     var scroll_value := scroll.scroll_vertical
     for child in list.get_children(): child.queue_free()
@@ -79,8 +84,12 @@ func _add_technology_card(item, tech, cash: int, rp: int) -> void:
 
 func _research(id: String) -> void:
     var main := get_tree().current_scene
-    if main != null and main.has_method("research_technology"): main.research_technology(id)
-    last_signature = ""; _refresh()
+    if main != null and main.has_method("research_technology"):
+        main.research_technology(id)
+        feedback = str(main.get("message")) if "message" in main else "Research command submitted."
+    else:
+        feedback = "Technology service is unavailable."
+    last_signature = ""; _refresh(true)
 
 func _close() -> void:
     var manager := get_node_or_null("/root/RenewUIScreenManager")
@@ -106,7 +115,8 @@ func _layout() -> void:
     status_label.position = Vector2(w - 198.0, 14); status_label.size = Vector2(110.0, 20); status_label.add_theme_font_size_override("font_size", 9 if phone else 10)
     close_button.position = Vector2(w - 84.0, 7); close_button.size = Vector2(70.0, 46); close_button.add_theme_font_size_override("font_size", 10)
     summary_label.position = Vector2(14, 48); summary_label.size = Vector2(w - 28.0, 48); summary_label.add_theme_font_size_override("font_size", 10 if phone else 11)
-    scroll.position = Vector2(12, 100); scroll.size = Vector2(w - 24.0, maxf(160.0, panel.size.y - 112.0)); list.custom_minimum_size.x = maxf(1.0, w - 24.0)
+    feedback_label.position = Vector2(14, 96); feedback_label.size = Vector2(w - 28.0, 34); feedback_label.add_theme_font_size_override("font_size", 9 if phone else 10)
+    scroll.position = Vector2(12, 136); scroll.size = Vector2(w - 24.0, maxf(160.0, panel.size.y - 148.0)); list.custom_minimum_size.x = maxf(1.0, w - 24.0)
     for card in list.get_children():
         if not card is Panel: continue
         var name := card.get_child(0) as Label; var meta := card.get_child(1) as Label; var button := card.get_child(2) as Button
