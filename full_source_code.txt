@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 15:52:39 UTC 2026
+// Generated on: Tue Sep  8 15:53:27 UTC 2026
 
-// Source snapshot commit: 0bb000d565d813f3f538dbae8e7a1a6ecd9858f2
+// Source snapshot commit: 7eddf583c45ae1a22d24515d27052f0f4be933a6
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4478,9 +4478,9 @@ action_inspect={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scenes/Main.tscn
-Lines: 207
+Lines: 204
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[gd_scene load_steps=49 format=3]
+[gd_scene load_steps=50 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -4533,160 +4533,157 @@ Lines: 207
 [ext_resource path="res://scripts/regions_launcher.gd" type="Script" id="54"]
 [ext_resource path="res://scripts/world_opportunities_ui.gd" type="Script" id="55"]
 [ext_resource path="res://scripts/production_control_ui.gd" type="Script" id="56"]
+[ext_resource path="res://scripts/supply_chain_ui.gd" type="Script" id="57"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
-
 [node name="World" type="Node2D" parent="."]
 [node name="PremiumWorldBackdrop" type="Node2D" parent="World"]
-z_index = -30
-script = ExtResource("37")
+z_index=-30
+script=ExtResource("37")
 [node name="PremiumIndustrialScene" type="Sprite2D" parent="World"]
-texture = ExtResource("43")
-position = Vector2(640, 360)
-scale = Vector2(0.8, 0.8)
-z_index = -28
-modulate = Color(1, 1, 1, 0.98)
+texture=ExtResource("43")
+position=Vector2(640,360)
+scale=Vector2(0.8,0.8)
+z_index=-28
 [node name="PremiumRestorationScene" type="Sprite2D" parent="World"]
-texture = ExtResource("44")
-position = Vector2(640, 400)
-scale = Vector2(0.914, 0.9)
-z_index = -27
-visible = true
-modulate = Color(1, 1, 1, 0.98)
+texture=ExtResource("44")
+position=Vector2(640,400)
+scale=Vector2(0.914,0.9)
+z_index=-27
 [node name="RichWorldScenery" type="Node2D" parent="World"]
-z_index = -25
-script = ExtResource("42")
+z_index=-25
+script=ExtResource("42")
 [node name="PropertyVisual" type="Node2D" parent="World"]
-z_index = -5
-script = ExtResource("34")
+z_index=-5
+script=ExtResource("34")
 [node name="WorldView" type="Node2D" parent="World"]
-z_index = -6
-script = ExtResource("11")
+z_index=-6
+script=ExtResource("11")
 [node name="PropertyMap" type="Node2D" parent="World"]
-z_index = -4
-script = ExtResource("52")
+z_index=-4
+script=ExtResource("52")
 [node name="EmpireController" type="Node2D" parent="World"]
-script = ExtResource("2")
+script=ExtResource("2")
 [node name="Corporate" type="Node2D" parent="World"]
-script = ExtResource("3")
+script=ExtResource("3")
 [node name="WorldMissions" type="Node2D" parent="World"]
-script = ExtResource("4")
+script=ExtResource("4")
 [node name="RegionController" type="Node2D" parent="World"]
-script = ExtResource("5")
+script=ExtResource("5")
 [node name="BranchController" type="Node2D" parent="World"]
-script = ExtResource("6")
+script=ExtResource("6")
 [node name="RivalSupplyController" type="Node2D" parent="World"]
-script = ExtResource("9")
+script=ExtResource("9")
 [node name="SupplyChainController" type="Node2D" parent="World"]
-script = ExtResource("10")
-
+script=ExtResource("10")
 [node name="Systems" type="Node" parent="."]
 [node name="ScarcitySystem" type="Node" parent="Systems"]
-script = ExtResource("22")
+script=ExtResource("22")
 [node name="GameBalance" type="Node" parent="Systems"]
-script = ExtResource("12")
+script=ExtResource("12")
 [node name="RestorationStrategy" type="Node" parent="Systems"]
-script = ExtResource("15")
+script=ExtResource("15")
 [node name="Progression" type="Node" parent="Systems"]
-script = ExtResource("14")
+script=ExtResource("14")
 [node name="MarketDirector" type="Node" parent="Systems"]
-script = ExtResource("16")
+script=ExtResource("16")
 [node name="EmpireGoals" type="Node" parent="Systems"]
-script = ExtResource("17")
+script=ExtResource("17")
 [node name="FinanceSystem" type="Node" parent="Systems"]
-script = ExtResource("26")
+script=ExtResource("26")
 [node name="OwnershipSystem" type="Node" parent="Systems"]
-script = ExtResource("24")
+script=ExtResource("24")
 [node name="AcquisitionSystem" type="Node" parent="Systems"]
-script = ExtResource("25")
+script=ExtResource("25")
 [node name="BankruptcySystem" type="Node" parent="Systems"]
-script = ExtResource("27")
-
+script=ExtResource("27")
 [node name="UI" type="CanvasLayer" parent="."]
-layer = 20
+layer=20
 [node name="MainHUD" type="CanvasLayer" parent="UI"]
-script = ExtResource("7")
-layer = 20
+script=ExtResource("7")
+layer=20
 [node name="MobileScaleFix" type="Node" parent="UI/MainHUD"]
-script = ExtResource("41")
+script=ExtResource("41")
 [node name="RegionsLauncher" type="Node" parent="UI/MainHUD"]
-script = ExtResource("54")
+script=ExtResource("54")
 [node name="PremiumUISkin" type="Control" parent="UI/MainHUD"]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-visible = true
-script = ExtResource("45")
+layout_mode=3
+anchors_preset=15
+anchor_right=1.0
+anchor_bottom=1.0
+grow_horizontal=2
+grow_vertical=2
+mouse_filter=2
+script=ExtResource("45")
 [node name="StrategyHUD" type="CanvasLayer" parent="UI"]
-script = ExtResource("18")
-layer = 25
+script=ExtResource("18")
+layer=25
 [node name="TutorialOverlay" type="CanvasLayer" parent="UI"]
-script = ExtResource("13")
-layer = 30
+script=ExtResource("13")
+layer=30
 [node name="V1Celebration" type="CanvasLayer" parent="UI"]
-script = ExtResource("19")
-layer = 35
+script=ExtResource("19")
+layer=35
 [node name="TechnologyPanel" type="CanvasLayer" parent="UI"]
-layer = 59
-script = ExtResource("35")
+layer=59
+script=ExtResource("35")
 [node name="HistoryPanel" type="CanvasLayer" parent="UI"]
-script = ExtResource("20")
-layer = 60
+script=ExtResource("20")
+layer=60
 [node name="NewsPanel" type="CanvasLayer" parent="UI"]
-script = ExtResource("21")
-layer = 70
+script=ExtResource("21")
+layer=70
 [node name="AlliancePanel" type="CanvasLayer" parent="UI"]
-script = ExtResource("28")
-layer = 55
+script=ExtResource("28")
+layer=55
 [node name="HeadquartersPanel" type="CanvasLayer" parent="UI"]
-script = ExtResource("29")
-layer = 58
+script=ExtResource("29")
+layer=58
 [node name="CollectionPanel" type="CanvasLayer" parent="UI"]
-script = ExtResource("30")
-layer = 61
+script=ExtResource("30")
+layer=61
 [node name="LiveOpsPanel" type="CanvasLayer" parent="UI"]
-script = ExtResource("31")
-layer = 62
+script=ExtResource("31")
+layer=62
 [node name="CustomerSegmentsUI" type="CanvasLayer" parent="UI"]
-script = ExtResource("32")
-layer = 56
+script=ExtResource("32")
+layer=56
 [node name="RenewDiplomacyUI" type="CanvasLayer" parent="UI"]
-script = ExtResource("46")
-layer = 64
+script=ExtResource("46")
+layer=64
 [node name="InfrastructurePanel" type="Control" parent="UI"]
-script = ExtResource("47")
+script=ExtResource("47")
 [node name="ContractPanel" type="CanvasLayer" parent="UI"]
-script = ExtResource("33")
-layer = 57
+script=ExtResource("33")
+layer=57
 [node name="EmployeePanel" type="CanvasLayer" parent="UI"]
-script = ExtResource("36")
-layer = 75
+script=ExtResource("36")
+layer=75
 [node name="DashboardPanel" type="CanvasLayer" parent="UI"]
-script = ExtResource("48")
-layer = 63
+script=ExtResource("48")
+layer=63
 [node name="FinancePanel" type="CanvasLayer" parent="UI"]
-script = ExtResource("49")
-layer = 65
+script=ExtResource("49")
+layer=65
 [node name="PortfolioPanel" type="CanvasLayer" parent="UI"]
-script = ExtResource("50")
-layer = 66
+script=ExtResource("50")
+layer=66
 [node name="CorporationsPanel" type="CanvasLayer" parent="UI"]
-script = ExtResource("51")
-layer = 67
+script=ExtResource("51")
+layer=67
 [node name="RegionsPanel" type="CanvasLayer" parent="UI"]
-layer = 68
-script = ExtResource("53")
+layer=68
+script=ExtResource("53")
 [node name="WorldOpportunitiesPanel" type="CanvasLayer" parent="UI"]
-layer = 69
-script = ExtResource("55")
+layer=69
+script=ExtResource("55")
 [node name="ProductionControlPanel" type="CanvasLayer" parent="UI"]
-layer = 71
-script = ExtResource("56")
+layer=71
+script=ExtResource("56")
+[node name="SupplyChainPanel" type="CanvasLayer" parent="UI"]
+layer=72
+script=ExtResource("57")
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -21720,15 +21717,16 @@ func _money(value:int)->String: return str(value)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/regions_launcher.gd
-Lines: 77
+Lines: 59
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 
-## Persistent entry points for the World Command, Business Operations and Production surfaces.
+## Persistent entry points for World Command, Business Operations, Production and Supply Chain.
 const BUSINESS_UI := preload("res://scripts/business_operations_ui.gd")
 var button: Button
 var operations_button: Button
 var production_button: Button
+var supply_button: Button
 var hud: CanvasLayer
 
 func _ready() -> void:
@@ -21738,67 +21736,48 @@ func _ready() -> void:
 func _build() -> void:
     if hud == null: return
     button = _make_button("REGIONS")
-    button.name = "RegionsLauncherButton"
     operations_button = _make_button("OPS")
-    operations_button.name = "BusinessOperationsLauncherButton"
     production_button = _make_button("PROD")
+    supply_button = _make_button("SUPPLY")
+    button.name = "RegionsLauncherButton"
+    operations_button.name = "BusinessOperationsLauncherButton"
     production_button.name = "ProductionControlLauncherButton"
-    hud.add_child(button)
-    hud.add_child(operations_button)
-    hud.add_child(production_button)
+    supply_button.name = "SupplyChainLauncherButton"
+    hud.add_child(button); hud.add_child(operations_button); hud.add_child(production_button); hud.add_child(supply_button)
     button.pressed.connect(_open_regions)
     operations_button.pressed.connect(_open_operations)
     production_button.pressed.connect(_open_production)
+    supply_button.pressed.connect(_open_supply)
     var ui_root := hud.get_parent()
     if ui_root != null and ui_root.get_node_or_null("BusinessOperationsPanel") == null:
-        var panel := BUSINESS_UI.new()
-        panel.name = "BusinessOperationsPanel"
-        ui_root.add_child(panel)
-    _layout()
-    get_viewport().size_changed.connect(_layout)
+        var panel := BUSINESS_UI.new(); panel.name = "BusinessOperationsPanel"; ui_root.add_child(panel)
+    _layout(); get_viewport().size_changed.connect(_layout)
 
 func _make_button(label: String) -> Button:
-    var b := Button.new()
-    b.text = label
-    b.custom_minimum_size = Vector2(88, 44)
-    b.focus_mode = Control.FOCUS_NONE
-    b.add_theme_font_size_override("font_size", 10)
-    b.add_theme_color_override("font_color", Color("edf6f3"))
-    b.add_theme_stylebox_override("normal", _style(Color("102a31"), Color("31565d"), 9))
-    b.add_theme_stylebox_override("hover", _style(Color("1b3b40"), Color("d8b76d"), 9))
-    b.add_theme_stylebox_override("pressed", _style(Color("18363a"), Color("d8b76d"), 9))
-    return b
+    var b := Button.new(); b.text = label; b.custom_minimum_size = Vector2(76,44); b.focus_mode = Control.FOCUS_NONE
+    b.add_theme_font_size_override("font_size",9); b.add_theme_color_override("font_color",Color("edf6f3"))
+    b.add_theme_stylebox_override("normal",_style(Color("102a31"),Color("31565d"),9)); b.add_theme_stylebox_override("hover",_style(Color("1b3b40"),Color("d8b76d"),9)); b.add_theme_stylebox_override("pressed",_style(Color("18363a"),Color("d8b76d"),9)); return b
 
 func _layout() -> void:
-    if button == null or operations_button == null or production_button == null: return
-    var size := get_viewport().get_visible_rect().size
-    var y := 64.0 if size.x < 700.0 else 66.0
-    button.size = Vector2(88.0, 44.0)
-    operations_button.size = Vector2(76.0, 44.0)
-    production_button.size = Vector2(88.0, 44.0)
-    button.position = Vector2(size.x - 96.0, y)
-    operations_button.position = Vector2(size.x - 178.0, y)
-    production_button.position = Vector2(size.x - 272.0, y)
+    if button == null or operations_button == null or production_button == null or supply_button == null:return
+    var size:=get_viewport().get_visible_rect().size; var y:=64.0 if size.x<700.0 else 66.0
+    var narrow:=size.x<520.0
+    if narrow:
+        button.size=Vector2(76,40); operations_button.size=Vector2(64,40); production_button.size=Vector2(70,40); supply_button.size=Vector2(72,40)
+        button.position=Vector2(size.x-80,y); operations_button.position=Vector2(size.x-148,y); production_button.position=Vector2(size.x-222,y); supply_button.position=Vector2(size.x-298,y)
+    else:
+        button.size=Vector2(82,44); operations_button.size=Vector2(70,44); production_button.size=Vector2(80,44); supply_button.size=Vector2(84,44)
+        button.position=Vector2(size.x-90,y); operations_button.position=Vector2(size.x-166,y); production_button.position=Vector2(size.x-252,y); supply_button.position=Vector2(size.x-340,y)
 
-func _open_regions() -> void:
-    var manager := get_node_or_null("/root/RenewUIScreenManager")
-    if manager != null and manager.has_method("show_screen"): manager.show_screen("RegionsPanel")
-
-func _open_operations() -> void:
-    var manager := get_node_or_null("/root/RenewUIScreenManager")
-    if manager != null and manager.has_method("show_screen"): manager.show_screen("BusinessOperationsPanel")
-
-func _open_production() -> void:
-    var manager := get_node_or_null("/root/RenewUIScreenManager")
-    if manager != null and manager.has_method("show_screen"): manager.show_screen("ProductionControlPanel")
-
-func _style(bg: Color, border: Color, radius: int) -> StyleBoxFlat:
-    var style := StyleBoxFlat.new()
-    style.bg_color = bg
-    style.border_color = border
-    style.set_border_width_all(1)
-    style.set_corner_radius_all(radius)
-    return style
+func _open_regions(): _show("RegionsPanel")
+func _open_operations(): _show("BusinessOperationsPanel")
+func _open_production(): _show("ProductionControlPanel")
+func _open_supply(): _show("SupplyChainPanel")
+func _show(name:String):
+    var manager:=get_node_or_null("/root/RenewUIScreenManager")
+    if manager!=null and manager.has_method("show_screen"):manager.show_screen(name)
+func _style(bg:Color,border:Color,radius:int)->StyleBoxFlat:
+    var style:=StyleBoxFlat.new();style.bg_color=bg;style.border_color=border;style.set_border_width_all(1);style.set_corner_radius_all(radius);return style
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
