@@ -3,9 +3,13 @@ class_name RenewEmployeeUI
 
 # Employee presentation reads canonical GameState and delegates mutations to
 # EmployeeCommandSystem through GameplayCommandSystem, including training costs.
+const PORTRAIT_SHEET := "res://Assets/Art/employee_portraits.svg"
+const PORTRAIT_SIZE := Vector2(128, 128)
 var panel: Panel
 var employee_list: VBoxContainer
 var detail_label: Label
+var detail_row: HBoxContainer
+var portrait: TextureRect
 var selected_id: Variant = ""
 var _refresh_clock: Variant = 0.0
 var _list_scroll: ScrollContainer
@@ -34,7 +38,6 @@ func _build_ui() -> void:
     panel.name = "EmployeesPanel"
     panel.visible = false
     add_child(panel)
-
     var margin := MarginContainer.new()
     margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     margin.add_theme_constant_override("margin_left", 14)
@@ -42,22 +45,18 @@ func _build_ui() -> void:
     margin.add_theme_constant_override("margin_top", 12)
     margin.add_theme_constant_override("margin_bottom", 12)
     panel.add_child(margin)
-
     var root := VBoxContainer.new()
     root.add_theme_constant_override("separation", 8)
     margin.add_child(root)
-
     var title := Label.new()
     title.text = "EMPLOYEES"
     title.add_theme_font_size_override("font_size", 24)
     root.add_child(title)
-
     var hint := Label.new()
     hint.text = "Select a person to view their career and manage assignments."
     hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     hint.add_theme_color_override("font_color", Color("78949a"))
     root.add_child(hint)
-
     _list_scroll = ScrollContainer.new()
     _list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     _list_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
@@ -66,17 +65,26 @@ func _build_ui() -> void:
     employee_list = VBoxContainer.new()
     employee_list.add_theme_constant_override("separation", 6)
     _list_scroll.add_child(employee_list)
-
     _detail_scroll = ScrollContainer.new()
     _detail_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     _detail_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-    _detail_scroll.custom_minimum_size.y = 108
+    _detail_scroll.custom_minimum_size.y = 112
     root.add_child(_detail_scroll)
+    detail_row = HBoxContainer.new()
+    detail_row.add_theme_constant_override("separation", 10)
+    _detail_scroll.add_child(detail_row)
+    portrait = TextureRect.new()
+    portrait.name = "EmployeePortrait"
+    portrait.custom_minimum_size = Vector2(76, 76)
+    portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+    detail_row.add_child(portrait)
     detail_label = Label.new()
     detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    _detail_scroll.add_child(detail_label)
-
+    detail_row.add_child(detail_label)
     _actions = GridContainer.new()
     _actions.columns = 2
     _actions.add_theme_constant_override("h_separation", 6)
@@ -122,7 +130,7 @@ func _layout_responsive() -> void:
         panel.size = Vector2(maxf(280.0, size.x - 16.0), maxf(420.0, size.y - 84.0))
         _list_scroll.custom_minimum_size.y = 150
         _list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-        _detail_scroll.custom_minimum_size.y = 112
+        _detail_scroll.custom_minimum_size.y = 118
         _actions.columns = 2
     else:
         panel.position = Vector2(12, 70)
@@ -168,11 +176,24 @@ func _update_details(roster: Array) -> void:
     var employee: Dictionary = _find_employee(roster, selected_id)
     if employee.is_empty():
         detail_label.text = "No employee selected."
+        portrait.texture = null
         return
+    _set_portrait(str(employee.get("id", selected_id)))
     var productivity: Variant = int(round(float(employee.get("productivity", 0.0)) * 100.0))
     var seat := str(employee.get("executive_seat", ""))
     var seat_line := ("C-suite: %s" % seat) if seat != "" else ("Level %d" % int(employee.get("level", 1)))
     detail_label.text = "%s\n%s [%s]\n────────────────\nProductivity %d%%  •  Experience %d\nMorale %d  •  Loyalty %d\nSalary $%d/day\nSpecialization: %s" % [str(employee.get("name", "Employee")), str(employee.get("role", "Worker")), seat_line, productivity, int(employee.get("experience", 0)), int(employee.get("morale", 0)), int(employee.get("loyalty", 0)), int(employee.get("salary", 0)), str(employee.get("specialization", "general")).capitalize()]
+
+func _set_portrait(employee_id: String) -> void:
+    var sheet := load(PORTRAIT_SHEET) as Texture2D
+    if sheet == null:
+        portrait.texture = null
+        return
+    var atlas := AtlasTexture.new()
+    atlas.atlas = sheet
+    var variant := absi(employee_id.hash()) % 5
+    atlas.region = Rect2(float(variant) * PORTRAIT_SIZE.x, 0.0, PORTRAIT_SIZE.x, PORTRAIT_SIZE.y)
+    portrait.texture = atlas
 
 func _select(employee_id: String) -> void:
     selected_id = employee_id

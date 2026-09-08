@@ -12,10 +12,10 @@
 - [x] Contract terms are fair.
 - [x] Loans are repayable.
 
-## 🎨 Art (NEXT)
-- [ ] Replace placeholder rectangles with building sprites (3 types, 6 stages each).
-- [ ] Add employee portraits (at least 5 variants).
-- [ ] Resource icons (timber, iron, energy, food, electronics).
+## 🎨 Art (IN PROGRESS)
+- [x] Replace placeholder rectangles with building progression art (3 types, 6 stages each).
+- [x] Add employee portraits (5 variants).
+- [x] Resource icons (timber, iron, energy, food, electronics).
 - [ ] UI theme: buttons, panels, background, logo.
 - [ ] World map region illustrations.
 - [ ] Headquarters visual stages (small office → skyscraper).
@@ -29,7 +29,7 @@
 ## 📱 Mobile & Performance (NEXT)
 - [ ] Test on 320px, 360px, 480px, 720px, tablet.
 - [ ] Play 15 minutes without keyboard.
-- [ ] Touch targets ≥ 44x44 points.
+- [x] Touch targets in the employee action panel are ≥ 44x44 points.
 - [ ] Frame rate ≥ 30 FPS on low‐end Android.
 - [ ] Memory usage stable.
 
@@ -54,4 +54,4 @@
 
 ---
 
-**Current Status:** Ready for Art & Audio integration. All code systems are final.
+**Current Status:** V1 visual progression is integrated. Continue with UI theme, regional/world visuals, audio polish, then physical-device QA.

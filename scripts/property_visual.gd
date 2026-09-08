@@ -1,11 +1,16 @@
 extends Node2D
 
 ## Premium restoration presentation layer.
-## The authored restoration scene is the visual foundation; this script adds
-## state-driven construction detail, progress, lighting and certification.
-## It owns no gameplay state and never mutates the canonical systems.
+## The authored restoration scene remains the visual foundation while this
+## layer adds state-driven progression art, construction detail and status UI.
 
 const STEPS := ["cleaning", "repair", "painting", "furnishing"]
+const BUILDING_SHEETS := [
+    "res://Assets/Art/building_warehouse_progression.svg",
+    "res://Assets/Art/building_factory_progression.svg",
+    "res://Assets/Art/building_office_progression.svg",
+]
+const FRAME_SIZE := Vector2(256, 144)
 const GOLD := Color("e4bd68")
 const GREEN := Color("67c99a")
 const SKY := Color("7ed0c3")
@@ -14,9 +19,13 @@ const MUTED := Color("a7bdbe")
 const PANEL := Color(0.035, 0.07, 0.08, 0.94)
 
 var _time := 0.0
+var _progression_sprite: Sprite2D
+var _last_stage := ""
+var _last_property_type := ""
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
+    _ensure_progression_sprite()
     queue_redraw()
 
 func _process(delta: float) -> void:
@@ -24,12 +33,20 @@ func _process(delta: float) -> void:
     if fmod(_time, 0.12) < delta:
         queue_redraw()
 
+func _ensure_progression_sprite() -> void:
+    if _progression_sprite != null:
+        return
+    _progression_sprite = Sprite2D.new()
+    _progression_sprite.name = "BuildingProgressionArt"
+    _progression_sprite.z_index = -27
+    _progression_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+    _progression_sprite.modulate = Color(1, 1, 1, 0.72)
+    _progression_sprite.visible = false
+    add_child(_progression_sprite)
+
 func _draw() -> void:
     var state = get_node_or_null("/root/RenewGameState")
     var scene_art := get_node_or_null("../PremiumRestorationScene")
-    # The restoration property is part of the initial playable world, not a
-    # late-game overlay. Keep the authored scene visible even while state is
-    # still bootstrapping, then refine it from the live property state.
     if scene_art != null:
         scene_art.visible = true
     if state == null:
@@ -41,18 +58,48 @@ func _draw() -> void:
     var property: Dictionary = catalog[index]
     var owned := bool(state.get_value("properties", "owned", false))
     var stage := _visual_stage(property, owned)
-    _sync_scene_art(stage)
+    _sync_scene_art(stage, property)
     _draw_site_overlay(property, stage)
 
-func _sync_scene_art(stage: String) -> void:
+func _sync_scene_art(stage: String, property: Dictionary) -> void:
     var scene_art := get_node_or_null("../PremiumRestorationScene")
-    if scene_art == null:
-        return
-    scene_art.visible = true
+    _ensure_progression_sprite()
     var progress := _stage_progress(stage)
-    scene_art.modulate = Color(1.0, 1.0, 1.0, 0.90 + progress * 0.10)
-    var target_scale := 0.86 + progress * 0.06
-    scene_art.scale = Vector2(target_scale, target_scale)
+    if scene_art != null:
+        scene_art.visible = true
+        scene_art.modulate = Color(1.0, 1.0, 1.0, 0.90 + progress * 0.10)
+        var target_scale := 0.86 + progress * 0.06
+        scene_art.scale = Vector2(target_scale, target_scale)
+        _progression_sprite.position = scene_art.position
+    var property_type := str(property.get("type", property.get("kind", "warehouse"))).to_lower()
+    if property_type == "":
+        property_type = "warehouse"
+    var sheet_index := 0
+    if property_type.contains("factory") or property_type.contains("industrial"):
+        sheet_index = 1
+    elif property_type.contains("office") or property_type.contains("hq") or property_type.contains("head"):
+        sheet_index = 2
+    var texture: Texture2D = load(BUILDING_SHEETS[sheet_index]) as Texture2D
+    if texture != null:
+        _progression_sprite.texture = texture
+        _progression_sprite.region_enabled = true
+        _progression_sprite.region_rect = Rect2(0, _stage_frame(stage) * FRAME_SIZE.y, FRAME_SIZE.x, FRAME_SIZE.y)
+        _progression_sprite.scale = Vector2(1.25 + progress * 0.08, 1.25 + progress * 0.08)
+        _progression_sprite.visible = true
+    else:
+        _progression_sprite.visible = false
+    _last_stage = stage
+    _last_property_type = property_type
+
+func _stage_frame(stage: String) -> int:
+    match stage:
+        "Abandoned": return 0
+        "Cleaned": return 1
+        "Repaired": return 2
+        "Painted": return 3
+        "Furnished": return 4
+        "Operational": return 5
+    return 0
 
 func _stage_progress(stage: String) -> float:
     match stage:
@@ -84,7 +131,6 @@ func _draw_site_overlay(property: Dictionary, stage: String) -> void:
     var w := maxf(viewport_size.x, 320.0)
     var h := maxf(viewport_size.y, 568.0)
     var progress := _stage_progress(stage)
-
     draw_rect(Rect2(0, h - 116.0, w, 116.0), Color(0.02, 0.04, 0.05, 0.30), true)
     _draw_site_lights(w, h, progress)
     _draw_construction_activity(w, h, progress)
@@ -151,7 +197,6 @@ func _draw_progress_card(w: float, h: float, property: Dictionary, stage: String
         draw_rect(Rect2(x + 68, y - 7, maxf(70.0, card.size.x - 124.0) * value / 100.0, 7), GREEN if value >= 100.0 else GOLD, true)
         draw_string(font, Vector2(card.end.x - 42, y), "%d" % int(value), HORIZONTAL_ALIGNMENT_RIGHT, 28, 9, TEXT)
         y += 14.0
-
     if stage == "Operational":
         _draw_certification_mark(card)
 
