@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 17:07:38 UTC 2026
+// Generated on: Tue Sep  8 17:08:46 UTC 2026
 
-// Source snapshot commit: 493ca3dfdc8d3fbc2fdde009aef2cb19a45a0e6c
+// Source snapshot commit: f14614b6dd0c29d5685dfe05a90d1c2d8d67928e
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -13145,7 +13145,7 @@ func _load_state() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/empire_identity_ui.gd
-Lines: 133
+Lines: 148
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 
@@ -13158,7 +13158,9 @@ const TEXT := Color("e7f2ef")
 const MUTED := Color("78949a")
 const ACCENT := Color("d5b56e")
 const GREEN := Color("68d391")
+const SCRIM := Color(0.02, 0.08, 0.10, 0.82)
 
+var dimmer: ColorRect
 var panel: Panel
 var title_label: Label
 var summary_label: Label
@@ -13172,11 +13174,18 @@ func _ready() -> void:
     layer = 76
     _build()
     _layout()
-    visible = false
+    close_screen()
     if not get_viewport().size_changed.is_connected(_layout): get_viewport().size_changed.connect(_layout)
 
+func open_screen() -> void:
+    if dimmer != null: dimmer.visible = true
+    if panel != null: panel.visible = true
+    _refresh()
+func close_screen() -> void:
+    if dimmer != null: dimmer.visible = false
+    if panel != null: panel.visible = false
 func _process(delta: float) -> void:
-    if not visible or panel == null: return
+    if panel == null or not panel.visible: return
     refresh_clock += delta
     if refresh_clock >= 1.0:
         refresh_clock = 0.0
@@ -13202,6 +13211,7 @@ func _button(text: String, callback: Callable) -> Button:
     b.pressed.connect(callback); return b
 
 func _build() -> void:
+    dimmer = ColorRect.new(); dimmer.name = "IdentityModalScrim"; dimmer.color = SCRIM; dimmer.mouse_filter = Control.MOUSE_FILTER_STOP; add_child(dimmer)
     panel = Panel.new(); panel.name = "EmpireIdentitySurface"; panel.mouse_filter = Control.MOUSE_FILTER_STOP
     panel.add_theme_stylebox_override("panel", _style(SURFACE, BORDER, 14)); add_child(panel)
     title_label = _label("COMPANY IDENTITY & STANDING", 20, TEXT); panel.add_child(title_label)
@@ -13236,8 +13246,7 @@ func _refresh() -> void:
     if identity != null and identity.has_method("progress"):
         var rows: Array = identity.progress()
         var completed := 0
-        for row in rows:
-            completed += int(row.get("claimed", 0))
+        for row in rows: completed += int(row.get("claimed", 0))
         _card("IDENTITY PORTFOLIO", "%d identity tiers achieved across %d strategic paths.\nReach new tiers to unlock cash and reputation rewards." % [completed, rows.size()])
         for row in rows:
             var reached := int(row.get("claimed", 0)); var total := int(row.get("total", 0)); var next = row.get("next", null)
@@ -13262,11 +13271,17 @@ func _format_value(value: float) -> String:
 func _close() -> void:
     var manager := get_node_or_null("/root/RenewUIScreenManager")
     if manager != null and manager.has_method("hide_all_screens"): manager.hide_all_screens()
-    else: visible = false
+    else: close_screen()
+
+func _unhandled_input(event: InputEvent) -> void:
+    if panel == null or not panel.visible: return
+    if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE:
+        _close(); get_viewport().set_input_as_handled()
 
 func _layout() -> void:
     if panel == null: return
     var size := get_viewport().get_visible_rect().size; var narrow := size.x < 760.0
+    dimmer.position = Vector2.ZERO; dimmer.size = size
     var width := maxf(304.0, size.x - 16.0) if narrow else minf(660.0, size.x - 36.0)
     var height := maxf(430.0, size.y - 90.0) if narrow else minf(720.0, size.y - 110.0)
     panel.position = Vector2(8, 70) if narrow else Vector2(maxf(18.0, (size.x - width) * 0.5), 82)
