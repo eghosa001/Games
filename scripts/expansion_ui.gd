@@ -85,7 +85,7 @@ func _build_ui() -> void:
     status_label = _label("ASSET STRATEGY  •  LIVE",10,ACCENT); panel.add_child(status_label)
     close_button = _button("CLOSE",_close); close_button.size_flags_horizontal=Control.SIZE_SHRINK_END; panel.add_child(close_button)
     summary_label = _label("",11,MUTED); panel.add_child(summary_label)
-    list_scroll = ScrollContainer.new(); list_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; panel.add_child(list_scroll)
+    list_scroll = ScrollContainer.new(); list_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED; list_scroll.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_AUTO; panel.add_child(list_scroll)
     list = VBoxContainer.new(); list.add_theme_constant_override("separation",7); list_scroll.add_child(list)
     detail_panel = Panel.new(); detail_panel.add_theme_stylebox_override("panel",_style(SURFACE_3,BORDER,10)); panel.add_child(detail_panel)
     detail_label = _label("",11,TEXT); detail_panel.add_child(detail_label)
@@ -171,11 +171,28 @@ func _close() -> void:
 
 func _layout() -> void:
     if panel==null:return
-    var size:=get_viewport().get_visible_rect().size; var narrow:=size.x<760.0; var phone:=size.x<430.0
-    var width:=maxf(304.0,size.x-16.0) if narrow else minf(560.0,size.x-36.0); var height:=maxf(430.0,size.y-90.0) if narrow else minf(700.0,size.y-120.0)
-    panel.position=Vector2(8,70) if narrow else Vector2(maxf(18.0,size.x-width-18.0),90); panel.size=Vector2(width,height)
-    title_label.position=Vector2(14,10); title_label.size=Vector2(width-130,30); status_label.position=Vector2(14,39); status_label.size=Vector2(width-28,20); close_button.position=Vector2(width-92,7); close_button.size=Vector2(82,46)
-    summary_label.position=Vector2(14,62); summary_label.size=Vector2(width-28,40)
-    var actions_h:=48.0; action_row.position=Vector2(12,height-actions_h-6); action_row.size=Vector2(width-24,actions_h)
-    detail_panel.position=Vector2(12,action_row.position.y-116.0); detail_panel.size=Vector2(width-24,108.0); detail_label.position=Vector2(10,8); detail_label.size=Vector2(width-44,92.0)
+    var size:=get_viewport().get_visible_rect().size
+    var narrow:=size.x<760.0
+    var phone:=size.x<430.0
+    var width:=maxf(304.0,size.x-16.0) if narrow else minf(560.0,size.x-36.0)
+    var height:=maxf(430.0,size.y-90.0) if narrow else minf(700.0,size.y-120.0)
+    panel.position=Vector2(8,70) if narrow else Vector2(maxf(18.0,size.x-width-18.0),90)
+    panel.size=Vector2(width,height)
+    title_label.position=Vector2(14,10); title_label.size=Vector2(width-130,30); title_label.add_theme_font_size_override("font_size",17 if phone else 20)
+    status_label.position=Vector2(14,39); status_label.size=Vector2(width-28,20); status_label.add_theme_font_size_override("font_size",9 if phone else 10)
+    close_button.position=Vector2(width-92,7); close_button.size=Vector2(82,46)
+    summary_label.position=Vector2(14,62); summary_label.size=Vector2(width-28,40); summary_label.add_theme_font_size_override("font_size",9 if phone else 11)
+    var action_bottom:=height-6.0
+    if phone:
+        # Stack the three primary actions so every touch target remains usable on small phones.
+        transport_button.position=Vector2(12,action_bottom-48); transport_button.size=Vector2(width-24,46)
+        upgrade_button.position=Vector2(12,action_bottom-101); upgrade_button.size=Vector2(width-24,46)
+        buy_button.position=Vector2(12,action_bottom-154); buy_button.size=Vector2(width-24,46)
+        action_row.position=Vector2(0,0); action_row.size=Vector2(width,0)
+    else:
+        action_row.position=Vector2(12,height-54); action_row.size=Vector2(width-24,48)
+        for b in [buy_button,upgrade_button,transport_button]: b.custom_minimum_size=Vector2(0,46)
+    var detail_bottom:=height-(170.0 if phone else 116.0)
+    detail_panel.position=Vector2(12,detail_bottom); detail_panel.size=Vector2(width-24,108 if not phone else 148)
+    detail_label.position=Vector2(10,8); detail_label.size=Vector2(width-44,detail_panel.size.y-16); detail_label.add_theme_font_size_override("font_size",10 if phone else 11)
     list_scroll.position=Vector2(12,108); list_scroll.size=Vector2(width-24,maxf(90.0,detail_panel.position.y-116.0)); list.custom_minimum_size.x=width-24
