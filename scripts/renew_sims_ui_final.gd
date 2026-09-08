@@ -1,8 +1,5 @@
 extends "res://scripts/renew_sims_ui.gd"
 
-# Final responsive presentation pass. One authoritative action grid is used on
-# desktop and mobile so every button reaches the same gameplay callbacks.
-
 const ACTIVE_TAB := Color("d7b86f")
 const INACTIVE_TAB := Color("102a32")
 const TAB_TEXT := Color("e7f2ef")
@@ -13,12 +10,10 @@ func _sync_mobile_actions() -> void:
         child.queue_free()
 
 func _style_mode_buttons() -> void:
-    if mode_buttons.is_empty():
-        return
+    if mode_buttons.is_empty(): return
     for i in range(mode_buttons.size()):
         var button := mode_buttons[i] as Button
-        if button == null:
-            continue
+        if button == null: continue
         var normal := StyleBoxFlat.new()
         normal.bg_color = ACTIVE_TAB if i == active_tab else INACTIVE_TAB
         normal.border_color = ACTIVE_TAB if i == active_tab else Color("24434b")
@@ -43,8 +38,7 @@ func _style_mode_buttons() -> void:
 
 func _layout_responsive() -> void:
     super._layout_responsive()
-    if root == null:
-        return
+    if root == null: return
     var s := root.size
     var w := maxf(s.x, 320.0)
     var h := maxf(s.y, 480.0)
@@ -52,13 +46,10 @@ func _layout_responsive() -> void:
     if mode_rail != null:
         mode_rail.mouse_filter = Control.MOUSE_FILTER_IGNORE
         for child in mode_rail.get_children():
-            if child is Control:
-                child.mouse_filter = Control.MOUSE_FILTER_IGNORE
+            if child is Control: child.mouse_filter = Control.MOUSE_FILTER_IGNORE
         for button in mode_buttons:
-            if button is Control:
-                button.mouse_filter = Control.MOUSE_FILTER_STOP
-    if not narrow:
-        return
+            if button is Control: button.mouse_filter = Control.MOUSE_FILTER_STOP
+    if not narrow: return
     mode_rail.visible = true
     mode_rail.position = Vector2(8, 64)
     mode_rail.size = Vector2(w - 16, 44)
@@ -113,11 +104,9 @@ func _set_tab(index: int) -> void:
 
 func _action(text: String, callback: Callable) -> void:
     super._action(text, callback)
-    if action_grid == null or action_grid.get_child_count() == 0:
-        return
+    if action_grid == null or action_grid.get_child_count() == 0: return
     var button := action_grid.get_child(action_grid.get_child_count() - 1) as Button
-    if button == null:
-        return
+    if button == null: return
     button.tooltip_text = _action_hint(text)
     button.add_theme_font_size_override("font_size", 10 if narrow else 11)
 
@@ -145,6 +134,10 @@ func _action_hint(text: String) -> String:
         "EXPANSION": return "Manage expansion businesses."
         "INTELLIGENCE": return "Review empire intelligence and strategic signals."
         "PROPERTY MAP": return "Open the property and district map."
+        "HQ": return "Manage headquarters upgrades and corporate services."
+        "CUSTOMERS": return "Review customer segments and demand."
+        "LIVE OPS": return "Review seasonal events and live operations."
+        "OPPORTUNITIES": return "Review strategic world opportunities."
         _:
             return "Execute %s." % text.to_lower()
 
@@ -157,44 +150,38 @@ func _tab_subtitle() -> String:
         _: return "Choose an action."
 
 func _mobile_context() -> String:
-    if parent == null:
-        return "PROPERTY • INITIALIZING"
+    if parent == null: return "PROPERTY • INITIALIZING"
     var ownership := "OWNED" if bool(parent.owned) else "AVAILABLE"
     var business := "OPEN" if bool(parent.business_open) else "CLOSED"
     return "PROPERTY %s • %d%% RESTORED • BUSINESS %s" % [ownership, int(parent.restoration), business]
 
-# Extend the canonical command surface without replacing gameplay callbacks.
-# The inherited _refresh builds the core actions; these additions expose every
-# major V1 panel from the same responsive command sheet.
 func _refresh() -> void:
     super._refresh()
-    if action_grid == null:
-        return
+    if action_grid == null: return
     match active_tab:
         0:
             _action("PROPERTY MAP", Callable(self, "_open_screen").bind("PropertyMap"))
         1:
             _action("PRODUCTION", Callable(self, "_open_screen").bind("ProductionControlPanel"))
+            _action("CUSTOMERS", Callable(self, "_open_screen").bind("CustomerSegmentsUI"))
         2:
             _action("INTELLIGENCE", Callable(self, "_open_screen").bind("EmpireIntelligencePanel"))
+            _action("HQ", Callable(self, "_open_screen").bind("HeadquartersPanel"))
         3:
             _action("REGIONS", Callable(self, "_open_screen").bind("RegionsPanel"))
             _action("INFRASTRUCTURE", Callable(self, "_open_screen").bind("InfrastructurePanel"))
             _action("MISSIONS", Callable(self, "_open_screen").bind("WorldOpportunitiesPanel"))
+            _action("OPPORTUNITIES", Callable(self, "_open_screen").bind("WorldOpportunitiesPanel"))
             _action("PRODUCTION", Callable(self, "_open_screen").bind("ProductionControlPanel"))
             _action("LOGISTICS", Callable(self, "_open_screen").bind("SupplyChainPanel"))
             _action("EXPANSION", Callable(self, "_open_screen").bind("EmpireExpansionPanel"))
             _action("INTELLIGENCE", Callable(self, "_open_screen").bind("EmpireIntelligencePanel"))
+            _action("LIVE OPS", Callable(self, "_open_screen").bind("LiveOpsPanel"))
 
 func _process(delta: float) -> void:
     super._process(delta)
-    if parent == null:
-        return
-    if action_subtitle != null:
-        action_subtitle.text = _tab_subtitle()
-    if selected_title != null:
-        selected_title.text = _selected_title()
-    if selected_meta != null:
-        selected_meta.text = _selected_meta()
-    if narrow and status_label != null:
-        status_label.text = _mobile_context()
+    if parent == null: return
+    if action_subtitle != null: action_subtitle.text = _tab_subtitle()
+    if selected_title != null: selected_title.text = _selected_title()
+    if selected_meta != null: selected_meta.text = _selected_meta()
+    if narrow and status_label != null: status_label.text = _mobile_context()
