@@ -112,7 +112,7 @@ func _refresh(force := false) -> void:
     var goals := _goals(); var progression := _progression()
     var rep := int(game.reputation); var assets := _owned_assets()
     var goal_done := goals.completed_count() if goals != null and goals.has_method("completed_count") else 0
-    var goal_total := goals.goals.size() if goals != null and "goals" in goals else 0
+    var goal_total := goals.goals.size() if goals != null else 0
     var milestone_done := progression.claimed.size() if progression != null else 0
     var milestone_total := progression.milestones.size() if progression != null else 0
     var region_count := 1
@@ -121,7 +121,7 @@ func _refresh(force := false) -> void:
     var signature := "%d|%d|%d|%d|%d|%d|%d" % [rep, assets, goal_done, milestone_done, region_count, int(game.total_profit), int(game.day)]
     if not force and signature == last_signature: return
     last_signature = signature
-    status_label.text = "%s  •  REP %d  •  %d ASSETS  •  %d REGION% s" % [_rank(rep), rep, assets, region_count, "" if region_count == 1 else "S"]
+    status_label.text = "%s  •  REP %d  •  %d ASSETS  •  %d REGION%s" % [_rank(rep), rep, assets, region_count, "" if region_count == 1 else "S"]
     summary_label.text = "CAMPAIGN %d/%d GOALS  •  %d/%d MILESTONES" % [goal_done, goal_total, milestone_done, milestone_total]
     for child in content.get_children(): child.queue_free()
     var current_goal: Dictionary = goals.current_goal() if goals != null and goals.has_method("current_goal") else {}
