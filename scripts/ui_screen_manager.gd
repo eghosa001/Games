@@ -3,7 +3,7 @@ extends Node
 
 ## Central presentation guard. Primary screens are mutually exclusive; screen
 ## scripts remain responsible for their own content and gameplay integration.
-const SCREEN_NAMES := ["ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel", "InfrastructurePanel", "DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel"]
+const SCREEN_NAMES := ["ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel", "InfrastructurePanel", "DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel", "RegionsPanel"]
 const ROOT_SCREEN_NAMES := ["RenewDiplomacyUI", "CustomerSegmentsUI"]
 const SCREEN_ALIASES := {"MarketPanel": "CustomerSegmentsUI"}
 var _previous_visible: Dictionary = {}
@@ -13,9 +13,6 @@ var _initializing := true
 var _suppress_hooks := false
 
 func _ready() -> void:
-    # The autoload can enter the tree before Main.tscn. Never recursively
-    # defer initialization while Renew is absent; that floods the message
-    # queue before the main scene has even been attached.
     call_deferred("_try_initialize")
 
 func _try_initialize() -> void:
@@ -42,7 +39,7 @@ func _root_screen_nodes() -> Array[Node]:
         var node: Node = null
         if ui != null:
             node = ui.get_node_or_null(screen_name)
-        if node == null: node = get_tree().root.get_node_or_null("Renew/" + screen_name)
+        if node == null: node = get_tree().root.get_node_or_null("Renew/" + canonical_screen_name(screen_name))
         if node == null: node = get_tree().root.get_node_or_null(screen_name)
         if node != null: result.append(node)
     return result
@@ -61,29 +58,18 @@ func _process(_delta: float) -> void:
     if _initializing:
         _try_initialize()
         return
-    # Guard against running during tree teardown — nodes may be partially freed.
     var tree := get_tree()
     if tree == null: return
     var root := tree.root
-    if root == null or not root.is_inside_tree() or root.is_queued_for_deletion():
-        return
+    if root == null or not root.is_inside_tree() or root.is_queued_for_deletion(): return
     _enforce_single_screen()
 
 func _input(event: InputEvent) -> void:
-    # Guard against running during tree teardown.
     var tree := get_tree()
     if tree == null: return
     var root := tree.root
-    if root == null or not root.is_inside_tree() or root.is_queued_for_deletion():
-        return
-    # Some complex CanvasLayer/control stacks can intercept a button event
-    # before the individual screen script receives its pressed signal. The
-    # screen manager therefore owns a narrow emergency close path: if the
-    # user clicks/taps inside a visible CLOSE button, close the active screen
-    # directly. This is deliberately limited to close controls and cannot
-    # steal normal gameplay button input.
-    if _active_screen == null or not is_instance_valid(_active_screen):
-        return
+    if root == null or not root.is_inside_tree() or root.is_queued_for_deletion(): return
+    if _active_screen == null or not is_instance_valid(_active_screen): return
     var pressed := false
     var point := Vector2.ZERO
     if event is InputEventMouseButton:
@@ -94,20 +80,17 @@ func _input(event: InputEvent) -> void:
         var touch := event as InputEventScreenTouch
         pressed = touch.pressed
         point = touch.position
-    if not pressed:
-        return
+    if not pressed: return
     var close_button := _find_close_button_at(_active_screen, point)
     if close_button != null:
         hide_all_screens()
         get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
-    # Guard against running during tree teardown.
     var tree := get_tree()
     if tree == null: return
     var root := tree.root
-    if root == null or not root.is_inside_tree() or root.is_queued_for_deletion():
-        return
+    if root == null or not root.is_inside_tree() or root.is_queued_for_deletion(): return
     if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and _active_screen != null:
         hide_all_screens(); get_viewport().set_input_as_handled()
 
@@ -205,24 +188,16 @@ func is_screen_open(screen_name: String) -> bool:
     return false
 
 func _find_close_button_at(node: Node, global_point: Vector2) -> Button:
-    if node == null or not is_instance_valid(node):
-        return null
+    if node == null or not is_instance_valid(node): return null
     var children := node.get_children()
-    # Traverse in reverse tree order so the most recently added/topmost
-    # control wins when several controls occupy the same screen area.
     for i in range(children.size() - 1, -1, -1):
         var child: Node = children[i]
         var nested := _find_close_button_at(child, global_point)
-        if nested != null:
-            return nested
+        if nested != null: return nested
         var button := child as Button
-        if button == null or not button.visible or not button.is_visible_in_tree():
-            continue
+        if button == null or not button.visible or not button.is_visible_in_tree(): continue
         var label := button.text.strip_edges().to_upper()
-        if label != "CLOSE" and label != "X" and label != "×":
-            continue
-        if button.mouse_filter == Control.MOUSE_FILTER_IGNORE:
-            continue
-        if button.get_global_rect().has_point(global_point):
-            return button
+        if label != "CLOSE" and label != "X" and label != "×": continue
+        if button.mouse_filter == Control.MOUSE_FILTER_IGNORE: continue
+        if button.get_global_rect().has_point(global_point): return button
     return null
