@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 16:29:52 UTC 2026
+// Generated on: Tue Sep  8 16:33:21 UTC 2026
 
-// Source snapshot commit: 54efa2199b40d9061fb66a5a3f88f48de2efd0b2
+// Source snapshot commit: 5e85f533b067585b6fff07b02c28e22143fbedff
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -23526,7 +23526,7 @@ func _money(value: int) -> String:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/renew_sims_ui_final.gd
-Lines: 184
+Lines: 200
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends "res://scripts/renew_sims_ui.gd"
 
@@ -23539,7 +23539,6 @@ const TAB_TEXT := Color("e7f2ef")
 const TAB_MUTED := Color("78949a")
 
 func _sync_mobile_actions() -> void:
-    # Do not duplicate callbacks into the legacy mobile grid.
     for child in mobile_actions.get_children():
         child.queue_free()
 
@@ -23579,34 +23578,25 @@ func _layout_responsive() -> void:
     var s := root.size
     var w := maxf(s.x, 320.0)
     var h := maxf(s.y, 480.0)
-
     _style_mode_buttons()
     if mode_rail != null:
         mode_rail.mouse_filter = Control.MOUSE_FILTER_IGNORE
         for child in mode_rail.get_children():
             if child is Control:
                 child.mouse_filter = Control.MOUSE_FILTER_IGNORE
-        # Buttons must remain interactive after the rail itself is made passive.
         for button in mode_buttons:
             if button is Control:
                 button.mouse_filter = Control.MOUSE_FILTER_STOP
-
     if not narrow:
         return
-
-    # Mobile: world first, compact status bar, mode tabs, then a contained
-    # command sheet. Nothing important is allowed to sit under the browser
-    # edge or collide with the mode tabs on short phone screens.
     mode_rail.visible = true
     mode_rail.position = Vector2(8, 64)
     mode_rail.size = Vector2(w - 16, 44)
-
     var dock_height := clampf(h * 0.40, 218.0, 250.0)
     var dock_top := maxf(114.0, h - dock_height - 8.0)
     action_dock.visible = true
     action_dock.position = Vector2(8, dock_top)
     action_dock.size = Vector2(w - 16, h - dock_top - 8.0)
-
     action_title.position = Vector2(10, 7)
     action_title.size = Vector2(w - 36, 20)
     action_subtitle.position = Vector2(10, 27)
@@ -23614,15 +23604,12 @@ func _layout_responsive() -> void:
     action_scroll.position = Vector2(8, 50)
     action_scroll.size = Vector2(w - 32, maxf(132.0, action_dock.size.y - 58.0))
     action_grid.columns = 2
-
     var gap := 8.0
     var button_width := maxf(0.0, (action_scroll.size.x - gap - 8.0) / 2.0)
     for child in action_grid.get_children():
         if child is Button:
             child.custom_minimum_size = Vector2(button_width, 44.0)
             child.size_flags_horizontal = Control.SIZE_FILL
-
-    # Hide duplicate/legacy mobile chrome and desktop-only context cards.
     bottom_mobile.visible = false
     mobile_actions.visible = false
     mobile_objective.visible = false
@@ -23631,8 +23618,6 @@ func _layout_responsive() -> void:
     objective_card.visible = false
     if right_card != null: right_card.visible = false
     network_strip.visible = false
-
-    # Compact top HUD. Keep all three values visible even on 320px devices.
     top_strip.position = Vector2(8, 8)
     top_strip.size = Vector2(w - 16, 50)
     brand.position = Vector2(9, 3)
@@ -23682,6 +23667,14 @@ func _action_hint(text: String) -> String:
         "SAVE": return "Save your current company state."
         "LOAD": return "Load the latest saved company state."
         "NEW COMPANY": return "Start a new dynasty after victory."
+        "REGIONS": return "Manage regional expansion and presence."
+        "INFRASTRUCTURE": return "Build and repair regional infrastructure."
+        "MISSIONS": return "Review world opportunities and missions."
+        "PRODUCTION": return "Open the production command center."
+        "LOGISTICS": return "Manage supply chain and internal logistics."
+        "EXPANSION": return "Manage expansion businesses."
+        "INTELLIGENCE": return "Review empire intelligence and strategic signals."
+        "PROPERTY MAP": return "Open the property and district map."
         _:
             return "Execute %s." % text.to_lower()
 
@@ -23699,6 +23692,29 @@ func _mobile_context() -> String:
     var ownership := "OWNED" if bool(parent.owned) else "AVAILABLE"
     var business := "OPEN" if bool(parent.business_open) else "CLOSED"
     return "PROPERTY %s • %d%% RESTORED • BUSINESS %s" % [ownership, int(parent.restoration), business]
+
+# Extend the canonical command surface without replacing gameplay callbacks.
+# The inherited _refresh builds the core actions; these additions expose every
+# major V1 panel from the same responsive command sheet.
+func _refresh() -> void:
+    super._refresh()
+    if action_grid == null:
+        return
+    match active_tab:
+        0:
+            _action("PROPERTY MAP", Callable(self, "_open_screen").bind("PropertyMap"))
+        1:
+            _action("PRODUCTION", Callable(self, "_open_screen").bind("ProductionControlPanel"))
+        2:
+            _action("INTELLIGENCE", Callable(self, "_open_screen").bind("EmpireIntelligencePanel"))
+        3:
+            _action("REGIONS", Callable(self, "_open_screen").bind("RegionsPanel"))
+            _action("INFRASTRUCTURE", Callable(self, "_open_screen").bind("InfrastructurePanel"))
+            _action("MISSIONS", Callable(self, "_open_screen").bind("WorldOpportunitiesPanel"))
+            _action("PRODUCTION", Callable(self, "_open_screen").bind("ProductionControlPanel"))
+            _action("LOGISTICS", Callable(self, "_open_screen").bind("SupplyChainPanel"))
+            _action("EXPANSION", Callable(self, "_open_screen").bind("EmpireExpansionPanel"))
+            _action("INTELLIGENCE", Callable(self, "_open_screen").bind("EmpireIntelligencePanel"))
 
 func _process(delta: float) -> void:
     super._process(delta)
