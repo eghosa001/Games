@@ -2,10 +2,16 @@ extends Node3D
 
 ## RENEW 3D WORLD — 3D-P1 technical prototype.
 ## Presentation only: simulation truth remains in existing GameState/systems.
-## This prototype can be toggled without replacing the management interface.
+## The visible prototype uses real GameState property IDs whenever the catalog is available.
 
 const WORLD_SIZE := Vector3(42.0, 0.0, 30.0)
 const GROUND_Y := -0.05
+const FALLBACK_PROPERTIES := [
+	{"id":"property_hq","name":"Headquarters","type":"Commercial Building"},
+	{"id":"property_factory","name":"Factory","type":"Workshop"},
+	{"id":"property_warehouse","name":"Warehouse","type":"Warehouse"},
+	{"id":"property_resource","name":"Resource Site","type":"Warehouse"}
+]
 
 var camera: Camera3D
 var selected_entity_id := ""
@@ -50,15 +56,29 @@ func _build_world() -> void:
 	_create_box("RoadWest", Vector3(-10.0, 0.03, 0.0), Vector3(2.4, 0.06, WORLD_SIZE.z - 4.0), Color("0d2026"), "")
 	_create_box("RoadEast", Vector3(10.0, 0.03, 0.0), Vector3(2.4, 0.06, WORLD_SIZE.z - 4.0), Color("0d2026"), "")
 
-	_create_property("property_hq", "Headquarters", Vector3(0.0, 2.0, -8.0), Vector3(7.0, 4.0, 5.0), Color("274b55"))
-	_create_property("property_factory", "Factory", Vector3(-11.0, 2.5, 8.0), Vector3(8.0, 5.0, 7.0), Color("31515a"))
-	_create_property("property_warehouse", "Warehouse", Vector3(11.0, 2.0, 8.0), Vector3(7.0, 4.0, 7.0), Color("3b555c"))
-	_create_property("property_resource", "Resource Site", Vector3(-14.0, 1.5, -9.0), Vector3(5.0, 3.0, 5.0), Color("3b6259"))
+	var specs := _property_specs()
+	var positions := [Vector3(0.0, 2.0, -8.0), Vector3(-11.0, 2.5, 8.0), Vector3(11.0, 2.0, 8.0), Vector3(-14.0, 1.5, -9.0)]
+	var sizes := [Vector3(7.0, 4.0, 5.0), Vector3(8.0, 5.0, 7.0), Vector3(7.0, 4.0, 7.0), Vector3(5.0, 3.0, 5.0)]
+	var materials := [Color("274b55"), Color("31515a"), Color("3b555c"), Color("3b6259")]
+	for i in range(mini(4, specs.size())):
+		var entry: Dictionary = specs[i]
+		_create_property(str(entry.get("id", "")), str(entry.get("name", "Property")), positions[i], sizes[i], materials[i])
+		_create_label(str(entry.get("name", "PROPERTY")).to_upper(), positions[i] + Vector3(0.0, sizes[i].y / 2.0 + 0.6, 0.0))
 
-	_create_label("HQ", Vector3(0.0, 4.6, -8.0))
-	_create_label("FACTORY", Vector3(-11.0, 5.7, 8.0))
-	_create_label("WAREHOUSE", Vector3(11.0, 4.7, 8.0))
-	_create_label("RESOURCE", Vector3(-14.0, 3.6, -9.0))
+func _property_specs() -> Array:
+	var state := get_node_or_null("/root/RenewGameState")
+	if state != null and state.has_method("get_value"):
+		var catalog: Variant = state.get_value("properties", "catalog", [])
+		if catalog is Array and not catalog.is_empty():
+			var result: Array = []
+			for entry in catalog:
+				if entry is Dictionary and not str(entry.get("id", "")).is_empty():
+					result.append(entry.duplicate(true))
+					if result.size() == 4:
+						break
+			if not result.is_empty():
+				return result
+	return FALLBACK_PROPERTIES.duplicate(true)
 
 func _create_box(node_name: String, position: Vector3, size: Vector3, material_color: Color, entity_id: String) -> MeshInstance3D:
 	var mesh_instance := MeshInstance3D.new()
@@ -203,4 +223,21 @@ func _select_at_screen(screen_position: Vector2) -> void:
 	selected_entity_id = entity_id
 	var display_name := str(collider.get_meta("display_name", entity_id))
 	selected_label.text = "Selected: %s  [%s]" % [display_name, entity_id]
-	status_label.text = "3D selection bound to an entity ID. Existing management systems remain authoritative."
+	_bind_selection_to_state(entity_id)
+
+func _bind_selection_to_state(entity_id: String) -> void:
+	var state := get_node_or_null("/root/RenewGameState")
+	if state == null or not state.has_method("get_value") or not state.has_method("set_value"):
+		status_label.text = "3D selection: %s • simulation state unavailable" % entity_id
+		return
+	var catalog: Variant = state.get_value("properties", "catalog", [])
+	if not catalog is Array:
+		status_label.text = "3D selection: %s" % entity_id
+		return
+	for index in range(catalog.size()):
+		var entry: Variant = catalog[index]
+		if entry is Dictionary and str(entry.get("id", "")) == entity_id:
+			state.set_value("properties", "selected_property", index)
+			status_label.text = "Selected property is synchronized with GameState. Open Property Map for management."
+			return
+	status_label.text = "Prototype object selected: %s" % entity_id
