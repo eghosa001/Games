@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 13:08:34 UTC 2026
+// Generated on: Tue Sep  8 13:08:56 UTC 2026
 
-// Source snapshot commit: 5ef505e2ec7074a4f55ef67ee7248f2690fa3212
+// Source snapshot commit: 7191277ef64121c7435950611f63c47582e466e6
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4252,7 +4252,7 @@ Lines: 95
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: export_presets.cfg
-Lines: 70
+Lines: 68
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [preset.0]
 
@@ -4271,7 +4271,7 @@ patch_list=Array[String]([])
 
 custom_template/debug=""
 custom_template/release=""
-gradle_build/use_gradle_build=true
+gradle_build/use_gradle_build=false
 gradle_build/target_build_type="debug"
 gradle_build/min_sdk="24"
 gradle_build/target_sdk="35"
@@ -4318,13 +4318,11 @@ custom_template/debug=""
 custom_template/release=""
 variant/extensions_support=false
 variant/thread_support=false
-html/custom_html_shell=""
-html/head_include="<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><style>html,body{margin:0!important;padding:0!important;width:100%!important;height:100%!important;min-height:100%!important;overflow:hidden!important;background:#081017!important}body{display:block!important}canvas#canvas{display:block!important;width:100vw!important;height:100vh!important;max-width:none!important;max-height:none!important;position:fixed!important;inset:0!important}</style>"
+html/custom_html_shell="<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\"><style>html,body{margin:0!important;padding:0!important;width:100%!important;height:100%!important;min-height:100%!important;overflow:hidden!important;background:#081017!important}body{display:block!important}canvas#canvas{display:block!important;width:100vw!important;height:100vh!important;max-width:none!important;max-height:none!important;position:fixed!important;inset:0!important}</style>"
 html/canvas_resize_policy=2
 html/focus_canvas_on_start=true
 progressive_web_app/enabled=false
 progressive_web_app/ensure_cross_origin_isolation_headers=false
-
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: project.godot
