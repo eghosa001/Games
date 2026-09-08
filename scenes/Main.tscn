@@ -1,4 +1,4 @@
-[gd_scene load_steps=48 format=3]
+[gd_scene load_steps=45 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -37,9 +37,6 @@
 [ext_resource path="res://scripts/technology_ui.gd" type="Script" id="35"]
 [ext_resource path="res://scripts/employee_ui.gd" type="Script" id="36"]
 [ext_resource path="res://scripts/premium_world_backdrop.gd" type="Script" id="37"]
-[ext_resource path="res://Assets/Art/renew_skyline.svg" type="Texture2D" id="38"]
-[ext_resource path="res://Assets/Art/renew_warehouse.svg" type="Texture2D" id="39"]
-[ext_resource path="res://Assets/Art/renew_resource_hub.svg" type="Texture2D" id="40"]
 [ext_resource path="res://scripts/mobile_ui_mobile_scale_fix.gd" type="Script" id="41"]
 [ext_resource path="res://scripts/rich_world_scenery.gd" type="Script" id="42"]
 [ext_resource path="res://Assets/Art/premium_industrial_district.svg" type="Texture2D" id="43"]
@@ -74,21 +71,6 @@ modulate = Color(1, 1, 1, 0.98)
 [node name="RichWorldScenery" type="Node2D" parent="World"]
 z_index = -25
 script = ExtResource("42")
-[node name="SkylineArt" type="Sprite2D" parent="World"]
-texture = ExtResource("38")
-position = Vector2(640, 225)
-z_index = -24
-visible = false
-[node name="WarehouseArt" type="Sprite2D" parent="World"]
-texture = ExtResource("39")
-position = Vector2(650, 480)
-z_index = -23
-visible = false
-[node name="ResourceHubArt" type="Sprite2D" parent="World"]
-texture = ExtResource("40")
-position = Vector2(1060, 485)
-z_index = -23
-visible = false
 [node name="PropertyVisual" type="Node2D" parent="World"]
 z_index = -5
 script = ExtResource("34")
@@ -150,7 +132,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-visible = false
+visible = true
 script = ExtResource("45")
 [node name="StrategyHUD" type="CanvasLayer" parent="UI"]
 script = ExtResource("18")
