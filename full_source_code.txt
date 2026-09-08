@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 17:09:32 UTC 2026
+// Generated on: Tue Sep  8 17:10:04 UTC 2026
 
-// Source snapshot commit: 7ce25286dd637f4af5e4a69d3375178a8bde44bc
+// Source snapshot commit: dcb38e944b3d7255b257c54ae9b1d7d1c9659ba6
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -19041,7 +19041,7 @@ func _layout() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/main.gd
-Lines: 409
+Lines: 248
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ===============================================
 # File: scripts/main.gd (Final – with Setters)
@@ -19049,216 +19049,77 @@ Lines: 409
 extends Node2D
 
 const GameplayCommandSystem = preload("res://scripts/gameplay_command_system.gd")
-
 var command_system: GameplayCommandSystem
-var stages: Array = [
-    ["Neglected", 0, 0],
-    ["Cleaned", 25, 500],
-    ["Repaired", 50, 1500],
-    ["Painted", 75, 900],
-    ["Operational", 100, 1200]
-]
-
-var economy:
-    get: return command_system.supply_system.economy if command_system else null
-
-var expansion:
-    get: return command_system.expansion_system.expansion if command_system else null
-
-var rivals:
-    get: return command_system.relationship_system.rivals if command_system else null
-
-var districts:
-    get: return command_system.expansion_system.districts if command_system else null
-
-func _game_state():
-    return get_node_or_null("/root/RenewGameState")
-
-func _finance():
-    return get_node_or_null("/root/RenewFinanceSystem")
-
+var stages: Array = [["Neglected", 0, 0], ["Cleaned", 25, 500], ["Repaired", 50, 1500], ["Painted", 75, 900], ["Operational", 100, 1200]]
+var economy: get: return command_system.supply_system.economy if command_system else null
+var expansion: get: return command_system.expansion_system.expansion if command_system else null
+var rivals: get: return command_system.relationship_system.rivals if command_system else null
+var districts: get: return command_system.expansion_system.districts if command_system else null
+func _game_state(): return get_node_or_null("/root/RenewGameState")
+func _finance(): return get_node_or_null("/root/RenewFinanceSystem")
 func _read(domain: String, key: String, default_value = null):
-    var state = _game_state()
-    return state.get_value(domain, key, default_value) if state else default_value
-
+    var state = _game_state(); return state.get_value(domain, key, default_value) if state else default_value
 func _write(domain: String, key: String, value) -> void:
     var state = _game_state()
     if state: state.set_value(domain, key, value)
-
-func _money(value: int) -> String:
-    return String.num_int64(value)
-
+func _money(value: int) -> String: return String.num_int64(value)
 func _log(text: String) -> void:
     var logs = _read("company", "log_lines", [])
-    if not logs is Array:
-        logs = []
-    logs = logs.duplicate(true)
-    logs.append(text)
-    if logs.size() > 100:
-        logs.pop_front()
+    if not logs is Array: logs = []
+    logs = logs.duplicate(true); logs.append(text)
+    if logs.size() > 100: logs.pop_front()
     _write("company", "log_lines", logs)
-
 func _next_cost() -> int:
-    if stage == "Operational":
-        return 0
+    if stage == "Operational": return 0
     for index in range(stages.size()):
-        if stages[index][0] == stage and index + 1 < stages.size():
-            return int(stages[index + 1][2])
+        if stages[index][0] == stage and index + 1 < stages.size(): return int(stages[index + 1][2])
     return 0
-
 var cash: int:
     get:
         var finance = _finance()
-        if finance != null and finance.has_method("available_cash"):
-            return int(finance.available_cash())
+        if finance != null and finance.has_method("available_cash"): return int(finance.available_cash())
         return int(_read("economy", "cash", 0))
     set(value):
-        # Legacy controllers still use parent.cash +=/-= syntax. Keep that API
-        # compatible, but make FinanceSystem the only authority that mutates
-        # cash. Absolute assignments are interpreted as a delta from the
-        # authoritative balance; a missing FinanceSystem retains the old
-        # GameState fallback for isolated/test construction.
         var finance = _finance()
         if finance != null and finance.has_method("available_cash"):
-            var current := int(finance.available_cash())
-            var target := int(value)
-            var delta := target - current
-            if delta > 0 and finance.has_method("receive"):
-                finance.receive(delta, "legacy Main cash credit")
-            elif delta < 0 and finance.has_method("spend"):
-                finance.spend(-delta, "legacy Main cash debit")
+            var current := int(finance.available_cash()); var target := int(value); var delta := target - current
+            if delta > 0 and finance.has_method("receive"): finance.receive(delta, "legacy Main cash credit")
+            elif delta < 0 and finance.has_method("spend"): finance.spend(-delta, "legacy Main cash debit")
             return
         _write("economy", "cash", int(value))
-
-var reputation: int:
-    get: return _read("player", "reputation", 0)
-    set(value): _write("player", "reputation", value)
-
-var day: int:
-    get: return _read("player", "day", 1)
-    set(value): _write("player", "day", value)
-
-var debt: int:
-    get: return _read("finance", "debt", 0)
-    set(value): _write("finance", "debt", value)
-
-var loan_payment: int:
-    get: return _read("finance", "loan_payment", 0)
-    set(value): _write("finance", "loan_payment", value)
-
-var owned: bool:
-    get: return _read("properties", "owned", false)
-    set(value): _write("properties", "owned", value)
-
-var inspected: bool:
-    get: return _read("properties", "inspected", false)
-    set(value): _write("properties", "inspected", value)
-
-var restoration: int:
-    get: return _read("properties", "restoration", 0)
-    set(value): _write("properties", "restoration", value)
-
-var stage: String:
-    get: return _read("properties", "stage", "Neglected")
-    set(value): _write("properties", "stage", value)
-
-var business_open: bool:
-    get: return _read("businesses", "business_open", false)
-    set(value): _write("businesses", "business_open", value)
-
-var employees: int:
-    get: return command_system.employee_system.get_active_employee_count() if command_system else 0
-    set(_value): pass
-
-var capacity_level: int:
-    get: return _read("businesses", "capacity_level", 1)
-    set(value): _write("businesses", "capacity_level", value)
-
-var marketing_level: int:
-    get: return _read("businesses", "marketing_level", 0)
-    set(value): _write("businesses", "marketing_level", value)
-
-var player_price: int:
-    get: return _read("businesses", "player_price", 110)
-    set(value): _write("businesses", "player_price", value)
-
-var finished_goods: int:
-    get: return _read("production", "finished_goods", 0)
-    set(value): _write("production", "finished_goods", value)
-
-var last_sales: int:
-    get: return _read("economy", "last_sales", 0)
-    set(value): _write("economy", "last_sales", value)
-
-var last_profit: int:
-    get: return _read("economy", "last_profit", 0)
-    set(value): _write("economy", "last_profit", value)
-
-var total_profit: int:
-    get: return _read("economy", "total_profit", 0)
-    set(value): _write("economy", "total_profit", value)
-
-var relationship: int:
-    get: return _read("competitors", "relationship", 15)
-    set(value): _write("competitors", "relationship", value)
-
-var selected_rival: int:
-    get: return _read("competitors", "selected_rival", 0)
-    set(value): _write("competitors", "selected_rival", value)
-
-var selected_expansion: int:
-    get: return _read("branches", "selected_expansion", 0)
-    set(value): _write("branches", "selected_expansion", value)
-
-var supplier_choice: int:
-    get: return _read("supply_chain", "supplier_choice", 0)
-    set(value): _write("supply_chain", "supplier_choice", value)
-
-var contract_days: int:
-    get: return _read("contracts", "contract_days", 0)
-    set(value): _write("contracts", "contract_days", value)
-
-var contract_bonus: int:
-    get: return _read("contracts", "contract_bonus", 0)
-    set(value): _write("contracts", "contract_bonus", value)
-
-var acquisition_count: int:
-    get: return _read("ownership", "acquisition_count", 0)
-    set(value): _write("ownership", "acquisition_count", value)
-
-var transport_level: int:
-    get: return _read("supply_chain", "transport_level", 1)
-    set(value): _write("supply_chain", "transport_level", value)
-
-var transport_capacity: int:
-    get: return _read("supply_chain", "transport_capacity", 40)
-    set(value): _write("supply_chain", "transport_capacity", value)
-
-var selected_district: int:
-    get: return _read("regions", "selected_district", 0)
-    set(value): _write("regions", "selected_district", value)
-
-var message: String:
-    get: return _read("company", "message", "")
-    set(value): _write("company", "message", value)
-
-var log_lines: Array:
-    get: var logs = _read("company", "log_lines", []); return logs if logs is Array else []
-    set(value): _write("company", "log_lines", value)
-
+var reputation: int: get: return _read("player", "reputation", 0); set(value): _write("player", "reputation", value)
+var day: int: get: return _read("player", "day", 1); set(value): _write("player", "day", value)
+var debt: int: get: return _read("finance", "debt", 0); set(value): _write("finance", "debt", value)
+var loan_payment: int: get: return _read("finance", "loan_payment", 0); set(value): _write("finance", "loan_payment", value)
+var owned: bool: get: return _read("properties", "owned", false); set(value): _write("properties", "owned", value)
+var inspected: bool: get: return _read("properties", "inspected", false); set(value): _write("properties", "inspected", value)
+var restoration: int: get: return _read("properties", "restoration", 0); set(value): _write("properties", "restoration", value)
+var stage: String: get: return _read("properties", "stage", "Neglected"); set(value): _write("properties", "stage", value)
+var business_open: bool: get: return _read("businesses", "business_open", false); set(value): _write("businesses", "business_open", value)
+var employees: int: get: return command_system.employee_system.get_active_employee_count() if command_system else 0; set(_value): pass
+var capacity_level: int: get: return _read("businesses", "capacity_level", 1); set(value): _write("businesses", "capacity_level", value)
+var marketing_level: int: get: return _read("businesses", "marketing_level", 0); set(value): _write("businesses", "marketing_level", value)
+var player_price: int: get: return _read("businesses", "player_price", 110); set(value): _write("businesses", "player_price", value)
+var finished_goods: int: get: return _read("production", "finished_goods", 0); set(value): _write("production", "finished_goods", value)
+var last_sales: int: get: return _read("economy", "last_sales", 0); set(value): _write("economy", "last_sales", value)
+var last_profit: int: get: return _read("economy", "last_profit", 0); set(value): _write("economy", "last_profit", value)
+var total_profit: int: get: return _read("economy", "total_profit", 0); set(value): _write("economy", "total_profit", value)
+var relationship: int: get: return _read("competitors", "relationship", 15); set(value): _write("competitors", "relationship", value)
+var selected_rival: int: get: return _read("competitors", "selected_rival", 0); set(value): _write("competitors", "selected_rival", value)
+var selected_expansion: int: get: return _read("branches", "selected_expansion", 0); set(value): _write("branches", "selected_expansion", value)
+var supplier_choice: int: get: return _read("supply_chain", "supplier_choice", 0); set(value): _write("supply_chain", "supplier_choice", value)
+var contract_days: int: get: return _read("contracts", "contract_days", 0); set(value): _write("contracts", "contract_days", value)
+var contract_bonus: int: get: return _read("contracts", "contract_bonus", 0); set(value): _write("contracts", "contract_bonus", value)
+var acquisition_count: int: get: return _read("ownership", "acquisition_count", 0); set(value): _write("ownership", "acquisition_count", value)
+var transport_level: int: get: return _read("supply_chain", "transport_level", 1); set(value): _write("supply_chain", "transport_level", value)
+var transport_capacity: int: get: return _read("supply_chain", "transport_capacity", 40); set(value): _write("supply_chain", "transport_capacity", value)
+var selected_district: int: get: return _read("regions", "selected_district", 0); set(value): _write("regions", "selected_district", value)
+var message: String: get: return _read("company", "message", ""); set(value): _write("company", "message", value)
+var log_lines: Array: get: var logs = _read("company", "log_lines", []); return logs if logs is Array else []; set(value): _write("company", "log_lines", value)
 func _ready():
-    command_system = GameplayCommandSystem.new()
-    command_system.name = "GameplayCommandSystem"
-    add_child(command_system)
-    command_system.initialize()
-    refresh_ui()
-
-func _process(_delta: float) -> void:
-    pass
-
-func refresh_ui():
-    pass
-
+    command_system = GameplayCommandSystem.new(); command_system.name = "GameplayCommandSystem"; add_child(command_system); command_system.initialize(); refresh_ui()
+func _process(_delta: float) -> void: pass
+func refresh_ui(): pass
 func inspect_property() -> void: command_system.inspect_property()
 func acquire_property() -> void: command_system.acquire_property()
 func restore_property() -> void: command_system.restore_property()
@@ -19296,16 +19157,13 @@ func decline_investment() -> void: command_system.decline_investment()
 func invest_term() -> void: command_system.invest_term()
 func pay_dividend() -> void:
     var corporate = get_node_or_null("World/Corporate")
-    if corporate != null and corporate.has_method("pay_dividend"):
-        corporate.pay_dividend()
+    if corporate != null and corporate.has_method("pay_dividend"): corporate.pay_dividend()
 func go_public() -> void:
     var corporate = get_node_or_null("World/Corporate")
-    if corporate != null and corporate.has_method("go_public"):
-        corporate.go_public()
+    if corporate != null and corporate.has_method("go_public"): corporate.go_public()
 func cap_table() -> void:
     var corporate = get_node_or_null("World/Corporate")
-    if corporate != null and corporate.has_method("cap_table_text"):
-        message = str(corporate.cap_table_text())
+    if corporate != null and corporate.has_method("cap_table_text"): message = str(corporate.cap_table_text())
 func select_rival(index: int) -> void: command_system.select_rival(index)
 func select_expansion(index: int) -> void: command_system.select_expansion(index)
 func select_district(index: int) -> void: command_system.select_district(index)
@@ -19314,7 +19172,7 @@ func send_envoy_gift() -> void: command_system.send_envoy_gift()
 func make_alliance_offer() -> void: command_system.make_alliance_offer()
 func compete_alliance() -> void: command_system.compete_alliance()
 func victory_progress() -> void: command_system.victory_progress()
-func found_new_company() -> void: command_system.found_new_company()
+func found_new_company() -> Dictionary: return command_system.found_new_company()
 func identity_status() -> void: command_system.identity_status()
 func reputation_status() -> void: command_system.reputation_status()
 func world_power() -> void: command_system.world_power()
@@ -19332,76 +19190,57 @@ func buy_expansion() -> void: command_system.buy_expansion()
 func upgrade_transport() -> Dictionary: return command_system.upgrade_transport()
 func next_region() -> void:
     var controller = get_node_or_null("World/RegionController")
-    if controller != null and controller.has_method("next_region"):
-        controller.next_region()
+    if controller != null and controller.has_method("next_region"): controller.next_region()
 func previous_region() -> void:
     var controller = get_node_or_null("World/RegionController")
-    if controller != null and controller.has_method("previous_region"):
-        controller.previous_region()
+    if controller != null and controller.has_method("previous_region"): controller.previous_region()
 func establish_region() -> void:
     var controller = get_node_or_null("World/RegionController")
-    if controller != null and controller.has_method("establish_region"):
-        controller.establish_region()
+    if controller != null and controller.has_method("establish_region"): controller.establish_region()
 func upgrade_regional_infrastructure() -> void:
     var controller = get_node_or_null("World/RegionController")
-    if controller != null and controller.has_method("upgrade_infrastructure"):
-        controller.upgrade_infrastructure()
+    if controller != null and controller.has_method("upgrade_infrastructure"): controller.upgrade_infrastructure()
 func establish_trade_route() -> void:
     var controller = get_node_or_null("World/RegionController")
-    if controller != null and controller.has_method("establish_trade_route"):
-        controller.establish_trade_route()
+    if controller != null and controller.has_method("establish_trade_route"): controller.establish_trade_route()
 func dispatch_goods() -> void:
     var controller = get_node_or_null("World/RegionController")
-    if controller != null and controller.has_method("dispatch_goods"):
-        controller.dispatch_goods()
+    if controller != null and controller.has_method("dispatch_goods"): controller.dispatch_goods()
 func charter_basin() -> void:
     var controller = get_node_or_null("World/RegionController")
-    if controller != null and controller.has_method("charter_basin"):
-        controller.charter_basin()
+    if controller != null and controller.has_method("charter_basin"): controller.charter_basin()
 func charter_valley() -> void:
     var controller = get_node_or_null("World/RegionController")
-    if controller != null and controller.has_method("charter_valley"):
-        controller.charter_valley()
+    if controller != null and controller.has_method("charter_valley"): controller.charter_valley()
 func infra_build() -> void:
     var panel = get_node_or_null("UI/InfrastructurePanel")
-    if panel != null and panel.has_method("build_selected"):
-        panel.build_selected()
+    if panel != null and panel.has_method("build_selected"): panel.build_selected()
 func infra_type() -> void:
     var panel = get_node_or_null("UI/InfrastructurePanel")
-    if panel != null and panel.has_method("cycle_type"):
-        panel.cycle_type()
+    if panel != null and panel.has_method("cycle_type"): panel.cycle_type()
 func infra_repair() -> void:
     var panel = get_node_or_null("UI/InfrastructurePanel")
-    if panel != null and panel.has_method("repair_damaged"):
-        panel.repair_damaged()
+    if panel != null and panel.has_method("repair_damaged"): panel.repair_damaged()
 func upgrade_expansion() -> void: command_system.upgrade_expansion()
 func acquire_rival_asset() -> void: command_system.acquire_rival_asset()
 func advance_day() -> void: command_system.advance_day()
 func save_game() -> void:
-    _set_runtime_save_state()
-    command_system.save_game()
+    _set_runtime_save_state(); command_system.save_game()
 func load_game() -> void:
-    command_system.load_game()
-    _restore_runtime_state()
-
+    command_system.load_game(); _restore_runtime_state()
 func _set_runtime_save_state() -> void:
     if command_system == null: return
     var expansion_system = command_system.expansion_system
-    if expansion_system != null and expansion_system.has_method("capture_state"):
-        _write("branches", "expansion", expansion_system.capture_state())
-
+    if expansion_system != null and expansion_system.has_method("capture_state"): _write("branches", "expansion", expansion_system.capture_state())
 func _restore_runtime_state() -> void:
     if command_system == null: return
     var expansion_system = command_system.expansion_system
     var saved_expansion = _read("branches", "expansion", {})
-    if expansion_system != null and expansion_system.has_method("restore_state") and saved_expansion is Dictionary and not saved_expansion.is_empty():
-        expansion_system.restore_state(saved_expansion)
-
+    if expansion_system != null and expansion_system.has_method("restore_state") and saved_expansion is Dictionary and not saved_expansion.is_empty(): expansion_system.restore_state(saved_expansion)
 func research_technology(id: String) -> void:
     if command_system.technology_system: command_system.technology_system.research(id)
 func research_next_technology() -> void:
     if command_system.technology_system: command_system.technology_system.research_next()
-
 func _input(event: InputEvent) -> void:
     if not event is InputEventKey or not event.pressed or event.echo: return
     if event.shift_pressed:
