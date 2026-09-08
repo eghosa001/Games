@@ -1,4 +1,4 @@
-[gd_scene load_steps=46 format=3]
+[gd_scene load_steps=47 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -48,6 +48,7 @@
 [ext_resource path="res://scripts/corporations_ui.gd" type="Script" id="51"]
 [ext_resource path="res://scripts/property_map.gd" type="Script" id="52"]
 [ext_resource path="res://scripts/regions_ui.gd" type="Script" id="53"]
+[ext_resource path="res://scripts/regions_launcher.gd" type="Script" id="54"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -125,6 +126,8 @@ script = ExtResource("7")
 layer = 20
 [node name="MobileScaleFix" type="Node" parent="UI/MainHUD"]
 script = ExtResource("41")
+[node name="RegionsLauncher" type="Node" parent="UI/MainHUD"]
+script = ExtResource("54")
 [node name="PremiumUISkin" type="Control" parent="UI/MainHUD"]
 layout_mode = 3
 anchors_preset = 15
