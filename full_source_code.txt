@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Mon Sep  7 23:45:03 UTC 2026
+// Generated on: Tue Sep  8 06:59:27 UTC 2026
 
-// Source snapshot commit: 59e2de604da9f7bd1671101574db7b3be638e03a
+// Source snapshot commit: 47359aa872eddcda6ccb343076eb6167618434cb
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -6216,7 +6216,7 @@ func _day() -> int:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/audio_manager.gd
-Lines: 239
+Lines: 242
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 ## RENEW premium adaptive audio system.
@@ -6356,6 +6356,9 @@ func _is_failure(text: String) -> bool:
     return text.contains("failed") or text.contains("unable") or text.contains("not enough") or text.contains("cannot") or text.contains("can't") or text.contains("no save") or text.contains("save failed") or text.contains("insufficient")
 
 func _on_node_added(node: Node) -> void:
+    # Guard against tree teardown — nodes may be mid-destruction.
+    var root := get_tree().root
+    if root == null or not root.is_inside_tree(): return
     if node is BaseButton:
         _hook_button(node as BaseButton)
 
@@ -20530,7 +20533,7 @@ func reject_selected_acquisition() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/renew_sims_ui.gd
-Lines: 267
+Lines: 268
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 
@@ -20707,13 +20710,14 @@ func _layout_responsive() -> void:
         goal_label.position = Vector2(8, 194); goal_label.size = Vector2(w - 16, 40)
     else:
         var dock_bottom := action_dock.position.y + action_dock.size.y
-        status_label.position = Vector2(8, dock_bottom + 4.0)
+        var max_y := maxf(0.0, h - 4.0)
+        status_label.position = Vector2(8, minf(dock_bottom + 4.0, max_y - 24.0))
         status_label.size = Vector2(240, 24)
-        feedback_panel.position = Vector2(8, status_label.position.y + 32.0)
+        feedback_panel.position = Vector2(8, minf(status_label.position.y + 32.0, max_y - 80.0))
         feedback_panel.size = Vector2(300, 80)
         feedback_label.position = Vector2(10, 8)
         feedback_label.size = Vector2(280, 64)
-        goal_label.position = Vector2(8, feedback_panel.position.y + 88.0)
+        goal_label.position = Vector2(8, minf(feedback_panel.position.y + 88.0, max_y - 44.0))
         goal_label.size = Vector2(300, 44)
 
 func _set_tab(index: int) -> void:
@@ -23581,7 +23585,7 @@ func get_panel_rect(panel_name: String) -> Rect2:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/ui_screen_manager.gd
-Lines: 210
+Lines: 228
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 ## class_name removed: "RenewUIScreenManager" conflicts with project.godot autoload.
@@ -23646,9 +23650,21 @@ func _process(_delta: float) -> void:
     if _initializing:
         _try_initialize()
         return
+    # Guard against running during tree teardown — nodes may be partially freed.
+    var tree := get_tree()
+    if tree == null: return
+    var root := tree.root
+    if root == null or not root.is_inside_tree() or root.is_queued_for_deletion():
+        return
     _enforce_single_screen()
 
 func _input(event: InputEvent) -> void:
+    # Guard against running during tree teardown.
+    var tree := get_tree()
+    if tree == null: return
+    var root := tree.root
+    if root == null or not root.is_inside_tree() or root.is_queued_for_deletion():
+        return
     # Some complex CanvasLayer/control stacks can intercept a button event
     # before the individual screen script receives its pressed signal. The
     # screen manager therefore owns a narrow emergency close path: if the
@@ -23675,6 +23691,12 @@ func _input(event: InputEvent) -> void:
         get_viewport().set_input_as_handled()
 
 func _unhandled_input(event: InputEvent) -> void:
+    # Guard against running during tree teardown.
+    var tree := get_tree()
+    if tree == null: return
+    var root := tree.root
+    if root == null or not root.is_inside_tree() or root.is_queued_for_deletion():
+        return
     if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and _active_screen != null:
         hide_all_screens(); get_viewport().set_input_as_handled()
 
@@ -26133,7 +26155,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/release/test_release_smoke.gd
-Lines: 71
+Lines: 74
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -26203,7 +26225,10 @@ func run() -> void:
     var snapshot: Dictionary = state.capture()
     check(int(snapshot.get("schema_version", 0)) == 8, "Release save uses schema 8")
     game.free()
-    await process_frame
+    current_scene = null
+    # Wait for deferred tree teardown to complete.
+    for _i in range(8):
+        await process_frame
     print("RELEASE SMOKE RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
 
