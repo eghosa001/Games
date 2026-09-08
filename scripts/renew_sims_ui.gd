@@ -39,7 +39,6 @@ var feedback_label: Label
 var feedback_timer: float = 0.0
 var narrow: bool = false
 
-const BG := Color("071217")
 const PANEL := Color("0b1b22e6")
 const BORDER := Color("31545c")
 const BORDER_SOFT := Color("24434b")
@@ -192,9 +191,9 @@ func _clear_action_grids() -> void:
 
 func _action(text: String, callback: Callable) -> void:
     if action_grid == null or not callback.is_valid(): return
-    var b := Button.new(); b.text = text; b.focus_mode = Control.FOCUS_NONE; b.custom_minimum_size = Vector2(140, 44); b.size_flags_horizontal = Control.SIZE_EXPAND_FILL; b.pressed.connect(_run_action.bind(text, callback)); action_grid.add_child(b)
+    var b := Button.new(); b.text = text; b.focus_mode = Control.FOCUS_NONE; b.custom_minimum_size = Vector2(140, 44); b.size_flags_horizontal = Control.SIZE_EXPAND_FILL; b.pressed.connect(_run_action.bind(callback)); action_grid.add_child(b)
 
-func _run_action(label: String, callback: Callable) -> void:
+func _run_action(callback: Callable) -> void:
     if parent == null or not callback.is_valid(): return
     var result = callback.call()
     if result is Dictionary and result.has("message"): parent.message = str(result["message"])
