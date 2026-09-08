@@ -23,6 +23,9 @@ func _process(_delta: float) -> void:
 
 func _input(event: InputEvent) -> void:
     if not (event is InputEventKey) or not event.pressed or event.echo: return
+    # Only process keys when an expansion is active; otherwise main.gd owns
+    # these keys and empire_controller must not fire as well.
+    if parent == null or parent.expansion == null: return
     match event.keycode:
         KEY_7: select_business(0)
         KEY_8: select_business(1)
