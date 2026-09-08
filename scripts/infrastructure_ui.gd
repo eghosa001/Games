@@ -56,6 +56,7 @@ func build_selected() -> void:
     if game == null or system == null:
         message = "Infrastructure system is unavailable."
         return
+    var ownership_snapshot := _capture_ownership_state()
     var region := _region_index()
     var result = system.build(system.TYPES[selected_type], region, "founder", int(game.cash), int(game.day))
     message = result["message"]
@@ -63,6 +64,7 @@ func build_selected() -> void:
         if not _spend_result(result, "infrastructure construction"):
             if str(result.get("id", "")) != "":
                 system.assets.erase(str(result["id"]))
+            _restore_ownership_state(ownership_snapshot)
             message = "Construction payment failed; the site was cancelled."
 
 func cycle_type() -> void:
@@ -106,6 +108,37 @@ func _spend_result(result: Dictionary, reason: String) -> bool:
     message = str(spend.get("message", "Payment failed."))
     return false
 
+func _capture_ownership_state() -> Dictionary:
+    var ownership = get_node_or_null("/root/RenewOwnershipSystem")
+    if ownership == null:
+        var scene = get_tree().current_scene if get_tree() != null else null
+        if scene != null:
+            ownership = scene.get_node_or_null("Systems/OwnershipSystem")
+            if ownership == null:
+                ownership = scene.get_node_or_null("OwnershipSystem")
+    if ownership != null and ownership.has_method("capture_state"):
+        return ownership.capture_state()
+    if ownership != null and ownership.has_method("save_state"):
+        return ownership.save_state()
+    return {}
+
+func _restore_ownership_state(snapshot: Dictionary) -> void:
+    if snapshot.is_empty():
+        return
+    var ownership = get_node_or_null("/root/RenewOwnershipSystem")
+    if ownership == null:
+        var scene = get_tree().current_scene if get_tree() != null else null
+        if scene != null:
+            ownership = scene.get_node_or_null("Systems/OwnershipSystem")
+            if ownership == null:
+                ownership = scene.get_node_or_null("OwnershipSystem")
+    if ownership == null:
+        return
+    if ownership.has_method("restore_state"):
+        ownership.restore_state(snapshot)
+    elif ownership.has_method("load_state"):
+        ownership.load_state(snapshot)
+
 func _input(event: InputEvent) -> void:
     if not event is InputEventKey or not event.pressed or event.echo or system == null or parent == null: return
     var region := _region_index()
@@ -114,6 +147,7 @@ func _input(event: InputEvent) -> void:
             selected_type = (selected_type + 1) % system.TYPES.size()
             message = "Selected %s." % system.TYPES[selected_type].replace("_", " ").capitalize()
         KEY_F12:
+            var ownership_snapshot := _capture_ownership_state()
             var result = system.build(system.TYPES[selected_type], region, "founder", int(parent.cash), int(parent.day))
             message = result["message"]
             if bool(result.get("ok", false)):
@@ -121,6 +155,7 @@ func _input(event: InputEvent) -> void:
                 var spend = state_adapter.spend(int(result.get("cost", 0)), "infrastructure construction")
                 if not bool(spend.get("ok", false)):
                     if asset_id != "": system.assets.erase(asset_id)
+                    _restore_ownership_state(ownership_snapshot)
                     message = str(spend.get("message", "Construction payment failed."))
         KEY_F13:
             var list: Array = system.list_region(region)
