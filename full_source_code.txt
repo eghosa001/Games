@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 13:41:52 UTC 2026
+// Generated on: Tue Sep  8 14:00:40 UTC 2026
 
-// Source snapshot commit: d862d35693e06adc60decbb168ec4a10818c95c4
+// Source snapshot commit: dfb954181f9f3620f2e22d5763bd8c850e8f8013
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -18561,7 +18561,7 @@ func _money(amount: int) -> String:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/premium_ui_skin.gd
-Lines: 185
+Lines: 184
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Control
 
@@ -18570,7 +18570,6 @@ extends Control
 ## The goal is to move the interface away from generic dashboard rectangles toward a
 ## compact, game-first command deck inspired by polished city/tycoon simulators.
 
-const BG := Color("071319")
 const DEEP := Color("09171d")
 const SURFACE := Color("0c2028")
 const SURFACE_2 := Color("102a32")
@@ -18583,7 +18582,6 @@ const MUTED := Color("78949a")
 var hud_root: Control
 var viewport_size := Vector2.ZERO
 var pulse := 0.0
-var accent_points := [Vector2(0, 0), Vector2(0, 0), Vector2(0, 0)]
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -18749,6 +18747,7 @@ func _chrome_box(bg: Color, border: Color, radius: int) -> StyleBoxFlat:
     box.shadow_size = 10
     box.shadow_offset = Vector2(0, 4)
     return box
+
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/premium_world_backdrop.gd
