@@ -6,8 +6,7 @@ const TAB_TEXT := Color("e7f2ef")
 const TAB_MUTED := Color("78949a")
 
 func _sync_mobile_actions() -> void:
-    for child in mobile_actions.get_children():
-        child.queue_free()
+    for child in mobile_actions.get_children(): child.queue_free()
 
 func _style_mode_buttons() -> void:
     if mode_buttons.is_empty(): return
@@ -133,7 +132,7 @@ func _action_hint(text: String) -> String:
         "LOGISTICS": return "Manage supply chain and internal logistics."
         "EXPANSION": return "Manage expansion businesses."
         "INTELLIGENCE": return "Review empire intelligence and strategic signals."
-        "PROPERTY MAP": return "Open the property and district map."
+        "PROPERTY MAP": return "Focus the property and district map."
         "HQ": return "Manage headquarters upgrades and corporate services."
         "CUSTOMERS": return "Review customer segments and demand."
         "LIVE OPS": return "Review seasonal events and live operations."
@@ -160,7 +159,7 @@ func _refresh() -> void:
     if action_grid == null: return
     match active_tab:
         0:
-            _action("PROPERTY MAP", Callable(self, "_open_screen").bind("PropertyMap"))
+            _action("PROPERTY MAP", Callable(self, "_focus_property_map"))
         1:
             _action("PRODUCTION", Callable(self, "_open_screen").bind("ProductionControlPanel"))
             _action("CUSTOMERS", Callable(self, "_open_screen").bind("CustomerSegmentsUI"))
@@ -177,6 +176,28 @@ func _refresh() -> void:
             _action("EXPANSION", Callable(self, "_open_screen").bind("EmpireExpansionPanel"))
             _action("INTELLIGENCE", Callable(self, "_open_screen").bind("EmpireIntelligencePanel"))
             _action("LIVE OPS", Callable(self, "_open_screen").bind("LiveOpsPanel"))
+
+func _focus_property_map() -> void:
+    var map := get_tree().root.get_node_or_null("Renew/World/PropertyMap")
+    if map != null:
+        map.show()
+        map.queue_redraw()
+        if parent != null:
+            parent.message = "Property map focused. Select a property on the district map."
+            show_feedback(str(parent.message))
+    elif parent != null:
+        parent.message = "Property map is unavailable."
+        show_feedback(str(parent.message))
+
+func _open_screen(screen_name: String) -> void:
+    var manager := get_node_or_null("/root/RenewUIScreenManager")
+    if manager != null and manager.has_method("show_screen"):
+        manager.show_screen(screen_name)
+    else:
+        var scene := get_tree().current_scene if get_tree() != null else null
+        if scene != null:
+            var node := scene.get_node_or_null("UI/" + screen_name)
+            if node != null: node.show()
 
 func _process(delta: float) -> void:
     super._process(delta)
