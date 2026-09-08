@@ -5,7 +5,6 @@ extends Control
 ## The goal is to move the interface away from generic dashboard rectangles toward a
 ## compact, game-first command deck inspired by polished city/tycoon simulators.
 
-const BG := Color("071319")
 const DEEP := Color("09171d")
 const SURFACE := Color("0c2028")
 const SURFACE_2 := Color("102a32")
@@ -18,7 +17,6 @@ const MUTED := Color("78949a")
 var hud_root: Control
 var viewport_size := Vector2.ZERO
 var pulse := 0.0
-var accent_points := [Vector2(0, 0), Vector2(0, 0), Vector2(0, 0)]
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_IGNORE
