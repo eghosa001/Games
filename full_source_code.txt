@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 16:10:02 UTC 2026
+// Generated on: Tue Sep  8 16:10:44 UTC 2026
 
-// Source snapshot commit: b4013389730cc98d65b21b7e72fb18179a7112dc
+// Source snapshot commit: 477e41b30518d1f220866dbd1ce6a1a4ddce3e15
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4478,9 +4478,9 @@ action_inspect={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode"
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scenes/Main.tscn
-Lines: 204
+Lines: 208
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[gd_scene load_steps=50 format=3]
+[gd_scene load_steps=51 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -4534,6 +4534,7 @@ Lines: 204
 [ext_resource path="res://scripts/world_opportunities_ui.gd" type="Script" id="55"]
 [ext_resource path="res://scripts/production_control_ui.gd" type="Script" id="56"]
 [ext_resource path="res://scripts/supply_chain_ui.gd" type="Script" id="57"]
+[ext_resource path="res://scripts/expansion_ui.gd" type="Script" id="58"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -4684,6 +4685,9 @@ script=ExtResource("56")
 [node name="SupplyChainPanel" type="CanvasLayer" parent="UI"]
 layer=72
 script=ExtResource("57")
+[node name="EmpireExpansionPanel" type="CanvasLayer" parent="UI"]
+layer=73
+script=ExtResource("58")
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
