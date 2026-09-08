@@ -6,11 +6,15 @@ const SURFACE_2 := Color("102831")
 const BORDER := Color("274852")
 const TEXT := Color("e7f2ef")
 const MUTED := Color("78949a")
-const ACCENT := Color("d5b56e")
+const ACCENT := Color("d8b76d")
 var panel: PanelContainer
 var summary_label: Label
 var content: VBoxContainer
 var scroll: ScrollContainer
+var actions: HBoxContainer
+var refresh_button: Button
+var mark_button: Button
+var daily_button: Button
 var open := false
 
 func _ready() -> void:
@@ -42,13 +46,14 @@ func _build() -> void:
     var title := Label.new(); title.text = "NOTIFICATION CENTER"; title.size_flags_horizontal = Control.SIZE_EXPAND_FILL; title.add_theme_font_size_override("font_size", 21); title.add_theme_color_override("font_color", TEXT); header.add_child(title)
     var close := Button.new(); close.text = "CLOSE"; close.custom_minimum_size = Vector2(84, 46); close.focus_mode = Control.FOCUS_NONE; close.pressed.connect(close_screen); header.add_child(close)
     summary_label = Label.new(); summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; summary_label.add_theme_font_size_override("font_size", 11); summary_label.add_theme_color_override("font_color", MUTED); root.add_child(summary_label)
-    var actions := HBoxContainer.new(); actions.add_theme_constant_override("separation", 8); root.add_child(actions)
-    var refresh := Button.new(); refresh.text = "REFRESH"; refresh.custom_minimum_size = Vector2(110, 46); refresh.pressed.connect(_refresh); actions.add_child(refresh)
-    var mark := Button.new(); mark.text = "MARK READ"; mark.custom_minimum_size = Vector2(120, 46); mark.pressed.connect(_mark_read); actions.add_child(mark)
-    var daily := Button.new(); daily.text = "DAILY"; daily.custom_minimum_size = Vector2(100, 46); daily.pressed.connect(_open_daily); actions.add_child(daily)
+    actions = HBoxContainer.new(); actions.add_theme_constant_override("separation", 8); root.add_child(actions)
+    refresh_button = Button.new(); refresh_button.text = "REFRESH"; refresh_button.custom_minimum_size = Vector2(110, 46); refresh_button.focus_mode = Control.FOCUS_NONE; refresh_button.pressed.connect(_refresh); actions.add_child(refresh_button)
+    mark_button = Button.new(); mark_button.text = "MARK READ"; mark_button.custom_minimum_size = Vector2(120, 46); mark_button.focus_mode = Control.FOCUS_NONE; mark_button.pressed.connect(_mark_read); actions.add_child(mark_button)
+    daily_button = Button.new(); daily_button.text = "DAILY"; daily_button.custom_minimum_size = Vector2(100, 46); daily_button.focus_mode = Control.FOCUS_NONE; daily_button.pressed.connect(_open_daily); actions.add_child(daily_button)
     scroll = ScrollContainer.new(); scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; root.add_child(scroll)
     content = VBoxContainer.new(); content.add_theme_constant_override("separation", 9); content.size_flags_horizontal = Control.SIZE_EXPAND_FILL; scroll.add_child(content)
 func _refresh() -> void:
+    if content == null or summary_label == null: return
     var news = _news()
     for child in content.get_children(): child.queue_free()
     if news == null: summary_label.text = "Notification service unavailable."; return
@@ -82,3 +87,19 @@ func _layout() -> void:
     var width := maxf(304.0, size.x - 16.0) if narrow else minf(720.0, size.x - 36.0)
     var height := maxf(420.0, size.y - 86.0) if narrow else minf(700.0, size.y - 100.0)
     panel.position = Vector2(8, 70) if narrow else Vector2(maxf(18.0, (size.x - width) * 0.5), 80); panel.size = Vector2(width, height)
+    if actions == null: return
+    actions.add_theme_constant_override("separation", 7 if narrow else 8)
+    if narrow:
+        actions.remove_child(refresh_button); actions.remove_child(mark_button); actions.remove_child(daily_button)
+        actions.add_child(refresh_button); actions.add_child(mark_button); actions.add_child(daily_button)
+        for button in [refresh_button, mark_button, daily_button]:
+            button.custom_minimum_size = Vector2(0, 46)
+            button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+            button.add_theme_font_size_override("font_size", 9)
+    else:
+        refresh_button.custom_minimum_size = Vector2(110, 46)
+        mark_button.custom_minimum_size = Vector2(120, 46)
+        daily_button.custom_minimum_size = Vector2(100, 46)
+        refresh_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+        mark_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+        daily_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
