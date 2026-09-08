@@ -27,6 +27,7 @@ var area_button: Button
 var next_area_button: Button
 var museum_button: Button
 var area_scroll: ScrollContainer
+var top_actions: HBoxContainer
 var selected_area: String = "executive_offices"
 var area_ids: Array[String] = ["executive_offices", "board_room", "research", "training", "archives", "museum", "technology_center"]
 
@@ -125,17 +126,17 @@ func _build_ui() -> void:
     progress_bar.add_theme_stylebox_override("fill", _style(ACCENT, ACCENT, 4))
     content.add_child(progress_bar)
 
-    var actions := HBoxContainer.new()
-    actions.add_theme_constant_override("separation", 8)
-    content.add_child(actions)
+    top_actions = HBoxContainer.new()
+    top_actions.add_theme_constant_override("separation", 8)
+    content.add_child(top_actions)
     upgrade_button = _button("UPGRADE HQ")
     upgrade_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     upgrade_button.pressed.connect(_upgrade_hq)
-    actions.add_child(upgrade_button)
+    top_actions.add_child(upgrade_button)
     museum_button = _button("MUSEUM")
     museum_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     museum_button.pressed.connect(_open_museum)
-    actions.add_child(museum_button)
+    top_actions.add_child(museum_button)
 
     content.add_child(_label("FUNCTIONAL AREAS", 10, ACCENT))
     area_scroll = ScrollContainer.new()
@@ -259,3 +260,20 @@ func _layout() -> void:
     var height := maxf(430.0, size.y - 86.0) if narrow else minf(680.0, size.y - 110.0)
     panel.position = Vector2(8, 70) if narrow else Vector2(maxf(18.0, (size.x - width) * 0.5), 82)
     panel.size = Vector2(width, height)
+    if top_actions != null:
+        top_actions.alignment = BoxContainer.ALIGNMENT_BEGIN
+        if narrow:
+            top_actions.set("theme_override_constants/separation", 6)
+            upgrade_button.custom_minimum_size = Vector2(0, 46)
+            museum_button.custom_minimum_size = Vector2(0, 46)
+            top_actions.add_theme_constant_override("separation", 6)
+            if upgrade_button.get_parent() == top_actions:
+                top_actions.remove_child(upgrade_button)
+                top_actions.remove_child(museum_button)
+                top_actions.add_child(upgrade_button)
+                top_actions.add_child(museum_button)
+                upgrade_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+                museum_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        else:
+            upgrade_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+            museum_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
