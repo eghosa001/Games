@@ -19,11 +19,13 @@ var summary: Label
 var scroll: ScrollContainer
 var content: VBoxContainer
 var refresh_clock := 0.0
+var last_signature := ""
 
 func _ready() -> void:
     layer = 74
     _build()
     _layout()
+    _refresh(true)
     if not get_viewport().size_changed.is_connected(_layout): get_viewport().size_changed.connect(_layout)
 
 func _process(delta: float) -> void:
@@ -31,13 +33,13 @@ func _process(delta: float) -> void:
     refresh_clock += delta
     if refresh_clock >= 1.0:
         refresh_clock = 0.0
-        _refresh()
+        _refresh(false)
 
 func _game() -> Node:
     return get_tree().root.get_node_or_null("Renew")
 
 func _style(bg: Color, border: Color, radius := 10) -> StyleBoxFlat:
-    var s := StyleBoxFlat.new(); s.bg_color=bg; s.border_color=border; s.set_border_width_all(1); s.set_corner_radius_all(radius); return s
+    var s:=StyleBoxFlat.new(); s.bg_color=bg; s.border_color=border; s.set_border_width_all(1); s.set_corner_radius_all(radius); return s
 
 func _label(text:String,size:int,color:Color)->Label:
     var l:=Label.new(); l.text=text; l.add_theme_font_size_override("font_size",size); l.add_theme_color_override("font_color",color); l.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART; return l
@@ -59,9 +61,8 @@ func _card(heading:String,body:String)->void:
     var h:=_label(heading,12,ACCENT); h.position=Vector2(12,9); h.size=Vector2(500,22); card.add_child(h)
     var b:=_label(body,11,TEXT); b.position=Vector2(12,32); b.size=Vector2(500,48); card.add_child(b)
 
-func _refresh()->void:
+func _refresh(force: bool = false)->void:
     var g:=_game(); if g==null:return
-    for child in content.get_children(): child.queue_free()
     var goals=g.get_node_or_null("Systems/EmpireGoals")
     var prog=g.get_node_or_null("Systems/Progression")
     var region=g.get_node_or_null("World/RegionController")
@@ -71,27 +72,41 @@ func _refresh()->void:
     var cash:=int(g.get("cash")) if "cash" in g else 0
     var rep:=int(g.get("reputation")) if "reputation" in g else 0
     var day:=int(g.get("day")) if "day" in g else 0
-    summary.text="%s  •  DAY %d  •  CASH $%s  •  REP %d" % [name,day,g._money(cash) if g.has_method("_money") else str(cash),rep]
-
-    if goals!=null and goals.has_method("current_goal"):
-        var goal:Dictionary=goals.current_goal(); var done:=goals.completed_count() if goals.has_method("completed_count") else 0; var total:=goals.goals.size() if "goals" in goals else 0
-        _card("NEXT OBJECTIVE  •  %d/%d COMPLETE" % [done,total], "%s\n%s" % [str(goal.get("title","EMPIRE MASTERED")),str(goal.get("text","Every company objective is complete."))])
-    if prog!=null and "milestones" in prog:
-        var claimed:=int(prog.claimed.size()) if prog.claimed is Dictionary else 0
-        _card("MILESTONE TRACKER", "%d of %d milestones achieved.\nMilestones record major company moments and reinforce long-term progression." % [claimed,prog.milestones.size()])
     var presence:=0
-    if region!=null and "regions" in region and region.regions!=null and "player_presence" in region.regions: presence=int(region.regions.player_presence.count(1))
+    if region!=null and "regions" in region and region.regions!=null and "player_presence" in region.regions:
+        presence=int(region.regions.player_presence.count(1))
     var rival_count:=0
     if rivals!=null and "rivals" in rivals: rival_count=rivals.rivals.size()
-    _card("EMPIRE POWER", "REGIONAL FOOTPRINT  %d\nRIVAL NETWORK  %d corporations\nREPUTATION  %d" % [presence,rival_count,rep])
+    var goal_title:="EMPIRE MASTERED"
+    var goal_text:="Every company objective is complete."
+    var done:=0
+    var total:=0
+    if goals!=null and goals.has_method("current_goal"):
+        var goal:Dictionary=goals.current_goal()
+        goal_title=str(goal.get("title",goal_title)); goal_text=str(goal.get("text",goal_text))
+        done=goals.completed_count() if goals.has_method("completed_count") else 0
+        total=goals.goals.size() if "goals" in goals else 0
+    var claimed:=0
+    var milestone_total:=0
+    if prog!=null and "milestones" in prog:
+        claimed=int(prog.claimed.size()) if prog.claimed is Dictionary else 0
+        milestone_total=prog.milestones.size()
     var message:=str(g.get("message")) if "message" in g else "No recent company notice."
     if message=="": message="No recent company notice."
-    _card("LATEST NOTICE", message)
-    _card("COMPANY IDENTITY", "%s\nYour identity, reputation and strategic history are presented here as the executive record of the company." % name)
-    if goals!=null and goals.has_method("current_goal") and goals.completed_count()!=goals.goals.size():
-        _card("EXECUTIVE GUIDANCE", "Prioritize the next objective while protecting cash, reputation and management capacity. Use the operating surfaces to act; this screen keeps the strategic picture visible.")
-    else:
-        _card("EXECUTIVE GUIDANCE", "All current objectives are complete. Continue expanding the network, strengthening regional presence and building the economic empire.")
+    var signature:="%s:%d:%d:%d:%d:%d:%s:%d:%d" % [name,day,cash,rep,presence,rival_count,message,done,claimed]
+    if not force and signature==last_signature:return
+    last_signature=signature
+    for child in content.get_children(): child.queue_free()
+    summary.text="%s  •  DAY %d  •  CASH $%s  •  REP %d" % [name,day,g._money(cash) if g.has_method("_money") else str(cash),rep]
+    _card("NEXT OBJECTIVE  •  %d/%d COMPLETE" % [done,total], "%s\n%s" % [goal_title,goal_text])
+    if prog!=null and "milestones" in prog:
+        _card("MILESTONE TRACKER", "%d of %d milestones achieved.\nMilestones record major company moments and reinforce long-term progression." % [claimed,milestone_total])
+    _card("EMPIRE POWER", "REGIONAL FOOTPRINT  %d\nRIVAL NETWORK  %d corporations\nREPUTATION  %d" % [presence,rival_count,rep])
+    _card("LATEST NOTICE",message)
+    _card("COMPANY IDENTITY","%s\nYour identity, reputation and strategic history are presented here as the executive record of the company." % name)
+    _card("EXECUTIVE GUIDANCE", "Prioritize the next objective while protecting cash, reputation and management capacity. Use the operating surfaces to act; this screen keeps the strategic picture visible." if done<total else "All current objectives are complete. Continue expanding the network, strengthening regional presence and building the economic empire.")
+    status_label.text="STRATEGY • %d REGIONS • %d RIVALS" % [presence,rival_count]
+    _layout()
 
 func _close()->void:
     var manager=get_node_or_null("/root/RenewUIScreenManager")
@@ -108,9 +123,7 @@ func _layout()->void:
     summary.position=Vector2(14,62); summary.size=Vector2(width-28,38)
     scroll.position=Vector2(12,106); scroll.size=Vector2(width-24,height-114); content.custom_minimum_size.x=width-24
     for child in content.get_children():
-        child.custom_minimum_size.y=90
+        child.custom_minimum_size.y=96 if narrow else 90
         for sub in child.get_children():
             if sub is Label:
                 sub.size.x=width-48
-    if narrow:
-        for child in content.get_children(): child.custom_minimum_size.y=96
