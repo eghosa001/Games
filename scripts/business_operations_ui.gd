@@ -53,8 +53,7 @@ func _build() -> void:
     inventory_label = _label("", 10, MUTED)
     machine_label = _label("", 10, MUTED)
     status = _label("", 9, MUTED)
-    for node in [header, summary, production_label, inventory_label, machine_label, status]:
-        panel.add_child(node)
+    for node in [header, summary, production_label, inventory_label, machine_label, status]: panel.add_child(node)
     close_button = _button("CLOSE", Callable(self, "_close"), 44)
     produce_button = _button("PRODUCE", Callable(self, "_produce"), 46)
     buy_inputs_button = _button("BUY INPUTS", Callable(self, "_buy_inputs"), 46)
@@ -62,8 +61,7 @@ func _build() -> void:
     marketing_button = _button("MARKETING", Callable(self, "_marketing"), 46)
     price_button = _button("CHANGE PRICE", Callable(self, "_price"), 46)
     staff_button = _button("STAFF", Callable(self, "_staff"), 46)
-    for button in [close_button, produce_button, buy_inputs_button, upgrade_button, marketing_button, price_button, staff_button]:
-        panel.add_child(button)
+    for button in [close_button, produce_button, buy_inputs_button, upgrade_button, marketing_button, price_button, staff_button]: panel.add_child(button)
 
 func _label(text: String, size: int, color: Color) -> Label:
     var l := Label.new()
@@ -97,44 +95,44 @@ func _button(text: String, callback: Callable, height: int) -> Button:
 func _layout() -> void:
     if panel == null: return
     var s := get_viewport().get_visible_rect().size
-    var w := maxf(s.x, 320.0); var h := maxf(s.y, 480.0)
-    var narrow := w < 720.0
-    var pw := minf(w - (18.0 if narrow else 56.0), 780.0)
-    var ph := minf(h - (20.0 if narrow else 56.0), 560.0)
-    panel.size = Vector2(pw, ph); panel.position = Vector2((w - pw) * 0.5, (h - ph) * 0.5)
-    header.position = Vector2(14, 10); header.size = Vector2(pw - 112, 28)
-    summary.position = Vector2(14, 39); summary.size = Vector2(pw - 112, 18)
-    close_button.position = Vector2(pw - 88, 10); close_button.size = Vector2(76, 44)
-    production_label.position = Vector2(14, 72); production_label.size = Vector2(pw - 28, 42)
-    inventory_label.position = Vector2(14, 116); inventory_label.size = Vector2(pw - 28, 56)
-    machine_label.position = Vector2(14, 174); machine_label.size = Vector2(pw - 28, 56)
-    var y := 238.0
-    var gap := 7.0
-    var cols := 2
-    var bw := (pw - 28.0 - gap) / 2.0
-    for button in [produce_button, buy_inputs_button, upgrade_button, marketing_button, price_button, staff_button]:
-        button.position = Vector2(14.0 + (bw + gap) * float((int(y) - 238) % 2), y)
-        button.size = Vector2(bw, 46)
-        if button == buy_inputs_button or button == staff_button:
-            pass
-        if button == produce_button or button == buy_inputs_button:
-            y += 53.0
-        elif button == upgrade_button or button == marketing_button:
-            y += 53.0
-        elif button == price_button:
-            y += 53.0
-    # Explicit grid positions keep the layout deterministic.
-    produce_button.position = Vector2(14, 238); buy_inputs_button.position = Vector2(14 + bw + gap, 238)
-    upgrade_button.position = Vector2(14, 291); marketing_button.position = Vector2(14 + bw + gap, 291)
-    price_button.position = Vector2(14, 344); staff_button.position = Vector2(14 + bw + gap, 344)
-    for button in [produce_button, buy_inputs_button, upgrade_button, marketing_button, price_button, staff_button]: button.size = Vector2(bw, 46)
-    status.position = Vector2(14, ph - 56); status.size = Vector2(pw - 28, 44)
+    var phone := s.x < 430.0
+    var narrow := s.x < 720.0
+    var w := minf(780.0, maxf(304.0, s.x - (16.0 if narrow else 56.0)))
+    var h := minf(620.0, maxf(470.0, s.y - (70.0 if narrow else 90.0)))
+    panel.size = Vector2(w, minf(h, s.y - 16.0))
+    panel.position = Vector2((s.x - w) * 0.5, maxf(38.0, (s.y - panel.size.y) * 0.5))
+    header.position = Vector2(14, 10); header.size = Vector2(w - 112, 28)
+    summary.position = Vector2(14, 39); summary.size = Vector2(w - 112, 18)
+    close_button.position = Vector2(w - 88, 10); close_button.size = Vector2(76, 44)
+    production_label.position = Vector2(14, 72); production_label.size = Vector2(w - 28, 42)
+    inventory_label.position = Vector2(14, 116); inventory_label.size = Vector2(w - 28, 56)
+    machine_label.position = Vector2(14, 174); machine_label.size = Vector2(w - 28, 56)
+    var buttons := [produce_button, buy_inputs_button, upgrade_button, marketing_button, price_button, staff_button]
+    if phone:
+        var y := 238.0
+        for button in buttons:
+            button.position = Vector2(14, y)
+            button.size = Vector2(w - 28, 46)
+            button.add_theme_font_size_override("font_size", 9)
+            y += 51.0
+        status.position = Vector2(14, minf(y + 2.0, panel.size.y - 48.0)); status.size = Vector2(w - 28, 42)
+    else:
+        var gap := 7.0
+        var bw := (w - 28.0 - gap) / 2.0
+        var y := 238.0
+        for i in range(buttons.size()):
+            var row := i / 2
+            var col := i % 2
+            buttons[i].position = Vector2(14.0 + col * (bw + gap), y + row * 53.0)
+            buttons[i].size = Vector2(bw, 46)
+        status.position = Vector2(14, panel.size.y - 56); status.size = Vector2(w - 28, 44)
+        for button in buttons: button.add_theme_font_size_override("font_size", 10 if not narrow else 9)
 
 func open_screen() -> void:
     visible = true
     if production == null: production = get_node_or_null("/root/RenewProductionSystem")
     if business == null: business = get_node_or_null("/root/RenewBusinessSystem")
-    _refresh()
+    _layout(); _refresh()
 
 func close_screen() -> void:
     visible = false
@@ -179,11 +177,8 @@ func _refresh() -> void:
             var m: Dictionary = machines.get(id, {})
             if not m.is_empty(): parts.append("%s %s%%" % [id.to_upper(), int(round(float(m.get("condition", 0.0))))])
         machine_label.text = "EQUIPMENT  •  " + "  |  ".join(parts)
-    produce_button.disabled = game == null or not bool(game.business_open)
-    buy_inputs_button.disabled = game == null or not bool(game.business_open)
-    upgrade_button.disabled = game == null or not bool(game.business_open)
-    marketing_button.disabled = game == null or not bool(game.business_open)
-    price_button.disabled = game == null or not bool(game.business_open)
+    var enabled := game != null and bool(game.business_open)
+    for button in [produce_button, buy_inputs_button, upgrade_button, marketing_button, price_button]: button.disabled = not enabled
 
 func _quality() -> int:
     if production != null: return int(production.quality)
