@@ -31,7 +31,12 @@ func _run() -> void:
     var expected_screens: Array[String] = [
         "ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel",
         "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel",
-        "NewsPanel", "InfrastructurePanel", "RenewDiplomacyUI", "CustomerSegmentsUI"
+        "NewsPanel", "InfrastructurePanel", "DashboardPanel", "FinancePanel",
+        "PortfolioPanel", "CorporationsPanel", "RegionsPanel", "WorldOpportunitiesPanel",
+        "BusinessOperationsPanel", "ProductionControlPanel", "SupplyChainPanel",
+        "EmpireExpansionPanel", "EmpireIntelligencePanel", "EmpireProgressionPanel",
+        "EmpireIdentityPanel", "NotificationsCenterPanel", "RenewDiplomacyUI",
+        "CustomerSegmentsUI"
     ]
     for screen_name in expected_screens:
         check("screen node resolves: %s" % screen_name, _find_screen(scene, screen_name) != null)
@@ -41,8 +46,9 @@ func _run() -> void:
     check("exactly one CustomerSegmentsUI instance exists", _count_named_nodes(scene, "CustomerSegmentsUI") == 1)
 
     # Screen routing is the contract: exactly one managed screen is rendered
-    # after every explicit open.
-    for screen_name in ["CustomerSegmentsUI", "ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel", "InfrastructurePanel", "RenewDiplomacyUI"]:
+    # after every explicit open. Exercise every registered panel, including the
+    # newer V1 management surfaces, rather than only the legacy subset.
+    for screen_name in expected_screens:
         manager.show_screen(screen_name)
         await process_frame
         check("active screen is %s" % screen_name, manager.get_active_screen_name() == screen_name)
