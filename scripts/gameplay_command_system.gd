@@ -204,9 +204,45 @@ func advance_day()->void:
     var repair:=_reconcile_books_once()
     var transaction:=_capture_daily_transaction()
     if not bool(transaction.get("ok",false)):_set_state("company","message",str(transaction.get("message","Daily transaction could not start.")));return
-    var before_day:=int(_state_value("player","day",1));simulation.advance_day();var after_day:=int(_state_value("player","day",before_day))
-    if after_day<=before_day:
-        _restore_daily_transaction(transaction["snapshot"]);_set_state("company","message","Daily transaction failed and was rolled back.");return
-    var reconcile:=_reconcile_books_once()
-    if bool(reconcile.get("ok",true)):return
-    _restore_daily_transaction(transaction["snapshot"]);_set_state("company","message",str(reconcile.get("message","Daily financial reconciliation failed; the day was rolled back.")))
+    var context={"economy":supply_system.economy,"rivals":relationship_system.rivals,"events":_events(),"expansion":expansion_system.expansion,"districts":expansion_system.districts,"employee_system":employee_system,"business_system":business_system,"production":business_system.production,"contracts":get_node_or_null("/root/RenewContractSystem")}
+    var result:Dictionary=simulation.advance_day(_simulation_state(),context)
+    if not bool(result.get("ok",false)):_restore_daily_transaction(transaction["snapshot"]);_set_state("company","message",str(result.get("message","Unable to advance the day.")));return
+    _apply_simulation_state(result.get("state",{}));employee_system.sync_roster()
+    if technology_system!=null:technology_system.add_daily_research_points(3)
+    if competitor_reactions!=null:
+        for reaction in competitor_reactions.observe_and_react(_simulation_state(),business_system.supply_chain,result.get("contract",{})):_log("COMPETITOR REACTION: "+reaction)
+        competitor_reactions.daily_decay()
+    var player_price:=max(1,int(_state_value("businesses","player_price",110)));var units_sold:=int(floor(float(_state_value("economy","last_sales",0))/float(player_price)))
+    if units_sold>0:
+        var sold_product := str(_state_value("businesses","industry_id","furniture"))
+        if not (sold_product in ["furniture","construction_materials","consumer_electronics"]):
+            sold_product = "furniture"
+        var demand_result:Dictionary=supply_system.economy.register_customer_demand(sold_product,units_sold)
+        if bool(demand_result.get("ok",false)):_log("MARKET: customers bought %d %s; upstream resource demand increased."%[units_sold,sold_product.replace("_"," ")])
+    if business_system.supply_chain.has_method("_sync_production_mirror"):business_system.supply_chain._sync_production_mirror(business_system.supply_chain.warehouse.keys())
+    var victory = get_node_or_null("/root/RenewVictorySystem")
+    if victory != null and victory.has_method("check_victory"): victory.check_victory()
+    if victory != null and victory.has_method("maybe_endgame_crisis"): victory.maybe_endgame_crisis()
+    var identity = get_node_or_null("/root/RenewIdentitySystem")
+    if identity != null and identity.has_method("evaluate"): identity.evaluate()
+    if bool(repair.get("repaired",false)):_set_state("company","message","BOOKS RECONCILED: one-time repair plugged $%s into retained earnings. The save advances again."%_money_text(int(abs(float(repair.get("plugged",0.0))))));_log("BOOKS RECONCILED: one-time repair plugged $%s into retained earnings."%_money_text(int(abs(float(repair.get("plugged",0.0))))))
+func _events():
+    if not has_meta("events_model"):set_meta("events_model",load("res://scripts/events.gd").new())
+    return get_meta("events_model")
+func _simulation_state()->Dictionary:return {"cash":_state_value("economy","cash",25000),"reputation":_state_value("player","reputation",0),"day":_state_value("player","day",1),"debt":_state_value("finance","debt",0),"loan_payment":_state_value("finance","loan_payment",0),"business_open":_state_value("businesses","business_open",false),"employees":employee_system.get_active_employee_count(),"wages":employee_system.get_daily_wage_total(),"capacity_level":_state_value("businesses","capacity_level",1),"marketing_level":_state_value("businesses","marketing_level",0),"player_price":_state_value("businesses","player_price",110),"finished_goods":_state_value("production","finished_goods",0),"last_sales":_state_value("economy","last_sales",0),"last_profit":_state_value("economy","last_profit",0),"total_profit":_state_value("economy","total_profit",0),"relationship":_state_value("competitors","relationship",15),"selected_rival":_state_value("competitors","selected_rival",0),"selected_expansion":_state_value("branches","selected_expansion",0),"supplier_choice":_state_value("supply_chain","supplier_choice",0),"contract_days":_state_value("contracts","contract_days",0),"contract_bonus":_state_value("contracts","contract_bonus",0),"acquisition_count":_state_value("ownership","acquisition_count",0),"transport_level":_state_value("supply_chain","transport_level",1),"transport_capacity":_state_value("supply_chain","transport_capacity",40),"selected_district":_state_value("regions","selected_district",0),"message":_state_value("company","message",""),"log_lines":_state_value("company","log_lines",[]).duplicate(true)}
+func _apply_simulation_state(state:Dictionary)->void:
+    var map={"cash":["economy","cash"],"reputation":["player","reputation"],"day":["player","day"],"debt":["finance","debt"],"loan_payment":["finance","loan_payment"],"business_open":["businesses","business_open"],"capacity_level":["businesses","capacity_level"],"marketing_level":["businesses","marketing_level"],"player_price":["businesses","player_price"],"finished_goods":["production","finished_goods"],"last_sales":["economy","last_sales"],"last_profit":["economy","last_profit"],"total_profit":["economy","total_profit"],"relationship":["competitors","relationship"],"selected_rival":["competitors","selected_rival"],"selected_expansion":["branches","selected_expansion"],"supplier_choice":["supply_chain","supplier_choice"],"contract_days":["contracts","contract_days"],"contract_bonus":["contracts","contract_bonus"],"acquisition_count":["ownership","acquisition_count"],"transport_level":["supply_chain","transport_level"],"transport_capacity":["supply_chain","transport_capacity"],"selected_district":["regions","selected_district"],"message":["company","message"]}
+    for key in map:
+        if state.has(key):_set_state(map[key][0],map[key][1],state[key])
+    if state.get("log_lines",[]) is Array:_set_state("company","log_lines",state["log_lines"].duplicate(true))
+func save_game()->void:
+    _set_state("supply_chain","resource_sites",business_system.supply_chain.warehouse_snapshot())
+    var state=get_node_or_null("/root/RenewGameState");var snapshot=state.capture() if state!=null else {}
+    _set_state("company","message","Game saved." if SaveSystem.save_game(snapshot) else "Save failed.")
+func load_game()->void:
+    var snapshot=SaveSystem.load_game();if snapshot.is_empty():_set_state("company","message","No save file found.");return
+    var state=get_node_or_null("/root/RenewGameState");if state!=null:state.restore(snapshot)
+    var roster=_state_value("employees","roster",[]);if roster is Array:employee_system.employee_system.restore_state({"employees":roster})
+    var saved_warehouse=_state_value("supply_chain","resource_sites",{});if saved_warehouse is Dictionary:business_system.supply_chain.restore_state({"warehouse":saved_warehouse})
+    if competitor_reactions!=null:competitor_reactions.set_rivals(relationship_system.rivals)
+    employee_system.sync_roster();_set_state("company","message","Game loaded.")
