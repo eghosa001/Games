@@ -33,11 +33,11 @@ func _signature() -> String:
 	if state == null:
 		return "none"
 	var catalog = state.get_value("properties", "catalog", [])
-	var parts: Array = [str(state.get_value("player", "day", 1)), str(state.get_value("properties", "selected_property", 0)), str(state.get_value("properties", "owned", false)), str(state.get_value("properties", "owned", false))]
+	var parts: Array = [str(state.get_value("player", "day", 1)), str(state.get_value("properties", "selected_property", 0)), str(state.get_value("properties", "owned", false))]
 	if catalog is Array:
 		for entry in catalog:
 			if entry is Dictionary:
-				parts.append("%s:%d:%d:%d:%d:%s" % [str(entry.get("id", "")), int(entry.get("cleaning", 0)), int(entry.get("repair", 0)), int(entry.get("painting", 0)), int(entry.get("furnishing", 0)), str(entry.get("condition", 0))])
+				parts.append("%s:%d:%d:%d:%d:%s:%d" % [str(entry.get("id", "")), int(entry.get("cleaning", 0)), int(entry.get("repair", 0)), int(entry.get("painting", 0)), int(entry.get("furnishing", 0)), str(entry.get("condition", 0)), int(entry.get("lease_until", 0))])
 	return "|".join(parts)
 
 func stage_of(property: Dictionary, owned: bool) -> int:
@@ -68,8 +68,6 @@ func _map_area() -> Rect2:
 		var dock: Variant = hud.get("action_dock")
 		if dock is Control and (dock as Control).visible:
 			bottom = minf(bottom, (dock as Control).position.y - 8.0)
-		# Clamp top against desktop property cards so the map never draws
-		# beneath left_rail / selected_card / objective_card (y:116→208).
 		var selected: Variant = hud.get("selected_card")
 		if selected is Control and selected.visible:
 			top = maxf(top, selected.position.y + selected.size.y + 4.0)
@@ -79,8 +77,6 @@ func _map_area() -> Rect2:
 				top = maxf(top, objective.position.y + objective.size.y + 4.0)
 			else:
 				top = maxf(top, 212.0)
-		# Clamp left against left_rail (x:8→96 on desktop) so tiles do not
-		# draw behind the navigation rail; also respect the dock's left edge.
 		var left_rail: Variant = hud.get("left_rail")
 		var rail_right: float = 16.0
 		if left_rail is Control and left_rail.visible:
@@ -221,13 +217,22 @@ func _draw_building(rect: Rect2, building_type: String, stage: int, condition: i
 		draw_rect(Rect2(bar.position, Vector2(bar.size.x * (float(stage) / 5.0), bar.size.y)), TRIM, true)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not (event is InputEventMouseButton):
-		return
-	var click: InputEventMouseButton = event
-	if not click.pressed or click.button_index != MOUSE_BUTTON_LEFT:
+	var point := Vector2.ZERO
+	var is_selection := false
+	if event is InputEventMouseButton:
+		var click: InputEventMouseButton = event
+		is_selection = click.pressed and click.button_index == MOUSE_BUTTON_LEFT
+		if is_selection:
+			point = click.position
+	elif event is InputEventScreenTouch:
+		var touch: InputEventScreenTouch = event
+		is_selection = touch.pressed
+		if is_selection:
+			point = touch.position
+	if not is_selection:
 		return
 	for slot in map_rects():
-		if (slot["rect"] as Rect2).has_point(click.position):
+		if (slot["rect"] as Rect2).has_point(point):
 			_select_property(str(slot["id"]))
 			get_viewport().set_input_as_handled()
 			return
