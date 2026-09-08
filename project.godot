@@ -17,7 +17,6 @@ RenewGameState="*res://scripts/game_state.gd"
 RenewAutosave="*res://scripts/autosave.gd"
 
 RenewFinanceSystem="*res://scripts/finance_system_fixed.gd"
-
 RenewSimulationSystem="*res://scripts/simulation_system.gd"
 RenewUIRegionCoordinator="*res://scripts/ui_region_coordinator.gd"
 
@@ -126,6 +125,8 @@ gdscript/warnings/inference_on_variant=1
 renderer/rendering_method="gl_compatibility"
 
 renderer/rendering_method.mobile="gl_compatibility"
+
+textures/vram_compression/import_etc2_astc=true
 
 environment/defaults/default_clear_color=Color(0.03, 0.05, 0.06, 1)
 
