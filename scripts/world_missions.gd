@@ -12,6 +12,7 @@ var expires_day: Variant = 0
 var reward_preview: Variant = ""
 var cooldown: Variant = 2
 var completed: Variant = 0
+var last_processed_day: int = -1
 
 var missions: Variant = [
     {"type":"community","title":"The Neighborhood Is Watching","text":"A neglected block near your district needs cleanup. A visible investment could build loyalty before a rival moves in.","a":"Spend $3,000","b":"Ignore it","reward":"+6 reputation"},
@@ -24,25 +25,38 @@ var missions: Variant = [
 
 func _ready() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
+    if parent != null:
+        last_processed_day = int(parent.day)
     queue_redraw()
 
 var _accum := 0.0
 
-func _process(_delta: float) -> void:
-    _accum += _delta
+func _process(delta: float) -> void:
+    _accum += delta
     if parent == null: return
-    if active and parent.day > expires_day:
+
+    # Cooldowns and expiry are gameplay-day based. They must not advance once
+    # per rendered frame, otherwise a two/three-day cooldown expires in a few
+    # frames on every platform.
+    var current_day := int(parent.day)
+    if current_day != last_processed_day:
+        last_processed_day = current_day
+        _process_day(current_day)
+
+    if _accum >= 0.16:
+        _accum = 0.0
+        queue_redraw()
+
+func _process_day(current_day: int) -> void:
+    if active and current_day > int(expires_day):
         active = false
         cooldown = 2
         parent._log("WORLD: The opportunity expired before you acted.")
         parent.message = "A world opportunity expired. Timing matters."
-    elif not active and cooldown > 0:
-        cooldown -= 1
-    elif not active and cooldown <= 0 and parent.day >= 4 and parent.day % 3 == 1:
+    elif not active and int(cooldown) > 0:
+        cooldown = max(0, int(cooldown) - 1)
+    elif not active and int(cooldown) <= 0 and current_day >= 4 and current_day % 3 == 1:
         _spawn()
-    if _accum >= 0.16:
-        _accum = 0.0
-        queue_redraw()
 
 func _spawn() -> void:
     var pool: Variant = missions.duplicate()
