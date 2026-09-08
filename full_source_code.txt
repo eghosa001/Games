@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 13:27:39 UTC 2026
+// Generated on: Tue Sep  8 13:31:09 UTC 2026
 
-// Source snapshot commit: 415189cd8034f548f471eeea5a8a08093b2d8ec7
+// Source snapshot commit: b1f3472e5ab3c50531e64d2dfd24273a52617e89
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -463,6 +463,36 @@ jobs:
           publish_dir: ./build/web
           force_orphan: true
 
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: Assets/Art/building_factory_progression.svg
+Lines: 0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="864" viewBox="0 0 256 864"><rect width="256" height="864" fill="#101a20"/><g fill="#293c45" stroke="#d5e2e1" stroke-width="4"><path d="M18 136V48L128 12l110 36v88z"/><path d="M12 280v-112l116-34 116 34v112z"/><path d="M8 428V296l120-38 120 38v132z"/><path d="M6 578V444l122-40 122 40v134z"/><path d="M4 730V594l124-42 124 42v136z"/><path d="M2 862V746l126-42 126 42v116z"/></g><g fill="none" stroke="#8fc7b5" stroke-width="6"><path d="M42 106h42v30H42zM172 76h42v30h-42z"/><path d="M38 228h44v34H38zM174 194h44v34h-44z"/><path d="M34 360h48v38H34zM174 322h48v38h-48z"/><path d="M30 510h52v40H30zM174 468h52v40h-52z"/><path d="M26 660h56v42H26zM172 616h56v42h-56z"/><path d="M22 808h58v44H22zM170 762h58v44h-58z"/></g></svg>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: Assets/Art/building_office_progression.svg
+Lines: 0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="864" viewBox="0 0 256 864"><rect width="256" height="864" fill="#101a20"/><g fill="#31434a" stroke="#e7d29a" stroke-width="4"><path d="M18 136V72l38-48h144l38 48v64z"/><path d="M12 280V160l42-50h148l42 50v120z"/><path d="M8 428V300l46-54h148l46 54v128z"/><path d="M6 578V448l48-56h148l48 56v130z"/><path d="M4 730V598l50-58h148l50 58v132z"/><path d="M2 862V748l52-60h148l52 60v114z"/></g><g fill="#b8d8d0" stroke="#17252d" stroke-width="4"><rect x="42" y="96" width="42" height="26"/><rect x="172" y="96" width="42" height="26"/><rect x="36" y="198" width="48" height="34"/><rect x="172" y="198" width="48" height="34"/><rect x="30" y="342" width="54" height="40"/><rect x="172" y="342" width="54" height="40"/><rect x="24" y="500" width="60" height="44"/><rect x="170" y="500" width="60" height="44"/><rect x="20" y="652" width="64" height="48"/><rect x="168" y="652" width="68" height="48"/><rect x="16" y="804" width="68" height="48"/><rect x="166" y="804" width="74" height="48"/></g><g fill="#e4bd68"><circle cx="128" cy="120" r="9"/><circle cx="128" cy="260" r="11"/><circle cx="128" cy="410" r="13"/><circle cx="128" cy="560" r="15"/><circle cx="128" cy="712" r="17"/><circle cx="128" cy="844" r="19"/></g></svg>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: Assets/Art/building_warehouse_progression.svg
+Lines: 6
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="864" viewBox="0 0 256 864"><defs><linearGradient id="b" x2="0" y2="1"><stop stop-color="#314955"/><stop offset="1" stop-color="#17252d"/></linearGradient></defs><rect width="256" height="864" fill="#101a20"/>
+<g stroke="#cfe0e1" stroke-width="4"><rect x="16" y="16" width="224" height="120" rx="8" fill="#263942"/><path d="M16 70h224M72 16v120M184 16v120" opacity=".35"/><path d="M30 116h196"/></g>
+<g stroke="#d9e6e6" stroke-width="4"><rect x="12" y="156" width="232" height="124" rx="7" fill="#5c6b70"/><path d="M12 204h232M58 156v124M198 156v124" opacity=".55"/><path d="M28 260h200"/></g>
+<g stroke="#d9e6e6" stroke-width="4"><rect x="10" y="300" width="236" height="128" rx="7" fill="#728b91"/><path d="M10 348h236M48 300v128M208 300v128" opacity=".55"/><path d="M26 408h204"/></g>
+<g stroke="#e5eeee" stroke-width="4"><rect x="8" y="444" width="240" height="132" rx="7" fill="#8caeb0"/><path d="M8 492h240M42 444v132M214 444v132" opacity=".65"/><rect x="30" y="510" width="42" height="44" fill="#b9d6d4"/><rect x="184" y="510" width="42" height="44" fill="#b9d6d4"/></g>
+<g stroke="#f0f5f2" stroke-width="4"><rect x="6" y="592" width="244" height="136" rx="7" fill="#a9c7c0"/><path d="M6 640h244M38 592v136M218 592v136" opacity=".65"/><rect x="26" y="660" width="48" height="46" fill="#d5e5df"/><rect x="182" y="660" width="48" height="46" fill="#d5e5df"/></g>
+<g stroke="#f6faf8" stroke-width="4"><rect x="4" y="744" width="248" height="116" rx="7" fill="url(#b)"/><path d="M4 792h248M34 744v116M222 744v116" opacity=".75"/><rect x="22" y="808" width="48" height="34" fill="#d8ebe2"/><rect x="186" y="808" width="48" height="34" fill="#d8ebe2"/><path d="M92 844v-70h72v70" fill="#243943"/></g></svg>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: Assets/Art/employee_portraits.svg
+Lines: 0
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="128" viewBox="0 0 640 128"><rect width="640" height="128" fill="#132027"/><g stroke="#e4bd68" stroke-width="3"><rect x="4" y="4" width="120" height="120" rx="22" fill="#29404a"/><rect x="132" y="4" width="120" height="120" rx="22" fill="#34454e"/><rect x="260" y="4" width="120" height="120" rx="22" fill="#263d49"/><rect x="388" y="4" width="120" height="120" rx="22" fill="#405052"/><rect x="516" y="4" width="120" height="120" rx="22" fill="#2f3d4c"/></g><g fill="#d9e8e4"><circle cx="64" cy="52" r="25"/><path d="M27 111c4-27 18-38 37-38s33 11 37 38z"/><circle cx="192" cy="52" r="25"/><path d="M155 111c4-27 18-38 37-38s33 11 37 38z"/><circle cx="320" cy="52" r="25"/><path d="M283 111c4-27 18-38 37-38s33 11 37 38z"/><circle cx="448" cy="52" r="25"/><path d="M411 111c4-27 18-38 37-38s33 11 37 38z"/><circle cx="576" cy="52" r="25"/><path d="M539 111c4-27 18-38 37-38s33 11 37 38z"/></g><g fill="#17252d"><path d="M39 45c5-22 45-27 50 1-12-9-35-11-50-1z"/><path d="M168 42c8-20 38-24 48 0-13-5-32-6-48 0z"/><path d="M295 43c8-23 44-22 50 2-17-10-34-9-50-2z"/><path d="M424 40c8-20 42-22 49 4-16-7-31-8-49-4z"/><path d="M551 45c5-23 45-27 51 1-15-9-35-10-51-1z"/></g></svg>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: Assets/Art/premium_industrial_district.svg
@@ -3830,10 +3860,10 @@ Lines: 57
 - [x] Contract terms are fair.
 - [x] Loans are repayable.
 
-## 🎨 Art (NEXT)
-- [ ] Replace placeholder rectangles with building sprites (3 types, 6 stages each).
-- [ ] Add employee portraits (at least 5 variants).
-- [ ] Resource icons (timber, iron, energy, food, electronics).
+## 🎨 Art (IN PROGRESS)
+- [x] Replace placeholder rectangles with building progression art (3 types, 6 stages each).
+- [x] Add employee portraits (5 variants).
+- [x] Resource icons (timber, iron, energy, food, electronics).
 - [ ] UI theme: buttons, panels, background, logo.
 - [ ] World map region illustrations.
 - [ ] Headquarters visual stages (small office → skyscraper).
@@ -3847,7 +3877,7 @@ Lines: 57
 ## 📱 Mobile & Performance (NEXT)
 - [ ] Test on 320px, 360px, 480px, 720px, tablet.
 - [ ] Play 15 minutes without keyboard.
-- [ ] Touch targets ≥ 44x44 points.
+- [x] Touch targets in the employee action panel are ≥ 44x44 points.
 - [ ] Frame rate ≥ 30 FPS on low‐end Android.
 - [ ] Memory usage stable.
 
@@ -3872,7 +3902,7 @@ Lines: 57
 
 ---
 
-**Current Status:** Ready for Art & Audio integration. All code systems are final.
+**Current Status:** V1 visual progression is integrated. Continue with UI theme, regional/world visuals, audio polish, then physical-device QA.
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -12991,16 +13021,20 @@ func sync_roster_to_state()->void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/employee_ui.gd
-Lines: 217
+Lines: 238
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 class_name RenewEmployeeUI
 
 # Employee presentation reads canonical GameState and delegates mutations to
 # EmployeeCommandSystem through GameplayCommandSystem, including training costs.
+const PORTRAIT_SHEET := "res://Assets/Art/employee_portraits.svg"
+const PORTRAIT_SIZE := Vector2(128, 128)
 var panel: Panel
 var employee_list: VBoxContainer
 var detail_label: Label
+var detail_row: HBoxContainer
+var portrait: TextureRect
 var selected_id: Variant = ""
 var _refresh_clock: Variant = 0.0
 var _list_scroll: ScrollContainer
@@ -13029,7 +13063,6 @@ func _build_ui() -> void:
     panel.name = "EmployeesPanel"
     panel.visible = false
     add_child(panel)
-
     var margin := MarginContainer.new()
     margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     margin.add_theme_constant_override("margin_left", 14)
@@ -13037,22 +13070,18 @@ func _build_ui() -> void:
     margin.add_theme_constant_override("margin_top", 12)
     margin.add_theme_constant_override("margin_bottom", 12)
     panel.add_child(margin)
-
     var root := VBoxContainer.new()
     root.add_theme_constant_override("separation", 8)
     margin.add_child(root)
-
     var title := Label.new()
     title.text = "EMPLOYEES"
     title.add_theme_font_size_override("font_size", 24)
     root.add_child(title)
-
     var hint := Label.new()
     hint.text = "Select a person to view their career and manage assignments."
     hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     hint.add_theme_color_override("font_color", Color("78949a"))
     root.add_child(hint)
-
     _list_scroll = ScrollContainer.new()
     _list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     _list_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
@@ -13061,17 +13090,26 @@ func _build_ui() -> void:
     employee_list = VBoxContainer.new()
     employee_list.add_theme_constant_override("separation", 6)
     _list_scroll.add_child(employee_list)
-
     _detail_scroll = ScrollContainer.new()
     _detail_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     _detail_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-    _detail_scroll.custom_minimum_size.y = 108
+    _detail_scroll.custom_minimum_size.y = 112
     root.add_child(_detail_scroll)
+    detail_row = HBoxContainer.new()
+    detail_row.add_theme_constant_override("separation", 10)
+    _detail_scroll.add_child(detail_row)
+    portrait = TextureRect.new()
+    portrait.name = "EmployeePortrait"
+    portrait.custom_minimum_size = Vector2(76, 76)
+    portrait.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+    portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    portrait.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+    detail_row.add_child(portrait)
     detail_label = Label.new()
     detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    _detail_scroll.add_child(detail_label)
-
+    detail_row.add_child(detail_label)
     _actions = GridContainer.new()
     _actions.columns = 2
     _actions.add_theme_constant_override("h_separation", 6)
@@ -13117,7 +13155,7 @@ func _layout_responsive() -> void:
         panel.size = Vector2(maxf(280.0, size.x - 16.0), maxf(420.0, size.y - 84.0))
         _list_scroll.custom_minimum_size.y = 150
         _list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-        _detail_scroll.custom_minimum_size.y = 112
+        _detail_scroll.custom_minimum_size.y = 118
         _actions.columns = 2
     else:
         panel.position = Vector2(12, 70)
@@ -13163,11 +13201,24 @@ func _update_details(roster: Array) -> void:
     var employee: Dictionary = _find_employee(roster, selected_id)
     if employee.is_empty():
         detail_label.text = "No employee selected."
+        portrait.texture = null
         return
+    _set_portrait(str(employee.get("id", selected_id)))
     var productivity: Variant = int(round(float(employee.get("productivity", 0.0)) * 100.0))
     var seat := str(employee.get("executive_seat", ""))
     var seat_line := ("C-suite: %s" % seat) if seat != "" else ("Level %d" % int(employee.get("level", 1)))
     detail_label.text = "%s\n%s [%s]\n────────────────\nProductivity %d%%  •  Experience %d\nMorale %d  •  Loyalty %d\nSalary $%d/day\nSpecialization: %s" % [str(employee.get("name", "Employee")), str(employee.get("role", "Worker")), seat_line, productivity, int(employee.get("experience", 0)), int(employee.get("morale", 0)), int(employee.get("loyalty", 0)), int(employee.get("salary", 0)), str(employee.get("specialization", "general")).capitalize()]
+
+func _set_portrait(employee_id: String) -> void:
+    var sheet := load(PORTRAIT_SHEET) as Texture2D
+    if sheet == null:
+        portrait.texture = null
+        return
+    var atlas := AtlasTexture.new()
+    atlas.atlas = sheet
+    var variant := absi(employee_id.hash()) % 5
+    atlas.region = Rect2(float(variant) * PORTRAIT_SIZE.x, 0.0, PORTRAIT_SIZE.x, PORTRAIT_SIZE.y)
+    portrait.texture = atlas
 
 func _select(employee_id: String) -> void:
     selected_id = employee_id
@@ -19666,16 +19717,21 @@ func lease_property() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/property_visual.gd
-Lines: 163
+Lines: 208
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node2D
 
 ## Premium restoration presentation layer.
-## The authored restoration scene is the visual foundation; this script adds
-## state-driven construction detail, progress, lighting and certification.
-## It owns no gameplay state and never mutates the canonical systems.
+## The authored restoration scene remains the visual foundation while this
+## layer adds state-driven progression art, construction detail and status UI.
 
 const STEPS := ["cleaning", "repair", "painting", "furnishing"]
+const BUILDING_SHEETS := [
+    "res://Assets/Art/building_warehouse_progression.svg",
+    "res://Assets/Art/building_factory_progression.svg",
+    "res://Assets/Art/building_office_progression.svg",
+]
+const FRAME_SIZE := Vector2(256, 144)
 const GOLD := Color("e4bd68")
 const GREEN := Color("67c99a")
 const SKY := Color("7ed0c3")
@@ -19684,9 +19740,13 @@ const MUTED := Color("a7bdbe")
 const PANEL := Color(0.035, 0.07, 0.08, 0.94)
 
 var _time := 0.0
+var _progression_sprite: Sprite2D
+var _last_stage := ""
+var _last_property_type := ""
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
+    _ensure_progression_sprite()
     queue_redraw()
 
 func _process(delta: float) -> void:
@@ -19694,12 +19754,20 @@ func _process(delta: float) -> void:
     if fmod(_time, 0.12) < delta:
         queue_redraw()
 
+func _ensure_progression_sprite() -> void:
+    if _progression_sprite != null:
+        return
+    _progression_sprite = Sprite2D.new()
+    _progression_sprite.name = "BuildingProgressionArt"
+    _progression_sprite.z_index = -27
+    _progression_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+    _progression_sprite.modulate = Color(1, 1, 1, 0.72)
+    _progression_sprite.visible = false
+    add_child(_progression_sprite)
+
 func _draw() -> void:
     var state = get_node_or_null("/root/RenewGameState")
     var scene_art := get_node_or_null("../PremiumRestorationScene")
-    # The restoration property is part of the initial playable world, not a
-    # late-game overlay. Keep the authored scene visible even while state is
-    # still bootstrapping, then refine it from the live property state.
     if scene_art != null:
         scene_art.visible = true
     if state == null:
@@ -19711,18 +19779,48 @@ func _draw() -> void:
     var property: Dictionary = catalog[index]
     var owned := bool(state.get_value("properties", "owned", false))
     var stage := _visual_stage(property, owned)
-    _sync_scene_art(stage)
+    _sync_scene_art(stage, property)
     _draw_site_overlay(property, stage)
 
-func _sync_scene_art(stage: String) -> void:
+func _sync_scene_art(stage: String, property: Dictionary) -> void:
     var scene_art := get_node_or_null("../PremiumRestorationScene")
-    if scene_art == null:
-        return
-    scene_art.visible = true
+    _ensure_progression_sprite()
     var progress := _stage_progress(stage)
-    scene_art.modulate = Color(1.0, 1.0, 1.0, 0.90 + progress * 0.10)
-    var target_scale := 0.86 + progress * 0.06
-    scene_art.scale = Vector2(target_scale, target_scale)
+    if scene_art != null:
+        scene_art.visible = true
+        scene_art.modulate = Color(1.0, 1.0, 1.0, 0.90 + progress * 0.10)
+        var target_scale := 0.86 + progress * 0.06
+        scene_art.scale = Vector2(target_scale, target_scale)
+        _progression_sprite.position = scene_art.position
+    var property_type := str(property.get("type", property.get("kind", "warehouse"))).to_lower()
+    if property_type == "":
+        property_type = "warehouse"
+    var sheet_index := 0
+    if property_type.contains("factory") or property_type.contains("industrial"):
+        sheet_index = 1
+    elif property_type.contains("office") or property_type.contains("hq") or property_type.contains("head"):
+        sheet_index = 2
+    var texture: Texture2D = load(BUILDING_SHEETS[sheet_index]) as Texture2D
+    if texture != null:
+        _progression_sprite.texture = texture
+        _progression_sprite.region_enabled = true
+        _progression_sprite.region_rect = Rect2(0, _stage_frame(stage) * FRAME_SIZE.y, FRAME_SIZE.x, FRAME_SIZE.y)
+        _progression_sprite.scale = Vector2(1.25 + progress * 0.08, 1.25 + progress * 0.08)
+        _progression_sprite.visible = true
+    else:
+        _progression_sprite.visible = false
+    _last_stage = stage
+    _last_property_type = property_type
+
+func _stage_frame(stage: String) -> int:
+    match stage:
+        "Abandoned": return 0
+        "Cleaned": return 1
+        "Repaired": return 2
+        "Painted": return 3
+        "Furnished": return 4
+        "Operational": return 5
+    return 0
 
 func _stage_progress(stage: String) -> float:
     match stage:
@@ -19754,7 +19852,6 @@ func _draw_site_overlay(property: Dictionary, stage: String) -> void:
     var w := maxf(viewport_size.x, 320.0)
     var h := maxf(viewport_size.y, 568.0)
     var progress := _stage_progress(stage)
-
     draw_rect(Rect2(0, h - 116.0, w, 116.0), Color(0.02, 0.04, 0.05, 0.30), true)
     _draw_site_lights(w, h, progress)
     _draw_construction_activity(w, h, progress)
@@ -19821,7 +19918,6 @@ func _draw_progress_card(w: float, h: float, property: Dictionary, stage: String
         draw_rect(Rect2(x + 68, y - 7, maxf(70.0, card.size.x - 124.0) * value / 100.0, 7), GREEN if value >= 100.0 else GOLD, true)
         draw_string(font, Vector2(card.end.x - 42, y), "%d" % int(value), HORIZONTAL_ALIGNMENT_RIGHT, 28, 9, TEXT)
         y += 14.0
-
     if stage == "Operational":
         _draw_certification_mark(card)
 
@@ -31735,6 +31831,37 @@ func run() -> void:
 
     print("V1 INDUSTRY PRODUCTION RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: tests/test_v1_presentation_assets.gd
+Lines: 25
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+extends SceneTree
+
+const ASSETS := [
+    "res://Assets/Art/building_warehouse_progression.svg",
+    "res://Assets/Art/building_factory_progression.svg",
+    "res://Assets/Art/building_office_progression.svg",
+    "res://Assets/Art/employee_portraits.svg",
+    "res://Assets/Art/resource_timber.svg",
+    "res://Assets/Art/resource_iron.svg",
+    "res://Assets/Art/resource_energy.svg",
+    "res://Assets/Art/resource_food.svg",
+    "res://Assets/Art/resource_electronics.svg",
+]
+
+func _init() -> void:
+    var failures := 0
+    for path in ASSETS:
+        if not FileAccess.file_exists(path):
+            failures += 1
+            push_error("Missing V1 presentation asset: %s" % path)
+    if failures == 0:
+        print("V1_PRESENTATION_ASSETS: PASS (%d assets)" % ASSETS.size())
+    else:
+        print("V1_PRESENTATION_ASSETS: FAIL (%d missing)" % failures)
+    quit(failures)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
