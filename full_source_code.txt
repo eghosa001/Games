@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Tue Sep  8 16:55:01 UTC 2026
+// Generated on: Tue Sep  8 16:59:45 UTC 2026
 
-// Source snapshot commit: 2338e137c1e5c605b64e80ff24e9fa9890e2f26a
+// Source snapshot commit: 157d51c54e77bdb867fc431481fbc96fd34a2a3d
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -23106,7 +23106,7 @@ func reject_selected_acquisition() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/renew_sims_ui.gd
-Lines: 267
+Lines: 279
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 
@@ -23139,6 +23139,7 @@ var action_grid: GridContainer
 var actions: GridContainer
 var action_scroll: ScrollContainer
 var network_strip: Panel
+var status_surface: Panel
 var bottom_mobile: Panel
 var mobile_actions: GridContainer
 var mobile_objective: Label
@@ -23232,6 +23233,13 @@ func _build_ui() -> void:
 
     network_strip = Panel.new(); network_strip.add_theme_stylebox_override("panel", _style(PANEL, BORDER_SOFT, 12)); root.add_child(network_strip)
 
+    # Desktop status/feedback live outside the command dock. Ground this area so
+    # the world renderer cannot visually bleed through the executive status rail.
+    status_surface = Panel.new()
+    status_surface.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    status_surface.add_theme_stylebox_override("panel", _style(Color("091920f2"), BORDER_SOFT, 10))
+    root.add_child(status_surface)
+
     bottom_mobile = Panel.new(); bottom_mobile.visible = false; root.add_child(bottom_mobile)
     status_label = _label("", 10, TEXT); status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(status_label)
     feedback_panel = Panel.new(); feedback_panel.add_theme_stylebox_override("panel", _style(PANEL, BORDER, 10)); feedback_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE; feedback_panel.visible = false; root.add_child(feedback_panel)
@@ -23276,13 +23284,17 @@ func _layout_responsive() -> void:
     action_scroll.position = Vector2(8, 50); action_scroll.size = Vector2(action_dock.size.x - 16, action_dock.size.y - 58)
     action_grid.columns = 2 if narrow else 3
     if narrow:
+        status_surface.visible = false
         status_label.position = Vector2(8, 108); status_label.size = Vector2(w - 16, 22)
         feedback_panel.position = Vector2(8, 134); feedback_panel.size = Vector2(w - 16, 56)
         feedback_label.position = Vector2(10, 8); feedback_label.size = Vector2(maxf(40.0, w - 52.0), 40)
         goal_label.position = Vector2(8, 194); goal_label.size = Vector2(w - 16, 40)
     else:
+        status_surface.visible = true
         var dock_bottom := action_dock.position.y + action_dock.size.y
         var max_y := maxf(0.0, h - 4.0)
+        status_surface.position = Vector2(4, h * 0.76)
+        status_surface.size = Vector2(minf(460.0, maxf(320.0, w * 0.36)), maxf(80.0, h * 0.24))
         status_label.position = Vector2(8, minf(dock_bottom + 4.0, max_y - 24.0))
         status_label.size = Vector2(240, 24)
         feedback_panel.position = Vector2(8, minf(status_label.position.y + 32.0, max_y - 80.0))
@@ -23357,7 +23369,7 @@ func _refresh() -> void:
         2:
             _action("NEXT RIVAL", _next_rival); _action("ALLIANCE", parent.make_alliance_offer); _action("RELATION", parent.improve_alliance); _action("COMPETE", parent.compete_alliance); _action("GOALS", parent.victory_progress); _action("REPUTE", parent.reputation_status); _action("SUPPLY DEAL", parent.propose_supply_deal); _action("ACQUIRE", parent.negotiate_selected_acquisition); _action("BID BATTLE", parent.start_acquisition_battle); _action("RAISE BID", parent.raise_acquisition_bid); _action("WALK AWAY", parent.walk_away_acquisition); _action("BUY SHARES", parent.buy_rival_shares); _action("SELL SHARES", parent.sell_rival_shares); _action("LOAN", parent.take_loan); _action("REPAY", parent.repay_loan); _action("INVESTOR", parent.request_investment); _action("ACCEPT DEAL", parent.accept_investment); _action("DECLINE DEAL", parent.decline_investment); _action("INVEST BILL", parent.invest_term); _action("DIVIDEND", parent.pay_dividend); _action("GO PUBLIC", parent.go_public); _action("CAP TABLE", parent.cap_table); _action("POWER", parent.world_power); _action("NETWORK", Callable(self, "_open_screen").bind("CorporationsPanel")); _action("PACT", Callable(self, "_open_screen").bind("AlliancePanel")); _action("END DAY", parent.advance_day)
         3:
-            _action("EXPANSION", parent.buy_expansion); _action("UPGRADE", parent.upgrade_expansion); _action("TRANSPORT", parent.upgrade_transport); _action("NEXT REGION", parent.next_region); _action("ESTABLISH", parent.establish_region); _action("CHARTER BASIN", parent.charter_basin); _action("CHARTER VALLEY", parent.charter_valley); _action("TRADE ROUTE", parent.establish_trade_route); _action("DISPATCH", parent.dispatch_goods); _action("INFRA BUILD", parent.infra_build); _action("INFRA TYPE", parent.infra_type); _action("INFRA REPAIR", parent.infra_repair); _action("SAVE", parent.save_game); _action("LOAD", parent.load_game); _action("NEW COMPANY", parent.found_new_company); _action("IDENTITY", parent.identity_status); _action("NOTICES", parent.check_notifications); _action("TECH", Callable(self, "_open_screen").bind("TechnologyPanel")); _action("WORLD", Callable(self, "_open_screen").bind("NewsPanel")); _action("PAST", Callable(self, "_open_screen").bind("HistoryPanel")); _action("END DAY", parent.advance_day)
+            _action("EXPANSION", parent.buy_expansion); _action("UPGRADE", parent.upgrade_expansion); _action("TRANSPORT", parent.upgrade_transport); _action("NEXT REGION", parent.next_region); _action("ESTABLISH", parent.establish_region); _action("CHARTER BASIN", parent.charter_basin); _action("CHARTER VALLEY", parent.charter_valley); _action("TRADE ROUTE", parent.establish_trade_route); _action("DISPATCH", parent.dispatch_goods); _action("INFRA BUILD", parent.infra_build); _action("INFRA TYPE", parent.infra_type); _action("INFRA REPAIR", parent.infra_repair); _action("SAVE", parent.save_game); _action("LOAD", parent.load_game); _action("NEW COMPANY", parent.found_new_company); _action("IDENTITY", parent.identity_status); _action("NOTICES", parent.check_notifications); _action("TECH", Callable(self, "_open_screen").bind("TechnologyPanel")); _action("NEWS", Callable(self, "_open_screen").bind("NewsPanel")); _action("PAST", Callable(self, "_open_screen").bind("HistoryPanel")); _action("END DAY", parent.advance_day)
 
 func _process(delta: float) -> void:
     if parent == null: return
