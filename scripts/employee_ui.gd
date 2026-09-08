@@ -5,6 +5,15 @@ class_name RenewEmployeeUI
 # EmployeeCommandSystem through GameplayCommandSystem, including training costs.
 const PORTRAIT_SHEET := "res://Assets/Art/employee_portraits.svg"
 const PORTRAIT_SIZE := Vector2(128, 128)
+const SURFACE := Color("0d2028")
+const SURFACE_2 := Color("102831")
+const BORDER := Color("274852")
+const TEXT := Color("e7f2ef")
+const MUTED := Color("78949a")
+const ACCENT := Color("d5b56e")
+const GOOD := Color("5fe08a")
+const SCRIM := Color(0.02, 0.08, 0.10, 0.72)
+var dimmer: ColorRect
 var panel: Panel
 var employee_list: VBoxContainer
 var detail_label: Label
@@ -15,6 +24,9 @@ var _refresh_clock: Variant = 0.0
 var _list_scroll: ScrollContainer
 var _detail_scroll: ScrollContainer
 var _actions: GridContainer
+var _title: Label
+var _status: Label
+var _summary: Label
 
 func _ready() -> void:
     layer = 75
@@ -26,18 +38,36 @@ func _process(delta: float) -> void:
     _refresh_clock += delta
     if _refresh_clock >= 0.5:
         _refresh_clock = 0.0
-        _layout_responsive()
-        _refresh()
+        if panel != null and panel.visible:
+            _layout_responsive()
+            _refresh()
 
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F:
         toggle()
 
+func _style(bg: Color, border: Color = BORDER, radius := 12) -> StyleBoxFlat:
+    var style := StyleBoxFlat.new()
+    style.bg_color = bg
+    style.border_color = border
+    style.set_border_width_all(1)
+    style.set_corner_radius_all(radius)
+    return style
+
 func _build_ui() -> void:
+    dimmer = ColorRect.new()
+    dimmer.name = "EmployeeModalScrim"
+    dimmer.color = SCRIM
+    dimmer.mouse_filter = Control.MOUSE_FILTER_STOP
+    dimmer.visible = false
+    add_child(dimmer)
+
     panel = Panel.new()
     panel.name = "EmployeesPanel"
     panel.visible = false
+    panel.add_theme_stylebox_override("panel", _style(SURFACE))
     add_child(panel)
+
     var margin := MarginContainer.new()
     margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     margin.add_theme_constant_override("margin_left", 14)
@@ -45,30 +75,49 @@ func _build_ui() -> void:
     margin.add_theme_constant_override("margin_top", 12)
     margin.add_theme_constant_override("margin_bottom", 12)
     panel.add_child(margin)
+
     var root := VBoxContainer.new()
     root.add_theme_constant_override("separation", 8)
     margin.add_child(root)
-    var title := Label.new()
-    title.text = "EMPLOYEES"
-    title.add_theme_font_size_override("font_size", 24)
-    root.add_child(title)
-    var hint := Label.new()
-    hint.text = "Select a person to view their career and manage assignments."
-    hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    hint.add_theme_color_override("font_color", Color("78949a"))
-    root.add_child(hint)
+
+    var header := HBoxContainer.new()
+    header.custom_minimum_size.y = 32
+    root.add_child(header)
+    _title = Label.new()
+    _title.text = "EMPLOYEE COMMAND"
+    _title.add_theme_font_size_override("font_size", 21)
+    _title.add_theme_color_override("font_color", TEXT)
+    _title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    header.add_child(_title)
+    _status = Label.new()
+    _status.text = "PEOPLE OPERATIONS"
+    _status.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+    _status.add_theme_font_size_override("font_size", 10)
+    _status.add_theme_color_override("font_color", ACCENT)
+    header.add_child(_status)
+
+    _summary = Label.new()
+    _summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    _summary.add_theme_font_size_override("font_size", 10)
+    _summary.add_theme_color_override("font_color", MUTED)
+    _summary.custom_minimum_size.y = 30
+    root.add_child(_summary)
+
     _list_scroll = ScrollContainer.new()
+    _list_scroll.name = "EmployeeRosterScroll"
     _list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     _list_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
     _list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     root.add_child(_list_scroll)
     employee_list = VBoxContainer.new()
     employee_list.add_theme_constant_override("separation", 6)
+    employee_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _list_scroll.add_child(employee_list)
+
     _detail_scroll = ScrollContainer.new()
     _detail_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     _detail_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-    _detail_scroll.custom_minimum_size.y = 112
+    _detail_scroll.custom_minimum_size.y = 116
     root.add_child(_detail_scroll)
     detail_row = HBoxContainer.new()
     detail_row.add_theme_constant_override("separation", 10)
@@ -83,22 +132,25 @@ func _build_ui() -> void:
     detail_row.add_child(portrait)
     detail_label = Label.new()
     detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    detail_label.add_theme_font_size_override("font_size", 11)
+    detail_label.add_theme_color_override("font_color", TEXT)
     detail_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     detail_row.add_child(detail_label)
+
     _actions = GridContainer.new()
     _actions.columns = 2
     _actions.add_theme_constant_override("h_separation", 6)
     _actions.add_theme_constant_override("v_separation", 6)
     root.add_child(_actions)
-    _add_action(_actions, "Train", "train")
-    _add_action(_actions, "Promote", "promote")
-    _add_action(_actions, "Appoint", "appoint")
-    _add_action(_actions, "Assign", "assign")
-    _add_action(_actions, "Transfer", "transfer")
-    _add_action(_actions, "Fire", "fire")
+    _add_action(_actions, "TRAIN", "train")
+    _add_action(_actions, "PROMOTE", "promote")
+    _add_action(_actions, "APPOINT", "appoint")
+    _add_action(_actions, "ASSIGN", "assign")
+    _add_action(_actions, "TRANSFER", "transfer")
+    _add_action(_actions, "FIRE", "fire")
     var close_button := Button.new()
-    close_button.text = "Close"
-    close_button.custom_minimum_size = Vector2(0, 44)
+    close_button.text = "CLOSE"
+    close_button.custom_minimum_size = Vector2(0, 46)
     close_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     close_button.focus_mode = Control.FOCUS_NONE
     close_button.pressed.connect(_close)
@@ -110,35 +162,51 @@ func _close() -> void:
         manager.hide_all_screens()
     else:
         panel.visible = false
+        dimmer.visible = false
 
 func _add_action(parent_node: GridContainer, text: String, action: String) -> void:
     var button := Button.new()
     button.text = text
-    button.custom_minimum_size = Vector2(0, 44)
+    button.custom_minimum_size = Vector2(0, 46)
     button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     button.focus_mode = Control.FOCUS_NONE
-    button.pressed.connect(_action.bind(action))
+    button.tooltip_text = _action_hint(action)
     parent_node.add_child(button)
+    button.pressed.connect(_action.bind(action))
+
+func _action_hint(action: String) -> String:
+    match action:
+        "train": return "Improve the selected employee's capabilities."
+        "promote": return "Increase the selected employee's career level."
+        "appoint": return "Place the employee in an executive seat when eligible."
+        "assign": return "Assign the employee to factory operations."
+        "transfer": return "Transfer the employee to regional operations."
+        "fire": return "Remove the selected employee from the company."
+        _: return "Manage the selected employee."
 
 func _layout_responsive() -> void:
-    if panel == null:
+    if panel == null or get_viewport() == null:
         return
     var size := get_viewport().get_visible_rect().size
+    var phone := size.x < 430.0
     var mobile := size.x < 760.0
-    if mobile:
-        panel.position = Vector2(8, 72)
-        panel.size = Vector2(maxf(280.0, size.x - 16.0), maxf(420.0, size.y - 84.0))
-        _list_scroll.custom_minimum_size.y = 150
-        _list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-        _detail_scroll.custom_minimum_size.y = 118
-        _actions.columns = 2
-    else:
-        panel.position = Vector2(12, 70)
-        panel.size = Vector2(minf(760.0, size.x - 24.0), minf(590.0, size.y - 82.0))
-        _list_scroll.custom_minimum_size.y = 0
-        _list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-        _detail_scroll.custom_minimum_size.y = 0
-        _actions.columns = 2
+    var margin := 8.0 if phone else 12.0
+    var panel_w := minf(760.0, maxf(280.0, size.x - margin * 2.0))
+    var panel_h := minf(650.0, maxf(420.0, size.y - 82.0))
+    panel.position = Vector2((size.x - panel_w) / 2.0, maxf(42.0, (size.y - panel_h) / 2.0))
+    panel.size = Vector2(panel_w, minf(panel_h, size.y - panel.position.y - 10.0))
+    dimmer.position = Vector2.ZERO
+    dimmer.size = size
+    _title.add_theme_font_size_override("font_size", 18 if phone else 21)
+    _status.add_theme_font_size_override("font_size", 9 if phone else 10)
+    _summary.add_theme_font_size_override("font_size", 9 if phone else 10)
+    _list_scroll.custom_minimum_size.y = 128 if mobile else 0
+    _detail_scroll.custom_minimum_size.y = 126 if mobile else 116
+    _actions.columns = 2
+    for child in _actions.get_children():
+        if child is Button:
+            child.custom_minimum_size = Vector2(0, 44 if phone else 46)
+            child.add_theme_font_size_override("font_size", 9 if phone else 10)
 
 func _refresh() -> void:
     if panel == null:
@@ -148,23 +216,45 @@ func _refresh() -> void:
         selected_id = str(roster[0].get("id", ""))
     if not selected_id.is_empty() and _find_employee(roster, selected_id).is_empty():
         selected_id = str(roster[0].get("id", "")) if not roster.is_empty() else ""
+    var active_count := 0
+    for employee in roster:
+        if str(employee.get("status", "active")) == "active":
+            active_count += 1
+    _summary.text = "%d ACTIVE EMPLOYEES   •   SELECT A PERSON TO MANAGE THEIR CAREER, ROLE AND ASSIGNMENT." % active_count
     _rebuild_list(roster)
     _update_details(roster)
 
 func _rebuild_list(roster: Array) -> void:
     for child in employee_list.get_children():
         child.queue_free()
+    var active_found := false
     for employee in roster:
         if str(employee.get("status", "active")) != "active":
             continue
+        active_found = true
         var button := Button.new()
-        button.text = "%s  •  %s" % [str(employee.get("name", "Employee")), str(employee.get("role", "Worker"))]
+        var employee_id := str(employee.get("id", ""))
+        var selected := employee_id == str(selected_id)
+        button.text = ("●  " if selected else "○  ") + "%s  •  %s" % [str(employee.get("name", "Employee")), str(employee.get("role", "Worker"))]
         button.alignment = HORIZONTAL_ALIGNMENT_LEFT
         button.custom_minimum_size.y = 52
         button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         button.focus_mode = Control.FOCUS_NONE
-        button.pressed.connect(_select.bind(str(employee.get("id", ""))))
+        button.add_theme_font_size_override("font_size", 11)
+        button.add_theme_color_override("font_color", TEXT if selected else MUTED)
+        button.add_theme_color_override("font_hover_color", TEXT)
+        button.add_theme_stylebox_override("normal", _style(SURFACE_2 if selected else SURFACE, ACCENT if selected else BORDER, 9))
+        button.add_theme_stylebox_override("hover", _style(Color("183b43"), ACCENT, 9))
+        button.pressed.connect(_select.bind(employee_id))
         employee_list.add_child(button)
+    if not active_found:
+        var empty := Label.new()
+        empty.text = "NO ACTIVE EMPLOYEES\nRecruit or restore the workforce before using people operations."
+        empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        empty.add_theme_color_override("font_color", MUTED)
+        empty.add_theme_font_size_override("font_size", 11)
+        empty.custom_minimum_size.y = 70
+        employee_list.add_child(empty)
 
 func _find_employee(roster: Array, employee_id: String) -> Dictionary:
     for employee in roster:
@@ -182,7 +272,7 @@ func _update_details(roster: Array) -> void:
     var productivity: Variant = int(round(float(employee.get("productivity", 0.0)) * 100.0))
     var seat := str(employee.get("executive_seat", ""))
     var seat_line := ("C-suite: %s" % seat) if seat != "" else ("Level %d" % int(employee.get("level", 1)))
-    detail_label.text = "%s\n%s [%s]\n────────────────\nProductivity %d%%  •  Experience %d\nMorale %d  •  Loyalty %d\nSalary $%d/day\nSpecialization: %s" % [str(employee.get("name", "Employee")), str(employee.get("role", "Worker")), seat_line, productivity, int(employee.get("experience", 0)), int(employee.get("morale", 0)), int(employee.get("loyalty", 0)), int(employee.get("salary", 0)), str(employee.get("specialization", "general")).capitalize()]
+    detail_label.text = "%s\n%s  •  %s\nProductivity %d%%  •  Experience %d\nMorale %d  •  Loyalty %d\nSalary $%d/day\nSpecialization: %s" % [str(employee.get("name", "Employee")), str(employee.get("role", "Worker")), seat_line, productivity, int(employee.get("experience", 0)), int(employee.get("morale", 0)), int(employee.get("loyalty", 0)), int(employee.get("salary", 0)), str(employee.get("specialization", "general")).capitalize()]
 
 func _set_portrait(employee_id: String) -> void:
     var sheet := load(PORTRAIT_SHEET) as Texture2D
@@ -233,6 +323,7 @@ func _roster() -> Array:
 
 func toggle() -> void:
     panel.visible = not panel.visible
+    dimmer.visible = panel.visible
     if panel.visible:
         _layout_responsive()
         _refresh()
