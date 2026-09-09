@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Wed Sep  9 06:45:40 UTC 2026
+// Generated on: Wed Sep  9 06:46:49 UTC 2026
 
-// Source snapshot commit: c235d438760bcc07403b86bc7b39fe9d0c321d45
+// Source snapshot commit: c52c5801f0dbf902ebcaf402d5d6c12c914a2738
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -14889,13 +14889,16 @@ func sync_roster_to_state()->void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/employee_ui.gd
-Lines: 329
+Lines: 378
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 class_name RenewEmployeeUI
 
 # Employee presentation reads canonical GameState and delegates mutations to
 # EmployeeCommandSystem through GameplayCommandSystem, including training costs.
+# V2 adds an in-panel recruitment action and authoritative feedback so the
+# People Operations screen can complete the hire -> manage loop without
+# forcing the player back to the main dashboard.
 const PORTRAIT_SHEET := "res://Assets/Art/employee_portraits.svg"
 const PORTRAIT_SIZE := Vector2(128, 128)
 const SURFACE := Color("0d2028")
@@ -14920,6 +14923,7 @@ var _actions: GridContainer
 var _title: Label
 var _status: Label
 var _summary: Label
+var _feedback: Label
 
 func _ready() -> void:
     layer = 75
@@ -14996,6 +15000,13 @@ func _build_ui() -> void:
     _summary.custom_minimum_size.y = 30
     root.add_child(_summary)
 
+    _feedback = Label.new()
+    _feedback.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    _feedback.add_theme_font_size_override("font_size", 10)
+    _feedback.add_theme_color_override("font_color", GOOD)
+    _feedback.custom_minimum_size.y = 24
+    root.add_child(_feedback)
+
     _list_scroll = ScrollContainer.new()
     _list_scroll.name = "EmployeeRosterScroll"
     _list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -15035,6 +15046,7 @@ func _build_ui() -> void:
     _actions.add_theme_constant_override("h_separation", 6)
     _actions.add_theme_constant_override("v_separation", 6)
     root.add_child(_actions)
+    _add_action(_actions, "HIRE", "hire")
     _add_action(_actions, "TRAIN", "train")
     _add_action(_actions, "PROMOTE", "promote")
     _add_action(_actions, "APPOINT", "appoint")
@@ -15069,6 +15081,7 @@ func _add_action(parent_node: GridContainer, text: String, action: String) -> vo
 
 func _action_hint(action: String) -> String:
     match action:
+        "hire": return "Recruit the first available candidate using the authoritative hiring system."
         "train": return "Improve the selected employee's capabilities."
         "promote": return "Increase the selected employee's career level."
         "appoint": return "Place the employee in an executive seat when eligible."
@@ -15093,6 +15106,7 @@ func _layout_responsive() -> void:
     _title.add_theme_font_size_override("font_size", 18 if phone else 21)
     _status.add_theme_font_size_override("font_size", 9 if phone else 10)
     _summary.add_theme_font_size_override("font_size", 9 if phone else 10)
+    _feedback.add_theme_font_size_override("font_size", 9 if phone else 10)
     _list_scroll.custom_minimum_size.y = 128 if mobile else 0
     _detail_scroll.custom_minimum_size.y = 126 if mobile else 116
     _actions.columns = 2
@@ -15113,7 +15127,11 @@ func _refresh() -> void:
     for employee in roster:
         if str(employee.get("status", "active")) == "active":
             active_count += 1
-    _summary.text = "%d ACTIVE EMPLOYEES   •   SELECT A PERSON TO MANAGE THEIR CAREER, ROLE AND ASSIGNMENT." % active_count
+    var candidates := _candidate_count()
+    var daily_wages := _daily_wages()
+    _summary.text = "%d ACTIVE  •  %d CANDIDATES  •  $%s DAILY WAGES\nSELECT A PERSON TO MANAGE THEIR CAREER, ROLE AND ASSIGNMENT." % [active_count, candidates, _money(daily_wages)]
+    var message := str(_state_value("company", "message", ""))
+    _feedback.text = message if not message.is_empty() else ""
     _rebuild_list(roster)
     _update_details(roster)
 
@@ -15128,7 +15146,10 @@ func _rebuild_list(roster: Array) -> void:
         var button := Button.new()
         var employee_id := str(employee.get("id", ""))
         var selected := employee_id == str(selected_id)
+        var assignment := str(employee.get("assignment", ""))
         button.text = ("●  " if selected else "○  ") + "%s  •  %s" % [str(employee.get("name", "Employee")), str(employee.get("role", "Worker"))]
+        if not assignment.is_empty():
+            button.text += "  •  " + assignment
         button.alignment = HORIZONTAL_ALIGNMENT_LEFT
         button.custom_minimum_size.y = 52
         button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -15158,14 +15179,14 @@ func _find_employee(roster: Array, employee_id: String) -> Dictionary:
 func _update_details(roster: Array) -> void:
     var employee: Dictionary = _find_employee(roster, selected_id)
     if employee.is_empty():
-        detail_label.text = "No employee selected."
+        detail_label.text = "No employee selected.\nUse HIRE to recruit the first available candidate."
         portrait.texture = null
         return
     _set_portrait(str(employee.get("id", selected_id)))
     var productivity: Variant = int(round(float(employee.get("productivity", 0.0)) * 100.0))
     var seat := str(employee.get("executive_seat", ""))
     var seat_line := ("C-suite: %s" % seat) if seat != "" else ("Level %d" % int(employee.get("level", 1)))
-    detail_label.text = "%s\n%s  •  %s\nProductivity %d%%  •  Experience %d\nMorale %d  •  Loyalty %d\nSalary $%d/day\nSpecialization: %s" % [str(employee.get("name", "Employee")), str(employee.get("role", "Worker")), seat_line, productivity, int(employee.get("experience", 0)), int(employee.get("morale", 0)), int(employee.get("loyalty", 0)), int(employee.get("salary", 0)), str(employee.get("specialization", "general")).capitalize()]
+    detail_label.text = "%s\n%s  •  %s\nProductivity %d%%  •  Experience %d\nMorale %d  •  Loyalty %d\nSalary $%d/month  •  Assignment: %s\nSpecialization: %s" % [str(employee.get("name", "Employee")), str(employee.get("role", "Worker")), seat_line, productivity, int(employee.get("experience", 0)), int(employee.get("morale", 0)), int(employee.get("loyalty", 0)), int(employee.get("salary", 0)), str(employee.get("assignment", "unassigned")), str(employee.get("specialization", "general")).capitalize()]
 
 func _set_portrait(employee_id: String) -> void:
     var sheet := load(PORTRAIT_SHEET) as Texture2D
@@ -15183,10 +15204,18 @@ func _select(employee_id: String) -> void:
     _refresh()
 
 func _action(action: String) -> void:
-    if selected_id.is_empty():
-        return
     var command = _command_system()
     if command == null:
+        _feedback.text = "People Operations is temporarily unavailable."
+        return
+    if action == "hire":
+        var result: Dictionary = command.hire_employee()
+        if bool(result.get("ok", false)):
+            selected_id = str(result.get("employee", {}).get("id", selected_id))
+        _refresh()
+        return
+    if selected_id.is_empty():
+        _feedback.text = "Select an employee first."
         return
     match action:
         "train": command.train_employee(selected_id)
@@ -15195,7 +15224,8 @@ func _action(action: String) -> void:
         "assign": command.assign_employee(selected_id, "factory_001")
         "transfer": command.assign_employee(selected_id, "regional_001")
         "fire": command.fire_employee(selected_id)
-    command.employee_system.sync_roster()
+    if command.employee_system != null and command.employee_system.has_method("sync_roster"):
+        command.employee_system.sync_roster()
     _refresh()
 
 func _command_system():
@@ -15213,6 +15243,25 @@ func _state_value(domain: String, key: String, default_value):
 func _roster() -> Array:
     var roster = _state_value("employees", "roster", [])
     return roster if roster is Array else []
+
+func _candidate_count() -> int:
+    var command = _command_system()
+    if command == null or command.employee_system == null:
+        return 0
+    if command.employee_system.has_method("get_candidates"):
+        return command.employee_system.get_candidates().size()
+    return 0
+
+func _daily_wages() -> int:
+    var command = _command_system()
+    if command == null or command.employee_system == null:
+        return 0
+    if command.employee_system.has_method("get_daily_wage_total"):
+        return int(command.employee_system.get_daily_wage_total())
+    return 0
+
+func _money(amount: int) -> String:
+    return str(amount)
 
 func toggle() -> void:
     panel.visible = not panel.visible
