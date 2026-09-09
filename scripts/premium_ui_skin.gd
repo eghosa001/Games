@@ -160,6 +160,15 @@ func _draw() -> void:
     draw_line(Vector2(18, top_h - 1), Vector2(s.x - 18, top_h - 1), Color(EDGE.r, EDGE.g, EDGE.b, 0.72), 1.0)
     _corner(Vector2(18, top_h + 14), 26.0, GOLD)
     _corner(Vector2(s.x - 18, top_h + 14), -26.0, CYAN)
+
+    # Secondary screens are deliberately presented as focused workspaces.
+    # Hide the persistent navigation chrome while one is open so the player
+    # sees the active task rather than multiple competing command surfaces.
+    var screen_manager := get_tree().root.get_node_or_null("RenewUIScreenManager")
+    var secondary_screen_open := screen_manager != null and screen_manager.get_active_screen_name() != ""
+    if secondary_screen_open:
+        return
+
     if mobile:
         _draw_mobile_command_dock(s, dock_h)
     else:
