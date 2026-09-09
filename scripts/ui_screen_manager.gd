@@ -1,18 +1,23 @@
 extends Node
 ## Central presentation guard for RENEW's primary screens.
 ## Guarantees one active screen, a visible close affordance, Escape/Android-back
-## dismissal, and safe cleanup when panels close themselves.
+## dismissal, safe cleanup when panels close themselves, and focused presentation
+## of secondary screens over the persistent management HUD.
 
 const SCREEN_NAMES := ["ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel", "InfrastructurePanel", "DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel", "RegionsPanel", "WorldOpportunitiesPanel", "BusinessOperationsPanel", "ProductionControlPanel", "SupplyChainPanel", "EmpireExpansionPanel", "EmpireIntelligencePanel", "EmpireProgressionPanel", "EmpireIdentityPanel", "NotificationsCenterPanel", "SaveLoadPanel"]
 const ROOT_SCREEN_NAMES := ["RenewDiplomacyUI", "CustomerSegmentsUI"]
 const SCREEN_ALIASES := {"MarketPanel": "CustomerSegmentsUI"}
 const CLOSE_BUTTON_NAME := "UniversalCloseButton"
+const MODAL_LAYER_NAME := "FocusedScreenBackdrop"
+const MODAL_LAYER := 50
 
 var _previous_visible: Dictionary = {}
 var _active_screen: Node = null
 var _active_screen_name := ""
 var _initializing := true
 var _suppress_hooks := false
+var _modal_layer: CanvasLayer
+var _modal_backdrop: ColorRect
 
 func _ready() -> void:
     call_deferred("_try_initialize")
@@ -104,6 +109,33 @@ func _set_node_visible(node: Node, value: bool) -> void:
         for child in node.get_children(): _set_node_visible(child, value)
     _call_screen_hook(node, value)
 
+func _ensure_modal_backdrop() -> void:
+    if _modal_layer != null and is_instance_valid(_modal_layer) and _modal_backdrop != null and is_instance_valid(_modal_backdrop):
+        return
+    _modal_layer = CanvasLayer.new()
+    _modal_layer.name = MODAL_LAYER_NAME
+    _modal_layer.layer = MODAL_LAYER
+    _modal_layer.follow_viewport_enabled = true
+    var ui := _ui_root()
+    if ui != null:
+        ui.add_child(_modal_layer)
+    else:
+        get_tree().root.add_child(_modal_layer)
+    _modal_backdrop = ColorRect.new()
+    _modal_backdrop.name = "Backdrop"
+    _modal_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    _modal_backdrop.color = Color(0.015, 0.035, 0.045, 0.72)
+    _modal_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+    _modal_backdrop.visible = false
+    _modal_layer.add_child(_modal_backdrop)
+
+func _set_modal_backdrop(value: bool) -> void:
+    _ensure_modal_backdrop()
+    if _modal_backdrop != null:
+        _modal_backdrop.visible = value
+        _modal_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP if value else Control.MOUSE_FILTER_IGNORE
+        _modal_backdrop.process_mode = Node.PROCESS_MODE_WHEN_PAUSED if value else Node.PROCESS_MODE_DISABLED
+
 func hide_all_screens() -> void:
     _suppress_hooks = true
     _active_screen = null
@@ -112,6 +144,7 @@ func hide_all_screens() -> void:
         _set_node_visible(node, false)
         _previous_visible[node.name] = false
     _suppress_hooks = false
+    _set_modal_backdrop(false)
     var coordinator := _coordinator()
     if coordinator != null:
         coordinator.set_active_screen("")
@@ -132,6 +165,7 @@ func _enforce_single_screen() -> void:
     if _active_screen == null or not _is_node_visible(_active_screen):
         _active_screen = null
         _active_screen_name = ""
+        _set_modal_backdrop(false)
         var coordinator := _coordinator()
         if coordinator != null:
             coordinator.set_active_screen("")
@@ -141,6 +175,7 @@ func _enforce_single_screen() -> void:
         if node != _active_screen and _is_node_visible(node):
             _set_node_visible(node, false)
             _previous_visible[node.name] = false
+    _set_modal_backdrop(true)
     var active_coordinator := _coordinator()
     if active_coordinator != null:
         active_coordinator.set_active_screen(_active_screen_name)
@@ -164,6 +199,7 @@ func show_screen(screen_name: String) -> void:
         _set_node_visible(node, should_show)
         _previous_visible[node.name] = should_show
     _ensure_close_button(target)
+    _set_modal_backdrop(true)
     var coordinator := _coordinator()
     if coordinator != null:
         coordinator.set_active_screen(canonical_name)
