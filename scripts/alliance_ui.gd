@@ -1,7 +1,8 @@
 extends CanvasLayer
 
 ## Responsive cooperation and restoration network presentation.
-## Financial/alliance mutations are delegated to the authoritative Alliance V1 API.
+## Keeps the council focused on high-level alliance decisions; detailed
+## infrastructure/research actions belong in their dedicated systems.
 const PLAYER_ID := "player"
 const FOUNDING_NAME := "RENEW Restoration Consortium"
 const FOUNDING_AMOUNT := 1000
@@ -12,8 +13,6 @@ const BORDER := Color("274852")
 const TEXT := Color("e7f2ef")
 const MUTED := Color("78949a")
 const ACCENT := Color("d5b56e")
-const POSITIVE := Color("78d69a")
-const DANGER := Color("301d22")
 
 var dimmer: ColorRect
 var panel: Panel
@@ -76,7 +75,7 @@ func _build() -> void:
     add_child(panel)
 
     title = Label.new()
-    title.text = "ALLIANCE COUNCIL"
+    title.text = "COOPERATION NETWORK"
     title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     title.add_theme_font_size_override("font_size", 20)
     title.add_theme_color_override("font_color", TEXT)
@@ -84,7 +83,7 @@ func _build() -> void:
 
     var subtitle := Label.new()
     subtitle.name = "Subtitle"
-    subtitle.text = "Restoration network  •  shared capital  •  corporate diplomacy"
+    subtitle.text = "Alliance strategy  •  shared capital  •  corporate diplomacy"
     subtitle.add_theme_font_size_override("font_size", 10)
     subtitle.add_theme_color_override("font_color", MUTED)
     panel.add_child(subtitle)
@@ -109,14 +108,14 @@ func _build() -> void:
     project.add_theme_color_override("font_color", ACCENT)
     panel.add_child(project)
 
+    # Keep the primary council actions compact. Infrastructure and research
+    # are intentionally not duplicated here; they belong to their dedicated
+    # gameplay screens, preventing action overload and accidental popups.
     _add_button("CREATE ALLIANCE  •  $1,000", _create_alliance)
     _add_button("CONTRIBUTE  •  $1,000", _contribute)
     _add_button("START RAILWAY", _project)
-    _add_button("ALLOCATE  •  $5,000", _allocate)
-    _add_button("ENTER CHALLENGE", _challenge)
     _add_button("GOVERN  •  VOTE", _govern)
-    _add_button("BUILD INFRA  •  $5,000", _infra)
-    _add_button("FUND RESEARCH  •  $5,000", _research)
+    _add_button("ENTER CHALLENGE", _challenge)
 
     var partners_title := Label.new()
     partners_title.name = "PartnersTitle"
@@ -198,10 +197,7 @@ func _create_alliance() -> void:
     _message(str(result.get("message", "Alliance creation failed.")))
 
 func _contribute() -> void:
-    if alliance_system == null:
-        _message("Alliance system is unavailable.")
-        return
-    if not alliance_system.has_method("contribute_from_finance"):
+    if alliance_system == null or not alliance_system.has_method("contribute_from_finance"):
         _message("Alliance contribution transaction is unavailable.")
         return
     _message(str(alliance_system.contribute_from_finance(finance, PLAYER_ID, 1000).get("message", "Contribution could not be completed.")))
@@ -211,16 +207,6 @@ func _project() -> void:
         _message(String(alliance_system.start_cooperative_project(PLAYER_ID, "Regional Railway Project").get("message", "Project could not be started.")))
     else:
         _message("Cooperative project system is unavailable.")
-
-func _allocate() -> void:
-    var alliance := _player_alliance()
-    if alliance_system == null or alliance.is_empty():
-        _message("Create an alliance before allocating treasury funds.")
-        return
-    if not alliance_system.has_method("allocate_treasury_to_railway"):
-        _message("Treasury allocation is unavailable.")
-        return
-    _message(str(alliance_system.allocate_treasury_to_railway(PLAYER_ID, 5000).get("message", "Allocation could not be completed.")))
 
 func _challenge() -> void:
     var alliance := _player_alliance()
@@ -262,34 +248,12 @@ func _govern() -> void:
         return
     _message(str(alliance_system.open_motion(PLAYER_ID, "sanction", target).get("message", "Motion could not be opened.")))
 
-func _infra() -> void:
-    var alliance := _player_alliance()
-    if alliance_system == null or alliance.is_empty():
-        _message("Create an alliance before building shared infrastructure.")
-        return
-    if not alliance_system.has_method("add_infrastructure"):
-        _message("Alliance infrastructure system is unavailable.")
-        return
-    var result: Dictionary = alliance_system.add_infrastructure(str(alliance.get("id", "")), "Regional Logistics Hub", 1, 5000)
-    _message(str(result.get("message", "Infrastructure could not be established.")))
-
-func _research() -> void:
-    var alliance := _player_alliance()
-    if alliance_system == null or alliance.is_empty():
-        _message("Create an alliance before funding shared research.")
-        return
-    if not alliance_system.has_method("fund_research"):
-        _message("Alliance research system is unavailable.")
-        return
-    var result: Dictionary = alliance_system.fund_research(str(alliance.get("id", "")), "Cooperative Restoration Technology", 5000)
-    _message(str(result.get("message", "Research could not be funded.")))
-
 func _invite_partner(partner_id: String, partner_name: String) -> void:
     var alliance := _player_alliance()
     if alliance_system == null or alliance.is_empty():
         _message("Create the Restoration Consortium before inviting corporate partners.")
         return
-    var result: Dictionary = alliance_system.invite_member(str(alliance.get("id", "")), PLAYER_ID, partner_id) if alliance_system.has_method("invite_member") else {"ok": false, "message": "Partner invitations are unavailable."}
+    var result := alliance_system.invite_member(str(alliance.get("id", "")), PLAYER_ID, partner_id) if alliance_system.has_method("invite_member") else {"ok": false, "message": "Partner invitations are unavailable."}
     _message("Invitation sent to %s." % partner_name if bool(result.get("ok", false)) else str(result.get("message", "Partner invitation failed.")))
 
 func _members_line(alliance: Dictionary) -> String:
@@ -321,7 +285,7 @@ func _refresh() -> void:
     status.text = "%s  •  LEVEL %d\nMEMBERS %d/6  •  TREASURY $%d  •  TRUST %.0f  •  REPUTATION %.0f\n%s" % [str(alliance.get("name", "Alliance")), int(alliance.get("level", 1)), members.size(), int(alliance.get("treasury", 0)), float(alliance.get("trust", 0)), float(alliance.get("reputation", 0)), _members_line(alliance)]
     var projects: Array = alliance.get("projects", [])
     if projects.is_empty():
-        project.text = "REGIONAL RAILWAY  •  NOT STARTED  •  Build a shared logistics backbone for the restoration economy."
+        project.text = "REGIONAL RAILWAY  •  NOT STARTED  •  Shared logistics backbone for the restoration economy."
     else:
         var active: Dictionary = projects.back()
         var contributed: Dictionary = active.get("contributed", {})
@@ -336,7 +300,7 @@ func _layout() -> void:
     var narrow := visible_width < 760.0
     var phone := visible_width < 390.0
     var width := maxf(304.0, visible_width - 16.0) if narrow else minf(590.0, visible_width - 36.0)
-    var height := maxf(500.0, size.y - 78.0) if narrow else minf(540.0, size.y - 100.0)
+    var height := maxf(470.0, size.y - 78.0) if narrow else minf(500.0, size.y - 100.0)
     panel.position = Vector2(8, 70) if narrow else Vector2(maxf(18.0, (visible_width - width) * 0.5), 82)
     panel.size = Vector2(width, height)
     title.position = Vector2(14, 10)
