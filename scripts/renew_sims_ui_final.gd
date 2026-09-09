@@ -4,6 +4,8 @@ const ACTIVE_TAB := Color("d7b86f")
 const INACTIVE_TAB := Color("102a32")
 const TAB_TEXT := Color("e7f2ef")
 const TAB_MUTED := Color("78949a")
+const HUD_REFRESH_INTERVAL := 0.20
+var _hud_refresh_accum := 0.0
 
 func _sync_mobile_actions() -> void:
     for child in mobile_actions.get_children(): child.queue_free()
@@ -170,7 +172,6 @@ func _refresh() -> void:
             _action("REGIONS", Callable(self, "_open_screen").bind("RegionsPanel"))
             _action("INFRASTRUCTURE", Callable(self, "_open_screen").bind("InfrastructurePanel"))
             _action("MISSIONS", Callable(self, "_open_screen").bind("WorldOpportunitiesPanel"))
-            _action("OPPORTUNITIES", Callable(self, "_open_screen").bind("WorldOpportunitiesPanel"))
             _action("PRODUCTION", Callable(self, "_open_screen").bind("ProductionControlPanel"))
             _action("LOGISTICS", Callable(self, "_open_screen").bind("SupplyChainPanel"))
             _action("EXPANSION", Callable(self, "_open_screen").bind("EmpireExpansionPanel"))
@@ -200,7 +201,10 @@ func _open_screen(screen_name: String) -> void:
             if node != null: node.show()
 
 func _process(delta: float) -> void:
-    super._process(delta)
+    _hud_refresh_accum += delta
+    if _hud_refresh_accum < HUD_REFRESH_INTERVAL:
+        return
+    _hud_refresh_accum = 0.0
     if parent == null: return
     if action_subtitle != null: action_subtitle.text = _tab_subtitle()
     if selected_title != null: selected_title.text = _selected_title()
