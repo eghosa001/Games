@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Wed Sep  9 07:10:20 UTC 2026
+// Generated on: Wed Sep  9 07:20:15 UTC 2026
 
-// Source snapshot commit: 1b36a4e43f9a3172cb3951ce92e6e39fb337f1ad
+// Source snapshot commit: 2ef2db80ba3522568033f793a020ac82f47e9c78
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -318,6 +318,59 @@ jobs:
       - name: Run individual test
         run: timeout 600s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/${{ matrix.test }}
 
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: .github/workflows/repair-root-path.yml
+Lines: 47
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+name: One-shot runtime repair
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: ${{ github.event.head_commit.message != 'fix: harden bankruptcy root lookup' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Repair bankruptcy root lookup
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/bankruptcy_system.gd')
+          s = p.read_text()
+          old = 'func _game() -> Variant:\n    return get_node_or_null("/root/Game")'
+          new = '''func _game() -> Variant:
+    var scene := get_tree().current_scene
+    if scene != null:
+        return scene
+    return get_node_or_null("/root/Renew")'''
+          if old not in s:
+              raise SystemExit('Expected bankruptcy _game() implementation was not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+
+      - name: Validate repair
+        run: |
+          grep -q 'get_tree().current_scene' scripts/bankruptcy_system.gd
+          ! grep -q 'get_node_or_null("/root/Game")' scripts/bankruptcy_system.gd
+
+      - name: Commit repair and remove one-shot workflow
+        run: |
+          rm -f .github/workflows/repair-root-path.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/bankruptcy_system.gd .github/workflows/repair-root-path.yml
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: harden bankruptcy root lookup'
+          git push
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: .github/workflows/web-export.yml
@@ -23592,7 +23645,7 @@ func _style(bg:Color,border:Color,radius:int)->StyleBoxFlat:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/regions_ui.gd
-Lines: 122
+Lines: 125
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 
@@ -23693,7 +23746,10 @@ func _refresh() -> void:
 func _select(index: int) -> void:
     if controller == null: return
     var result = controller.regions.select(index, int(game.reputation)); feedback_label.text = str(result.get("message", "Region selection unavailable."))
-    if bool(result.get("ok", false)): selected_index = index; if game != null and game.has_method("_log"): game._log("REGION: " + feedback_label.text)
+    if bool(result.get("ok", false)):
+        selected_index = index
+        if game != null and game.has_method("_log"):
+            game._log("REGION: " + feedback_label.text)
     _refresh()
 
 func _update_detail() -> void:
