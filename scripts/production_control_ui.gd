@@ -58,7 +58,15 @@ func _build_ui() -> void:
 
     var header := HBoxContainer.new(); header.add_theme_constant_override("separation",10); content.add_child(header)
     var title := _label("PRODUCTION CONTROL CENTER",20,Color("edf6f3")); title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; header.add_child(title)
-    var close := _button("CLOSE",46); close.pressed.connect(func(): get_node_or_null("/root/RenewUIScreenManager").hide_all_screens() if get_node_or_null("/root/RenewUIScreenManager") != null else close_screen()); header.add_child(close)
+    var close := _button("CLOSE",46)
+    close.pressed.connect(func():
+        var manager := get_node_or_null("/root/RenewUIScreenManager")
+        if manager != null and manager.has_method("hide_all_screens"):
+            manager.hide_all_screens()
+        else:
+            close_screen()
+    )
+    header.add_child(close)
 
     status_label = _label("",13,Color("a9c5c6")); content.add_child(status_label)
     content.add_child(_section("PRODUCTION LINE"))

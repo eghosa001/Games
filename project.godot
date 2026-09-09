@@ -46,11 +46,7 @@ RenewInfrastructureSystem="*res://scripts/infrastructure_system.gd"
 
 RenewCollectionSystem="*res://scripts/collection_system.gd"
 
-RenewCollectionUI="*res://scripts/collection_ui.gd"
-
 RenewLiveOpsSystem="*res://scripts/liveops_system.gd"
-
-RenewLiveOpsUI="*res://scripts/liveops_ui.gd"
 
 RenewHeadquartersSystem="*res://scripts/headquarters_system.gd"
 
@@ -99,15 +95,10 @@ RenewUIScreenManager="*res://scripts/ui_screen_manager.gd"
 [display]
 
 window/size/viewport_width=1280
-
 window/size/viewport_height=720
-
 window/size/window_width_override=1280
-
 window/size/window_height_override=720
-
 window/stretch/mode="canvas_items"
-
 window/stretch/aspect="expand"
 
 
