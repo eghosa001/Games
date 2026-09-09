@@ -148,7 +148,6 @@ func _action_hint(text: String) -> String:
     match text:
         "END DAY": return "Advance the simulation by one in-game day."
         "BACK": return "Return to this sector's command hub."
-        "OVERVIEW": return "Return to the sector overview."
         "DASHBOARD": return "Open the company overview."
         "PROPERTY MAP": return "Focus the property and district map."
         "INSPECT": return "Inspect the selected property."
@@ -194,6 +193,8 @@ func _action_hint(text: String) -> String:
         "REGIONS": return "Open regional management."
         "EXPANSION": return "Manage expansion businesses."
         "ACQUISITIONS": return "Review and negotiate acquisitions."
+        "UPGRADE EXPANSION": return "Upgrade an expansion business."
+        "TRANSPORT": return "Upgrade empire transport."
         "NEXT REGION": return "Select the next region."
         "ESTABLISH": return "Establish regional presence."
         "CHARTER BASIN": return "Charter the basin region."
@@ -220,7 +221,6 @@ func _action_hint(text: String) -> String:
         "INFRASTRUCTURE": return "Build and repair regional infrastructure."
         "MISSIONS": return "Review world opportunities and missions."
         "LIVE OPS": return "Review seasonal events and live operations."
-        "EMPIRE": return "Open empire management."
         _:
             return "Execute %s." % text.to_lower()
 
@@ -302,6 +302,8 @@ func _refresh() -> void:
                     _action("GOVT DEAL", parent.sign_government_contract)
                     _action("BUILD DEAL", parent.sign_construction_contract)
                     _action("EXPORT DEAL", parent.sign_export_contract)
+                4:
+                    _back_button()
                     _screen("FINANCE", "FinancePanel")
                     _screen("COLLECTIONS", "CollectionPanel")
                     _screen("PORTFOLIO", "PortfolioPanel")
@@ -321,7 +323,7 @@ func _refresh() -> void:
                     _action("GOALS", parent.victory_progress)
                     _action("REPUTE", parent.reputation_status)
                     _action("SUPPLY DEAL", parent.propose_supply_deal)
-                    _screen("CORPORATIONS", "CorporationsPanel")
+                    _screen("NETWORK", "CorporationsPanel")
                     _screen("PACT", "AlliancePanel")
                 2:
                     _back_button()
