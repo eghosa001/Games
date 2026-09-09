@@ -97,7 +97,10 @@ func _refresh() -> void:
 func _select(index: int) -> void:
     if controller == null: return
     var result = controller.regions.select(index, int(game.reputation)); feedback_label.text = str(result.get("message", "Region selection unavailable."))
-    if bool(result.get("ok", false)): selected_index = index; if game != null and game.has_method("_log"): game._log("REGION: " + feedback_label.text)
+    if bool(result.get("ok", false)):
+        selected_index = index
+        if game != null and game.has_method("_log"):
+            game._log("REGION: " + feedback_label.text)
     _refresh()
 
 func _update_detail() -> void:
