@@ -1,4 +1,4 @@
-name: One-shot runtime repair
+name: Full production repair
 
 on:
   push:
@@ -9,40 +9,119 @@ permissions:
 
 jobs:
   repair:
-    if: ${{ github.event.head_commit.message != 'fix: harden bankruptcy root lookup' }}
+    if: ${{ !startsWith(github.event.head_commit.message, 'fix: full production repair') && !startsWith(github.event.head_commit.message, 'ci: consolidate production repair') }}
     runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: '4.7.2'
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Repair bankruptcy root lookup
+      - name: Apply complete repair set
+        shell: bash
         run: |
-          python3 - <<'PY'
+          set -euo pipefail
+          python3 <<'PY'
           from pathlib import Path
-          p = Path('scripts/bankruptcy_system.gd')
-          s = p.read_text()
-          old = 'func _game() -> Variant:\n    return get_node_or_null("/root/Game")'
-          new = '''func _game() -> Variant:
-    var scene := get_tree().current_scene
-    if scene != null:
-        return scene
-    return get_node_or_null("/root/Renew")'''
-          if old not in s:
-              raise SystemExit('Expected bankruptcy _game() implementation was not found')
-          p.write_text(s.replace(old, new, 1))
+          import re
+
+          def edit(path, fn):
+              p = Path(path)
+              s = p.read_text(encoding='utf-8')
+              n = fn(s)
+              if n != s:
+                  p.write_text(n, encoding='utf-8')
+                  print('UPDATED', path)
+
+          def replace(path, pairs):
+              def f(s):
+                  for old, new in pairs:
+                      s = s.replace(old, new)
+                  return s
+              edit(path, f)
+
+          def normalize_properties(s):
+              out=[]
+              pat=re.compile(r'^var (\\w+(?:: [^:]+)?): get: (.*?); set\\(value\\): (.*)$')
+              for line in s.splitlines():
+                  m=pat.match(line)
+                  if not m:
+                      out.append(line); continue
+                  left,getter,setter=m.groups()
+                  out += [f'var {left}:','    get:',f'        {getter}','    set(value):',f'        {setter}']
+              return '\n'.join(out)+ ('\n' if s.endswith('\n') else '')
+          edit('scripts/main.gd', normalize_properties)
+
+          replace('scripts/alliance_ui.gd', [('var partner_y := y + ceil(float(buttons.size()) / float(cols)) * 50 + 4','var partner_y: float = y + ceil(float(buttons.size()) / float(cols)) * 50 + 4')])
+          replace('scripts/headquarters_ui.gd', [
+              ('var stage_index := system.get_stage_index()','var stage_index: int = int(system.get_stage_index())'),
+              ('var built := system.has_area(selected_area)','var built: bool = bool(system.has_area(selected_area))'),
+              ('var level := system.area_level(selected_area)','var level: int = int(system.area_level(selected_area))'),
+              ('var unlocked := stage_index >= int(spec.get("min_stage", 0))','var unlocked: bool = stage_index >= int(spec.get("min_stage", 0))')])
+          replace('scripts/infrastructure_ui.gd',[('var game := _parent()','var game: Variant = _parent()')])
+          replace('scripts/save_load_ui.gd',[('var can_start := victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()','var can_start: bool = victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()')])
+          replace('scripts/empire_progression_ui.gd',[
+              ('var goal_done := goals.completed_count() if goals != null and goals.has_method("completed_count") else 0','var goal_done: int = int(goals.completed_count()) if goals != null and goals.has_method("completed_count") else 0'),
+              ('var goal_total := goals.goals.size() if goals != null else 0','var goal_total: int = int(goals.goals.size()) if goals != null else 0'),
+              ('var milestone_done := progression.claimed.size() if progression != null else 0','var milestone_done: int = int(progression.claimed.size()) if progression != null else 0'),
+              ('var milestone_total := progression.milestones.size() if progression != null else 0','var milestone_total: int = int(progression.milestones.size()) if progression != null else 0')])
+          replace('scripts/premium_ui_skin.gd',[('var tint := accents[i]','var tint: Color = accents[i]')])
+          replace('scripts/bankruptcy_system.gd',[('return get_node_or_null("/root/Game")','var root_game := get_node_or_null("/root/Renew")\n    if root_game != null:\n        return root_game\n    var tree := get_tree()\n    if tree != null and tree.current_scene != null and tree.current_scene.has_method("advance_day"):\n        return tree.current_scene\n    return null')])
+          replace('scripts/contracts_ui.gd',[('reputation = int(game_state.reputation)','reputation = int(game_state.get_value("player", "reputation", 0))')])
+
+          def fix_reparent(path):
+              def f(s):
+                  old='list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)'
+                  new='list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180)\n    if list_label.get_parent() != scroll:\n        var old_parent := list_label.get_parent()\n        if old_parent != null: old_parent.remove_child(list_label)\n        scroll.add_child(list_label)'
+                  return s.replace(old,new)
+              edit(path,f)
+          fix_reparent('scripts/portfolio_ui.gd')
+          fix_reparent('scripts/corporations_ui.gd')
+
+          def fix_regions(s):
+              replacements=[
+              ('    var ui_root:=hud.get_parent()','    var ui_root: Node = hud.get_parent()'),
+              ('    if ui_root!=null and ui_root.get_node_or_null("BusinessOperationsPanel")==null: var p:=BUSINESS_UI.new(); p.name="BusinessOperationsPanel"; ui_root.add_child(p)','    if ui_root != null and ui_root.get_node_or_null("BusinessOperationsPanel") == null:\n        var p: Node = BUSINESS_UI.new()\n        p.name = "BusinessOperationsPanel"\n        ui_root.add_child(p)'),
+              ('    if ui_root!=null and ui_root.get_node_or_null("EmpireExpansionPanel")==null: var e:=EXPANSION_UI.new(); e.name="EmpireExpansionPanel"; ui_root.add_child(e)','    if ui_root != null and ui_root.get_node_or_null("EmpireExpansionPanel") == null:\n        var e: Node = EXPANSION_UI.new()\n        e.name = "EmpireExpansionPanel"\n        ui_root.add_child(e)'),
+              ('    if ui_root!=null and ui_root.get_node_or_null("EmpireIntelligencePanel")==null: var i:=INTELLIGENCE_UI.new(); i.name="EmpireIntelligencePanel"; ui_root.add_child(i)','    if ui_root != null and ui_root.get_node_or_null("EmpireIntelligencePanel") == null:\n        var i: Node = INTELLIGENCE_UI.new()\n        i.name = "EmpireIntelligencePanel"\n        ui_root.add_child(i)'),
+              ('    if ui_root!=null and ui_root.get_node_or_null("EmpireProgressionPanel")==null: var p2:=PROGRESSION_UI.new(); p2.name="EmpireProgressionPanel"; ui_root.add_child(p2)','    if ui_root != null and ui_root.get_node_or_null("EmpireProgressionPanel") == null:\n        var p2: Node = PROGRESSION_UI.new()\n        p2.name = "EmpireProgressionPanel"\n        ui_root.add_child(p2)'),
+              ('    if ui_root!=null and ui_root.get_node_or_null("EmpireIdentityPanel")==null: var idp:=IDENTITY_UI.new(); idp.name="EmpireIdentityPanel"; ui_root.add_child(idp)','    if ui_root != null and ui_root.get_node_or_null("EmpireIdentityPanel") == null:\n        var idp: Node = IDENTITY_UI.new()\n        idp.name = "EmpireIdentityPanel"\n        ui_root.add_child(idp)'),
+              ('    if ui_root!=null and ui_root.get_node_or_null("NotificationsCenterPanel")==null: var n:=NOTIFICATIONS_UI.new(); n.name="NotificationsCenterPanel"; ui_root.add_child(n)','    if ui_root != null and ui_root.get_node_or_null("NotificationsCenterPanel") == null:\n        var n: Node = NOTIFICATIONS_UI.new()\n        n.name = "NotificationsCenterPanel"\n        ui_root.add_child(n)')]
+              for a,b in replacements: s=s.replace(a,b)
+              return s
+          edit('scripts/regions_launcher.gd',fix_regions)
+          replace('tests/test_runner.gd',[('    root.add_child(game)\n    await process_frame','    game.name = "Renew"\n    root.add_child(game)\n    await process_frame'),('    game.free()\n    await process_frame','    game.queue_free()\n    await process_frame')])
           PY
 
-      - name: Validate repair
+      - name: Install Godot
+        shell: bash
         run: |
-          grep -q 'get_tree().current_scene' scripts/bankruptcy_system.gd
-          ! grep -q 'get_node_or_null("/root/Game")' scripts/bankruptcy_system.gd
+          set -euo pipefail
+          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O /tmp/godot.zip
+          mkdir -p "$HOME/godot"
+          7z x /tmp/godot.zip -o"$HOME/godot" >/dev/null
+          chmod +x "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
 
-      - name: Commit repair and remove one-shot workflow
+      - name: Compile project
+        run: timeout 180s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+
+      - name: Run integration suite
+        run: timeout 300s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_runner.gd
+
+      - name: Commit and push repaired source
+        shell: bash
         run: |
-          rm -f .github/workflows/repair-root-path.yml
+          set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add scripts/bankruptcy_system.gd .github/workflows/repair-root-path.yml
-          git diff --cached --quiet && exit 0
-          git commit -m 'fix: harden bankruptcy root lookup'
-          git push
+          git add scripts tests
+          git commit -m 'fix: full production repair' || true
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git rebase origin/main && git push origin HEAD:main && exit 0
+            git rebase --abort || true
+            sleep 2
+          done
+          exit 1
