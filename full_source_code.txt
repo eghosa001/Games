@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Wed Sep  9 07:25:27 UTC 2026
+// Generated on: Wed Sep  9 07:25:59 UTC 2026
 
-// Source snapshot commit: 10e6ae4bf4f886163c73a7212e18fd441c2d85f4
+// Source snapshot commit: 3a523e69e0812853ef2bce3eca1da0798f27e3c1
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -317,6 +317,156 @@ jobs:
         run: timeout 120s ./Godot_v4.7.2-stable_linux.x86_64 --headless --editor --path . --quit
       - name: Run individual test
         run: timeout 600s ./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --script res://tests/${{ matrix.test }}
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: .github/workflows/repair-batch-v2.yml
+Lines: 144
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+name: One Pass Production Repair V2
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply all known runtime repairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+
+          def edit(path, fn):
+              p = Path(path)
+              s = p.read_text(encoding='utf-8')
+              n = fn(s)
+              if n != s:
+                  p.write_text(n, encoding='utf-8')
+                  print('UPDATED', path)
+              else:
+                  print('UNCHANGED', path)
+
+          def replace(path, pairs):
+              def f(s):
+                  for old, new in pairs:
+                      if old in s:
+                          s = s.replace(old, new)
+              
+                  return s
+              edit(path, f)
+
+          replace('scripts/alliance_ui.gd', [
+              ('var partner_y := y + ceil(float(buttons.size()) / float(cols)) * 50 + 4', 'var partner_y: float = y + ceil(float(buttons.size()) / float(cols)) * 50 + 4'),
+          ])
+          replace('scripts/headquarters_ui.gd', [
+              ('var stage_index := system.get_stage_index()', 'var stage_index: int = int(system.get_stage_index())'),
+              ('var built := system.has_area(selected_area)', 'var built: bool = bool(system.has_area(selected_area))'),
+              ('var level := system.area_level(selected_area)', 'var level: int = int(system.area_level(selected_area))'),
+              ('var unlocked := stage_index >= int(spec.get("min_stage", 0))', 'var unlocked: bool = stage_index >= int(spec.get("min_stage", 0))'),
+          ])
+          replace('scripts/infrastructure_ui.gd', [
+              ('var game := _parent()', 'var game: Variant = _parent()'),
+          ])
+          replace('scripts/save_load_ui.gd', [
+              ('var can_start := victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()', 'var can_start: bool = victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()'),
+          ])
+          replace('scripts/empire_progression_ui.gd', [
+              ('var goal_done := goals.completed_count() if goals != null and goals.has_method("completed_count") else 0', 'var goal_done: int = int(goals.completed_count()) if goals != null and goals.has_method("completed_count") else 0'),
+              ('var goal_total := goals.goals.size() if goals != null else 0', 'var goal_total: int = int(goals.goals.size()) if goals != null else 0'),
+              ('var milestone_done := progression.claimed.size() if progression != null else 0', 'var milestone_done: int = int(progression.claimed.size()) if progression != null else 0'),
+              ('var milestone_total := progression.milestones.size() if progression != null else 0', 'var milestone_total: int = int(progression.milestones.size()) if progression != null else 0'),
+          ])
+          replace('scripts/premium_ui_skin.gd', [
+              ('var tint := accents[i]', 'var tint: Color = accents[i]'),
+          ])
+          replace('scripts/bankruptcy_system.gd', [
+              ('return get_node_or_null("/root/Game")', 'var tree := get_tree()\n    if tree != null and tree.current_scene != null:\n        return tree.current_scene\n    return get_node_or_null("/root/Renew")'),
+          ])
+          replace('scripts/portfolio_ui.gd', [
+              ('list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)', 'list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); panel.remove_child(list_label); scroll.add_child(list_label)'),
+          ])
+          replace('scripts/corporations_ui.gd', [
+              ('list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)', 'list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); panel.remove_child(list_label); scroll.add_child(list_label)'),
+          ])
+
+          # Expand compressed main.gd property declarations into valid Godot 4.7 syntax.
+          def main_fix(s):
+              out = []
+              for line in s.splitlines():
+                  if line.startswith('var ') and ': get: ' in line:
+                      left, getter = line.split(': get: ', 1)
+                      name_part = left[4:]
+                      if '; set(value): ' in getter:
+                          getter, setter = getter.split('; set(value): ', 1)
+                          out.append(f'var {name_part}:')
+                          out.append(f'    get: {getter}')
+                          out.append(f'    set(value): {setter}')
+                      else:
+                          out.append(f'var {name_part}:')
+                          out.append(f'    get: {getter}')
+                  else:
+                      out.append(line)
+              return '\n'.join(out) + ('\n' if s.endswith('\n') else '')
+          edit('scripts/main.gd', main_fix)
+          PY
+
+      - name: Install Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O /tmp/godot.zip
+          mkdir -p "$HOME/godot"
+          7z x /tmp/godot.zip -o"$HOME/godot" >/dev/null
+          chmod +x "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
+
+      - name: Compile project
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+
+      - name: Run core test suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 300s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_runner.gd
+
+      - name: Commit repairs
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts
+          git commit -m "fix: complete production runtime repair pass" || true
+          git push origin HEAD:main
+
+      - name: Remove temporary repair runners
+        if: success()
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm -f .github/workflows/repair-batch.yml .github/workflows/repair-batch-v2.yml || true
+          git commit -m "ci: remove temporary repair runners" || true
+          git push origin HEAD:main || true
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
