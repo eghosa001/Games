@@ -6,9 +6,7 @@ const TAB_TEXT := Color("e7f2ef")
 const TAB_MUTED := Color("78949a")
 const HUD_REFRESH_INTERVAL := 0.20
 var _hud_refresh_accum := 0.0
-
-func _sync_mobile_actions() -> void:
-    for child in mobile_actions.get_children(): child.queue_free()
+var _world_page := 0
 
 func _style_mode_buttons() -> void:
     if mode_buttons.is_empty(): return
@@ -100,6 +98,8 @@ func _layout_responsive() -> void:
 
 func _set_tab(index: int) -> void:
     active_tab = clampi(index, 0, 3)
+    if active_tab != 3:
+        _world_page = 0
     _refresh()
     _style_mode_buttons()
 
@@ -139,6 +139,10 @@ func _action_hint(text: String) -> String:
         "CUSTOMERS": return "Review customer segments and demand."
         "LIVE OPS": return "Review seasonal events and live operations."
         "OPPORTUNITIES": return "Review strategic world opportunities."
+        "WORLD OVERVIEW": return "Return to the World command overview."
+        "OPERATIONS": return "Open production and logistics commands."
+        "EMPIRE": return "Open expansion and intelligence commands."
+        "EVENTS": return "Open missions and live operations."
         _:
             return "Execute %s." % text.to_lower()
 
@@ -147,8 +151,14 @@ func _tab_subtitle() -> String:
         0: return "Manage property, restoration and your first operating site."
         1: return "Run production, staffing, pricing, contracts and finance."
         2: return "Manage rivals, alliances, investment, shares and corporate power."
-        3: return "Expand regions, infrastructure, logistics, technology and world activity."
+        3:
+            match _world_page:
+                0: return "Choose a world domain. Infrastructure is kept inside Regional Management."
+                1: return "Production and logistics are grouped into Operations."
+                2: return "Expansion and intelligence are grouped into Empire Management."
+                3: return "Missions and live operations are grouped into Events."
         _: return "Choose an action."
+    return "Choose an action."
 
 func _mobile_context() -> String:
     if parent == null: return "PROPERTY • INITIALIZING"
@@ -159,24 +169,35 @@ func _mobile_context() -> String:
 func _refresh() -> void:
     super._refresh()
     if action_grid == null: return
-    match active_tab:
+    if active_tab != 3: return
+    _clear_action_grids()
+    action_title.text = "WORLD • " + ["OVERVIEW", "OPERATIONS", "EMPIRE", "EVENTS"][_world_page]
+    match _world_page:
         0:
-            _action("PROPERTY MAP", Callable(self, "_focus_property_map"))
+            _action("REGIONS", Callable(self, "_set_world_page").bind(1))
+            _action("OPERATIONS", Callable(self, "_set_world_page").bind(2))
+            _action("EMPIRE", Callable(self, "_set_world_page").bind(3))
+            _action("EVENTS", Callable(self, "_set_world_page").bind(4))
         1:
-            _action("PRODUCTION", Callable(self, "_open_screen").bind("ProductionControlPanel"))
-            _action("CUSTOMERS", Callable(self, "_open_screen").bind("CustomerSegmentsUI"))
-        2:
-            _action("INTELLIGENCE", Callable(self, "_open_screen").bind("EmpireIntelligencePanel"))
-            _action("HQ", Callable(self, "_open_screen").bind("HeadquartersPanel"))
-        3:
-            _action("REGIONS", Callable(self, "_open_screen").bind("RegionsPanel"))
+            _action("WORLD OVERVIEW", Callable(self, "_set_world_page").bind(0))
             _action("INFRASTRUCTURE", Callable(self, "_open_screen").bind("InfrastructurePanel"))
             _action("MISSIONS", Callable(self, "_open_screen").bind("WorldOpportunitiesPanel"))
+        2:
+            _action("WORLD OVERVIEW", Callable(self, "_set_world_page").bind(0))
             _action("PRODUCTION", Callable(self, "_open_screen").bind("ProductionControlPanel"))
             _action("LOGISTICS", Callable(self, "_open_screen").bind("SupplyChainPanel"))
+        3:
+            _action("WORLD OVERVIEW", Callable(self, "_set_world_page").bind(0))
             _action("EXPANSION", Callable(self, "_open_screen").bind("EmpireExpansionPanel"))
             _action("INTELLIGENCE", Callable(self, "_open_screen").bind("EmpireIntelligencePanel"))
+        4:
+            _action("WORLD OVERVIEW", Callable(self, "_set_world_page").bind(0))
+            _action("MISSIONS", Callable(self, "_open_screen").bind("WorldOpportunitiesPanel"))
             _action("LIVE OPS", Callable(self, "_open_screen").bind("LiveOpsPanel"))
+
+func _set_world_page(page: int) -> void:
+    _world_page = clampi(page, 0, 4)
+    _refresh()
 
 func _focus_property_map() -> void:
     var map := get_tree().root.get_node_or_null("Renew/World/PropertyMap")
