@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Wed Sep  9 06:42:22 UTC 2026
+// Generated on: Wed Sep  9 06:45:40 UTC 2026
 
-// Source snapshot commit: 4cabef7e1d9a99b7851b9eeca6d913b4d98ba846
+// Source snapshot commit: c235d438760bcc07403b86bc7b39fe9d0c321d45
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -14548,12 +14548,12 @@ func restore_state(snapshot:Dictionary)->void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/employee_system.gd
-Lines: 350
+Lines: 335
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 ## class_name removed: "RenewEmployeeSystem" conflicts with project.godot autoload.
 
-const SYSTEM_VERSION := 3
+const SYSTEM_VERSION := 4
 const JAMES_ID := "emp_james_001"
 const EXECUTIVE_SEATS := ["CEO", "COO", "CFO", "CTO"]
 const EXECUTIVE_BONUSES := {"COO": {"production": 1.10}, "CFO": {"operating_cost": 0.90}, "CTO": {"research": 1.25}, "CEO": {"hiring": 0.80}}
@@ -14603,11 +14603,9 @@ func refresh_candidates()->void:
         candidates.append({"id":"candidate_exec_%d"%int(_day),"name":"Morgan","role":"Senior Manager","level":3,"skills":{"production":55,"logistics":60,"management":74},"experience":22,"salary":1500,"loyalty":55,"morale":72,"productivity":0.80,"ambition":85,"specialization":"operations","status":"candidate","assignment":"hq_001"})
 
 func _reputation() -> int:
-    if not is_inside_tree():
-        return 0
+    if not is_inside_tree(): return 0
     var state = get_node_or_null("/root/RenewGameState")
-    if state == null or not state.has_method("get_value"):
-        return 0
+    if state == null or not state.has_method("get_value"): return 0
     return int(state.get_value("player", "reputation", 0))
 
 func get_active_employee_count()->int:
@@ -14621,7 +14619,6 @@ func get_daily_wage_total()->int:
     var total:=0
     for employee in employees:
         if employee.get("status","active")=="active": total+=int(employee.get("salary",0))
-    # Salaries are stored as monthly rates; the daily simulation consumes 1/30.
     return int(round(float(total) / 30.0))
 func total_productivity()->float:
     var total:=0.0
@@ -14642,8 +14639,7 @@ func get_morale_multiplier()->float:
     return 0.75
 
 func _culture_effect(effect_name: String, fallback: float = 1.0) -> float:
-    if not is_inside_tree():
-        return fallback
+    if not is_inside_tree(): return fallback
     var culture = get_node_or_null("/root/RenewCompanyCultureSystem")
     if culture != null and culture.has_method("get_effects"):
         return float(culture.get_effects().get(effect_name, fallback))
@@ -14683,71 +14679,52 @@ func get_employee(employee_id:String)->Dictionary:
 func get_executives() -> Dictionary:
     var seats: Dictionary = {}
     for employee in employees:
-        if not employee is Dictionary:
-            continue
-        if employee.get("status", "active") != "active":
-            continue
+        if not employee is Dictionary or employee.get("status", "active") != "active": continue
         var seat := str(employee.get("executive_seat", ""))
-        if seat != "" and EXECUTIVE_SEATS.has(seat):
-            seats[seat] = employee.duplicate(true)
+        if seat != "" and EXECUTIVE_SEATS.has(seat): seats[seat] = employee.duplicate(true)
     return seats
 
 func executive_bonus_multiplier(kind: String) -> float:
     var seats := get_executives()
     match kind:
-        "production":
-            return float(EXECUTIVE_BONUSES["COO"].get("production", 1.0)) if seats.has("COO") else 1.0
-        "operating_cost":
-            return float(EXECUTIVE_BONUSES["CFO"].get("operating_cost", 1.0)) if seats.has("CFO") else 1.0
-        "research":
-            return float(EXECUTIVE_BONUSES["CTO"].get("research", 1.0)) if seats.has("CTO") else 1.0
-        "hiring":
-            return float(EXECUTIVE_BONUSES["CEO"].get("hiring", 1.0)) if seats.has("CEO") else 1.0
+        "production": return float(EXECUTIVE_BONUSES["COO"].get("production", 1.0)) if seats.has("COO") else 1.0
+        "operating_cost": return float(EXECUTIVE_BONUSES["CFO"].get("operating_cost", 1.0)) if seats.has("CFO") else 1.0
+        "research": return float(EXECUTIVE_BONUSES["CTO"].get("research", 1.0)) if seats.has("CTO") else 1.0
+        "hiring": return float(EXECUTIVE_BONUSES["CEO"].get("hiring", 1.0)) if seats.has("CEO") else 1.0
     return 1.0
 
 func appoint_executive(employee_id: String, seat: String, day: int) -> Dictionary:
     seat = seat.to_upper()
-    if not EXECUTIVE_SEATS.has(seat):
-        return {"ok": false, "message": "Unknown executive seat."}
+    if not EXECUTIVE_SEATS.has(seat): return {"ok": false, "message": "Unknown executive seat."}
     var employee := get_employee(employee_id)
-    if employee.is_empty() or employee.get("status", "active") != "active":
-        return {"ok": false, "message": "Employee is not active."}
-    if int(employee.get("level", 1)) < 4:
-        return {"ok": false, "message": "%s needs career level 4 before joining the C-suite." % employee.get("name", "Employee")}
+    if employee.is_empty() or employee.get("status", "active") != "active": return {"ok": false, "message": "Employee is not active."}
+    if int(employee.get("level", 1)) < 4: return {"ok": false, "message": "%s needs career level 4 before joining the C-suite." % employee.get("name", "Employee")}
     for other in employees:
         if other is Dictionary and str(other.get("executive_seat", "")) == seat and str(other.get("id", "")) != employee_id:
             other["executive_seat"] = ""
             _record(str(other.get("id", "")), "executive_unseated", {"day": day, "seat": seat})
-    employee["executive_seat"] = seat
-    employee["role"] = seat
-    employee["assignment"] = "hq_001"
-    employee["morale"] = min(100, int(employee.get("morale", 70)) + 8)
-    employee["loyalty"] = min(100, int(employee.get("loyalty", 50)) + 10)
+    employee["executive_seat"] = seat; employee["role"] = seat; employee["assignment"] = "hq_001"
+    employee["morale"] = min(100, int(employee.get("morale", 70)) + 8); employee["loyalty"] = min(100, int(employee.get("loyalty", 50)) + 10)
     _record(employee_id, "executive_appointed", {"day": day, "seat": seat})
     return {"ok": true, "employee": employee.duplicate(true), "seat": seat, "message": "%s appointed %s." % [employee["name"], seat]}
 
 func remove_executive_seat(employee_id: String, day: int) -> Dictionary:
     var employee := get_employee(employee_id)
-    if employee.is_empty():
-        return {"ok": false, "message": "Employee not found."}
-    var seat := str(employee.get("executive_seat", ""))
-    employee["executive_seat"] = ""
-    if not seat.is_empty():
-        _record(employee_id, "executive_unseated", {"day": day, "seat": seat})
+    if employee.is_empty(): return {"ok": false, "message": "Employee not found."}
+    var seat := str(employee.get("executive_seat", "")); employee["executive_seat"] = ""
+    if not seat.is_empty(): _record(employee_id, "executive_unseated", {"day": day, "seat": seat})
     return {"ok": true, "seat": seat}
 
 func get_roster()->Array[Dictionary]:
     var roster: Array[Dictionary] = []
     for employee in employees:
-        if employee is Dictionary:
-            roster.append(employee.duplicate(true))
+        if employee is Dictionary: roster.append(employee.duplicate(true))
     return roster
 
 func get_candidates()->Array[Dictionary]:
     var result: Array[Dictionary] = []
     for candidate in candidates:
-        if candidate is Dictionary:
-            result.append(candidate.duplicate(true))
+        if candidate is Dictionary: result.append(candidate.duplicate(true))
     return result
 
 func hire_candidate(candidate_id:String,day:int)->Dictionary:
@@ -14757,7 +14734,7 @@ func hire_candidate(candidate_id:String,day:int)->Dictionary:
         var hire_level:=clampi(int(candidate.get("level",1)),1,3)
         var employee:=_make_employee(id,str(candidate["name"]),str(candidate["role"]),str(candidate["specialization"]),candidate.get("skills",{}),int(candidate["experience"]),int(candidate["salary"]),int(candidate["loyalty"]),int(candidate["morale"]),float(candidate["productivity"]),int(candidate["ambition"]),hire_level,str(candidate.get("assignment","factory_001")),day)
         employees.append(employee); _record(id,"hired",{"candidate_id":candidate_id}); refresh_candidates()
-        var recruitment_factor:=1.0+float(max(0,80-int(employee["loyalty"]))) / 200.0
+        var recruitment_factor:=1.0+float(max(0,80-int(employee["loyalty"])))/200.0
         return {"ok":true,"employee":employee.duplicate(true),"cost":int(round((1200+(get_active_employee_count()-1)*250)*recruitment_factor))}
     return {"ok":false,"message":"Candidate is no longer available."}
 func hire_default(day:int)->Dictionary:
@@ -14769,9 +14746,20 @@ func fire_employee(employee_id:String,day:int)->Dictionary:
     if employee.is_empty(): return {"ok":false,"message":"Employee not found."}
     if employee_id==JAMES_ID: return {"ok":false,"message":"James is a core story character and cannot be casually dismissed."}
     if employee.get("status","active")!="active": return {"ok":false,"message":"Employee is not active."}
+    var dismissed_name:=str(employee.get("name","Employee"))
+    var dismissed_assignment:=str(employee.get("assignment",""))
     employee["status"]="fired"; employee["morale"]=max(0,int(employee["morale"])-20); employee["loyalty"]=max(0,int(employee["loyalty"])-30)
-    if str(employee.get("executive_seat",""))!="": employee["executive_seat"]=""; _record(employee_id,"executive_unseated",{"day":day,"seat":"dismissal"})
-    _record(employee_id,"fired",{"day":day}); return {"ok":true,"message":"%s was dismissed. Remaining staff morale took a hit."%employee["name"]}
+    if str(employee.get("executive_seat",""))!="":
+        var seat:=str(employee.get("executive_seat","")); employee["executive_seat"]=""; _record(employee_id,"executive_unseated",{"day":day,"seat":seat})
+    var affected:=0
+    for coworker in employees:
+        if coworker.get("status","active")!="active" or coworker.get("id","")==employee_id: continue
+        if dismissed_assignment!="" and str(coworker.get("assignment",""))!=dismissed_assignment: continue
+        coworker["morale"]=max(0,int(coworker.get("morale",70))-4)
+        coworker["loyalty"]=max(0,int(coworker.get("loyalty",50))-1)
+        affected+=1
+    _record(employee_id,"fired",{"day":day,"assignment":dismissed_assignment,"coworkers_affected":affected})
+    return {"ok":true,"affected_coworkers":affected,"message":"%s was dismissed. %d nearby coworkers lost morale."%[dismissed_name,affected]}
 
 func train_employee(employee_id:String,day:int,cost:int=900)->Dictionary:
     var employee:=get_employee(employee_id)
@@ -14830,8 +14818,7 @@ func daily_update(day:int,company_performance:int=0)->Dictionary:
         elif loyalty<50 and randi_range(1,100)<=4: warnings.append("%s has a high resignation risk."%employee["name"])
         elif loyalty<=80 and randi_range(1,100)<=1: warnings.append("%s may consider outside offers."%employee["name"])
         if int(employee["ambition"])>=80 and int(employee.get("level",1))<4 and int(employee["experience"])%12==0: warnings.append("%s is ready for a career conversation."%employee["name"])
-    refresh_candidates()
-    sync_roster_to_state()
+    refresh_candidates(); sync_roster_to_state()
     return {"warnings":warnings,"resignations":resignations,"salary":get_daily_wage_total(),"productivity":total_productivity()}
 
 func poach_candidate(employee_id:String,rival_name:String,day:int)->Dictionary:
@@ -14858,8 +14845,7 @@ func restore_state(snapshot:Dictionary)->void:
     candidates.clear()
     for candidate in snapshot.get("candidates",[]):
         if candidate is Dictionary: candidates.append(candidate.duplicate(true))
-    next_id=int(snapshot.get("next_id",employees.size()+1))
-    history.clear()
+    next_id=int(snapshot.get("next_id",employees.size()+1)); history.clear()
     for entry in snapshot.get("history",[]):
         if entry is Dictionary: history.append(entry.duplicate(true))
     _day=int(snapshot.get("day",1))
@@ -14898,8 +14884,7 @@ func _record(employee_id:String,event_type:String,details:Dictionary)->void:
 
 func sync_roster_to_state()->void:
     var state=get_node_or_null("/root/RenewGameState")
-    if state:
-        state.set_value("employees","roster",get_roster())
+    if state: state.set_value("employees","roster",get_roster())
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -30901,6 +30886,35 @@ func test_scene_edges() -> void:
     check(game.business_open, "Business opening edge path")
     game.queue_free()
     await process_frame
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: tests/test_employee_dismissal_cascade.gd
+Lines: 23
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+extends SceneTree
+
+var failures: Array[String] = []
+
+func _init() -> void:
+    var system = load("res://scripts/employee_system.gd").new()
+    root.add_child(system)
+    system._create_initial_roster()
+    var result: Dictionary = system.fire_employee("emp_0002", 10)
+    if not bool(result.get("ok", false)):
+        failures.append("Employee dismissal should succeed for a normal active employee")
+    var coworker := system.get_employee("emp_james_001")
+    if int(coworker.get("morale", 78)) != 74:
+        failures.append("Dismissal must reduce morale of coworkers sharing the affected assignment")
+    if int(result.get("affected_coworkers", 0)) != 1:
+        failures.append("Dismissal should report the number of affected coworkers")
+    if not failures.is_empty():
+        for failure in failures:
+            push_error(failure)
+        quit(1)
+        return
+    print("EMPLOYEE DISMISSAL CASCADE TEST PASSED")
+    quit(0)
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
