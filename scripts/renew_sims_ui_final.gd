@@ -5,35 +5,46 @@ const INACTIVE_TAB := Color("102a32")
 const TAB_TEXT := Color("e7f2ef")
 const TAB_MUTED := Color("78949a")
 const HUD_REFRESH_INTERVAL := 0.20
+const MAX_PAGE_ACTIONS := 5
 
 var _hud_refresh_accum := 0.0
 var _page := [0, 0, 0, 0]
 
+# Every sector has a hub plus deliberately small task pages. No operational page
+# exposes more than five task buttons; BACK is the only navigation affordance.
 const PAGE_NAMES := [
-    ["OVERVIEW", "PROPERTY", "RECORDS"],
-    ["OVERVIEW", "OPERATIONS", "PEOPLE", "COMMERCIAL", "FINANCE"],
-    ["OVERVIEW", "NETWORK", "GROWTH", "CAPITAL", "TECHNOLOGY"],
+    ["OVERVIEW", "PROPERTY", "OWNERSHIP", "RECORDS"],
+    ["OVERVIEW", "PRODUCTION", "BUSINESS", "PEOPLE", "COMMERCIAL", "CONTRACTS", "FINANCE", "FUNDING"],
+    ["OVERVIEW", "RIVALS", "ALLIANCES", "CORPORATE", "GROWTH", "REGIONS", "CAPITAL", "EQUITY", "TECHNOLOGY"],
     ["OVERVIEW", "REGIONAL MANAGEMENT", "OPERATIONS", "EMPIRE MANAGEMENT", "EVENTS"]
 ]
 
 const PAGE_SUBTITLES := [
     [
         "Company overview and the next essential move.",
-        "Inspect, acquire, restore and operate the selected property.",
+        "Inspect, restore and prepare the selected property.",
+        "Acquire, sell, lease and open the selected property.",
         "Save, load and review company history and world news."
     ],
     [
         "Choose a focused business command area.",
-        "Production, inputs, pricing, upgrades and marketing.",
-        "Employees, headquarters and workforce management.",
-        "Customers, contracts and commercial negotiations.",
-        "Financing, collections and portfolio management."
+        "Inputs, imports, production and pricing.",
+        "Business upgrades and marketing.",
+        "Employees and headquarters management.",
+        "Customers and the commercial desk.",
+        "Contract signing and negotiation.",
+        "Finance, collections and portfolio.",
+        "Loans, investors and investment decisions."
     ],
     [
         "Choose a focused empire command area.",
-        "Rivals, alliances, relationships and corporate network.",
-        "Regional expansion, acquisitions and strategic growth.",
-        "Loans, investors, shares, dividends and public markets.",
+        "Rival selection, competition and reputation.",
+        "Alliances, relationships and supply agreements.",
+        "Corporate network, victory and world power.",
+        "Strategic growth and acquisitions.",
+        "Regions, charters and trade routes.",
+        "Loans, investors and public-market capital.",
+        "Shares, dividends and capitalization.",
         "Technology, progression and corporate identity."
     ],
     [
@@ -259,17 +270,20 @@ func _refresh() -> void:
                     _screen("DASHBOARD", "DashboardPanel")
                     _action("PROPERTY MAP", _focus_property_map)
                     _page_button("PROPERTY", 1)
-                    _page_button("RECORDS", 2)
+                    _page_button("OWNERSHIP", 2)
+                    _page_button("RECORDS", 3)
                     _action("END DAY", parent.advance_day)
                 1:
                     _back_button()
                     _action("INSPECT", parent.inspect_property)
-                    _action("ACQUIRE", parent.acquire_property)
                     _action("RESTORE", parent.restore_property)
+                2:
+                    _back_button()
+                    _action("ACQUIRE", parent.acquire_property)
                     _action("SELL", parent.sell_property)
                     _action("LEASE", parent.lease_property)
                     _action("OPEN BUSINESS", parent.open_business)
-                2:
+                3:
                     _back_button()
                     _action("SAVE", parent.save_game)
                     _action("LOAD", parent.load_game)
@@ -278,83 +292,103 @@ func _refresh() -> void:
         1:
             match page:
                 0:
-                    _page_button("OPERATIONS", 1)
-                    _page_button("PEOPLE", 2)
-                    _page_button("COMMERCIAL", 3)
-                    _page_button("FINANCE", 4)
+                    _page_button("PRODUCTION", 1)
+                    _page_button("BUSINESS", 2)
+                    _page_button("PEOPLE", 3)
+                    _page_button("COMMERCIAL", 4)
+                    _page_button("FINANCE", 6)
                 1:
                     _back_button()
                     _action("BUY INPUTS", parent.buy_inputs)
                     _action("IMPORT", parent.buy_international)
                     _action("PRODUCE", parent.produce_goods)
-                    _action("UPGRADE", parent.upgrade_business)
-                    _action("MARKETING", parent.marketing_campaign)
                     _action("PRICE", parent.change_price)
                 2:
+                    _back_button()
+                    _action("UPGRADE", parent.upgrade_business)
+                    _action("MARKETING", parent.marketing_campaign)
+                3:
                     _back_button()
                     _action("HIRE", parent.hire_employee)
                     _screen("STAFF", "EmployeePanel")
                     _screen("HQ", "HeadquartersPanel")
-                3:
-                    _back_button()
+                4:
+                    _page_button("CONTRACTS", 5)
                     _screen("CUSTOMERS", "CustomerSegmentsUI")
                     _screen("DEALS", "ContractPanel")
+                5:
+                    _back_button()
                     _action("CONTRACT", parent.sign_contract)
                     _action("HAGGLE", parent.haggle_contract)
                     _action("EXCLUSIVE", parent.sign_exclusive_contract)
                     _action("GOVT DEAL", parent.sign_government_contract)
                     _action("BUILD DEAL", parent.sign_construction_contract)
                     _action("EXPORT DEAL", parent.sign_export_contract)
-                4:
-                    _back_button()
+                6:
+                    _page_button("FUNDING", 7)
                     _screen("FINANCE", "FinancePanel")
                     _screen("COLLECTIONS", "CollectionPanel")
                     _screen("PORTFOLIO", "PortfolioPanel")
-        2:
-            match page:
-                0:
-                    _page_button("NETWORK", 1)
-                    _page_button("GROWTH", 2)
-                    _page_button("CAPITAL", 3)
-                    _page_button("TECHNOLOGY", 4)
-                1:
-                    _back_button()
-                    _action("NEXT RIVAL", _next_rival)
-                    _action("ALLIANCE", parent.make_alliance_offer)
-                    _action("RELATION", parent.improve_alliance)
-                    _action("COMPETE", parent.compete_alliance)
-                    _action("GOALS", parent.victory_progress)
-                    _action("REPUTE", parent.reputation_status)
-                    _action("SUPPLY DEAL", parent.propose_supply_deal)
-                    _screen("CORPORATIONS", "CorporationsPanel")
-                    _screen("PACT", "AlliancePanel")
-                2:
-                    _back_button()
-                    _screen("REGIONS", "RegionsPanel")
-                    _action("EXPANSION", parent.buy_expansion)
-                    _action("UPGRADE EXPANSION", parent.upgrade_expansion)
-                    _action("TRANSPORT", parent.upgrade_transport)
-                    _action("NEXT REGION", parent.next_region)
-                    _action("ESTABLISH", parent.establish_region)
-                    _action("CHARTER BASIN", parent.charter_basin)
-                    _action("CHARTER VALLEY", parent.charter_valley)
-                    _action("TRADE ROUTE", parent.establish_trade_route)
-                    _action("ACQUISITIONS", parent.negotiate_selected_acquisition)
-                3:
+                7:
                     _back_button()
                     _action("LOAN", parent.take_loan)
                     _action("REPAY", parent.repay_loan)
                     _action("INVESTOR", parent.request_investment)
                     _action("ACCEPT DEAL", parent.accept_investment)
                     _action("DECLINE DEAL", parent.decline_investment)
+        2:
+            match page:
+                0:
+                    _page_button("RIVALS", 1)
+                    _page_button("ALLIANCES", 2)
+                    _page_button("CORPORATE", 3)
+                    _page_button("GROWTH", 4)
+                    _page_button("CAPITAL", 6)
+                1:
+                    _back_button()
+                    _action("NEXT RIVAL", _next_rival)
+                    _action("COMPETE", parent.compete_alliance)
+                    _action("GOALS", parent.victory_progress)
+                    _action("REPUTE", parent.reputation_status)
+                2:
+                    _back_button()
+                    _action("ALLIANCE", parent.make_alliance_offer)
+                    _action("RELATION", parent.improve_alliance)
+                    _action("SUPPLY DEAL", parent.propose_supply_deal)
+                    _screen("PACT", "AlliancePanel")
+                3:
+                    _back_button()
+                    _screen("NETWORK", "CorporationsPanel")
+                    _action("POWER", parent.world_power)
+                    _action("GOALS", parent.victory_progress)
+                    _action("REPUTE", parent.reputation_status)
+                4:
+                    _page_button("REGIONS", 5)
+                    _action("EXPANSION", parent.buy_expansion)
+                    _action("UPGRADE EXPANSION", parent.upgrade_expansion)
+                    _action("TRANSPORT", parent.upgrade_transport)
+                    _action("ACQUISITIONS", parent.negotiate_selected_acquisition)
+                5:
+                    _back_button()
+                    _screen("REGIONS", "RegionsPanel")
+                    _action("NEXT REGION", parent.next_region)
+                    _action("ESTABLISH", parent.establish_region)
+                    _action("CHARTER BASIN", parent.charter_basin)
+                    _action("CHARTER VALLEY", parent.charter_valley)
+                6:
+                    _page_button("EQUITY", 7)
+                    _action("LOAN", parent.take_loan)
+                    _action("REPAY", parent.repay_loan)
+                    _action("INVESTOR", parent.request_investment)
                     _action("INVEST BILL", parent.invest_term)
-                    _action("DIVIDEND", parent.pay_dividend)
+                7:
+                    _back_button()
                     _action("BUY SHARES", parent.buy_rival_shares)
                     _action("SELL SHARES", parent.sell_rival_shares)
+                    _action("DIVIDEND", parent.pay_dividend)
                     _action("GO PUBLIC", parent.go_public)
                     _action("CAP TABLE", parent.cap_table)
-                    _action("POWER", parent.world_power)
-                4:
+                8:
                     _back_button()
                     _screen("TECH", "TechnologyPanel")
                     _screen("PROGRESSION", "EmpireProgressionPanel")
