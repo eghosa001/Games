@@ -137,3 +137,5 @@ jobs:
           publish_branch: gh-pages
           publish_dir: ./build/web
           force_orphan: true
+
+# Manual refresh trigger: regenerate full_source_code.txt from current main.
