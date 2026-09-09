@@ -1,9 +1,10 @@
 extends Control
 
-## RENEW colorful premium presentation skin for the command HUD.
-## Presentation only: gameplay callbacks, node names and screen management remain untouched.
-## Each major management sector receives its own accent while retaining a coherent dark command-deck foundation.
+## RENEW premium presentation skin.
+## Applies one coherent command-deck theme to every UI screen while preserving
+## gameplay callbacks, node names and screen-management behavior.
 
+const THEME_PATH := "res://Assets/Themes/EmpireTheme.tres"
 const DEEP := Color("08151b")
 const SURFACE := Color("0d222b")
 const SURFACE_2 := Color("12303a")
@@ -20,29 +21,53 @@ const MUTED := Color("8da9ae")
 
 var hud_root: Control
 var viewport_size := Vector2.ZERO
-var pulse := 0.0
+var _theme: Theme
+var _last_tree_count := -1
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_IGNORE
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    _theme = load(THEME_PATH) as Theme
     call_deferred("_install")
 
-func _process(delta: float) -> void:
-    pulse += delta
+func _process(_delta: float) -> void:
     if size != viewport_size:
         viewport_size = size
-    queue_redraw()
+        queue_redraw()
+    var count := get_tree().get_node_count()
+    if count != _last_tree_count:
+        _last_tree_count = count
+        _apply_theme_to_all_ui()
 
 func _install() -> void:
-    var main_hud := get_node_or_null("/root/Ren/UI/MainHUD")
+    var main_hud := get_node_or_null("/root/Renew/UI/MainHUD")
     if main_hud != null:
         hud_root = main_hud.get("root") as Control
     if hud_root == null and get_parent() is Control:
         hud_root = get_parent() as Control
-    if hud_root == null:
-        return
-    _style_existing_controls(hud_root)
+    _apply_theme_to_all_ui()
+    if hud_root != null:
+        _style_existing_controls(hud_root)
     queue_redraw()
+
+func _apply_theme_to_all_ui() -> void:
+    if _theme == null:
+        return
+    var game_root := get_tree().root.get_node_or_null("Renew")
+    if game_root == null:
+        return
+    var ui := game_root.get_node_or_null("UI")
+    if ui == null:
+        return
+    _apply_theme_recursive(ui)
+
+func _apply_theme_recursive(node: Node) -> void:
+    if node is Control and node != self:
+        var control := node as Control
+        control.theme = _theme
+        control.add_theme_font_size_override("font_size", _theme.default_font_size)
+    for child in node.get_children():
+        _apply_theme_recursive(child)
 
 func _style_existing_controls(node: Node) -> void:
     for child in node.get_children():
@@ -122,34 +147,6 @@ func _style_button(button: Button) -> void:
     button.add_theme_font_size_override("font_size", 11)
     button.focus_mode = Control.FOCUS_NONE
     button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 46.0)
-    button.text = _decorate_button_text(button.text)
-
-func _decorate_button_text(value: String) -> String:
-    var t := value.strip_edges()
-    var icon := "◆"
-    if t.contains("HOME"):
-        icon = "⌂"
-    elif t.contains("ASSET") or t.contains("PROPERTY") or t.contains("RESTOR"):
-        icon = "◇"
-    elif t.contains("OPERAT") or t.contains("PRODUCE") or t.contains("INPUT"):
-        icon = "▣"
-    elif t.contains("NETWORK") or t.contains("ALLIANCE") or t.contains("RIVAL") or t.contains("RELATION"):
-        icon = "◈"
-    elif t.contains("WORLD") or t.contains("MARKET") or t.contains("INFRA"):
-        icon = "◎"
-    elif t.contains("FINANCE") or t.contains("LOAN"):
-        icon = "¤"
-    elif t.contains("EMPLOYEE") or t.contains("HIRE"):
-        icon = "●"
-    elif t.contains("TECHNOLOGY"):
-        icon = "✦"
-    elif t.contains("NEWS") or t.contains("HISTORY"):
-        icon = "▤"
-    elif t.contains("SAVE") or t.contains("LOAD"):
-        icon = "⬢"
-    elif t.contains("END DAY"):
-        icon = "▶"
-    return icon + "  " + t
 
 func _draw() -> void:
     var s := get_viewport_rect().size
@@ -167,12 +164,6 @@ func _draw() -> void:
         _draw_mobile_command_dock(s, dock_h)
     else:
         _draw_desktop_command_rail(s)
-    var base := Vector2(s.x - (78 if mobile else 118), 28)
-    var accents := [GREEN, CYAN, PURPLE]
-    for i in range(3):
-        var alpha := 0.42 + 0.28 * sin(pulse * 1.7 + i * 1.8)
-        var tint: Color = accents[i]
-        draw_circle(base + Vector2(i * 15, 0), 3.0, Color(tint.r, tint.g, tint.b, alpha))
 
 func _corner(origin: Vector2, direction: float, tint: Color) -> void:
     draw_line(origin, origin + Vector2(direction, 0), Color(tint.r, tint.g, tint.b, 0.60), 2.0)
