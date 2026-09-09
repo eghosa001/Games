@@ -1,6 +1,6 @@
 extends Node
 ## RENEW service registry. Domain systems are ordinary scene Nodes under Systems;
-## only ten infrastructure services remain true autoloads.
+## only infrastructure services remain true autoloads.
 
 var _services: Dictionary = {}
 
@@ -35,8 +35,7 @@ const SERVICE_PATHS := {
     "RenewHistorySystem": "res://scripts/history_system.gd",
     "RenewHistoryEventBridge": "res://scripts/history_event_bridge.gd",
     "RenewNewsSystem": "res://scripts/news_system.gd",
-    "RenewAmbientAudio": "res://scripts/ambient_audio.gd",
-    "RenewUIScreenManager": "res://scripts/ui_screen_manager.gd"
+    "RenewAmbientAudio": "res://scripts/ambient_audio.gd"
 }
 
 func _ready() -> void:
