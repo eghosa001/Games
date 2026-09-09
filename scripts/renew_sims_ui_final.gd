@@ -11,9 +11,9 @@ var _page := [0, 0, 0, 0]
 
 const PAGE_NAMES := [
     ["OVERVIEW", "PROPERTY", "RECORDS"],
-    ["OPERATIONS", "PEOPLE", "COMMERCIAL", "FINANCE"],
-    ["NETWORK", "GROWTH", "CAPITAL", "TECHNOLOGY"],
-    ["REGIONAL MANAGEMENT", "OPERATIONS", "EMPIRE MANAGEMENT", "EVENTS"]
+    ["OVERVIEW", "OPERATIONS", "PEOPLE", "COMMERCIAL", "FINANCE"],
+    ["OVERVIEW", "NETWORK", "GROWTH", "CAPITAL", "TECHNOLOGY"],
+    ["OVERVIEW", "REGIONAL MANAGEMENT", "OPERATIONS", "EMPIRE MANAGEMENT", "EVENTS"]
 ]
 
 const PAGE_SUBTITLES := [
@@ -23,18 +23,21 @@ const PAGE_SUBTITLES := [
         "Save, load and review company history and world news."
     ],
     [
+        "Choose a focused business command area.",
         "Production, inputs, pricing, upgrades and marketing.",
         "Employees, headquarters and workforce management.",
         "Customers, contracts and commercial negotiations.",
         "Financing, collections and portfolio management."
     ],
     [
+        "Choose a focused empire command area.",
         "Rivals, alliances, relationships and corporate network.",
         "Regional expansion, acquisitions and strategic growth.",
         "Loans, investors, shares, dividends and public markets.",
         "Technology, progression and corporate identity."
     ],
     [
+        "Choose a focused world command area.",
         "Regions and infrastructure are managed here only.",
         "World production and logistics commands.",
         "Empire expansion and intelligence.",
@@ -275,10 +278,10 @@ func _refresh() -> void:
         1:
             match page:
                 0:
-                    _page_button("OPERATIONS", 0)
-                    _page_button("PEOPLE", 1)
-                    _page_button("COMMERCIAL", 2)
-                    _page_button("FINANCE", 3)
+                    _page_button("OPERATIONS", 1)
+                    _page_button("PEOPLE", 2)
+                    _page_button("COMMERCIAL", 3)
+                    _page_button("FINANCE", 4)
                 1:
                     _back_button()
                     _action("BUY INPUTS", parent.buy_inputs)
@@ -310,10 +313,10 @@ func _refresh() -> void:
         2:
             match page:
                 0:
-                    _page_button("NETWORK", 0)
-                    _page_button("GROWTH", 1)
-                    _page_button("CAPITAL", 2)
-                    _page_button("TECHNOLOGY", 3)
+                    _page_button("NETWORK", 1)
+                    _page_button("GROWTH", 2)
+                    _page_button("CAPITAL", 3)
+                    _page_button("TECHNOLOGY", 4)
                 1:
                     _back_button()
                     _action("NEXT RIVAL", _next_rival)
@@ -323,7 +326,7 @@ func _refresh() -> void:
                     _action("GOALS", parent.victory_progress)
                     _action("REPUTE", parent.reputation_status)
                     _action("SUPPLY DEAL", parent.propose_supply_deal)
-                    _screen("NETWORK", "CorporationsPanel")
+                    _screen("CORPORATIONS", "CorporationsPanel")
                     _screen("PACT", "AlliancePanel")
                 2:
                     _back_button()
@@ -359,10 +362,10 @@ func _refresh() -> void:
         3:
             match page:
                 0:
-                    _page_button("REGIONAL MANAGEMENT", 0)
-                    _page_button("OPERATIONS", 1)
-                    _page_button("EMPIRE MANAGEMENT", 2)
-                    _page_button("EVENTS", 3)
+                    _page_button("REGIONAL MANAGEMENT", 1)
+                    _page_button("OPERATIONS", 2)
+                    _page_button("EMPIRE MANAGEMENT", 3)
+                    _page_button("EVENTS", 4)
                 1:
                     _back_button()
                     _screen("REGIONS", "RegionsPanel")
