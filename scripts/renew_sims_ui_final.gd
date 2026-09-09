@@ -5,7 +5,6 @@ const INACTIVE_TAB := Color("102a32")
 const TAB_TEXT := Color("e7f2ef")
 const TAB_MUTED := Color("78949a")
 const HUD_REFRESH_INTERVAL := 0.20
-const MAX_PAGE_ACTIONS := 5
 
 var _hud_refresh_accum := 0.0
 var _page := [0, 0, 0, 0]
