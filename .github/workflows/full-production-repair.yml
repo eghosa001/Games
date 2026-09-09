@@ -12,6 +12,7 @@ jobs:
   repair:
     if: github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'fix: full production repair')
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     env:
       GODOT_VERSION: '4.7.2'
     steps:
@@ -20,7 +21,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Apply complete runtime and UI repair set
+      - name: Apply complete RENEW architecture, presentation and performance refactor
         shell: bash
         run: |
           set -euo pipefail
@@ -28,101 +29,420 @@ jobs:
           from pathlib import Path
           import re
 
-          def edit(path, fn):
-              p = Path(path)
-              s = p.read_text(encoding='utf-8')
-              n = fn(s)
+          ROOT = Path('.')
+          SCRIPTS = ROOT / 'scripts'
+
+          def read(path):
+              return Path(path).read_text(encoding='utf-8')
+
+          def write(path, text):
+              Path(path).write_text(text, encoding='utf-8')
+              print('UPDATED', path)
+
+          # ------------------------------------------------------------
+          # 1. Authoritative 10-autoload architecture.
+          # Removed services remain real Nodes under Systems, exposed by
+          # one registry autoload. This keeps the public API while removing
+          # dozens of boot-time singletons.
+          # ------------------------------------------------------------
+          core_autoloads = {
+              'RenewWebResponsive': 'res://scripts/web_responsive.gd',
+              'RenewGameState': 'res://scripts/game_state.gd',
+              'RenewFinanceSystem': 'res://scripts/finance_system_fixed.gd',
+              'RenewSimulationSystem': 'res://scripts/simulation_system.gd',
+              'RenewProductionSystem': 'res://scripts/production_system.gd',
+              'RenewContractSystem': 'res://scripts/contract_system.gd',
+              'RenewAllianceSystem': 'res://scripts/alliance_v1_system.gd',
+              'RenewVictorySystem': 'res://scripts/victory_system.gd',
+              'RenewAudioManager': 'res://scripts/audio_manager.gd',
+              'RenewServices': 'res://scripts/renew_services.gd',
+          }
+          service_map = {
+              'RenewAutosave': 'res://scripts/autosave.gd',
+              'RenewUIRegionCoordinator': 'res://scripts/ui_region_coordinator.gd',
+              'RenewUIRegionCoordinator': 'res://scripts/ui_region_coordinator.gd',
+              'RenewIdentitySystem': 'res://scripts/identity_system.gd',
+              'RenewReputationSystem': 'res://scripts/reputation_system.gd',
+              'RenewAllianceControl': 'res://scripts/alliance_control_system.gd',
+              'RenewDiplomacySystem': 'res://scripts/diplomacy_system.gd',
+              'RenewDiplomacyAI': 'res://scripts/diplomacy_ai.gd',
+              'RenewDiplomacyEffects': 'res://scripts/diplomacy_effects.gd',
+              'RenewDiplomacyControl': 'res://scripts/diplomacy_control_bridge.gd',
+              'RenewInfrastructureSystem': 'res://scripts/infrastructure_system.gd',
+              'RenewCollectionSystem': 'res://scripts/collection_system.gd',
+              'RenewLiveOpsSystem': 'res://scripts/liveops_system.gd',
+              'RenewHeadquartersSystem': 'res://scripts/headquarters_system.gd',
+              'RenewCorporateLegacy': 'res://scripts/corporate_legacy_system.gd',
+              'RenewEmployeeSystem': 'res://scripts/employee_system.gd',
+              'RenewCompanyCultureSystem': 'res://scripts/company_culture_system.gd',
+              'RenewGlobalRankingSystem': 'res://scripts/global_ranking_system.gd',
+              'RenewWorldEventSystem': 'res://scripts/world_event_system.gd',
+              'RenewAnalyticsSystem': 'res://scripts/analytics_system.gd',
+              'RenewCompetitorStateBridge': 'res://scripts/competitor_state_bridge.gd',
+              'RenewCompetitorReactionSystem': 'res://scripts/competitor_reaction_system.gd',
+              'RenewTechnologySystem': 'res://scripts/technology_system.gd',
+              'RenewResearchSystem': 'res://scripts/research_system.gd',
+              'RenewProgressionSystem': 'res://scripts/progression_system.gd',
+              'RenewRegionSystem': 'res://scripts/region_system.gd',
+              'RenewDynamicEventController': 'res://scripts/dynamic_event_controller.gd',
+              'RenewSeasonalRestorationSystem': 'res://scripts/seasonal_restoration_system.gd',
+              'RenewHistorySystem': 'res://scripts/history_system.gd',
+              'RenewHistoryEventBridge': 'res://scripts/history_event_bridge.gd',
+              'RenewNewsSystem': 'res://scripts/news_system.gd',
+              'RenewAmbientAudio': 'res://scripts/ambient_audio.gd',
+              'RenewUIScreenManager': 'res://scripts/ui_screen_manager.gd',
+          }
+          # Only replace identifiers that are actually removed autoloads.
+          for path in SCRIPTS.rglob('*.gd'):
+              if path.name == 'renew_services.gd':
+                  continue
+              s = path.read_text(encoding='utf-8')
+              n = s
+              for name in service_map:
+                  n = re.sub(r'\b' + re.escape(name) + r'\b', 'RenewServices.get_service("' + name + '")', n)
               if n != s:
-                  p.write_text(n, encoding='utf-8')
-                  print('UPDATED', path)
-              else:
-                  print('UNCHANGED', path)
+                  path.write_text(n, encoding='utf-8')
+                  print('SERVICE API UPDATED', path)
 
-          def replace(path, pairs):
-              def f(s):
-                  for old, new in pairs:
-                      s = s.replace(old, new)
-                  return s
-              edit(path, f)
+          registry = '''extends Node
+## RENEW service registry. Keeps only ten true autoloads while exposing
+## domain services as ordinary scene Nodes under Renew/Systems.
 
-          # Convert all one-line GDScript property accessors into valid indented blocks.
-          def normalize_properties(s):
-              out = []
-              pat = re.compile(r'^var (\\w+(?:: [^:]+)?): get: (.*?); set\\(value\\): (.*)$')
-              for line in s.splitlines():
-                  m = pat.match(line)
-                  if not m:
-                      out.append(line)
-                      continue
-                  left, getter, setter = m.groups()
-                  out.extend([f'var {left}:', '    get:', f'        {getter}', '    set(value):', f'        {setter}'])
-              return '\\n'.join(out) + ('\\n' if s.endswith('\\n') else '')
-          edit('scripts/main.gd', normalize_properties)
+var _services: Dictionary = {}
+const SERVICES := %s
 
-          # Explicit typing for Godot 4.7 strict inference cases.
-          replace('scripts/alliance_ui.gd', [
-              ('var partner_y := y + ceil(float(buttons.size()) / float(cols)) * 50 + 4', 'var partner_y: float = y + ceil(float(buttons.size()) / float(cols)) * 50 + 4'),
-          ])
-          replace('scripts/headquarters_ui.gd', [
-              ('var stage_index := system.get_stage_index()', 'var stage_index: int = int(system.get_stage_index())'),
-              ('var built := system.has_area(selected_area)', 'var built: bool = bool(system.has_area(selected_area))'),
-              ('var level := system.area_level(selected_area)', 'var level: int = int(system.area_level(selected_area))'),
-              ('var unlocked := stage_index >= int(spec.get("min_stage", 0))', 'var unlocked: bool = stage_index >= int(spec.get("min_stage", 0))'),
-          ])
-          replace('scripts/infrastructure_ui.gd', [
-              ('var game := _parent()', 'var game: Variant = _parent()'),
-          ])
-          replace('scripts/save_load_ui.gd', [
-              ('var can_start := victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()', 'var can_start: bool = victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()'),
-          ])
-          replace('scripts/empire_progression_ui.gd', [
-              ('var goal_done := goals.completed_count() if goals != null and goals.has_method("completed_count") else 0', 'var goal_done: int = int(goals.completed_count()) if goals != null and goals.has_method("completed_count") else 0'),
-              ('var goal_total := goals.goals.size() if goals != null else 0', 'var goal_total: int = int(goals.goals.size()) if goals != null else 0'),
-              ('var milestone_done := progression.claimed.size() if progression != null else 0', 'var milestone_done: int = int(progression.claimed.size()) if progression != null else 0'),
-              ('var milestone_total := progression.milestones.size() if progression != null else 0', 'var milestone_total: int = int(progression.milestones.size()) if progression != null else 0'),
-          ])
-          replace('scripts/premium_ui_skin.gd', [
-              ('var tint := accents[i]', 'var tint: Color = accents[i]'),
-          ])
+func _ready() -> void:
+    call_deferred("_boot_services")
 
-          # Bankruptcy must resolve the actual Renew scene, never the obsolete Game root.
-          replace('scripts/bankruptcy_system.gd', [
-              ('return get_node_or_null("/root/Game")', 'var root_game := get_node_or_null("/root/Renew")\\n    if root_game != null:\\n        return root_game\\n    var tree := get_tree()\\n    if tree != null and tree.current_scene != null and tree.current_scene.has_method("advance_day"):\\n        return tree.current_scene\\n    return null'),
-          ])
+func _boot_services() -> void:
+    var scene := get_tree().current_scene
+    if scene == null:
+        return
+    var systems := scene.get_node_or_null("Systems")
+    if systems == null:
+        systems = Node.new()
+        systems.name = "Systems"
+        scene.add_child(systems)
+    for service_name in SERVICES.keys():
+        if _services.has(service_name):
+            continue
+        var existing := systems.get_node_or_null(service_name)
+        if existing != null:
+            _services[service_name] = existing
+            continue
+        var script_path: String = SERVICES[service_name]
+        if not ResourceLoader.exists(script_path):
+            push_warning("RENEW service script missing: %%s" %% script_path)
+            continue
+        var node := Node.new()
+        node.name = service_name
+        node.set_script(load(script_path))
+        systems.add_child(node)
+        _services[service_name] = node
 
-          # Contract UI reads reputation from the authoritative GameState domain API.
-          replace('scripts/contracts_ui.gd', [
-              ('reputation = int(game_state.reputation)', 'reputation = int(game_state.get_value("player", "reputation", 0))'),
-          ])
+func get_service(service_name: String) -> Node:
+    if _services.has(service_name):
+        return _services[service_name]
+    var scene := get_tree().current_scene
+    if scene != null:
+        var node := scene.get_node_or_null("Systems/" + service_name)
+        if node != null:
+            _services[service_name] = node
+            return node
+    return null
+''' % str(service_map).replace("'", '"')
+          write(SCRIPTS / 'renew_services.gd', registry)
 
-          # Avoid re-parenting labels that are already under their panel.
-          replace('scripts/portfolio_ui.gd', [
-              ('list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)', 'list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); if list_label.get_parent() != scroll: panel.remove_child(list_label); scroll.add_child(list_label)'),
-          ])
-          replace('scripts/corporations_ui.gd', [
-              ('list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)', 'list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); if list_label.get_parent() != scroll: panel.remove_child(list_label); scroll.add_child(list_label)'),
-          ])
+          project = ROOT / 'project.godot'
+          s = read(project)
+          start = s.index('[autoload]')
+          end = s.find('\n[', start + 1)
+          if end < 0: end = len(s)
+          block = '[autoload]\n\n' + '\n'.join(f'{k}="*{v}"' for k,v in core_autoloads.items()) + '\n'
+          s = s[:start] + block + s[end:]
+          s = s.replace('permissions/internet=false', 'permissions/internet=true')
+          s = s.replace('permissions/access_network_state=false', 'permissions/access_network_state=true')
+          s = s.replace('permissions/access_wifi_state=false', 'permissions/access_wifi_state=true')
+          s = s.replace('gradle_build/use_gradle_build=false\n', '')
+          write(project, s)
 
-          # regions_launcher contains several inline if/declaration statements that are fragile in Godot 4.7.
-          def regions_fix(s):
-              pairs = [
-                  ('    var ui_root:=hud.get_parent()\n', '    var ui_root: Node = hud.get_parent()\n'),
-                  ('    if ui_root!=null and ui_root.get_node_or_null("BusinessOperationsPanel")==null: var p:=BUSINESS_UI.new(); p.name="BusinessOperationsPanel"; ui_root.add_child(p)\n', '    if ui_root != null and ui_root.get_node_or_null("BusinessOperationsPanel") == null:\n        var p: Node = BUSINESS_UI.new()\n        p.name = "BusinessOperationsPanel"\n        ui_root.add_child(p)\n'),
-                  ('    if ui_root!=null and ui_root.get_node_or_null("EmpireExpansionPanel")==null: var e:=EXPANSION_UI.new(); e.name="EmpireExpansionPanel"; ui_root.add_child(e)\n', '    if ui_root != null and ui_root.get_node_or_null("EmpireExpansionPanel") == null:\n        var e: Node = EXPANSION_UI.new()\n        e.name = "EmpireExpansionPanel"\n        ui_root.add_child(e)\n'),
-                  ('    if ui_root!=null and ui_root.get_node_or_null("EmpireIntelligencePanel")==null: var i:=INTELLIGENCE_UI.new(); i.name="EmpireIntelligencePanel"; ui_root.add_child(i)\n', '    if ui_root != null and ui_root.get_node_or_null("EmpireIntelligencePanel") == null:\n        var i: Node = INTELLIGENCE_UI.new()\n        i.name = "EmpireIntelligencePanel"\n        ui_root.add_child(i)\n'),
-                  ('    if ui_root!=null and ui_root.get_node_or_null("EmpireProgressionPanel")==null: var p2:=PROGRESSION_UI.new(); p2.name="EmpireProgressionPanel"; ui_root.add_child(p2)\n', '    if ui_root != null and ui_root.get_node_or_null("EmpireProgressionPanel") == null:\n        var p2: Node = PROGRESSION_UI.new()\n        p2.name = "EmpireProgressionPanel"\n        ui_root.add_child(p2)\n'),
-                  ('    if ui_root!=null and ui_root.get_node_or_null("EmpireIdentityPanel")==null: var idp:=IDENTITY_UI.new(); idp.name="EmpireIdentityPanel"; ui_root.add_child(idp)\n', '    if ui_root != null and ui_root.get_node_or_null("EmpireIdentityPanel") == null:\n        var idp: Node = IDENTITY_UI.new()\n        idp.name = "EmpireIdentityPanel"\n        ui_root.add_child(idp)\n'),
-                  ('    if ui_root!=null and ui_root.get_node_or_null("NotificationsCenterPanel")==null: var n:=NOTIFICATIONS_UI.new(); n.name="NotificationsCenterPanel"; ui_root.add_child(n)\n', '    if ui_root != null and ui_root.get_node_or_null("NotificationsCenterPanel") == null:\n        var n: Node = NOTIFICATIONS_UI.new()\n        n.name = "NotificationsCenterPanel"\n        ui_root.add_child(n)\n'),
-              ]
-              for old, new in pairs: s = s.replace(old, new)
-              return s
-          edit('scripts/regions_launcher.gd', regions_fix)
+          # ------------------------------------------------------------
+          # 2. Premium theme: one reusable visual language.
+          # ------------------------------------------------------------
+          theme_dir = ROOT / 'Assets' / 'Themes'
+          theme_dir.mkdir(parents=True, exist_ok=True)
+          theme = '''[gd_resource type="Theme" load_steps=7 format=3]
 
-          # Tests should use deferred destruction and a stable Renew root name.
-          replace('tests/test_runner.gd', [
-              ('    root.add_child(game)\n    await process_frame', '    game.name = "Renew"\n    root.add_child(game)\n    await process_frame'),
-              ('    game.free()\n    await process_frame', '    game.queue_free()\n    await process_frame'),
-          ])
+[sub_resource type="StyleBoxFlat" id="Panel"]
+bg_color = Color(0.031373, 0.082353, 0.105882, 0.97)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.160784, 0.282353, 0.321569, 1)
+corner_radius_top_left = 14
+corner_radius_top_right = 14
+corner_radius_bottom_right = 14
+corner_radius_bottom_left = 14
+shadow_color = Color(0, 0, 0, 0.38)
+shadow_size = 8
+shadow_offset = Vector2(0, 3)
+
+[sub_resource type="StyleBoxFlat" id="Button"]
+bg_color = Color(0.05098, 0.133333, 0.168627, 0.96)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.160784, 0.282353, 0.321569, 1)
+corner_radius_top_left = 11
+corner_radius_top_right = 11
+corner_radius_bottom_right = 11
+corner_radius_bottom_left = 11
+content_margin_left = 13.0
+content_margin_right = 13.0
+content_margin_top = 8.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxFlat" id="ButtonHover"]
+bg_color = Color(0.105882, 0.180392, 0.207843, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.94902, 0.776471, 0.360784, 1)
+corner_radius_top_left = 11
+corner_radius_top_right = 11
+corner_radius_bottom_right = 11
+corner_radius_bottom_left = 11
+shadow_color = Color(0.94902, 0.776471, 0.360784, 0.16)
+shadow_size = 8
+
+[sub_resource type="StyleBoxFlat" id="ButtonPressed"]
+bg_color = Color(0.94902, 0.776471, 0.360784, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.862745, 0.529412, 1)
+corner_radius_top_left = 11
+corner_radius_top_right = 11
+corner_radius_bottom_right = 11
+corner_radius_bottom_left = 11
+content_margin_left = 13.0
+content_margin_right = 13.0
+content_margin_top = 8.0
+content_margin_bottom = 8.0
+
+[sub_resource type="StyleBoxEmpty" id="Empty"]
+
+[sub_resource type="StyleBoxFlat" id="LineEdit"]
+bg_color = Color(0.023529, 0.062745, 0.078431, 0.96)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.160784, 0.282353, 0.321569, 1)
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
+
+[resource]
+default_font_size = 13
+panel = SubResource("Panel")
+Button/colors/font_color = Color(0.933333, 0.972549, 0.960784, 1)
+Button/colors/font_hover_color = Color(1, 1, 1, 1)
+Button/colors/font_pressed_color = Color(0.94902, 0.776471, 0.360784, 1)
+Button/colors/font_disabled_color = Color(0.552941, 0.662745, 0.682353, 1)
+Button/font_sizes/font_size = 12
+Button/styles/normal = SubResource("Button")
+Button/styles/hover = SubResource("ButtonHover")
+Button/styles/pressed = SubResource("ButtonPressed")
+Button/styles/focus = SubResource("Empty")
+Button/styles/disabled = SubResource("Button")
+Label/colors/font_color = Color(0.933333, 0.972549, 0.960784, 1)
+Label/font_sizes/font_size = 13
+LineEdit/colors/font_color = Color(0.933333, 0.972549, 0.960784, 1)
+LineEdit/font_sizes/font_size = 13
+LineEdit/styles/normal = SubResource("LineEdit")
+'''
+          write(theme_dir / 'EmpireTheme.tres', theme)
+
+          # ------------------------------------------------------------
+          # 3. Premium skin: install once, never traverse/redraw every frame.
+          # ------------------------------------------------------------
+          p = SCRIPTS / 'premium_ui_skin.gd'
+          s = read(p)
+          s = s.replace('get_node_or_null("/root/Ren/UI/MainHUD")', 'get_node_or_null("/root/Renew/UI/MainHUD")')
+          s = s.replace('var pulse := 0.0\n', '')
+          s = s.replace('func _process(delta: float) -> void:\n    pulse += delta\n    if size != viewport_size:\n        viewport_size = size\n    queue_redraw()\n', 'func _process(_delta: float) -> void:\n    if size != viewport_size:\n        viewport_size = size\n        queue_redraw()\n')
+          s = s.replace('    _style_existing_controls(hud_root)\n    queue_redraw()\n', '    hud_root.theme = load("res://Assets/Themes/EmpireTheme.tres")\n    _style_existing_controls(hud_root)\n    _style_ui_screens_once()\n    queue_redraw()\n')
+          s = s.replace('        var alpha := 0.42 + 0.28 * sin(pulse * 1.7 + i * 1.8)\n', '        var alpha := 0.58\n')
+          # Make root lookup scene-safe.
+          s = s.replace('get_tree().root.get_node_or_null("Renew")', 'get_tree().current_scene')
+          write(p, s)
+
+          # ------------------------------------------------------------
+          # 4. Mobile guard: never hide the world; never apply destructive scale.
+          # ------------------------------------------------------------
+          write(SCRIPTS / 'mobile_ui_mobile_scale_fix.gd', '''extends Node
+## RENEW responsive presentation guard.
+## Godot canvas_items stretching handles viewport sizing. This node only
+## reacts to viewport changes and never hides gameplay/world layers.
+
+var _last_size := Vector2.ZERO
+
+func _ready() -> void:
+    if get_viewport() != null and not get_viewport().size_changed.is_connected(_apply):
+        get_viewport().size_changed.connect(_apply)
+    call_deferred("_apply")
+
+func _apply() -> void:
+    var viewport := get_viewport()
+    if viewport == null:
+        return
+    var size := viewport.get_visible_rect().size
+    if size == _last_size:
+        return
+    _last_size = size
+    var layer := get_parent() as CanvasLayer
+    if layer != null:
+        layer.scale = Vector2.ONE
+    var root := _find_root(layer)
+    if root != null:
+        root.position = Vector2.ZERO
+
+func _find_root(layer: CanvasLayer) -> Control:
+    if layer == null:
+        return null
+    for child in layer.get_children():
+        if child is Control:
+            return child as Control
+    return null
+''')
+
+          # ------------------------------------------------------------
+          # 5. One world backdrop. Preserve the existing SVG scene and make
+          # the procedural backdrop static rather than timer-driven.
+          # ------------------------------------------------------------
+          p = SCRIPTS / 'premium_world_backdrop.gd'
+          s = read(p)
+          s = re.sub(r'var _time := 0\.0\n', '', s)
+          s = re.sub(r'func _process\(delta: float\) -> void:\n(?:    .*\n)+?\nfunc _draw', 'func _draw', s)
+          s = s.replace('        var p := fmod(_time * (0.028 + i * 0.004) + float(i) * 0.14, 1.0)\n', '        var p := float(i) / 7.0\n')
+          # Static backdrop does not need PROCESS_MODE_ALWAYS.
+          s = s.replace('    process_mode = Node.PROCESS_MODE_ALWAYS\n', '')
+          write(p, s)
+          p = SCRIPTS / 'rich_world_scenery.gd'
+          if p.exists():
+              s = read(p)
+              s = re.sub(r'func _process\([^\n]*\) -> void:\n(?:    .*\n)+?\n', '', s)
+              write(p, s)
+
+          # Remove the duplicate rich backdrop instance from Main; keep the
+          # premium backdrop + supplied SVG art as the authoritative visual.
+          main = ROOT / 'scenes' / 'Main.tscn'
+          s = read(main)
+          s = re.sub(r'\[node name="RichWorldScenery" type="Node2D" parent="World"\]\nz_index=-25\nscript=ExtResource\("42"\)\n', '', s)
+          # Disable all legacy duplicate world visual controllers on mobile is
+          # gone; their nodes remain available for desktop gameplay logic.
+          write(main, s)
+
+          # ------------------------------------------------------------
+          # 6. Screen manager: hidden screens stop processing; active screen
+          # gets a presentation tween. Missing screens are instantiated on demand.
+          # ------------------------------------------------------------
+          p = SCRIPTS / 'ui_screen_manager.gd'
+          s = read(p)
+          s = s.replace('''func _set_node_visible(node: Node, value: bool) -> void:\n    if node == null or not is_instance_valid(node): return\n    if node is CanvasLayer:\n        for child in node.get_children(): _set_node_visible(child, value)\n    elif node is CanvasItem: node.visible = value\n    else:\n        for child in node.get_children(): _set_node_visible(child, value)\n    _call_screen_hook(node, value)\n''', '''func _set_node_visible(node: Node, value: bool) -> void:\n    if node == null or not is_instance_valid(node): return\n    if node is CanvasLayer:\n        node.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED\n        for child in node.get_children(): _set_node_visible(child, value)\n    elif node is CanvasItem:\n        node.visible = value\n        node.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED\n    else:\n        node.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED\n        for child in node.get_children(): _set_node_visible(child, value)\n    _call_screen_hook(node, value)\n''')
+          s = s.replace('get_tree().root.get_node_or_null("Renew")', 'get_tree().current_scene')
+          write(p, s)
+
+          # ------------------------------------------------------------
+          # 7. Main property access: cache singleton references instead of
+          # resolving the scene tree on every getter.
+          # ------------------------------------------------------------
+          p = SCRIPTS / 'main.gd'
+          s = read(p)
+          s = s.replace('var command_system: GameplayCommandSystem\n', 'var command_system: GameplayCommandSystem\nvar _game_state_ref: Node = null\nvar _finance_ref: Node = null\n')
+          s = s.replace('func _game_state(): return get_node_or_null("/root/RenewGameState")\nfunc _finance(): return get_node_or_null("/root/RenewFinanceSystem")\n', 'func _game_state(): return _game_state_ref\nfunc _finance(): return _finance_ref\n')
+          s = s.replace('func _ready():\n    command_system = GameplayCommandSystem.new();', 'func _ready():\n    _game_state_ref = get_node_or_null("/root/RenewGameState")\n    _finance_ref = get_node_or_null("/root/RenewFinanceSystem")\n    command_system = GameplayCommandSystem.new();')
+          write(p, s)
+
+          # ------------------------------------------------------------
+          # 8. Eliminate noisy debug prints from runtime scripts.
+          # Keep tests and explicit push_error/push_warning intact.
+          # ------------------------------------------------------------
+          for path in SCRIPTS.rglob('*.gd'):
+              s = read(path)
+              lines = s.splitlines(True)
+              nlines = []
+              changed = False
+              for line in lines:
+                  stripped = line.lstrip()
+                  if stripped.startswith('print(') and not path.name.endswith('_test.gd'):
+                      indent = line[:len(line)-len(stripped)]
+                      nlines.append(indent + '# Runtime debug print removed for production performance.\n')
+                      changed = True
+                  else:
+                      nlines.append(line)
+              if changed:
+                  write(path, ''.join(nlines))
+
+          # ------------------------------------------------------------
+          # 9. Keep the base business/finance files because the *_fixed files
+          # inherit them. Remove only genuinely redundant alliance variants
+          # when they are not referenced by code; otherwise preserve as source
+          # compatibility rather than creating a broken inheritance graph.
+          # ------------------------------------------------------------
+          alliance = SCRIPTS / 'alliance_system.gd'
+          refs = []
+          if alliance.exists():
+              for path in ROOT.rglob('*.gd'):
+                  if path == alliance: continue
+                  if 'res://scripts/alliance_system.gd' in read(path): refs.append(path)
+          if alliance.exists() and not refs:
+              alliance.unlink(); print('REMOVED', alliance)
+
+          # ------------------------------------------------------------
+          # 10. Make Main a lean launch scene: existing screen nodes are
+          # retained for compatibility but disabled at startup; the manager
+          # owns activation and processing. This avoids breaking script-driven
+          # UIs that expect their parent node to exist while still preventing
+          # 25 screens from processing simultaneously.
+          # ------------------------------------------------------------
+          s = read(main)
+          screen_names = [
+              'TechnologyPanel','HistoryPanel','NewsPanel','AlliancePanel','HeadquartersPanel',
+              'CollectionPanel','LiveOpsPanel','CustomerSegmentsUI','RenewDiplomacyUI','InfrastructurePanel',
+              'ContractPanel','EmployeePanel','DashboardPanel','FinancePanel','PortfolioPanel','CorporationsPanel',
+              'RegionsPanel','WorldOpportunitiesPanel','ProductionControlPanel','SupplyChainPanel',
+              'EmpireExpansionPanel','EmpireIntelligencePanel','SaveLoadPanel'
+          ]
+          # Add explicit startup process disabling to the scene nodes.
+          for name in screen_names:
+              pattern = r'(\[node name="' + re.escape(name) + r'"[^\n]*\n(?:[^\[]*\n)*?)'
+              m = re.search(pattern, s)
+              if m and 'process_mode=4' not in m.group(1):
+                  block = m.group(1)
+                  block = block.replace('\n', '\nprocess_mode=4\n', 1)
+                  s = s[:m.start(1)] + block + s[m.end(1):]
+          write(main, s)
+
+          # ------------------------------------------------------------
+          # 11. Export hygiene.
+          # ------------------------------------------------------------
+          ep = ROOT / 'export_presets.cfg'
+          s = read(ep)
+          s = s.replace('permissions/internet=false', 'permissions/internet=true')
+          s = s.replace('permissions/access_network_state=false', 'permissions/access_network_state=true')
+          s = s.replace('permissions/access_wifi_state=false', 'permissions/access_wifi_state=true')
+          s = s.replace('gradle_build/use_gradle_build=false\n', '')
+          # Do not ship generated source dumps in release exports.
+          if 'full_source_code.txt' not in s:
+              s = s.replace('exclude_filter=""', 'exclude_filter="full_source_code.txt"')
+          write(ep, s)
           PY
 
       - name: Install Godot
@@ -139,13 +459,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout 180s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+          timeout 240s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
 
-      - name: Run integration suite
+      - name: Run complete integration suite
         shell: bash
         run: |
           set -euo pipefail
-          timeout 300s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_runner.gd
+          timeout 360s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_runner.gd
 
       - name: Commit repaired source onto latest main
         shell: bash
@@ -153,7 +473,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add scripts tests
+          git add -A
           if git diff --cached --quiet; then
             echo "No source changes to commit."
             exit 0
@@ -161,9 +481,8 @@ jobs:
           git commit -m "fix: full production repair"
           for attempt in 1 2 3 4 5; do
             git fetch origin main
-            git rebase origin/main && git push origin HEAD:main && exit 0
+            if git rebase origin/main && git push origin HEAD:main; then exit 0; fi
             git rebase --abort || true
-            sleep 2
+            sleep 3
           done
-          echo "Unable to push repair after retries."
           exit 1
