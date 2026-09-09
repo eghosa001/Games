@@ -45,7 +45,7 @@ func _build_ui() -> void:
     title_label = _label("PROPERTY PORTFOLIO", 20, TEXT)
     status_label = _label("ASSET REGISTER", 10, ACCENT)
     scroll = ScrollContainer.new(); scroll.name = "PortfolioAssetScroll"; scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; panel.add_child(scroll)
-    list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)
+    list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); panel.remove_child(list_label); scroll.add_child(list_label)
     detail_label = _label("", 11, ACCENT)
     next_button = _button("NEXT"); next_button.pressed.connect(_next)
     sell_button = _button("SELL"); sell_button.pressed.connect(_sell)

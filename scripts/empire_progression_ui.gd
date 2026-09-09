@@ -111,10 +111,10 @@ func _refresh(force := false) -> void:
     if game == null: return
     var goals := _goals(); var progression := _progression()
     var rep := int(game.reputation); var assets := _owned_assets()
-    var goal_done := goals.completed_count() if goals != null and goals.has_method("completed_count") else 0
-    var goal_total := goals.goals.size() if goals != null else 0
-    var milestone_done := progression.claimed.size() if progression != null else 0
-    var milestone_total := progression.milestones.size() if progression != null else 0
+    var goal_done: int = int(goals.completed_count()) if goals != null and goals.has_method("completed_count") else 0
+    var goal_total: int = int(goals.goals.size()) if goals != null else 0
+    var milestone_done: int = int(progression.claimed.size()) if progression != null else 0
+    var milestone_total: int = int(progression.milestones.size()) if progression != null else 0
     var region_count := 1
     var region := _regions()
     if region != null and region.regions != null: region_count = max(1, int(region.regions.player_presence.count(1)))

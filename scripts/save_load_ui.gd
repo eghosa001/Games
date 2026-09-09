@@ -149,7 +149,7 @@ func _refresh() -> void:
     save_button.disabled = false
     load_button.disabled = false
     var victory := get_node_or_null("/root/RenewVictorySystem")
-    var can_start := victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()
+    var can_start: bool = victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()
     new_button.disabled = not can_start
     if can_start:
         status.text = "Company data is ready. Save or restore the current campaign, or begin a new dynasty using your earned legacy bonuses."

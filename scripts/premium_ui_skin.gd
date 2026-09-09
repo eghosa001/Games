@@ -171,7 +171,7 @@ func _draw() -> void:
     var accents := [GREEN, CYAN, PURPLE]
     for i in range(3):
         var alpha := 0.42 + 0.28 * sin(pulse * 1.7 + i * 1.8)
-        var tint := accents[i]
+        var tint: Color = accents[i]
         draw_circle(base + Vector2(i * 15, 0), 3.0, Color(tint.r, tint.g, tint.b, alpha))
 
 func _corner(origin: Vector2, direction: float, tint: Color) -> void:

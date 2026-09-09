@@ -42,7 +42,7 @@ func _build_ui() -> void:
     var style := StyleBoxFlat.new(); style.bg_color = SURFACE; style.border_color = BORDER; style.set_border_width_all(1); style.set_corner_radius_all(14); panel.add_theme_stylebox_override("panel", style); add_child(panel)
     title_label = _label("CORPORATION NETWORK", 20, TEXT); status_label = _label("RIVAL INTELLIGENCE", 10, ACCENT)
     scroll = ScrollContainer.new(); scroll.name = "CorporationRivalScroll"; scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; panel.add_child(scroll)
-    list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)
+    list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); panel.remove_child(list_label); scroll.add_child(list_label)
     detail_label = _label("", 11, ACCENT)
     next_button = _button("NEXT"); next_button.pressed.connect(_next); offer_button = _button("OFFER"); offer_button.pressed.connect(_offer); improve_button = _button("IMPROVE"); improve_button.pressed.connect(_improve); shares_button = _button("SHARES"); shares_button.pressed.connect(_shares); close_button = _button("CLOSE"); close_button.pressed.connect(_close)
     _layout()

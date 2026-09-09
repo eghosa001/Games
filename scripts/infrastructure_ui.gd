@@ -289,7 +289,7 @@ func _refresh() -> void:
             disrupted += 1
     var cash := 0
     var day := 1
-    var game := _parent()
+    var game: Variant = _parent()
     if game != null:
         cash = int(game.cash)
         day = int(game.day)

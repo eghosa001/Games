@@ -43,6 +43,7 @@ func _new_game() -> Node:
     check(game != null, "integration Main scene instantiates")
     if game == null:
         return null
+    game.name = "Renew"
     root.add_child(game)
     await process_frame
     seed(123456)
@@ -67,7 +68,7 @@ func test_main_composition() -> void:
     check(game.command_system.business_system != null, "integration business system wired")
     check(game.command_system.business_system.production != null, "integration production owned by business system")
 
-    game.free()
+    game.queue_free()
     await process_frame
 
 func test_main_command_integration() -> void:
@@ -181,5 +182,5 @@ func test_main_command_integration() -> void:
 
     check(game.expansion.properties.size() == 3, "integration expansion state restored")
 
-    game.free()
+    game.queue_free()
     await process_frame

@@ -6,10 +6,18 @@ extends Node2D
 const GameplayCommandSystem = preload("res://scripts/gameplay_command_system.gd")
 var command_system: GameplayCommandSystem
 var stages: Array = [["Neglected", 0, 0], ["Cleaned", 25, 500], ["Repaired", 50, 1500], ["Painted", 75, 900], ["Operational", 100, 1200]]
-var economy: get: return command_system.supply_system.economy if command_system else null
-var expansion: get: return command_system.expansion_system.expansion if command_system else null
-var rivals: get: return command_system.relationship_system.rivals if command_system else null
-var districts: get: return command_system.expansion_system.districts if command_system else null
+var economy:
+    get:
+        return command_system.supply_system.economy if command_system else null
+var expansion:
+    get:
+        return command_system.expansion_system.expansion if command_system else null
+var rivals:
+    get:
+        return command_system.relationship_system.rivals if command_system else null
+var districts:
+    get:
+        return command_system.expansion_system.districts if command_system else null
 func _game_state(): return get_node_or_null("/root/RenewGameState")
 func _finance(): return get_node_or_null("/root/RenewFinanceSystem")
 func _read(domain: String, key: String, default_value = null):
@@ -42,35 +50,152 @@ var cash: int:
             elif delta < 0 and finance.has_method("spend"): finance.spend(-delta, "legacy Main cash debit")
             return
         _write("economy", "cash", int(value))
-var reputation: int: get: return _read("player", "reputation", 0); set(value): _write("player", "reputation", value)
-var day: int: get: return _read("player", "day", 1); set(value): _write("player", "day", value)
-var debt: int: get: return _read("finance", "debt", 0); set(value): _write("finance", "debt", value)
-var loan_payment: int: get: return _read("finance", "loan_payment", 0); set(value): _write("finance", "loan_payment", value)
-var owned: bool: get: return _read("properties", "owned", false); set(value): _write("properties", "owned", value)
-var inspected: bool: get: return _read("properties", "inspected", false); set(value): _write("properties", "inspected", value)
-var restoration: int: get: return _read("properties", "restoration", 0); set(value): _write("properties", "restoration", value)
-var stage: String: get: return _read("properties", "stage", "Neglected"); set(value): _write("properties", "stage", value)
-var business_open: bool: get: return _read("businesses", "business_open", false); set(value): _write("businesses", "business_open", value)
-var employees: int: get: return command_system.employee_system.get_active_employee_count() if command_system else 0; set(_value): pass
-var capacity_level: int: get: return _read("businesses", "capacity_level", 1); set(value): _write("businesses", "capacity_level", value)
-var marketing_level: int: get: return _read("businesses", "marketing_level", 0); set(value): _write("businesses", "marketing_level", value)
-var player_price: int: get: return _read("businesses", "player_price", 110); set(value): _write("businesses", "player_price", value)
-var finished_goods: int: get: return _read("production", "finished_goods", 0); set(value): _write("production", "finished_goods", value)
-var last_sales: int: get: return _read("economy", "last_sales", 0); set(value): _write("economy", "last_sales", value)
-var last_profit: int: get: return _read("economy", "last_profit", 0); set(value): _write("economy", "last_profit", value)
-var total_profit: int: get: return _read("economy", "total_profit", 0); set(value): _write("economy", "total_profit", value)
-var relationship: int: get: return _read("competitors", "relationship", 15); set(value): _write("competitors", "relationship", value)
-var selected_rival: int: get: return _read("competitors", "selected_rival", 0); set(value): _write("competitors", "selected_rival", value)
-var selected_expansion: int: get: return _read("branches", "selected_expansion", 0); set(value): _write("branches", "selected_expansion", value)
-var supplier_choice: int: get: return _read("supply_chain", "supplier_choice", 0); set(value): _write("supply_chain", "supplier_choice", value)
-var contract_days: int: get: return _read("contracts", "contract_days", 0); set(value): _write("contracts", "contract_days", value)
-var contract_bonus: int: get: return _read("contracts", "contract_bonus", 0); set(value): _write("contracts", "contract_bonus", value)
-var acquisition_count: int: get: return _read("ownership", "acquisition_count", 0); set(value): _write("ownership", "acquisition_count", value)
-var transport_level: int: get: return _read("supply_chain", "transport_level", 1); set(value): _write("supply_chain", "transport_level", value)
-var transport_capacity: int: get: return _read("supply_chain", "transport_capacity", 40); set(value): _write("supply_chain", "transport_capacity", value)
-var selected_district: int: get: return _read("regions", "selected_district", 0); set(value): _write("regions", "selected_district", value)
-var message: String: get: return _read("company", "message", ""); set(value): _write("company", "message", value)
-var log_lines: Array: get: var logs = _read("company", "log_lines", []); return logs if logs is Array else []; set(value): _write("company", "log_lines", value)
+var reputation: int:
+    get:
+        return _read("player", "reputation", 0)
+    set(value):
+        _write("player", "reputation", value)
+var day: int:
+    get:
+        return _read("player", "day", 1)
+    set(value):
+        _write("player", "day", value)
+var debt: int:
+    get:
+        return _read("finance", "debt", 0)
+    set(value):
+        _write("finance", "debt", value)
+var loan_payment: int:
+    get:
+        return _read("finance", "loan_payment", 0)
+    set(value):
+        _write("finance", "loan_payment", value)
+var owned: bool:
+    get:
+        return _read("properties", "owned", false)
+    set(value):
+        _write("properties", "owned", value)
+var inspected: bool:
+    get:
+        return _read("properties", "inspected", false)
+    set(value):
+        _write("properties", "inspected", value)
+var restoration: int:
+    get:
+        return _read("properties", "restoration", 0)
+    set(value):
+        _write("properties", "restoration", value)
+var stage: String:
+    get:
+        return _read("properties", "stage", "Neglected")
+    set(value):
+        _write("properties", "stage", value)
+var business_open: bool:
+    get:
+        return _read("businesses", "business_open", false)
+    set(value):
+        _write("businesses", "business_open", value)
+var employees: int:
+    get:
+        return command_system.employee_system.get_active_employee_count() if command_system else 0
+    set(_value):
+        pass
+var capacity_level: int:
+    get:
+        return _read("businesses", "capacity_level", 1)
+    set(value):
+        _write("businesses", "capacity_level", value)
+var marketing_level: int:
+    get:
+        return _read("businesses", "marketing_level", 0)
+    set(value):
+        _write("businesses", "marketing_level", value)
+var player_price: int:
+    get:
+        return _read("businesses", "player_price", 110)
+    set(value):
+        _write("businesses", "player_price", value)
+var finished_goods: int:
+    get:
+        return _read("production", "finished_goods", 0)
+    set(value):
+        _write("production", "finished_goods", value)
+var last_sales: int:
+    get:
+        return _read("economy", "last_sales", 0)
+    set(value):
+        _write("economy", "last_sales", value)
+var last_profit: int:
+    get:
+        return _read("economy", "last_profit", 0)
+    set(value):
+        _write("economy", "last_profit", value)
+var total_profit: int:
+    get:
+        return _read("economy", "total_profit", 0)
+    set(value):
+        _write("economy", "total_profit", value)
+var relationship: int:
+    get:
+        return _read("competitors", "relationship", 15)
+    set(value):
+        _write("competitors", "relationship", value)
+var selected_rival: int:
+    get:
+        return _read("competitors", "selected_rival", 0)
+    set(value):
+        _write("competitors", "selected_rival", value)
+var selected_expansion: int:
+    get:
+        return _read("branches", "selected_expansion", 0)
+    set(value):
+        _write("branches", "selected_expansion", value)
+var supplier_choice: int:
+    get:
+        return _read("supply_chain", "supplier_choice", 0)
+    set(value):
+        _write("supply_chain", "supplier_choice", value)
+var contract_days: int:
+    get:
+        return _read("contracts", "contract_days", 0)
+    set(value):
+        _write("contracts", "contract_days", value)
+var contract_bonus: int:
+    get:
+        return _read("contracts", "contract_bonus", 0)
+    set(value):
+        _write("contracts", "contract_bonus", value)
+var acquisition_count: int:
+    get:
+        return _read("ownership", "acquisition_count", 0)
+    set(value):
+        _write("ownership", "acquisition_count", value)
+var transport_level: int:
+    get:
+        return _read("supply_chain", "transport_level", 1)
+    set(value):
+        _write("supply_chain", "transport_level", value)
+var transport_capacity: int:
+    get:
+        return _read("supply_chain", "transport_capacity", 40)
+    set(value):
+        _write("supply_chain", "transport_capacity", value)
+var selected_district: int:
+    get:
+        return _read("regions", "selected_district", 0)
+    set(value):
+        _write("regions", "selected_district", value)
+var message: String:
+    get:
+        return _read("company", "message", "")
+    set(value):
+        _write("company", "message", value)
+var log_lines: Array:
+    get:
+        var logs = _read("company", "log_lines", [])
+        return logs if logs is Array else []
+    set(value):
+        _write("company", "log_lines", value)
 func _ready():
     command_system = GameplayCommandSystem.new(); command_system.name = "GameplayCommandSystem"; add_child(command_system); command_system.initialize(); refresh_ui()
 func _process(_delta: float) -> void: pass

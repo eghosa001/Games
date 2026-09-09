@@ -565,7 +565,13 @@ func _log_game(text: String) -> void:
             game.log_lines.pop_front()
 
 func _game() -> Variant:
-    return get_node_or_null("/root/Game")
+    var root_game := get_node_or_null("/root/Renew")
+    if root_game != null:
+        return root_game
+    var tree := get_tree()
+    if tree != null and tree.current_scene != null and tree.current_scene.has_method("advance_day"):
+        return tree.current_scene
+    return null
 
 func _finance() -> Variant:
     return get_node_or_null("/root/RenewFinanceSystem")

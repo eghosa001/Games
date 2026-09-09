@@ -214,7 +214,7 @@ func _close() -> void:
 func _refresh() -> void:
     if system == null or finance == null or status_label == null: return
     var cash := int(finance.cash)
-    var stage_index := system.get_stage_index()
+    var stage_index: int = int(system.get_stage_index())
     var check: Dictionary = system.can_upgrade(cash)
     var next_text := "FINAL STAGE"
     if bool(check.get("ok", false)): next_text = "%s • $%s" % [check.get("stage", "Next"), _money(int(check.get("cost", 0)))]
@@ -228,9 +228,9 @@ func _refresh() -> void:
 
     var spec: Dictionary = system.AREA_SPECS.get(selected_area, {})
     if spec.is_empty(): return
-    var built := system.has_area(selected_area)
-    var level := system.area_level(selected_area)
-    var unlocked := stage_index >= int(spec.get("min_stage", 0))
+    var built: bool = bool(system.has_area(selected_area))
+    var level: int = int(system.area_level(selected_area))
+    var unlocked: bool = stage_index >= int(spec.get("min_stage", 0))
     var state := "OPERATIONAL" if built else ("AVAILABLE" if unlocked else "LOCKED")
     area_label.text = "%s   •   %s" % [str(spec.get("name", "Area")).to_upper(), state]
     area_status.text = "Requires %s  •  Level %d  •  %s $%s" % [system.STAGES[int(spec.get("min_stage", 0))], level, "Upgrade" if built else "Build", _money(int(spec.get("cost", 0)) * max(1, level))]

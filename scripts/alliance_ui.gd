@@ -364,7 +364,7 @@ func _layout() -> void:
         buttons[i].size = Vector2(bw, 44)
         buttons[i].add_theme_font_size_override("font_size", 9 if phone else 10)
     var partners_title := panel.get_node_or_null("PartnersTitle") as Label
-    var partner_y := y + ceil(float(buttons.size()) / float(cols)) * 50 + 4
+    var partner_y: float = y + ceil(float(buttons.size()) / float(cols)) * 50 + 4
     if partners_title != null:
         partners_title.position = Vector2(14, partner_y)
         partners_title.size = Vector2(width - 28, 18)
