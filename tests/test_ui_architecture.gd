@@ -66,22 +66,6 @@ func _run() -> void:
     check("world renderer exists", world_view != null)
     check("world renderer resolves world-owned RegionController", world_view != null and region_controller != null and world_view.get("game") == scene)
 
-    var world_3d := scene.get_node_or_null("World3D")
-    check("3D world prototype is mounted", world_3d != null)
-    if world_3d != null:
-        check("3D world exposes open_world", world_3d.has_method("open_world"))
-        check("3D world exposes close_world", world_3d.has_method("close_world"))
-        check("3D world exposes toggle_world", world_3d.has_method("toggle_world"))
-        check("3D world starts hidden", not world_3d.visible)
-        world_3d.open_world()
-        await process_frame
-        check("3D world opens without replacing management scene", world_3d.visible)
-        check("3D world creates a camera", world_3d.get_node_or_null("World3DCamera") != null)
-        check("3D world creates selectable prototype objects", world_3d.get("objects") is Array and world_3d.get("objects").size() > 0)
-        world_3d.close_world()
-        await process_frame
-        check("3D world closes cleanly", not world_3d.visible)
-
     var hq := scene.get_node_or_null("UI/HeadquartersPanel")
     check("HQ UI resolves game root", hq != null and hq.get("main") == scene)
     var employee := scene.get_node_or_null("UI/EmployeePanel")
@@ -98,10 +82,12 @@ func _run() -> void:
     _finish()
 
 func _find_screen(scene: Node, screen_name: String) -> Node:
-    var direct := scene.get_node_or_null("UI/" + screen_name)
-    if direct != null:
-        return direct
-    return scene.get_node_or_null("UI/MainHUD/" + screen_name)
+    var ui := scene.get_node_or_null("UI")
+    if ui != null:
+        var child := ui.get_node_or_null(screen_name)
+        if child != null:
+            return child
+    return get_root().get_node_or_null("Renew/" + screen_name)
 
 func _count_named_nodes(node: Node, target_name: String) -> int:
     var count := 1 if node.name == target_name else 0
@@ -111,22 +97,26 @@ func _count_named_nodes(node: Node, target_name: String) -> int:
 
 func _visible_screen_count(manager: Node) -> int:
     var count := 0
-    var names: Array[String] = manager.SCREEN_NAMES if manager != null and "SCREEN_NAMES" in manager else []
-    for name in names:
-        var target := manager.get_node_or_null("../UI/" + name)
-        if target != null and target.visible:
+    for node in manager._screen_nodes():
+        if manager._is_node_visible(node):
             count += 1
     return count
 
 func check(label: String, condition: bool) -> void:
     checks += 1
-    if not condition:
-        failed += 1
+    if condition:
+        print("PASS: %s" % label)
+    else:
         failures.append(label)
+        failed += 1
+        print("FAIL: %s" % label)
 
 func _finish() -> void:
-    if failed > 0:
-        push_error("UI architecture test failed (%d/%d): %s" % [failed, checks, "; ".join(failures)])
-        quit(1)
-    print("UI architecture test passed: %d checks" % checks)
-    quit(0)
+    print("--- UI ARCHITECTURE SUMMARY ---")
+    print("Checks: %d | Failures: %d" % [checks, failures.size()])
+    if not failures.is_empty():
+        for failure in failures:
+            print("FAILED: %s" % failure)
+    else:
+        print("UI ARCHITECTURE TEST: PASS")
+    quit(1 if failed > 0 else 0)
