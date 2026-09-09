@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Wed Sep  9 06:53:38 UTC 2026
+// Generated on: Wed Sep  9 07:10:20 UTC 2026
 
-// Source snapshot commit: e21c7e3f28e9c0a33df214b21bee694b81f76eda
+// Source snapshot commit: 1b36a4e43f9a3172cb3951ce92e6e39fb337f1ad
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -5179,7 +5179,7 @@ progressive_web_app/ensure_cross_origin_isolation_headers=false
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: project.godot
-Lines: 138
+Lines: 129
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 [application]
 
@@ -5229,11 +5229,7 @@ RenewInfrastructureSystem="*res://scripts/infrastructure_system.gd"
 
 RenewCollectionSystem="*res://scripts/collection_system.gd"
 
-RenewCollectionUI="*res://scripts/collection_ui.gd"
-
 RenewLiveOpsSystem="*res://scripts/liveops_system.gd"
-
-RenewLiveOpsUI="*res://scripts/liveops_ui.gd"
 
 RenewHeadquartersSystem="*res://scripts/headquarters_system.gd"
 
@@ -5282,15 +5278,10 @@ RenewUIScreenManager="*res://scripts/ui_screen_manager.gd"
 [display]
 
 window/size/viewport_width=1280
-
 window/size/viewport_height=720
-
 window/size/window_width_override=1280
-
 window/size/window_height_override=720
-
 window/stretch/mode="canvas_items"
-
 window/stretch/aspect="expand"
 
 
@@ -21808,7 +21799,7 @@ func restore_state(snapshot:Dictionary)->void: system.restore_state(snapshot)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/production_control_ui.gd
-Lines: 164
+Lines: 172
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends CanvasLayer
 ## Dedicated production command center. Presentation only: all simulation
@@ -21870,7 +21861,15 @@ func _build_ui() -> void:
 
     var header := HBoxContainer.new(); header.add_theme_constant_override("separation",10); content.add_child(header)
     var title := _label("PRODUCTION CONTROL CENTER",20,Color("edf6f3")); title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; header.add_child(title)
-    var close := _button("CLOSE",46); close.pressed.connect(func(): get_node_or_null("/root/RenewUIScreenManager").hide_all_screens() if get_node_or_null("/root/RenewUIScreenManager") != null else close_screen()); header.add_child(close)
+    var close := _button("CLOSE",46)
+    close.pressed.connect(func():
+        var manager := get_node_or_null("/root/RenewUIScreenManager")
+        if manager != null and manager.has_method("hide_all_screens"):
+            manager.hide_all_screens()
+        else:
+            close_screen()
+    )
+    header.add_child(close)
 
     status_label = _label("",13,Color("a9c5c6")); content.add_child(status_label)
     content.add_child(_section("PRODUCTION LINE"))
