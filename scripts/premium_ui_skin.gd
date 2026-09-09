@@ -22,22 +22,20 @@ const MUTED := Color("8da9ae")
 var hud_root: Control
 var viewport_size := Vector2.ZERO
 var _theme: Theme
-var _last_tree_count := -1
+var _theme_refresh_queued := false
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_IGNORE
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     _theme = load(THEME_PATH) as Theme
+    if not get_tree().tree_changed.is_connected(_queue_theme_refresh):
+        get_tree().tree_changed.connect(_queue_theme_refresh)
     call_deferred("_install")
 
-func _process(_delta: float) -> void:
-    if size != viewport_size:
+func _notification(what: int) -> void:
+    if what == NOTIFICATION_RESIZED:
         viewport_size = size
         queue_redraw()
-    var count := get_tree().get_node_count()
-    if count != _last_tree_count:
-        _last_tree_count = count
-        _apply_theme_to_all_ui()
 
 func _install() -> void:
     var main_hud := get_node_or_null("/root/Renew/UI/MainHUD")
@@ -49,6 +47,18 @@ func _install() -> void:
     if hud_root != null:
         _style_existing_controls(hud_root)
     queue_redraw()
+
+func _queue_theme_refresh() -> void:
+    if _theme_refresh_queued:
+        return
+    _theme_refresh_queued = true
+    call_deferred("_run_theme_refresh")
+
+func _run_theme_refresh() -> void:
+    _theme_refresh_queued = false
+    _apply_theme_to_all_ui()
+    if hud_root != null and is_instance_valid(hud_root):
+        _style_existing_controls(hud_root)
 
 func _apply_theme_to_all_ui() -> void:
     if _theme == null:
