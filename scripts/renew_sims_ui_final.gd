@@ -14,7 +14,7 @@ var _page := [0, 0, 0, 0]
 const PAGE_NAMES := [
     ["OVERVIEW", "PROPERTY", "OWNERSHIP", "RECORDS"],
     ["OVERVIEW", "PRODUCTION", "BUSINESS", "PEOPLE", "COMMERCIAL", "CONTRACTS", "NEGOTIATION", "FINANCE", "FUNDING"],
-    ["OVERVIEW", "RIVALS", "ALLIANCES", "GROWTH", "REGIONS", "CHARTERS", "CAPITAL", "EQUITY", "TECHNOLOGY"],
+    ["OVERVIEW", "RIVALS", "ALLIANCES", "CORPORATE", "GROWTH", "REGIONS", "CHARTERS", "CAPITAL", "EQUITY", "TECHNOLOGY"],
     ["OVERVIEW", "REGIONAL MANAGEMENT", "OPERATIONS", "EMPIRE MANAGEMENT", "EVENTS"]
 ]
 
@@ -39,7 +39,8 @@ const PAGE_SUBTITLES := [
     [
         "Choose a focused empire command area.",
         "Rival selection, competition and reputation.",
-        "Alliances, relationships, supply agreements and corporate network.",
+        "Alliances, relationships and supply agreements.",
+        "Corporate network, victory and world power.",
         "Expansion businesses and strategic acquisitions.",
         "Regional selection and presence.",
         "Regional charters and trade routes.",
@@ -345,9 +346,9 @@ func _refresh() -> void:
                 0:
                     _page_button("RIVALS", 1)
                     _page_button("ALLIANCES", 2)
-                    _page_button("GROWTH", 3)
-                    _page_button("CAPITAL", 6)
-                    _page_button("TECHNOLOGY", 8)
+                    _page_button("GROWTH", 4)
+                    _page_button("CAPITAL", 7)
+                    _page_button("TECHNOLOGY", 9)
                 1:
                     _back_button()
                     _action("NEXT RIVAL", _next_rival)
@@ -356,41 +357,47 @@ func _refresh() -> void:
                     _action("REPUTE", parent.reputation_status)
                 2:
                     _back_button()
+                    _page_button("CORPORATE", 3)
                     _action("ALLIANCE", parent.make_alliance_offer)
                     _action("RELATION", parent.improve_alliance)
                     _action("SUPPLY DEAL", parent.propose_supply_deal)
-                    _screen("PACT", "AlliancePanel")
                 3:
                     _back_button()
-                    _page_button("REGIONS", 4)
+                    _screen("NETWORK", "CorporationsPanel")
+                    _screen("PACT", "AlliancePanel")
+                    _action("POWER", parent.world_power)
+                    _action("GOALS", parent.victory_progress)
+                4:
+                    _back_button()
+                    _page_button("REGIONS", 5)
                     _action("EXPANSION", parent.buy_expansion)
                     _action("UPGRADE EXPANSION", parent.upgrade_expansion)
                     _action("TRANSPORT", parent.upgrade_transport)
-                4:
+                5:
                     _back_button()
-                    _page_button("CHARTERS", 5)
+                    _page_button("CHARTERS", 6)
                     _screen("REGIONS", "RegionsPanel")
                     _action("NEXT REGION", parent.next_region)
                     _action("ESTABLISH", parent.establish_region)
-                5:
+                    _action("ACQUISITIONS", parent.negotiate_selected_acquisition)
+                6:
                     _back_button()
                     _action("CHARTER BASIN", parent.charter_basin)
                     _action("CHARTER VALLEY", parent.charter_valley)
                     _action("TRADE ROUTE", parent.establish_trade_route)
-                    _action("ACQUISITIONS", parent.negotiate_selected_acquisition)
-                6:
+                7:
                     _back_button()
-                    _page_button("EQUITY", 7)
+                    _page_button("EQUITY", 8)
                     _action("LOAN", parent.take_loan)
                     _action("REPAY", parent.repay_loan)
                     _action("INVESTOR", parent.request_investment)
-                7:
+                8:
                     _back_button()
                     _action("INVEST BILL", parent.invest_term)
                     _action("BUY SHARES", parent.buy_rival_shares)
                     _action("SELL SHARES", parent.sell_rival_shares)
                     _action("DIVIDEND", parent.pay_dividend)
-                8:
+                9:
                     _back_button()
                     _screen("TECH", "TechnologyPanel")
                     _screen("PROGRESSION", "EmpireProgressionPanel")
