@@ -153,10 +153,11 @@ func _tab_subtitle() -> String:
         2: return "Manage rivals, alliances, investment, shares and corporate power."
         3:
             match _world_page:
-                0: return "Choose a world domain. Infrastructure is kept inside Regional Management."
-                1: return "Production and logistics are grouped into Operations."
-                2: return "Expansion and intelligence are grouped into Empire Management."
-                3: return "Missions and live operations are grouped into Events."
+                0: return "Choose a world domain. Regional infrastructure is hidden until Regional Management is opened."
+                1: return "Regional Management • regions and infrastructure."
+                2: return "Operations • production and logistics."
+                3: return "Empire Management • expansion and intelligence."
+                4: return "Events • missions and live operations."
         _: return "Choose an action."
     return "Choose an action."
 
@@ -171,7 +172,7 @@ func _refresh() -> void:
     if action_grid == null: return
     if active_tab != 3: return
     _clear_action_grids()
-    action_title.text = "WORLD • " + ["OVERVIEW", "OPERATIONS", "EMPIRE", "EVENTS"][_world_page]
+    action_title.text = "WORLD • " + ["OVERVIEW", "REGIONAL MANAGEMENT", "OPERATIONS", "EMPIRE MANAGEMENT", "EVENTS"][_world_page]
     match _world_page:
         0:
             _action("REGIONS", Callable(self, "_set_world_page").bind(1))
@@ -180,8 +181,8 @@ func _refresh() -> void:
             _action("EVENTS", Callable(self, "_set_world_page").bind(4))
         1:
             _action("WORLD OVERVIEW", Callable(self, "_set_world_page").bind(0))
+            _action("REGIONS", Callable(self, "_open_screen").bind("RegionsPanel"))
             _action("INFRASTRUCTURE", Callable(self, "_open_screen").bind("InfrastructurePanel"))
-            _action("MISSIONS", Callable(self, "_open_screen").bind("WorldOpportunitiesPanel"))
         2:
             _action("WORLD OVERVIEW", Callable(self, "_set_world_page").bind(0))
             _action("PRODUCTION", Callable(self, "_open_screen").bind("ProductionControlPanel"))
