@@ -257,8 +257,7 @@ func _screen(text: String, screen_name: String) -> void:
     _action(text, Callable(self, "_open_screen").bind(screen_name))
 
 func _refresh() -> void:
-    super._refresh()
-    if action_grid == null: return
+    if parent == null or action_grid == null: return
     _clear_action_grids()
     var page := _page[active_tab]
     action_title.text = ["LIVE", "BUSINESS", "EMPIRE", "WORLD"][active_tab] + " • " + PAGE_NAMES[active_tab][page]
