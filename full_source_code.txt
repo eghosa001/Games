@@ -1,7 +1,7 @@
 // ===== GAMES PROJECT - COMPLETE SOURCE =====
-// Generated on: Wed Sep  9 07:28:07 UTC 2026
+// Generated on: Wed Sep  9 07:40:42 UTC 2026
 
-// Source snapshot commit: ecdaa0a364a8520eb090966b3266906eb41967f3
+// Source snapshot commit: 5dac4da739f75f243352380fee182a3a83058d70
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -178,6 +178,181 @@ jobs:
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+File: .github/workflows/full-production-repair.yml
+Lines: 169
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+name: Full Production Repair
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'fix: full production repair')
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: '4.7.2'
+    steps:
+      - name: Checkout latest main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply complete runtime and UI repair set
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          def edit(path, fn):
+              p = Path(path)
+              s = p.read_text(encoding='utf-8')
+              n = fn(s)
+              if n != s:
+                  p.write_text(n, encoding='utf-8')
+                  print('UPDATED', path)
+              else:
+                  print('UNCHANGED', path)
+
+          def replace(path, pairs):
+              def f(s):
+                  for old, new in pairs:
+                      s = s.replace(old, new)
+                  return s
+              edit(path, f)
+
+          # Convert all one-line GDScript property accessors into valid indented blocks.
+          def normalize_properties(s):
+              out = []
+              pat = re.compile(r'^var (\\w+(?:: [^:]+)?): get: (.*?); set\\(value\\): (.*)$')
+              for line in s.splitlines():
+                  m = pat.match(line)
+                  if not m:
+                      out.append(line)
+                      continue
+                  left, getter, setter = m.groups()
+                  out.extend([f'var {left}:', '    get:', f'        {getter}', '    set(value):', f'        {setter}'])
+              return '\\n'.join(out) + ('\\n' if s.endswith('\\n') else '')
+          edit('scripts/main.gd', normalize_properties)
+
+          # Explicit typing for Godot 4.7 strict inference cases.
+          replace('scripts/alliance_ui.gd', [
+              ('var partner_y := y + ceil(float(buttons.size()) / float(cols)) * 50 + 4', 'var partner_y: float = y + ceil(float(buttons.size()) / float(cols)) * 50 + 4'),
+          ])
+          replace('scripts/headquarters_ui.gd', [
+              ('var stage_index := system.get_stage_index()', 'var stage_index: int = int(system.get_stage_index())'),
+              ('var built := system.has_area(selected_area)', 'var built: bool = bool(system.has_area(selected_area))'),
+              ('var level := system.area_level(selected_area)', 'var level: int = int(system.area_level(selected_area))'),
+              ('var unlocked := stage_index >= int(spec.get("min_stage", 0))', 'var unlocked: bool = stage_index >= int(spec.get("min_stage", 0))'),
+          ])
+          replace('scripts/infrastructure_ui.gd', [
+              ('var game := _parent()', 'var game: Variant = _parent()'),
+          ])
+          replace('scripts/save_load_ui.gd', [
+              ('var can_start := victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()', 'var can_start: bool = victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()'),
+          ])
+          replace('scripts/empire_progression_ui.gd', [
+              ('var goal_done := goals.completed_count() if goals != null and goals.has_method("completed_count") else 0', 'var goal_done: int = int(goals.completed_count()) if goals != null and goals.has_method("completed_count") else 0'),
+              ('var goal_total := goals.goals.size() if goals != null else 0', 'var goal_total: int = int(goals.goals.size()) if goals != null else 0'),
+              ('var milestone_done := progression.claimed.size() if progression != null else 0', 'var milestone_done: int = int(progression.claimed.size()) if progression != null else 0'),
+              ('var milestone_total := progression.milestones.size() if progression != null else 0', 'var milestone_total: int = int(progression.milestones.size()) if progression != null else 0'),
+          ])
+          replace('scripts/premium_ui_skin.gd', [
+              ('var tint := accents[i]', 'var tint: Color = accents[i]'),
+          ])
+
+          # Bankruptcy must resolve the actual Renew scene, never the obsolete Game root.
+          replace('scripts/bankruptcy_system.gd', [
+              ('return get_node_or_null("/root/Game")', 'var root_game := get_node_or_null("/root/Renew")\\n    if root_game != null:\\n        return root_game\\n    var tree := get_tree()\\n    if tree != null and tree.current_scene != null and tree.current_scene.has_method("advance_day"):\\n        return tree.current_scene\\n    return null'),
+          ])
+
+          # Contract UI reads reputation from the authoritative GameState domain API.
+          replace('scripts/contracts_ui.gd', [
+              ('reputation = int(game_state.reputation)', 'reputation = int(game_state.get_value("player", "reputation", 0))'),
+          ])
+
+          # Avoid re-parenting labels that are already under their panel.
+          replace('scripts/portfolio_ui.gd', [
+              ('list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)', 'list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); if list_label.get_parent() != scroll: panel.remove_child(list_label); scroll.add_child(list_label)'),
+          ])
+          replace('scripts/corporations_ui.gd', [
+              ('list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)', 'list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); if list_label.get_parent() != scroll: panel.remove_child(list_label); scroll.add_child(list_label)'),
+          ])
+
+          # regions_launcher contains several inline if/declaration statements that are fragile in Godot 4.7.
+          def regions_fix(s):
+              pairs = [
+                  ('    var ui_root:=hud.get_parent()\n', '    var ui_root: Node = hud.get_parent()\n'),
+                  ('    if ui_root!=null and ui_root.get_node_or_null("BusinessOperationsPanel")==null: var p:=BUSINESS_UI.new(); p.name="BusinessOperationsPanel"; ui_root.add_child(p)\n', '    if ui_root != null and ui_root.get_node_or_null("BusinessOperationsPanel") == null:\n        var p: Node = BUSINESS_UI.new()\n        p.name = "BusinessOperationsPanel"\n        ui_root.add_child(p)\n'),
+                  ('    if ui_root!=null and ui_root.get_node_or_null("EmpireExpansionPanel")==null: var e:=EXPANSION_UI.new(); e.name="EmpireExpansionPanel"; ui_root.add_child(e)\n', '    if ui_root != null and ui_root.get_node_or_null("EmpireExpansionPanel") == null:\n        var e: Node = EXPANSION_UI.new()\n        e.name = "EmpireExpansionPanel"\n        ui_root.add_child(e)\n'),
+                  ('    if ui_root!=null and ui_root.get_node_or_null("EmpireIntelligencePanel")==null: var i:=INTELLIGENCE_UI.new(); i.name="EmpireIntelligencePanel"; ui_root.add_child(i)\n', '    if ui_root != null and ui_root.get_node_or_null("EmpireIntelligencePanel") == null:\n        var i: Node = INTELLIGENCE_UI.new()\n        i.name = "EmpireIntelligencePanel"\n        ui_root.add_child(i)\n'),
+                  ('    if ui_root!=null and ui_root.get_node_or_null("EmpireProgressionPanel")==null: var p2:=PROGRESSION_UI.new(); p2.name="EmpireProgressionPanel"; ui_root.add_child(p2)\n', '    if ui_root != null and ui_root.get_node_or_null("EmpireProgressionPanel") == null:\n        var p2: Node = PROGRESSION_UI.new()\n        p2.name = "EmpireProgressionPanel"\n        ui_root.add_child(p2)\n'),
+                  ('    if ui_root!=null and ui_root.get_node_or_null("EmpireIdentityPanel")==null: var idp:=IDENTITY_UI.new(); idp.name="EmpireIdentityPanel"; ui_root.add_child(idp)\n', '    if ui_root != null and ui_root.get_node_or_null("EmpireIdentityPanel") == null:\n        var idp: Node = IDENTITY_UI.new()\n        idp.name = "EmpireIdentityPanel"\n        ui_root.add_child(idp)\n'),
+                  ('    if ui_root!=null and ui_root.get_node_or_null("NotificationsCenterPanel")==null: var n:=NOTIFICATIONS_UI.new(); n.name="NotificationsCenterPanel"; ui_root.add_child(n)\n', '    if ui_root != null and ui_root.get_node_or_null("NotificationsCenterPanel") == null:\n        var n: Node = NOTIFICATIONS_UI.new()\n        n.name = "NotificationsCenterPanel"\n        ui_root.add_child(n)\n'),
+              ]
+              for old, new in pairs: s = s.replace(old, new)
+              return s
+          edit('scripts/regions_launcher.gd', regions_fix)
+
+          # Tests should use deferred destruction and a stable Renew root name.
+          replace('tests/test_runner.gd', [
+              ('    root.add_child(game)\n    await process_frame', '    game.name = "Renew"\n    root.add_child(game)\n    await process_frame'),
+              ('    game.free()\n    await process_frame', '    game.queue_free()\n    await process_frame'),
+          ])
+          PY
+
+      - name: Install Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O /tmp/godot.zip
+          mkdir -p "$HOME/godot"
+          7z x /tmp/godot.zip -o"$HOME/godot" >/dev/null
+          chmod +x "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
+
+      - name: Compile and import-check
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+
+      - name: Run integration suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 300s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_runner.gd
+
+      - name: Commit repaired source onto latest main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts tests
+          if git diff --cached --quiet; then
+            echo "No source changes to commit."
+            exit 0
+          fi
+          git commit -m "fix: full production repair"
+          for attempt in 1 2 3 4 5; do
+            git fetch origin main
+            git rebase origin/main && git push origin HEAD:main && exit 0
+            git rebase --abort || true
+            sleep 2
+          done
+          echo "Unable to push repair after retries."
+          exit 1
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: .github/workflows/godot-tests.yml
 Lines: 80
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -320,179 +495,32 @@ jobs:
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: .github/workflows/repair-batch-v2.yml
-Lines: 144
+File: .github/workflows/repair-root-path.yml
+Lines: 72
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-name: One Pass Production Repair V2
+name: Full production repair
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:
 
 permissions:
   contents: write
 
 env:
-  GODOT_VERSION: 4.7.2
+  REPAIR_VERSION: 'full-2026-09-09'
 
 jobs:
   repair:
+    if: ${{ !startsWith(github.event.head_commit.message, 'fix: full production repair') }}
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    env:
+      GODOT_VERSION: '4.7.2'
     steps:
-      - name: Checkout
+      - name: Checkout latest main
         uses: actions/checkout@v4
-
-      - name: Apply all known runtime repairs
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 <<'PY'
-          from pathlib import Path
-
-          def edit(path, fn):
-              p = Path(path)
-              s = p.read_text(encoding='utf-8')
-              n = fn(s)
-              if n != s:
-                  p.write_text(n, encoding='utf-8')
-                  print('UPDATED', path)
-              else:
-                  print('UNCHANGED', path)
-
-          def replace(path, pairs):
-              def f(s):
-                  for old, new in pairs:
-                      if old in s:
-                          s = s.replace(old, new)
-              
-                  return s
-              edit(path, f)
-
-          replace('scripts/alliance_ui.gd', [
-              ('var partner_y := y + ceil(float(buttons.size()) / float(cols)) * 50 + 4', 'var partner_y: float = y + ceil(float(buttons.size()) / float(cols)) * 50 + 4'),
-          ])
-          replace('scripts/headquarters_ui.gd', [
-              ('var stage_index := system.get_stage_index()', 'var stage_index: int = int(system.get_stage_index())'),
-              ('var built := system.has_area(selected_area)', 'var built: bool = bool(system.has_area(selected_area))'),
-              ('var level := system.area_level(selected_area)', 'var level: int = int(system.area_level(selected_area))'),
-              ('var unlocked := stage_index >= int(spec.get("min_stage", 0))', 'var unlocked: bool = stage_index >= int(spec.get("min_stage", 0))'),
-          ])
-          replace('scripts/infrastructure_ui.gd', [
-              ('var game := _parent()', 'var game: Variant = _parent()'),
-          ])
-          replace('scripts/save_load_ui.gd', [
-              ('var can_start := victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()', 'var can_start: bool = victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()'),
-          ])
-          replace('scripts/empire_progression_ui.gd', [
-              ('var goal_done := goals.completed_count() if goals != null and goals.has_method("completed_count") else 0', 'var goal_done: int = int(goals.completed_count()) if goals != null and goals.has_method("completed_count") else 0'),
-              ('var goal_total := goals.goals.size() if goals != null else 0', 'var goal_total: int = int(goals.goals.size()) if goals != null else 0'),
-              ('var milestone_done := progression.claimed.size() if progression != null else 0', 'var milestone_done: int = int(progression.claimed.size()) if progression != null else 0'),
-              ('var milestone_total := progression.milestones.size() if progression != null else 0', 'var milestone_total: int = int(progression.milestones.size()) if progression != null else 0'),
-          ])
-          replace('scripts/premium_ui_skin.gd', [
-              ('var tint := accents[i]', 'var tint: Color = accents[i]'),
-          ])
-          replace('scripts/bankruptcy_system.gd', [
-              ('return get_node_or_null("/root/Game")', 'var tree := get_tree()\n    if tree != null and tree.current_scene != null:\n        return tree.current_scene\n    return get_node_or_null("/root/Renew")'),
-          ])
-          replace('scripts/portfolio_ui.gd', [
-              ('list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)', 'list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); panel.remove_child(list_label); scroll.add_child(list_label)'),
-          ])
-          replace('scripts/corporations_ui.gd', [
-              ('list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)', 'list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); panel.remove_child(list_label); scroll.add_child(list_label)'),
-          ])
-
-          # Expand compressed main.gd property declarations into valid Godot 4.7 syntax.
-          def main_fix(s):
-              out = []
-              for line in s.splitlines():
-                  if line.startswith('var ') and ': get: ' in line:
-                      left, getter = line.split(': get: ', 1)
-                      name_part = left[4:]
-                      if '; set(value): ' in getter:
-                          getter, setter = getter.split('; set(value): ', 1)
-                          out.append(f'var {name_part}:')
-                          out.append(f'    get: {getter}')
-                          out.append(f'    set(value): {setter}')
-                      else:
-                          out.append(f'var {name_part}:')
-                          out.append(f'    get: {getter}')
-                  else:
-                      out.append(line)
-              return '\n'.join(out) + ('\n' if s.endswith('\n') else '')
-          edit('scripts/main.gd', main_fix)
-          PY
-
-      - name: Install Godot
-        shell: bash
-        run: |
-          set -euo pipefail
-          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O /tmp/godot.zip
-          mkdir -p "$HOME/godot"
-          7z x /tmp/godot.zip -o"$HOME/godot" >/dev/null
-          chmod +x "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
-          "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
-
-      - name: Compile project
-        shell: bash
-        run: |
-          set -euo pipefail
-          timeout 180s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
-
-      - name: Run core test suite
-        shell: bash
-        run: |
-          set -euo pipefail
-          timeout 300s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_runner.gd
-
-      - name: Commit repairs
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add scripts
-          git commit -m "fix: complete production runtime repair pass" || true
-          git push origin HEAD:main
-
-      - name: Remove temporary repair runners
-        if: success()
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm -f .github/workflows/repair-batch.yml .github/workflows/repair-batch-v2.yml || true
-          git commit -m "ci: remove temporary repair runners" || true
-          git push origin HEAD:main || true
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: .github/workflows/repair-batch-v3.yml
-Lines: 143
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-name: One Pass Production Repair V3
-
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
-env:
-  GODOT_VERSION: 4.7.2
-
-jobs:
-  repair:
-    runs-on: ubuntu-latest
-    timeout-minutes: 40
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Apply complete repair set
         shell: bash
@@ -500,336 +528,53 @@ jobs:
           set -euo pipefail
           python3 <<'PY'
           from pathlib import Path
-
-          def edit(path, fn):
-              p = Path(path)
-              s = p.read_text(encoding='utf-8')
-              n = fn(s)
-              if n != s:
-                  p.write_text(n, encoding='utf-8')
-                  print('UPDATED', path)
-              else:
-                  print('UNCHANGED', path)
-
-          def replace(path, pairs):
-              def f(s):
-                  for old, new in pairs:
-                      s = s.replace(old, new)
-                  return s
-              edit(path, f)
-
-          replace('scripts/alliance_ui.gd', [('var partner_y := y + ceil(float(buttons.size()) / float(cols)) * 50 + 4', 'var partner_y: float = y + ceil(float(buttons.size()) / float(cols)) * 50 + 4')])
-          replace('scripts/headquarters_ui.gd', [
-              ('var stage_index := system.get_stage_index()', 'var stage_index: int = int(system.get_stage_index())'),
-              ('var built := system.has_area(selected_area)', 'var built: bool = bool(system.has_area(selected_area))'),
-              ('var level := system.area_level(selected_area)', 'var level: int = int(system.area_level(selected_area))'),
-              ('var unlocked := stage_index >= int(spec.get("min_stage", 0))', 'var unlocked: bool = stage_index >= int(spec.get("min_stage", 0))'),
-          ])
-          replace('scripts/infrastructure_ui.gd', [('var game := _parent()', 'var game: Variant = _parent()')])
-          replace('scripts/save_load_ui.gd', [('var can_start := victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()', 'var can_start: bool = victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()')])
-          replace('scripts/empire_progression_ui.gd', [
-              ('var goal_done := goals.completed_count() if goals != null and goals.has_method("completed_count") else 0', 'var goal_done: int = int(goals.completed_count()) if goals != null and goals.has_method("completed_count") else 0'),
-              ('var goal_total := goals.goals.size() if goals != null else 0', 'var goal_total: int = int(goals.goals.size()) if goals != null else 0'),
-              ('var milestone_done := progression.claimed.size() if progression != null else 0', 'var milestone_done: int = int(progression.claimed.size()) if progression != null else 0'),
-              ('var milestone_total := progression.milestones.size() if progression != null else 0', 'var milestone_total: int = int(progression.milestones.size()) if progression != null else 0'),
-          ])
-          replace('scripts/premium_ui_skin.gd', [('var tint := accents[i]', 'var tint: Color = accents[i]')])
-          replace('scripts/bankruptcy_system.gd', [
-              ('var tree := get_tree()\n    if tree != null and tree.current_scene != null:\n        return tree.current_scene\n    return get_node_or_null("/root/Renew")', 'var root_game := get_node_or_null("/root/Renew")\n    if root_game != null:\n        return root_game\n    var tree := get_tree()\n    if tree != null and tree.current_scene != null and tree.current_scene.has_method("advance_day"):\n        return tree.current_scene\n    return null'),
-              ('return get_node_or_null("/root/Game")', 'var root_game := get_node_or_null("/root/Renew")\n    if root_game != null:\n        return root_game\n    var tree := get_tree()\n    if tree != null and tree.current_scene != null and tree.current_scene.has_method("advance_day"):\n        return tree.current_scene\n    return null'),
-          ])
-          replace('scripts/portfolio_ui.gd', [('list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)', 'list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); panel.remove_child(list_label); scroll.add_child(list_label)')])
-          replace('scripts/corporations_ui.gd', [('list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)', 'list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); panel.remove_child(list_label); scroll.add_child(list_label)')])
-
-          def main_fix(s):
-              out=[]
-              for line in s.splitlines():
-                  if line.startswith('var ') and ': get: ' in line:
-                      left, getter = line.split(': get: ', 1)
-                      name_part = left[4:]
-                      setter = None
-                      marker = '; set('
-                      if marker in getter:
-                          getter, setter_tail = getter.rsplit(marker, 1)
-                          setter = 'set(' + setter_tail
-                      out.append(f'var {name_part}:')
-                      out.append('    get:')
-                      for stmt in getter.split('; '):
-                          if stmt:
-                              out.append('        ' + stmt)
-                      if setter is not None:
-                          setter_name, setter_body = setter.split(': ', 1)
-                          out.append(f'    {setter_name}:')
-                          for stmt in setter_body.split('; '):
-                              if stmt:
-                                  out.append('        ' + stmt)
-                  else:
-                      out.append(line)
-              return '\n'.join(out) + ('\n' if s.endswith('\n') else '')
-          edit('scripts/main.gd', main_fix)
-
-          replace('tests/test_runner.gd', [
-              ('    root.add_child(game)\n    await process_frame', '    game.name = "Renew"\n    root.add_child(game)\n    await process_frame'),
-              ('    game.free()\n    await process_frame', '    game.queue_free()\n    await process_frame'),
-          ])
-          PY
-
-      - name: Install Godot
-        shell: bash
-        run: |
-          set -euo pipefail
-          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O /tmp/godot.zip
-          mkdir -p "$HOME/godot"
-          7z x /tmp/godot.zip -o"$HOME/godot" >/dev/null
-          chmod +x "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
-          "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
-
-      - name: Compile project
-        shell: bash
-        run: |
-          set -euo pipefail
-          timeout 180s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
-
-      - name: Run integration suite
-        shell: bash
-        run: |
-          set -euo pipefail
-          timeout 300s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_runner.gd
-
-      - name: Commit repaired source
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add scripts tests
-          git commit -m "fix: complete production runtime repair pass" || true
-          git push origin HEAD:main
-
-      - name: Remove temporary repair runners
-        if: success()
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm -f .github/workflows/repair-batch.yml .github/workflows/repair-batch-v2.yml .github/workflows/repair-batch-v3.yml || true
-          git commit -m "ci: remove temporary repair runners" || true
-          git push origin HEAD:main || true
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: .github/workflows/repair-batch.yml
-Lines: 150
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-name: One Pass Production Repair
-
-on:
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
-env:
-  GODOT_VERSION: 4.7.2
-
-jobs:
-  repair:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Apply production repairs
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 <<'PY'
-          from pathlib import Path
           import re
-
           def edit(path, fn):
-              p = Path(path)
-              s = p.read_text(encoding='utf-8')
-              n = fn(s)
-              if n != s:
-                  p.write_text(n, encoding='utf-8')
-                  print('UPDATED', path)
-              else:
-                  print('UNCHANGED', path)
-
-          # Godot 4.7 requires explicit types where values originate from Variant-returning APIs.
-          replacements = {
-              'scripts/alliance_ui.gd': [
-                  ('var partner_y := y + ceil(float(buttons.size()) / float(cols)) * 50 + 4', 'var partner_y: float = y + ceil(float(buttons.size()) / float(cols)) * 50 + 4'),
-              ],
-              'scripts/headquarters_ui.gd': [
-                  ('var stage_index := system.get_stage_index()', 'var stage_index: int = int(system.get_stage_index())'),
-                  ('var built := system.has_area(selected_area)', 'var built: bool = bool(system.has_area(selected_area))'),
-                  ('var level := system.area_level(selected_area)', 'var level: int = int(system.area_level(selected_area))'),
-                  ('var unlocked := stage_index >= int(spec.get("min_stage", 0))', 'var unlocked: bool = stage_index >= int(spec.get("min_stage", 0))'),
-              ],
-              'scripts/infrastructure_ui.gd': [
-                  ('var game := _parent()', 'var game: Variant = _parent()'),
-              ],
-              'scripts/save_load_ui.gd': [
-                  ('var can_start := victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()', 'var can_start: bool = victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()'),
-              ],
-              'scripts/empire_progression_ui.gd': [
-                  ('var goal_done := goals.completed_count() if goals != null and goals.has_method("completed_count") else 0', 'var goal_done: int = int(goals.completed_count()) if goals != null and goals.has_method("completed_count") else 0'),
-                  ('var goal_total := goals.goals.size() if goals != null else 0', 'var goal_total: int = int(goals.goals.size()) if goals != null else 0'),
-                  ('var milestone_done := progression.claimed.size() if progression != null else 0', 'var milestone_done: int = int(progression.claimed.size()) if progression != null else 0'),
-                  ('var milestone_total := progression.milestones.size() if progression != null else 0', 'var milestone_total: int = int(progression.milestones.size()) if progression != null else 0'),
-              ],
-              'scripts/premium_ui_skin.gd': [
-                  ('var tint := accents[i]', 'var tint: Color = accents[i]'),
-              ],
-              'scripts/bankruptcy_system.gd': [
-                  ('return get_node_or_null("/root/Game")', 'var tree := get_tree()\n    if tree != null and tree.current_scene != null:\n        return tree.current_scene\n    return get_node_or_null("/root/Renew")'),
-              ],
-              'scripts/portfolio_ui.gd': [
-                  ('list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)', 'list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); panel.remove_child(list_label); scroll.add_child(list_label)'),
-              ],
-              'scripts/corporations_ui.gd': [
-                  ('list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)', 'list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); panel.remove_child(list_label); scroll.add_child(list_label)'),
-              ],
-          }
-
-          for path, pairs in replacements.items():
-              def f(s, pairs=pairs):
-                  for a,b in pairs:
-                      s = s.replace(a,b)
-                  return s
-              edit(path, f)
-
-          # main.gd used compressed one-line property declarations. Expand them into
-          # valid Godot 4.7 property blocks without changing their behavior.
-          def main_fix(s):
-              out=[]
-              pat = re.compile(r'^var (\\w+): ([^:]+): get: (.*?); set\\(value\\): (.*)$')
+              p=Path(path); s=p.read_text(encoding='utf-8'); n=fn(s)
+              if n!=s: p.write_text(n,encoding='utf-8'); print('UPDATED',path)
+          def replace(path,pairs):
+              edit(path,lambda s: __import__('functools').reduce(lambda x,p:x.replace(*p),pairs,s))
+          def normalize(s):
+              out=[]; pat=re.compile(r'^var (\\w+(?:: [^:]+)?): get: (.*?); set\\(value\\): (.*)$')
               for line in s.splitlines():
                   m=pat.match(line)
-                  if not m:
-                      m2=re.match(r'^var (\\w+): get: (.*)$', line)
-                      if m2:
-                          out.append(f'var {m2.group(1)}: Variant:')
-                          out.append(f'    get: {m2.group(2)}')
-                          continue
-                      out.append(line)
-                      continue
-                  name, typ, getter, setter = m.groups()
-                  out.append(f'var {name}: {typ}:')
-                  out.append(f'    get: {getter}')
-                  out.append(f'    set(value): {setter}')
-              return '\\n'.join(out)+'\\n' if s.endswith('\\n') else '\\n'.join(out)
-          edit('scripts/main.gd', main_fix)
+                  if not m: out.append(line); continue
+                  left,getter,setter=m.groups(); out += [f'var {left}:','    get:',f'        {getter}','    set(value):',f'        {setter}']
+              return '\n'.join(out)+ ('\n' if s.endswith('\n') else '')
+          edit('scripts/main.gd',normalize)
+          replace('scripts/alliance_ui.gd',[('var partner_y := y + ceil(float(buttons.size()) / float(cols)) * 50 + 4','var partner_y: float = y + ceil(float(buttons.size()) / float(cols)) * 50 + 4')])
+          replace('scripts/headquarters_ui.gd',[('var stage_index := system.get_stage_index()','var stage_index: int = int(system.get_stage_index())'),('var built := system.has_area(selected_area)','var built: bool = bool(system.has_area(selected_area))'),('var level := system.area_level(selected_area)','var level: int = int(system.area_level(selected_area))'),('var unlocked := stage_index >= int(spec.get("min_stage", 0))','var unlocked: bool = stage_index >= int(spec.get("min_stage", 0))')])
+          replace('scripts/infrastructure_ui.gd',[('var game := _parent()','var game: Variant = _parent()')])
+          replace('scripts/save_load_ui.gd',[('var can_start := victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()','var can_start: bool = victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()')])
+          replace('scripts/empire_progression_ui.gd',[('var goal_done := goals.completed_count() if goals != null and goals.has_method("completed_count") else 0','var goal_done: int = int(goals.completed_count()) if goals != null and goals.has_method("completed_count") else 0'),('var goal_total := goals.goals.size() if goals != null else 0','var goal_total: int = int(goals.goals.size()) if goals != null else 0'),('var milestone_done := progression.claimed.size() if progression != null else 0','var milestone_done: int = int(progression.claimed.size()) if progression != null else 0'),('var milestone_total := progression.milestones.size() if progression != null else 0','var milestone_total: int = int(progression.milestones.size()) if progression != null else 0')])
+          replace('scripts/premium_ui_skin.gd',[('var tint := accents[i]','var tint: Color = accents[i]')])
+          replace('scripts/bankruptcy_system.gd',[('return get_node_or_null("/root/Game")','var root_game := get_node_or_null("/root/Renew")\n    if root_game != null:\n        return root_game\n    var tree := get_tree()\n    if tree != null and tree.current_scene != null and tree.current_scene.has_method("advance_day"):\n        return tree.current_scene\n    return null')])
+          replace('scripts/contracts_ui.gd',[('reputation = int(game_state.reputation)','reputation = int(game_state.get_value("player", "reputation", 0))')])
+          replace('tests/test_runner.gd',[('    root.add_child(game)\n    await process_frame','    game.name = "Renew"\n    root.add_child(game)\n    await process_frame'),('    game.free()\n    await process_frame','    game.queue_free()\n    await process_frame')])
           PY
-
       - name: Install Godot
-        shell: bash
         run: |
           set -euo pipefail
           wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O /tmp/godot.zip
-          mkdir -p "$HOME/godot"
-          7z x /tmp/godot.zip -o"$HOME/godot" >/dev/null
-          chmod +x "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
-          "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
-
-      - name: Compile and import project
+          mkdir -p "$HOME/godot"; 7z x /tmp/godot.zip -o"$HOME/godot" >/dev/null; chmod +x "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+      - name: Compile project
+        run: timeout 180s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+      - name: Run integration suite
+        run: timeout 300s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_runner.gd
+      - name: Commit repaired source onto latest main
         shell: bash
         run: |
           set -euo pipefail
-          timeout 180s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+          git config user.name 'github-actions[bot]'; git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts tests
+          git commit -m 'fix: full production repair' || true
+          for i in 1 2 3 4 5; do git fetch origin main; git rebase origin/main && git push origin HEAD:main && exit 0; git rebase --abort || true; sleep 2; done
+          exit 1
 
-      - name: Run core test suite
-        shell: bash
-        run: |
-          set -euo pipefail
-          timeout 300s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_runner.gd
-
-      - name: Commit repaired source
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add scripts .github/workflows/repair-batch.yml
-          if git diff --cached --quiet; then
-            echo "No source changes were necessary."
-          else
-            git commit -m "fix: complete production runtime repair pass"
-            git push origin HEAD:main
-          fi
-
-      - name: Remove one-pass repair runner
-        if: success()
-        shell: bash
-        run: |
-          set -euo pipefail
-          git rm .github/workflows/repair-batch.yml
-          git commit -m "ci: remove one-pass repair runner"
-          git push origin HEAD:main
-
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-File: .github/workflows/repair-root-path.yml
-Lines: 47
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-name: One-shot runtime repair
-
-on:
-  push:
-    branches: [main]
-
-permissions:
-  contents: write
-
-jobs:
-  repair:
-    if: ${{ github.event.head_commit.message != 'fix: harden bankruptcy root lookup' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Repair bankruptcy root lookup
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path('scripts/bankruptcy_system.gd')
-          s = p.read_text()
-          old = 'func _game() -> Variant:\n    return get_node_or_null("/root/Game")'
-          new = '''func _game() -> Variant:
-    var scene := get_tree().current_scene
-    if scene != null:
-        return scene
-    return get_node_or_null("/root/Renew")'''
-          if old not in s:
-              raise SystemExit('Expected bankruptcy _game() implementation was not found')
-          p.write_text(s.replace(old, new, 1))
-          PY
-
-      - name: Validate repair
-        run: |
-          grep -q 'get_tree().current_scene' scripts/bankruptcy_system.gd
-          ! grep -q 'get_node_or_null("/root/Game")' scripts/bankruptcy_system.gd
-
-      - name: Commit repair and remove one-shot workflow
-        run: |
-          rm -f .github/workflows/repair-root-path.yml
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add scripts/bankruptcy_system.gd .github/workflows/repair-root-path.yml
-          git diff --cached --quiet && exit 0
-          git commit -m 'fix: harden bankruptcy root lookup'
-          git push
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: .github/workflows/web-export.yml
-Lines: 139
+Lines: 140
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 name: Godot Web Export
 
@@ -971,6 +716,7 @@ jobs:
           publish_dir: ./build/web
           force_orphan: true
 
+# Manual refresh trigger: regenerate full_source_code.txt from current main.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: Assets/Art/building_factory_progression.svg
@@ -7070,7 +6816,7 @@ func _layout() -> void:
         buttons[i].size = Vector2(bw, 44)
         buttons[i].add_theme_font_size_override("font_size", 9 if phone else 10)
     var partners_title := panel.get_node_or_null("PartnersTitle") as Label
-    var partner_y := y + ceil(float(buttons.size()) / float(cols)) * 50 + 4
+    var partner_y: float = y + ceil(float(buttons.size()) / float(cols)) * 50 + 4
     if partners_title != null:
         partners_title.position = Vector2(14, partner_y)
         partners_title.size = Vector2(width - 28, 18)
@@ -8087,7 +7833,7 @@ func _save_current_game() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/bankruptcy_system.gd
-Lines: 575
+Lines: 581
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends Node
 
@@ -8656,7 +8402,13 @@ func _log_game(text: String) -> void:
             game.log_lines.pop_front()
 
 func _game() -> Variant:
-    return get_node_or_null("/root/Game")
+    var root_game := get_node_or_null("/root/Renew")
+    if root_game != null:
+        return root_game
+    var tree := get_tree()
+    if tree != null and tree.current_scene != null and tree.current_scene.has_method("advance_day"):
+        return tree.current_scene
+    return null
 
 func _finance() -> Variant:
     return get_node_or_null("/root/RenewFinanceSystem")
@@ -12166,7 +11918,7 @@ func _build_ui() -> void:
     var style := StyleBoxFlat.new(); style.bg_color = SURFACE; style.border_color = BORDER; style.set_border_width_all(1); style.set_corner_radius_all(14); panel.add_theme_stylebox_override("panel", style); add_child(panel)
     title_label = _label("CORPORATION NETWORK", 20, TEXT); status_label = _label("RIVAL INTELLIGENCE", 10, ACCENT)
     scroll = ScrollContainer.new(); scroll.name = "CorporationRivalScroll"; scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; panel.add_child(scroll)
-    list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)
+    list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); panel.remove_child(list_label); scroll.add_child(list_label)
     detail_label = _label("", 11, ACCENT)
     next_button = _button("NEXT"); next_button.pressed.connect(_next); offer_button = _button("OFFER"); offer_button.pressed.connect(_offer); improve_button = _button("IMPROVE"); improve_button.pressed.connect(_improve); shares_button = _button("SHARES"); shares_button.pressed.connect(_shares); close_button = _button("CLOSE"); close_button.pressed.connect(_close)
     _layout()
@@ -14893,10 +14645,10 @@ func _refresh(force := false) -> void:
     if game == null: return
     var goals := _goals(); var progression := _progression()
     var rep := int(game.reputation); var assets := _owned_assets()
-    var goal_done := goals.completed_count() if goals != null and goals.has_method("completed_count") else 0
-    var goal_total := goals.goals.size() if goals != null else 0
-    var milestone_done := progression.claimed.size() if progression != null else 0
-    var milestone_total := progression.milestones.size() if progression != null else 0
+    var goal_done: int = int(goals.completed_count()) if goals != null and goals.has_method("completed_count") else 0
+    var goal_total: int = int(goals.goals.size()) if goals != null else 0
+    var milestone_done: int = int(progression.claimed.size()) if progression != null else 0
+    var milestone_total: int = int(progression.milestones.size()) if progression != null else 0
     var region_count := 1
     var region := _regions()
     if region != null and region.regions != null: region_count = max(1, int(region.regions.player_presence.count(1)))
@@ -18558,7 +18310,7 @@ func _close() -> void:
 func _refresh() -> void:
     if system == null or finance == null or status_label == null: return
     var cash := int(finance.cash)
-    var stage_index := system.get_stage_index()
+    var stage_index: int = int(system.get_stage_index())
     var check: Dictionary = system.can_upgrade(cash)
     var next_text := "FINAL STAGE"
     if bool(check.get("ok", false)): next_text = "%s • $%s" % [check.get("stage", "Next"), _money(int(check.get("cost", 0)))]
@@ -18572,9 +18324,9 @@ func _refresh() -> void:
 
     var spec: Dictionary = system.AREA_SPECS.get(selected_area, {})
     if spec.is_empty(): return
-    var built := system.has_area(selected_area)
-    var level := system.area_level(selected_area)
-    var unlocked := stage_index >= int(spec.get("min_stage", 0))
+    var built: bool = bool(system.has_area(selected_area))
+    var level: int = int(system.area_level(selected_area))
+    var unlocked: bool = stage_index >= int(spec.get("min_stage", 0))
     var state := "OPERATIONAL" if built else ("AVAILABLE" if unlocked else "LOCKED")
     area_label.text = "%s   •   %s" % [str(spec.get("name", "Area")).to_upper(), state]
     area_status.text = "Requires %s  •  Level %d  •  %s $%s" % [system.STAGES[int(spec.get("min_stage", 0))], level, "Upgrade" if built else "Build", _money(int(spec.get("cost", 0)) * max(1, level))]
@@ -19903,7 +19655,7 @@ func _refresh() -> void:
             disrupted += 1
     var cash := 0
     var day := 1
-    var game := _parent()
+    var game: Variant = _parent()
     if game != null:
         cash = int(game.cash)
         day = int(game.day)
@@ -20419,7 +20171,7 @@ func _layout() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: scripts/main.gd
-Lines: 248
+Lines: 373
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # ===============================================
 # File: scripts/main.gd (Final – with Setters)
@@ -20429,10 +20181,18 @@ extends Node2D
 const GameplayCommandSystem = preload("res://scripts/gameplay_command_system.gd")
 var command_system: GameplayCommandSystem
 var stages: Array = [["Neglected", 0, 0], ["Cleaned", 25, 500], ["Repaired", 50, 1500], ["Painted", 75, 900], ["Operational", 100, 1200]]
-var economy: get: return command_system.supply_system.economy if command_system else null
-var expansion: get: return command_system.expansion_system.expansion if command_system else null
-var rivals: get: return command_system.relationship_system.rivals if command_system else null
-var districts: get: return command_system.expansion_system.districts if command_system else null
+var economy:
+    get:
+        return command_system.supply_system.economy if command_system else null
+var expansion:
+    get:
+        return command_system.expansion_system.expansion if command_system else null
+var rivals:
+    get:
+        return command_system.relationship_system.rivals if command_system else null
+var districts:
+    get:
+        return command_system.expansion_system.districts if command_system else null
 func _game_state(): return get_node_or_null("/root/RenewGameState")
 func _finance(): return get_node_or_null("/root/RenewFinanceSystem")
 func _read(domain: String, key: String, default_value = null):
@@ -20465,35 +20225,152 @@ var cash: int:
             elif delta < 0 and finance.has_method("spend"): finance.spend(-delta, "legacy Main cash debit")
             return
         _write("economy", "cash", int(value))
-var reputation: int: get: return _read("player", "reputation", 0); set(value): _write("player", "reputation", value)
-var day: int: get: return _read("player", "day", 1); set(value): _write("player", "day", value)
-var debt: int: get: return _read("finance", "debt", 0); set(value): _write("finance", "debt", value)
-var loan_payment: int: get: return _read("finance", "loan_payment", 0); set(value): _write("finance", "loan_payment", value)
-var owned: bool: get: return _read("properties", "owned", false); set(value): _write("properties", "owned", value)
-var inspected: bool: get: return _read("properties", "inspected", false); set(value): _write("properties", "inspected", value)
-var restoration: int: get: return _read("properties", "restoration", 0); set(value): _write("properties", "restoration", value)
-var stage: String: get: return _read("properties", "stage", "Neglected"); set(value): _write("properties", "stage", value)
-var business_open: bool: get: return _read("businesses", "business_open", false); set(value): _write("businesses", "business_open", value)
-var employees: int: get: return command_system.employee_system.get_active_employee_count() if command_system else 0; set(_value): pass
-var capacity_level: int: get: return _read("businesses", "capacity_level", 1); set(value): _write("businesses", "capacity_level", value)
-var marketing_level: int: get: return _read("businesses", "marketing_level", 0); set(value): _write("businesses", "marketing_level", value)
-var player_price: int: get: return _read("businesses", "player_price", 110); set(value): _write("businesses", "player_price", value)
-var finished_goods: int: get: return _read("production", "finished_goods", 0); set(value): _write("production", "finished_goods", value)
-var last_sales: int: get: return _read("economy", "last_sales", 0); set(value): _write("economy", "last_sales", value)
-var last_profit: int: get: return _read("economy", "last_profit", 0); set(value): _write("economy", "last_profit", value)
-var total_profit: int: get: return _read("economy", "total_profit", 0); set(value): _write("economy", "total_profit", value)
-var relationship: int: get: return _read("competitors", "relationship", 15); set(value): _write("competitors", "relationship", value)
-var selected_rival: int: get: return _read("competitors", "selected_rival", 0); set(value): _write("competitors", "selected_rival", value)
-var selected_expansion: int: get: return _read("branches", "selected_expansion", 0); set(value): _write("branches", "selected_expansion", value)
-var supplier_choice: int: get: return _read("supply_chain", "supplier_choice", 0); set(value): _write("supply_chain", "supplier_choice", value)
-var contract_days: int: get: return _read("contracts", "contract_days", 0); set(value): _write("contracts", "contract_days", value)
-var contract_bonus: int: get: return _read("contracts", "contract_bonus", 0); set(value): _write("contracts", "contract_bonus", value)
-var acquisition_count: int: get: return _read("ownership", "acquisition_count", 0); set(value): _write("ownership", "acquisition_count", value)
-var transport_level: int: get: return _read("supply_chain", "transport_level", 1); set(value): _write("supply_chain", "transport_level", value)
-var transport_capacity: int: get: return _read("supply_chain", "transport_capacity", 40); set(value): _write("supply_chain", "transport_capacity", value)
-var selected_district: int: get: return _read("regions", "selected_district", 0); set(value): _write("regions", "selected_district", value)
-var message: String: get: return _read("company", "message", ""); set(value): _write("company", "message", value)
-var log_lines: Array: get: var logs = _read("company", "log_lines", []); return logs if logs is Array else []; set(value): _write("company", "log_lines", value)
+var reputation: int:
+    get:
+        return _read("player", "reputation", 0)
+    set(value):
+        _write("player", "reputation", value)
+var day: int:
+    get:
+        return _read("player", "day", 1)
+    set(value):
+        _write("player", "day", value)
+var debt: int:
+    get:
+        return _read("finance", "debt", 0)
+    set(value):
+        _write("finance", "debt", value)
+var loan_payment: int:
+    get:
+        return _read("finance", "loan_payment", 0)
+    set(value):
+        _write("finance", "loan_payment", value)
+var owned: bool:
+    get:
+        return _read("properties", "owned", false)
+    set(value):
+        _write("properties", "owned", value)
+var inspected: bool:
+    get:
+        return _read("properties", "inspected", false)
+    set(value):
+        _write("properties", "inspected", value)
+var restoration: int:
+    get:
+        return _read("properties", "restoration", 0)
+    set(value):
+        _write("properties", "restoration", value)
+var stage: String:
+    get:
+        return _read("properties", "stage", "Neglected")
+    set(value):
+        _write("properties", "stage", value)
+var business_open: bool:
+    get:
+        return _read("businesses", "business_open", false)
+    set(value):
+        _write("businesses", "business_open", value)
+var employees: int:
+    get:
+        return command_system.employee_system.get_active_employee_count() if command_system else 0
+    set(_value):
+        pass
+var capacity_level: int:
+    get:
+        return _read("businesses", "capacity_level", 1)
+    set(value):
+        _write("businesses", "capacity_level", value)
+var marketing_level: int:
+    get:
+        return _read("businesses", "marketing_level", 0)
+    set(value):
+        _write("businesses", "marketing_level", value)
+var player_price: int:
+    get:
+        return _read("businesses", "player_price", 110)
+    set(value):
+        _write("businesses", "player_price", value)
+var finished_goods: int:
+    get:
+        return _read("production", "finished_goods", 0)
+    set(value):
+        _write("production", "finished_goods", value)
+var last_sales: int:
+    get:
+        return _read("economy", "last_sales", 0)
+    set(value):
+        _write("economy", "last_sales", value)
+var last_profit: int:
+    get:
+        return _read("economy", "last_profit", 0)
+    set(value):
+        _write("economy", "last_profit", value)
+var total_profit: int:
+    get:
+        return _read("economy", "total_profit", 0)
+    set(value):
+        _write("economy", "total_profit", value)
+var relationship: int:
+    get:
+        return _read("competitors", "relationship", 15)
+    set(value):
+        _write("competitors", "relationship", value)
+var selected_rival: int:
+    get:
+        return _read("competitors", "selected_rival", 0)
+    set(value):
+        _write("competitors", "selected_rival", value)
+var selected_expansion: int:
+    get:
+        return _read("branches", "selected_expansion", 0)
+    set(value):
+        _write("branches", "selected_expansion", value)
+var supplier_choice: int:
+    get:
+        return _read("supply_chain", "supplier_choice", 0)
+    set(value):
+        _write("supply_chain", "supplier_choice", value)
+var contract_days: int:
+    get:
+        return _read("contracts", "contract_days", 0)
+    set(value):
+        _write("contracts", "contract_days", value)
+var contract_bonus: int:
+    get:
+        return _read("contracts", "contract_bonus", 0)
+    set(value):
+        _write("contracts", "contract_bonus", value)
+var acquisition_count: int:
+    get:
+        return _read("ownership", "acquisition_count", 0)
+    set(value):
+        _write("ownership", "acquisition_count", value)
+var transport_level: int:
+    get:
+        return _read("supply_chain", "transport_level", 1)
+    set(value):
+        _write("supply_chain", "transport_level", value)
+var transport_capacity: int:
+    get:
+        return _read("supply_chain", "transport_capacity", 40)
+    set(value):
+        _write("supply_chain", "transport_capacity", value)
+var selected_district: int:
+    get:
+        return _read("regions", "selected_district", 0)
+    set(value):
+        _write("regions", "selected_district", value)
+var message: String:
+    get:
+        return _read("company", "message", "")
+    set(value):
+        _write("company", "message", value)
+var log_lines: Array:
+    get:
+        var logs = _read("company", "log_lines", [])
+        return logs if logs is Array else []
+    set(value):
+        _write("company", "log_lines", value)
 func _ready():
     command_system = GameplayCommandSystem.new(); command_system.name = "GameplayCommandSystem"; add_child(command_system); command_system.initialize(); refresh_ui()
 func _process(_delta: float) -> void: pass
@@ -21851,7 +21728,7 @@ func _build_ui() -> void:
     title_label = _label("PROPERTY PORTFOLIO", 20, TEXT)
     status_label = _label("ASSET REGISTER", 10, ACCENT)
     scroll = ScrollContainer.new(); scroll.name = "PortfolioAssetScroll"; scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; panel.add_child(scroll)
-    list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); scroll.add_child(list_label)
+    list_label = _label("", 12, TEXT); list_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; list_label.custom_minimum_size = Vector2(0, 180); panel.remove_child(list_label); scroll.add_child(list_label)
     detail_label = _label("", 11, ACCENT)
     next_button = _button("NEXT"); next_button.pressed.connect(_next)
     sell_button = _button("SELL"); sell_button.pressed.connect(_sell)
@@ -22100,7 +21977,7 @@ func _draw() -> void:
     var accents := [GREEN, CYAN, PURPLE]
     for i in range(3):
         var alpha := 0.42 + 0.28 * sin(pulse * 1.7 + i * 1.8)
-        var tint := accents[i]
+        var tint: Color = accents[i]
         draw_circle(base + Vector2(i * 15, 0), 3.0, Color(tint.r, tint.g, tint.b, alpha))
 
 func _corner(origin: Vector2, direction: float, tint: Color) -> void:
@@ -25590,7 +25467,7 @@ func _refresh() -> void:
     save_button.disabled = false
     load_button.disabled = false
     var victory := get_node_or_null("/root/RenewVictorySystem")
-    var can_start := victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()
+    var can_start: bool = victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()
     new_button.disabled = not can_start
     if can_start:
         status.text = "Company data is ready. Save or restore the current campaign, or begin a new dynasty using your earned legacy bonuses."
@@ -34901,7 +34778,7 @@ func run() -> void:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 File: tests/test_runner.gd
-Lines: 185
+Lines: 186
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 extends SceneTree
 
@@ -34948,6 +34825,7 @@ func _new_game() -> Node:
     check(game != null, "integration Main scene instantiates")
     if game == null:
         return null
+    game.name = "Renew"
     root.add_child(game)
     await process_frame
     seed(123456)
@@ -34972,7 +34850,7 @@ func test_main_composition() -> void:
     check(game.command_system.business_system != null, "integration business system wired")
     check(game.command_system.business_system.production != null, "integration production owned by business system")
 
-    game.free()
+    game.queue_free()
     await process_frame
 
 func test_main_command_integration() -> void:
@@ -35086,7 +34964,7 @@ func test_main_command_integration() -> void:
 
     check(game.expansion.properties.size() == 3, "integration expansion state restored")
 
-    game.free()
+    game.queue_free()
     await process_frame
 
 
