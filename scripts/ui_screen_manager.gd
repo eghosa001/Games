@@ -176,7 +176,14 @@ func is_screen_open(screen_name: String) -> bool:
 
 func _ensure_close_button(screen: Node) -> void:
     if screen == null or not is_instance_valid(screen): return
-    if _find_close_button(screen) != null: return
+    var existing := _find_close_button(screen)
+    if existing != null:
+        existing.name = CLOSE_BUTTON_NAME
+        if not existing.pressed.is_connected(_on_close_pressed):
+            existing.pressed.connect(_on_close_pressed)
+        existing.tooltip_text = "Close"
+        existing.focus_mode = Control.FOCUS_NONE
+        return
     var host: Control = null
     if screen is CanvasLayer:
         for child in screen.get_children():
@@ -198,8 +205,11 @@ func _ensure_close_button(screen: Node) -> void:
     button.custom_minimum_size = Vector2(88, 44)
     button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
     button.position = Vector2(-104, 16)
-    button.pressed.connect(hide_all_screens)
+    button.pressed.connect(_on_close_pressed)
     host.add_child(button)
+
+func _on_close_pressed() -> void:
+    hide_all_screens()
 
 func _first_control_child(node: Node) -> Control:
     for child in node.get_children():
