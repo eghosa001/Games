@@ -93,19 +93,25 @@ func _call_screen_hook(node: Node, value: bool) -> void:
 func _set_node_visible(node: Node, value: bool) -> void:
     if node == null or not is_instance_valid(node): return
     if node is CanvasLayer:
+        node.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
         for child in node.get_children(): _set_node_visible(child, value)
     elif node is CanvasItem:
         node.visible = value
+        if node is Control:
+            node.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
     else:
+        node.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
         for child in node.get_children(): _set_node_visible(child, value)
     _call_screen_hook(node, value)
 
 func hide_all_screens() -> void:
+    _suppress_hooks = true
     _active_screen = null
     _active_screen_name = ""
     for node in _screen_nodes():
         _set_node_visible(node, false)
         _previous_visible[node.name] = false
+    _suppress_hooks = false
     var coordinator := _coordinator()
     if coordinator != null:
         coordinator.set_active_screen("")
