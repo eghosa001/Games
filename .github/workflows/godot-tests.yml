@@ -30,7 +30,7 @@ jobs:
           import re
           root=Path('.')
           scripts=root/'scripts'
-          removed=['RenewAutosave','RenewUIRegionCoordinator','RenewIdentitySystem','RenewReputationSystem','RenewAllianceControl','RenewDiplomacySystem','RenewDiplomacyAI','RenewDiplomacyEffects','RenewDiplomacyControl','RenewInfrastructureSystem','RenewCollectionSystem','RenewLiveOpsSystem','RenewHeadquartersSystem','RenewCorporateLegacy','RenewEmployeeSystem','RenewCompanyCultureSystem','RenewGlobalRankingSystem','RenewWorldEventSystem','RenewAnalyticsSystem','RenewCompetitorStateBridge','RenewCompetitorReactionSystem','RenewTechnologySystem','RenewResearchSystem','RenewProgressionSystem','RenewRegionSystem','RenewDynamicEventController','RenewSeasonalRestorationSystem','RenewHistorySystem','RenewHistoryEventBridge','RenewNewsSystem','RenewAmbientAudio','RenewUIScreenManager']
+          removed=['RenewAutosave','RenewUIRegionCoordinator','RenewIdentitySystem','RenewReputationSystem','RenewAllianceControl','RenewDiplomacySystem','RenewDiplomacyAI','RenewDiplomacyEffects','RenewDiplomacyControl','RenewInfrastructureSystem','RenewCollectionSystem','RenewLiveOpsSystem','RenewHeadquartersSystem','RenewCorporateLegacy','RenewEmployeeSystem','RenewCompanyCultureSystem','RenewGlobalRankingSystem','RenewWorldEventSystem','RenewAnalyticsSystem','RenewCompetitorStateBridge','RenewCompetitorReactionSystem','RenewTechnologySystem','RenewResearchSystem','RenewProgressionSystem','RenewRegionSystem','RenewDynamicEventController','RenewSeasonalRestorationSystem','RenewHistorySystem','RenewHistoryEventBridge','RenewNewsSystem','RenewAmbientAudio']
           for p in scripts.rglob('*.gd'):
               if p.name=='renew_services.gd': continue
               s=p.read_text(encoding='utf-8'); n=s
@@ -44,14 +44,14 @@ jobs:
           s=re.sub(r'func _process\(delta: float\) -> void:\n    pulse \+= delta\n    if size != viewport_size:\n        viewport_size = size\n    queue_redraw\(\)\n','func _process(_delta: float) -> void:\n    if size != viewport_size:\n        viewport_size = size\n        queue_redraw()\n',s)
           s=s.replace('var alpha := 0.42 + 0.28 * sin(pulse * 1.7 + i * 1.8)','var alpha := 0.58')
           p.write_text(s,encoding='utf-8')
-          # Make hidden UI screens inert and remove the duplicate rich backdrop node.
+          # Make secondary UI screens inert and remove the duplicate rich backdrop node.
           p=root/'scenes/Main.tscn'; s=p.read_text(encoding='utf-8')
           s=re.sub(r'\[node name="RichWorldScenery" type="Node2D" parent="World"\]\nz_index=-25\nscript=ExtResource\("42"\)\n','',s)
           names=['TechnologyPanel','HistoryPanel','NewsPanel','AlliancePanel','HeadquartersPanel','CollectionPanel','LiveOpsPanel','CustomerSegmentsUI','RenewDiplomacyUI','InfrastructurePanel','ContractPanel','EmployeePanel','DashboardPanel','FinancePanel','PortfolioPanel','CorporationsPanel','RegionsPanel','WorldOpportunitiesPanel','ProductionControlPanel','SupplyChainPanel','EmpireExpansionPanel','EmpireIntelligencePanel','SaveLoadPanel']
           for name in names:
               s=re.sub(r'(\[node name="'+re.escape(name)+r'"[^\n]*\n)',r'\1process_mode=4\n',s,count=1)
           p.write_text(s,encoding='utf-8')
-          # Remove the two timer-driven backdrop loops.
+          # Remove timer-driven backdrop loops.
           p=scripts/'premium_world_backdrop.gd'; s=p.read_text(encoding='utf-8')
           s=re.sub(r'var _time := 0\.0\n','',s)
           s=re.sub(r'func _process\(delta: float\) -> void:\n(?:    .*\n)+?\nfunc _draw','func _draw',s)
