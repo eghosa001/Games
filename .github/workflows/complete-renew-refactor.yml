@@ -1,0 +1,157 @@
+name: RENEW Complete Refactor
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'fix: service migration')
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      GODOT_VERSION: '4.7.2'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Refactor architecture and presentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 <<'PY'
+          from pathlib import Path
+          import re
+
+          root = Path('.')
+          scripts = root / 'scripts'
+          removed = [
+              'RenewAutosave','RenewUIRegionCoordinator','RenewIdentitySystem','RenewReputationSystem',
+              'RenewAllianceControl','RenewDiplomacySystem','RenewDiplomacyAI','RenewDiplomacyEffects',
+              'RenewDiplomacyControl','RenewInfrastructureSystem','RenewCollectionSystem','RenewLiveOpsSystem',
+              'RenewHeadquartersSystem','RenewCorporateLegacy','RenewEmployeeSystem','RenewCompanyCultureSystem',
+              'RenewGlobalRankingSystem','RenewWorldEventSystem','RenewAnalyticsSystem','RenewCompetitorStateBridge',
+              'RenewCompetitorReactionSystem','RenewTechnologySystem','RenewResearchSystem','RenewProgressionSystem',
+              'RenewRegionSystem','RenewDynamicEventController','RenewSeasonalRestorationSystem','RenewHistorySystem',
+              'RenewHistoryEventBridge','RenewNewsSystem','RenewAmbientAudio','RenewUIScreenManager'
+          ]
+          # Migrate all removed autoload references to the registry. Skip the registry itself.
+          for p in scripts.rglob('*.gd'):
+              if p.name == 'renew_services.gd':
+                  continue
+              s = p.read_text(encoding='utf-8')
+              n = s
+              for name in removed:
+                  n = re.sub(r'(?<![A-Za-z0-9_])' + re.escape(name) + r'(?![A-Za-z0-9_])', 'RenewServices.get_service("' + name + '")', n)
+              if n != s:
+                  p.write_text(n, encoding='utf-8')
+                  print('MIGRATED', p)
+
+          # Repair root lookup and remove the frame loop from the premium skin.
+          p = scripts / 'premium_ui_skin.gd'
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('get_node_or_null("/root/Ren/UI/MainHUD")', 'get_node_or_null("/root/Renew/UI/MainHUD")')
+          s = s.replace('var pulse := 0.0\n', '')
+          s = re.sub(r'func _process\(delta: float\) -> void:\n    pulse \+= delta\n    if size != viewport_size:\n        viewport_size = size\n    queue_redraw\(\)\n', 'func _process(_delta: float) -> void:\n    if size != viewport_size:\n        viewport_size = size\n        queue_redraw()\n', s)
+          s = s.replace('        var alpha := 0.42 + 0.28 * sin(pulse * 1.7 + i * 1.8)', '        var alpha := 0.58')
+          p.write_text(s, encoding='utf-8')
+
+          # Mobile must never hide world systems or force a destructive scale.
+          (scripts / 'mobile_ui_mobile_scale_fix.gd').write_text('''extends Node
+## RENEW responsive presentation guard.
+## Godot canvas_items stretching handles viewport sizing; this node never hides
+## gameplay/world layers and only reacts to actual viewport changes.
+var _last_size := Vector2.ZERO
+func _ready() -> void:
+    if get_viewport() != null and not get_viewport().size_changed.is_connected(_apply):
+        get_viewport().size_changed.connect(_apply)
+    call_deferred("_apply")
+func _apply() -> void:
+    var viewport := get_viewport()
+    if viewport == null: return
+    var size := viewport.get_visible_rect().size
+    if size == _last_size: return
+    _last_size = size
+    var layer := get_parent() as CanvasLayer
+    if layer != null: layer.scale = Vector2.ONE
+    var root := _find_root(layer)
+    if root != null: root.position = Vector2.ZERO
+func _find_root(layer: CanvasLayer) -> Control:
+    if layer == null: return null
+    for child in layer.get_children():
+        if child is Control: return child as Control
+    return null
+''', encoding='utf-8')
+
+          # Static premium world backdrop: one visual layer, one draw at initialization.
+          p = scripts / 'premium_world_backdrop.gd'
+          s = p.read_text(encoding='utf-8')
+          s = re.sub(r'var _time := 0\.0\n', '', s)
+          s = re.sub(r'func _process\(delta: float\) -> void:\n(?:    .*\n)+?\nfunc _draw', 'func _draw', s)
+          s = s.replace('    process_mode = Node.PROCESS_MODE_ALWAYS\n', '')
+          s = s.replace('        var p := fmod(_time * (0.028 + i * 0.004) + float(i) * 0.14, 1.0)', '        var p := float(i) / 7.0')
+          p.write_text(s, encoding='utf-8')
+          p = scripts / 'rich_world_scenery.gd'
+          if p.exists():
+              s = p.read_text(encoding='utf-8')
+              s = re.sub(r'func _process\([^\n]*\) -> void:\n(?:    .*\n)+?\n', '', s)
+              p.write_text(s, encoding='utf-8')
+
+          # Disable all secondary screens at startup; ScreenManager owns activation.
+          main = root / 'scenes' / 'Main.tscn'
+          s = main.read_text(encoding='utf-8')
+          s = re.sub(r'\[node name="RichWorldScenery" type="Node2D" parent="World"\]\nz_index=-25\nscript=ExtResource\("42"\)\n', '', s)
+          names = ['TechnologyPanel','HistoryPanel','NewsPanel','AlliancePanel','HeadquartersPanel','CollectionPanel','LiveOpsPanel','CustomerSegmentsUI','RenewDiplomacyUI','InfrastructurePanel','ContractPanel','EmployeePanel','DashboardPanel','FinancePanel','PortfolioPanel','CorporationsPanel','RegionsPanel','WorldOpportunitiesPanel','ProductionControlPanel','SupplyChainPanel','EmpireExpansionPanel','EmpireIntelligencePanel','SaveLoadPanel']
+          for name in names:
+              pat = r'(\[node name="' + re.escape(name) + r'"[^\n]*\n)'
+              s = re.sub(pat, r'\1process_mode=4\n', s, count=1)
+          main.write_text(s, encoding='utf-8')
+
+          # Global theme resource.
+          theme_dir = root / 'Assets' / 'Themes'
+          theme_dir.mkdir(parents=True, exist_ok=True)
+          (theme_dir / 'EmpireTheme.tres').write_text('''[gd_resource type="Theme" load_steps=7 format=3]\n\n[sub_resource type="StyleBoxFlat" id="Panel"]\nbg_color = Color(0.031373, 0.082353, 0.105882, 0.97)\nborder_width_left = 1\nborder_width_top = 1\nborder_width_right = 1\nborder_width_bottom = 1\nborder_color = Color(0.160784, 0.282353, 0.321569, 1)\ncorner_radius_top_left = 14\ncorner_radius_top_right = 14\ncorner_radius_bottom_right = 14\ncorner_radius_bottom_left = 14\nshadow_color = Color(0, 0, 0, 0.38)\nshadow_size = 8\nshadow_offset = Vector2(0, 3)\n\n[sub_resource type="StyleBoxFlat" id="Button"]\nbg_color = Color(0.05098, 0.133333, 0.168627, 0.96)\nborder_width_left = 1\nborder_width_top = 1\nborder_width_right = 1\nborder_width_bottom = 1\nborder_color = Color(0.160784, 0.282353, 0.321569, 1)\ncorner_radius_top_left = 11\ncorner_radius_top_right = 11\ncorner_radius_bottom_right = 11\ncorner_radius_bottom_left = 11\ncontent_margin_left = 13.0\ncontent_margin_right = 13.0\ncontent_margin_top = 8.0\ncontent_margin_bottom = 8.0\n\n[sub_resource type="StyleBoxFlat" id="ButtonHover"]\nbg_color = Color(0.105882, 0.180392, 0.207843, 1)\nborder_width_left = 1\nborder_width_top = 1\nborder_width_right = 1\nborder_width_bottom = 1\nborder_color = Color(0.94902, 0.776471, 0.360784, 1)\ncorner_radius_top_left = 11\ncorner_radius_top_right = 11\ncorner_radius_bottom_right = 11\ncorner_radius_bottom_left = 11\nshadow_color = Color(0.94902, 0.776471, 0.360784, 0.16)\nshadow_size = 8\n\n[sub_resource type="StyleBoxFlat" id="ButtonPressed"]\nbg_color = Color(0.94902, 0.776471, 0.360784, 1)\nborder_width_left = 1\nborder_width_top = 1\nborder_width_right = 1\nborder_width_bottom = 1\nborder_color = Color(1, 0.862745, 0.529412, 1)\ncorner_radius_top_left = 11\ncorner_radius_top_right = 11\ncorner_radius_bottom_right = 11\ncorner_radius_bottom_left = 11\n\n[sub_resource type="StyleBoxEmpty" id="Empty"]\n\n[sub_resource type="StyleBoxFlat" id="LineEdit"]\nbg_color = Color(0.023529, 0.062745, 0.078431, 0.96)\nborder_width_left = 1\nborder_width_top = 1\nborder_width_right = 1\nborder_width_bottom = 1\nborder_color = Color(0.160784, 0.282353, 0.321569, 1)\ncorner_radius_top_left = 9\ncorner_radius_top_right = 9\ncorner_radius_bottom_right = 9\ncorner_radius_bottom_left = 9\n\n[resource]\ndefault_font_size = 13\npanel = SubResource("Panel")\nButton/colors/font_color = Color(0.933333, 0.972549, 0.960784, 1)\nButton/colors/font_hover_color = Color(1, 1, 1, 1)\nButton/colors/font_pressed_color = Color(0.94902, 0.776471, 0.360784, 1)\nButton/colors/font_disabled_color = Color(0.552941, 0.662745, 0.682353, 1)\nButton/font_sizes/font_size = 12\nButton/styles/normal = SubResource("Button")\nButton/styles/hover = SubResource("ButtonHover")\nButton/styles/pressed = SubResource("ButtonPressed")\nButton/styles/focus = SubResource("Empty")\nButton/styles/disabled = SubResource("Button")\nLabel/colors/font_color = Color(0.933333, 0.972549, 0.960784, 1)\nLabel/font_sizes/font_size = 13\nLineEdit/colors/font_color = Color(0.933333, 0.972549, 0.960784, 1)\nLineEdit/font_sizes/font_size = 13\nLineEdit/styles/normal = SubResource("LineEdit")\n''', encoding='utf-8')
+
+          # Export permissions and release hygiene.
+          ep = root / 'export_presets.cfg'
+          s = ep.read_text(encoding='utf-8')
+          s = s.replace('permissions/internet=false', 'permissions/internet=true')
+          s = s.replace('permissions/access_network_state=false', 'permissions/access_network_state=true')
+          s = s.replace('permissions/access_wifi_state=false', 'permissions/access_wifi_state=true')
+          s = s.replace('gradle_build/use_gradle_build=false\n', '')
+          s = s.replace('exclude_filter=""', 'exclude_filter="full_source_code.txt"')
+          ep.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Validate Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O /tmp/godot.zip
+          mkdir -p "$HOME/godot"
+          7z x /tmp/godot.zip -o"$HOME/godot" >/dev/null
+          chmod +x "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          timeout 240s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+
+      - name: Run tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 360s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_runner.gd
+
+      - name: Commit all changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "fix: service migration and complete presentation pass"
+          git push origin HEAD:main
