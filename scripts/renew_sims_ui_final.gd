@@ -5,8 +5,42 @@ const INACTIVE_TAB := Color("102a32")
 const TAB_TEXT := Color("e7f2ef")
 const TAB_MUTED := Color("78949a")
 const HUD_REFRESH_INTERVAL := 0.20
+
 var _hud_refresh_accum := 0.0
-var _world_page := 0
+var _page := [0, 0, 0, 0]
+
+const PAGE_NAMES := [
+    ["OVERVIEW", "PROPERTY", "RECORDS"],
+    ["OPERATIONS", "PEOPLE", "COMMERCIAL", "FINANCE"],
+    ["NETWORK", "GROWTH", "CAPITAL", "TECHNOLOGY"],
+    ["REGIONAL MANAGEMENT", "OPERATIONS", "EMPIRE MANAGEMENT", "EVENTS"]
+]
+
+const PAGE_SUBTITLES := [
+    [
+        "Company overview and the next essential move.",
+        "Inspect, acquire, restore and operate the selected property.",
+        "Save, load and review company history and world news."
+    ],
+    [
+        "Production, inputs, pricing, upgrades and marketing.",
+        "Employees, headquarters and workforce management.",
+        "Customers, contracts and commercial negotiations.",
+        "Financing, collections and portfolio management."
+    ],
+    [
+        "Rivals, alliances, relationships and corporate network.",
+        "Regional expansion, acquisitions and strategic growth.",
+        "Loans, investors, shares, dividends and public markets.",
+        "Technology, progression and corporate identity."
+    ],
+    [
+        "Regions and infrastructure are managed here only.",
+        "World production and logistics commands.",
+        "Empire expansion and intelligence.",
+        "Missions and live operations."
+    ]
+]
 
 func _style_mode_buttons() -> void:
     if mode_buttons.is_empty(): return
@@ -98,8 +132,7 @@ func _layout_responsive() -> void:
 
 func _set_tab(index: int) -> void:
     active_tab = clampi(index, 0, 3)
-    if active_tab != 3:
-        _world_page = 0
+    _page[active_tab] = 0
     _refresh()
     _style_mode_buttons()
 
@@ -114,52 +147,85 @@ func _action(text: String, callback: Callable) -> void:
 func _action_hint(text: String) -> String:
     match text:
         "END DAY": return "Advance the simulation by one in-game day."
+        "BACK": return "Return to this sector's command hub."
+        "OVERVIEW": return "Return to the sector overview."
         "DASHBOARD": return "Open the company overview."
-        "ASSETS": return "Review properties, assets and holdings."
-        "FINANCE": return "Open financing and balance-sheet tools."
-        "DEALS": return "Review contracts and commercial deals."
-        "STAFF": return "Manage employees and executives."
-        "NETWORK": return "Open the corporate network."
-        "PACT": return "Open alliance management."
-        "TECH": return "Research and manage technology."
-        "WORLD": return "Open world news and developments."
-        "PAST": return "Review company history."
+        "PROPERTY MAP": return "Focus the property and district map."
+        "INSPECT": return "Inspect the selected property."
+        "ACQUIRE": return "Acquire the selected property."
+        "RESTORE": return "Continue restoring the selected property."
+        "SELL": return "Sell the selected property."
+        "LEASE": return "Lease the selected property."
+        "OPEN BUSINESS": return "Open the business at the selected property."
         "SAVE": return "Save your current company state."
         "LOAD": return "Load the latest saved company state."
-        "NEW COMPANY": return "Start a new dynasty after victory."
-        "REGIONS": return "Manage regional expansion and presence."
+        "PAST": return "Review company history."
+        "NEWS": return "Review current world news."
+        "BUY INPUTS": return "Purchase production inputs."
+        "IMPORT": return "Purchase international inputs."
+        "PRODUCE": return "Run the production command."
+        "UPGRADE": return "Upgrade the current business."
+        "MARKETING": return "Run a marketing campaign."
+        "PRICE": return "Change the current product price."
+        "STAFF": return "Manage employees."
+        "HIRE": return "Hire an employee."
+        "HQ": return "Manage headquarters upgrades and services."
+        "CUSTOMERS": return "Review customer segments and demand."
+        "DEALS": return "Review contracts and commercial deals."
+        "CONTRACT": return "Sign a commercial contract."
+        "HAGGLE": return "Negotiate the selected contract."
+        "EXCLUSIVE": return "Sign an exclusive contract."
+        "GOVT DEAL": return "Sign a government contract."
+        "BUILD DEAL": return "Sign a construction contract."
+        "EXPORT DEAL": return "Sign an export contract."
+        "FINANCE": return "Open financing tools."
+        "COLLECTIONS": return "Open collections management."
+        "PORTFOLIO": return "Review investments and holdings."
+        "NEXT RIVAL": return "Select the next rival."
+        "ALLIANCE": return "Make an alliance offer."
+        "RELATION": return "Improve an alliance relationship."
+        "COMPETE": return "Compete against an alliance."
+        "GOALS": return "Review victory progress."
+        "REPUTE": return "Review reputation status."
+        "SUPPLY DEAL": return "Propose a supply deal."
+        "NETWORK": return "Open the corporate network."
+        "PACT": return "Open alliance management."
+        "CORPORATIONS": return "Open corporation management."
+        "REGIONS": return "Open regional management."
+        "EXPANSION": return "Manage expansion businesses."
+        "ACQUISITIONS": return "Review and negotiate acquisitions."
+        "NEXT REGION": return "Select the next region."
+        "ESTABLISH": return "Establish regional presence."
+        "CHARTER BASIN": return "Charter the basin region."
+        "CHARTER VALLEY": return "Charter the valley region."
+        "TRADE ROUTE": return "Establish a trade route."
+        "INTELLIGENCE": return "Review empire intelligence."
+        "LOAN": return "Take a company loan."
+        "REPAY": return "Repay a company loan."
+        "INVESTOR": return "Request an investment."
+        "ACCEPT DEAL": return "Accept an investment deal."
+        "DECLINE DEAL": return "Decline an investment deal."
+        "INVEST BILL": return "Invest in a term opportunity."
+        "DIVIDEND": return "Pay a dividend."
+        "BUY SHARES": return "Buy rival shares."
+        "SELL SHARES": return "Sell rival shares."
+        "GO PUBLIC": return "Take the company public."
+        "CAP TABLE": return "Review the capitalization table."
+        "POWER": return "Review world corporate power."
+        "TECH": return "Open technology management."
+        "PROGRESSION": return "Review empire progression."
+        "IDENTITY": return "Review corporate identity."
+        "PRODUCTION": return "Open production command center."
+        "LOGISTICS": return "Manage supply chain and logistics."
         "INFRASTRUCTURE": return "Build and repair regional infrastructure."
         "MISSIONS": return "Review world opportunities and missions."
-        "PRODUCTION": return "Open the production command center."
-        "LOGISTICS": return "Manage supply chain and internal logistics."
-        "EXPANSION": return "Manage expansion businesses."
-        "INTELLIGENCE": return "Review empire intelligence and strategic signals."
-        "PROPERTY MAP": return "Focus the property and district map."
-        "HQ": return "Manage headquarters upgrades and corporate services."
-        "CUSTOMERS": return "Review customer segments and demand."
         "LIVE OPS": return "Review seasonal events and live operations."
-        "OPPORTUNITIES": return "Review strategic world opportunities."
-        "WORLD OVERVIEW": return "Return to the World command overview."
-        "OPERATIONS": return "Open production and logistics commands."
-        "EMPIRE": return "Open expansion and intelligence commands."
-        "EVENTS": return "Open missions and live operations."
+        "EMPIRE": return "Open empire management."
         _:
             return "Execute %s." % text.to_lower()
 
 func _tab_subtitle() -> String:
-    match active_tab:
-        0: return "Manage property, restoration and your first operating site."
-        1: return "Run production, staffing, pricing, contracts and finance."
-        2: return "Manage rivals, alliances, investment, shares and corporate power."
-        3:
-            match _world_page:
-                0: return "Choose a world domain. Regional infrastructure is hidden until Regional Management is opened."
-                1: return "Regional Management • regions and infrastructure."
-                2: return "Operations • production and logistics."
-                3: return "Empire Management • expansion and intelligence."
-                4: return "Events • missions and live operations."
-        _: return "Choose an action."
-    return "Choose an action."
+    return PAGE_SUBTITLES[active_tab][_page[active_tab]]
 
 func _mobile_context() -> String:
     if parent == null: return "PROPERTY • INITIALIZING"
@@ -167,37 +233,153 @@ func _mobile_context() -> String:
     var business := "OPEN" if bool(parent.business_open) else "CLOSED"
     return "PROPERTY %s • %d%% RESTORED • BUSINESS %s" % [ownership, int(parent.restoration), business]
 
+func _page_button(text: String, page: int) -> void:
+    _action(text, Callable(self, "_set_page").bind(page))
+
+func _back_button() -> void:
+    _action("BACK", Callable(self, "_set_page").bind(0))
+
+func _screen(text: String, screen_name: String) -> void:
+    _action(text, Callable(self, "_open_screen").bind(screen_name))
+
 func _refresh() -> void:
     super._refresh()
     if action_grid == null: return
-    if active_tab != 3: return
     _clear_action_grids()
-    action_title.text = "WORLD • " + ["OVERVIEW", "REGIONAL MANAGEMENT", "OPERATIONS", "EMPIRE MANAGEMENT", "EVENTS"][_world_page]
-    match _world_page:
-        0:
-            _action("REGIONS", Callable(self, "_set_world_page").bind(1))
-            _action("OPERATIONS", Callable(self, "_set_world_page").bind(2))
-            _action("EMPIRE", Callable(self, "_set_world_page").bind(3))
-            _action("EVENTS", Callable(self, "_set_world_page").bind(4))
-        1:
-            _action("WORLD OVERVIEW", Callable(self, "_set_world_page").bind(0))
-            _action("REGIONS", Callable(self, "_open_screen").bind("RegionsPanel"))
-            _action("INFRASTRUCTURE", Callable(self, "_open_screen").bind("InfrastructurePanel"))
-        2:
-            _action("WORLD OVERVIEW", Callable(self, "_set_world_page").bind(0))
-            _action("PRODUCTION", Callable(self, "_open_screen").bind("ProductionControlPanel"))
-            _action("LOGISTICS", Callable(self, "_open_screen").bind("SupplyChainPanel"))
-        3:
-            _action("WORLD OVERVIEW", Callable(self, "_set_world_page").bind(0))
-            _action("EXPANSION", Callable(self, "_open_screen").bind("EmpireExpansionPanel"))
-            _action("INTELLIGENCE", Callable(self, "_open_screen").bind("EmpireIntelligencePanel"))
-        4:
-            _action("WORLD OVERVIEW", Callable(self, "_set_world_page").bind(0))
-            _action("MISSIONS", Callable(self, "_open_screen").bind("WorldOpportunitiesPanel"))
-            _action("LIVE OPS", Callable(self, "_open_screen").bind("LiveOpsPanel"))
+    var page := _page[active_tab]
+    action_title.text = ["LIVE", "BUSINESS", "EMPIRE", "WORLD"][active_tab] + " • " + PAGE_NAMES[active_tab][page]
 
-func _set_world_page(page: int) -> void:
-    _world_page = clampi(page, 0, 4)
+    match active_tab:
+        0:
+            match page:
+                0:
+                    _screen("DASHBOARD", "DashboardPanel")
+                    _action("PROPERTY MAP", _focus_property_map)
+                    _page_button("PROPERTY", 1)
+                    _page_button("RECORDS", 2)
+                    _action("END DAY", parent.advance_day)
+                1:
+                    _back_button()
+                    _action("INSPECT", parent.inspect_property)
+                    _action("ACQUIRE", parent.acquire_property)
+                    _action("RESTORE", parent.restore_property)
+                    _action("SELL", parent.sell_property)
+                    _action("LEASE", parent.lease_property)
+                    _action("OPEN BUSINESS", parent.open_business)
+                2:
+                    _back_button()
+                    _action("SAVE", parent.save_game)
+                    _action("LOAD", parent.load_game)
+                    _screen("PAST", "HistoryPanel")
+                    _screen("NEWS", "NewsPanel")
+        1:
+            match page:
+                0:
+                    _page_button("OPERATIONS", 0)
+                    _page_button("PEOPLE", 1)
+                    _page_button("COMMERCIAL", 2)
+                    _page_button("FINANCE", 3)
+                1:
+                    _back_button()
+                    _action("BUY INPUTS", parent.buy_inputs)
+                    _action("IMPORT", parent.buy_international)
+                    _action("PRODUCE", parent.produce_goods)
+                    _action("UPGRADE", parent.upgrade_business)
+                    _action("MARKETING", parent.marketing_campaign)
+                    _action("PRICE", parent.change_price)
+                2:
+                    _back_button()
+                    _action("HIRE", parent.hire_employee)
+                    _screen("STAFF", "EmployeePanel")
+                    _screen("HQ", "HeadquartersPanel")
+                3:
+                    _back_button()
+                    _screen("CUSTOMERS", "CustomerSegmentsUI")
+                    _screen("DEALS", "ContractPanel")
+                    _action("CONTRACT", parent.sign_contract)
+                    _action("HAGGLE", parent.haggle_contract)
+                    _action("EXCLUSIVE", parent.sign_exclusive_contract)
+                    _action("GOVT DEAL", parent.sign_government_contract)
+                    _action("BUILD DEAL", parent.sign_construction_contract)
+                    _action("EXPORT DEAL", parent.sign_export_contract)
+                    _screen("FINANCE", "FinancePanel")
+                    _screen("COLLECTIONS", "CollectionPanel")
+                    _screen("PORTFOLIO", "PortfolioPanel")
+        2:
+            match page:
+                0:
+                    _page_button("NETWORK", 0)
+                    _page_button("GROWTH", 1)
+                    _page_button("CAPITAL", 2)
+                    _page_button("TECHNOLOGY", 3)
+                1:
+                    _back_button()
+                    _action("NEXT RIVAL", _next_rival)
+                    _action("ALLIANCE", parent.make_alliance_offer)
+                    _action("RELATION", parent.improve_alliance)
+                    _action("COMPETE", parent.compete_alliance)
+                    _action("GOALS", parent.victory_progress)
+                    _action("REPUTE", parent.reputation_status)
+                    _action("SUPPLY DEAL", parent.propose_supply_deal)
+                    _screen("CORPORATIONS", "CorporationsPanel")
+                    _screen("PACT", "AlliancePanel")
+                2:
+                    _back_button()
+                    _screen("REGIONS", "RegionsPanel")
+                    _action("EXPANSION", parent.buy_expansion)
+                    _action("UPGRADE EXPANSION", parent.upgrade_expansion)
+                    _action("TRANSPORT", parent.upgrade_transport)
+                    _action("NEXT REGION", parent.next_region)
+                    _action("ESTABLISH", parent.establish_region)
+                    _action("CHARTER BASIN", parent.charter_basin)
+                    _action("CHARTER VALLEY", parent.charter_valley)
+                    _action("TRADE ROUTE", parent.establish_trade_route)
+                    _action("ACQUISITIONS", parent.negotiate_selected_acquisition)
+                3:
+                    _back_button()
+                    _action("LOAN", parent.take_loan)
+                    _action("REPAY", parent.repay_loan)
+                    _action("INVESTOR", parent.request_investment)
+                    _action("ACCEPT DEAL", parent.accept_investment)
+                    _action("DECLINE DEAL", parent.decline_investment)
+                    _action("INVEST BILL", parent.invest_term)
+                    _action("DIVIDEND", parent.pay_dividend)
+                    _action("BUY SHARES", parent.buy_rival_shares)
+                    _action("SELL SHARES", parent.sell_rival_shares)
+                    _action("GO PUBLIC", parent.go_public)
+                    _action("CAP TABLE", parent.cap_table)
+                    _action("POWER", parent.world_power)
+                4:
+                    _back_button()
+                    _screen("TECH", "TechnologyPanel")
+                    _screen("PROGRESSION", "EmpireProgressionPanel")
+                    _screen("IDENTITY", "EmpireIdentityPanel")
+        3:
+            match page:
+                0:
+                    _page_button("REGIONAL MANAGEMENT", 0)
+                    _page_button("OPERATIONS", 1)
+                    _page_button("EMPIRE MANAGEMENT", 2)
+                    _page_button("EVENTS", 3)
+                1:
+                    _back_button()
+                    _screen("REGIONS", "RegionsPanel")
+                    _screen("INFRASTRUCTURE", "InfrastructurePanel")
+                2:
+                    _back_button()
+                    _screen("PRODUCTION", "ProductionControlPanel")
+                    _screen("LOGISTICS", "SupplyChainPanel")
+                3:
+                    _back_button()
+                    _screen("EXPANSION", "EmpireExpansionPanel")
+                    _screen("INTELLIGENCE", "EmpireIntelligencePanel")
+                4:
+                    _back_button()
+                    _screen("MISSIONS", "WorldOpportunitiesPanel")
+                    _screen("LIVE OPS", "LiveOpsPanel")
+
+func _set_page(page: int) -> void:
+    _page[active_tab] = clampi(page, 0, PAGE_NAMES[active_tab].size() - 1)
     _refresh()
 
 func _focus_property_map() -> void:
