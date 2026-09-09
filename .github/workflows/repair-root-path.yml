@@ -1,0 +1,48 @@
+name: One-shot runtime repair
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: ${{ github.event.head_commit.message != 'fix: harden bankruptcy root lookup' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Repair bankruptcy root lookup
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('scripts/bankruptcy_system.gd')
+          s = p.read_text()
+          old = 'func _game() -> Variant:\n    return get_node_or_null("/root/Game")'
+          new = '''func _game() -> Variant:
+    var scene := get_tree().current_scene
+    if scene != null:
+        return scene
+    return get_node_or_null("/root/Renew")'''
+          if old not in s:
+              raise SystemExit('Expected bankruptcy _game() implementation was not found')
+          p.write_text(s.replace(old, new, 1))
+          PY
+
+      - name: Validate repair
+        run: |
+          grep -q 'get_tree().current_scene' scripts/bankruptcy_system.gd
+          ! grep -q 'get_node_or_null("/root/Game")' scripts/bankruptcy_system.gd
+
+      - name: Commit repair and remove one-shot workflow
+        run: |
+          rm -f .github/workflows/repair-root-path.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add scripts/bankruptcy_system.gd .github/workflows/repair-root-path.yml
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: harden bankruptcy root lookup'
+          git push
