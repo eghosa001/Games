@@ -218,14 +218,6 @@ func is_screen_open(screen_name: String) -> bool:
 
 func _ensure_close_button(screen: Node) -> void:
     if screen == null or not is_instance_valid(screen): return
-    var existing := _find_close_button(screen)
-    if existing != null:
-        existing.name = CLOSE_BUTTON_NAME
-        if not existing.pressed.is_connected(_on_close_pressed):
-            existing.pressed.connect(_on_close_pressed)
-        existing.tooltip_text = "Close"
-        existing.focus_mode = Control.FOCUS_NONE
-        return
     var host: Control = null
     if screen is CanvasLayer:
         for child in screen.get_children():
@@ -237,6 +229,21 @@ func _ensure_close_button(screen: Node) -> void:
     else:
         host = _first_control_child(screen)
     if host == null: return
+
+    var existing := _find_close_button(screen)
+    if existing != null:
+        existing.name = CLOSE_BUTTON_NAME
+        existing.tooltip_text = "Close"
+        existing.focus_mode = Control.FOCUS_NONE
+        existing.mouse_filter = Control.MOUSE_FILTER_STOP
+        existing.z_index = 10000
+        existing.custom_minimum_size = Vector2(96, 46)
+        existing.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+        existing.position = Vector2(-112, 14)
+        if not existing.pressed.is_connected(_on_close_pressed):
+            existing.pressed.connect(_on_close_pressed)
+        return
+
     var button := Button.new()
     button.name = CLOSE_BUTTON_NAME
     button.text = "CLOSE"
@@ -244,9 +251,9 @@ func _ensure_close_button(screen: Node) -> void:
     button.focus_mode = Control.FOCUS_NONE
     button.mouse_filter = Control.MOUSE_FILTER_STOP
     button.z_index = 10000
-    button.custom_minimum_size = Vector2(88, 44)
+    button.custom_minimum_size = Vector2(96, 46)
     button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-    button.position = Vector2(-104, 16)
+    button.position = Vector2(-112, 14)
     button.pressed.connect(_on_close_pressed)
     host.add_child(button)
 
