@@ -1,6 +1,7 @@
 extends SceneTree
 
-# Unit test boundary: instantiate the authoritative SupplyChainSystem directly.
+# Unit test boundary: instantiate the authoritative SupplyChainSystem directly,
+# but mount it in the SceneTree because runtime modifiers are tree services.
 # Main/composed-game behavior is covered by integration and E2E suites.
 
 var passed := 0
@@ -29,6 +30,9 @@ func run() -> void:
 
     var economy = Economy.new()
     var chain = SupplyChain.new()
+    root.add_child(economy)
+    root.add_child(chain)
+    await process_frame
     chain.set_economy(economy)
 
     check(chain.SYSTEM_VERSION == 8, "Supply chain system version is current")
@@ -81,6 +85,8 @@ func run() -> void:
 
     var snapshot = chain.capture_state()
     var restored = SupplyChain.new()
+    root.add_child(restored)
+    await process_frame
     restored.set_economy(economy)
     restored.restore_state(snapshot)
     check(restored.stock("furniture") == chain.stock("furniture"), "Warehouse state survives save/restore")
@@ -116,5 +122,9 @@ func run() -> void:
     check(float(economy.resources["timber"]["stock"]) == timber_stock_before_capacity, "Warehouse overflow does not remove market stock")
     check(chain.stock("timber") == timber_warehouse_before_capacity, "Warehouse overflow does not add partial stock")
 
+    chain.queue_free()
+    restored.queue_free()
+    economy.queue_free()
+    await process_frame
     print("SUPPLY CHAIN SYSTEM RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
