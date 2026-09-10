@@ -21,6 +21,20 @@ func _init() -> void:
 func _state():
     return root.get_node_or_null("RenewGameState")
 
+func _system(node_name: String) -> Node:
+    var node := root.get_node_or_null(node_name)
+    if node != null:
+        return node
+    var services := root.get_node_or_null("RenewServices")
+    if services != null and services.has_method("get_service"):
+        node = services.get_service(node_name)
+        if node != null:
+            return node
+    var game := root.get_node_or_null("Renew")
+    if game != null:
+        node = game.get_node_or_null("Systems/" + node_name)
+    return node
+
 func _roster() -> Array:
     var state = _state()
     if state == null:
@@ -48,7 +62,7 @@ func _resource_stock() -> Dictionary:
     return stock if stock is Dictionary else {}
 
 func _history() -> Array:
-    var history = root.get_node_or_null("RenewHistorySystem")
+    var history = _system("RenewHistorySystem")
     if history == null:
         return []
     var timeline = history.get("timeline")
@@ -68,7 +82,7 @@ func _unique_history() -> bool:
     return true
 
 func _issue() -> Dictionary:
-    var news = root.get_node_or_null("RenewNewsSystem")
+    var news = _system("RenewNewsSystem")
     if news == null or not news.has_method("get_current_issue"):
         return {}
     var issue = news.get_current_issue()
@@ -119,7 +133,7 @@ func _check_day_60(state) -> void:
     check(int(state.get_value("economy", "cash", 0)) > -1000000000, "Day 60 growth remains bounded")
     check(_roster().size() >= 3, "Day 60 employee growth state remains valid")
     check(int(state.get_value("contracts", "contract_days", 0)) >= 0, "Day 60 contract state is valid")
-    var technology = root.get_node_or_null("RenewTechnologySystem")
+    var technology = _system("RenewTechnologySystem")
     check(technology != null, "Day 60 technology system remains available")
     if technology != null:
         check(technology.has_method("get_unlocked"), "Day 60 technology progression API remains available")
@@ -151,9 +165,9 @@ func _check_day_365(state) -> void:
         check(float(stock[key]) >= -0.0001, "Day 365 resource is never impossible negative: " + str(key))
     check(_roster().size() >= 1, "Day 365 employee data remains intact")
     check(_unique_history(), "Day 365 history contains no duplicate signatures")
-    var rivals = root.get_node_or_null("RenewCompetitorReactionSystem")
+    var rivals = _system("RenewCompetitorReactionSystem")
     check(rivals != null, "Day 365 competitor AI remains available")
-    var news = root.get_node_or_null("RenewNewsSystem")
+    var news = _system("RenewNewsSystem")
     check(news != null, "Day 365 NewsSystem remains available")
     var issue := _issue()
     check(issue.is_empty() or bool(issue.get("verified_only", false)), "Day 365 news remains verified-event-only")
