@@ -53,7 +53,7 @@ const PAGE_SUBTITLES := [
         "Regions and infrastructure are managed here only.",
         "World production and logistics commands.",
         "Empire expansion and intelligence.",
-        "Missions and live operations."
+        "Missions, seasonal events and live opportunities."
     ]
 ]
 
@@ -173,7 +173,7 @@ func _action_hint(text: String) -> String:
         "OPEN BUSINESS": return "Open the business at the selected property."
         "SAVE": return "Save your current company state."
         "LOAD": return "Load the latest saved company state."
-        "PAST": return "Review company history."
+        "HISTORY": return "Review company history."
         "NEWS": return "Review current world news."
         "BUY INPUTS": return "Purchase production inputs."
         "IMPORT": return "Purchase international inputs."
@@ -187,23 +187,23 @@ func _action_hint(text: String) -> String:
         "CUSTOMERS": return "Review customer segments and demand."
         "DEALS": return "Review contracts and commercial deals."
         "CONTRACT": return "Sign a commercial contract."
-        "HAGGLE": return "Negotiate the selected contract."
+        "NEGOTIATE": return "Negotiate the selected contract."
         "EXCLUSIVE": return "Sign an exclusive contract."
-        "GOVT DEAL": return "Sign a government contract."
-        "BUILD DEAL": return "Sign a construction contract."
+        "GOVERNMENT": return "Sign a government contract."
+        "CONSTRUCTION": return "Sign a construction contract."
         "EXPORT DEAL": return "Sign an export contract."
         "FINANCE": return "Open financing tools."
         "COLLECTIONS": return "Open collections management."
         "PORTFOLIO": return "Review investments and holdings."
         "NEXT RIVAL": return "Select the next rival."
         "ALLIANCE": return "Make an alliance offer."
-        "RELATION": return "Improve an alliance relationship."
+        "RELATIONS": return "Improve an alliance relationship."
         "COMPETE": return "Compete against an alliance."
         "GOALS": return "Review victory progress."
-        "REPUTE": return "Review reputation status."
+        "REPUTATION": return "Review reputation status."
         "SUPPLY DEAL": return "Propose a supply deal."
         "NETWORK": return "Open the corporate network."
-        "PACT": return "Open alliance management."
+        "ALLIANCES": return "Open alliance management."
         "CORPORATIONS": return "Open corporation management."
         "REGIONS": return "Open regional management."
         "EXPANSION": return "Manage expansion businesses."
@@ -227,15 +227,15 @@ func _action_hint(text: String) -> String:
         "SELL SHARES": return "Sell rival shares."
         "GO PUBLIC": return "Take the company public."
         "CAP TABLE": return "Review the capitalization table."
-        "POWER": return "Review world corporate power."
-        "TECH": return "Open technology management."
+        "WORLD POWER": return "Review world corporate power."
+        "TECHNOLOGY": return "Open technology management."
         "PROGRESSION": return "Review empire progression."
         "IDENTITY": return "Review corporate identity."
         "PRODUCTION": return "Open production command center."
         "LOGISTICS": return "Manage supply chain and logistics."
         "INFRASTRUCTURE": return "Build and repair regional infrastructure."
         "MISSIONS": return "Review world opportunities and missions."
-        "LIVE OPS": return "Review seasonal events and live operations."
+        "LIVE EVENTS": return "Review seasonal events and live opportunities."
         _:
             return "Execute %s." % text.to_lower()
 
@@ -287,7 +287,7 @@ func _refresh() -> void:
                     _back_button()
                     _action("SAVE", parent.save_game)
                     _action("LOAD", parent.load_game)
-                    _screen("PAST", "HistoryPanel")
+                    _screen("HISTORY", "HistoryPanel")
                     _screen("NEWS", "NewsPanel")
         1:
             match page:
@@ -321,12 +321,12 @@ func _refresh() -> void:
                     _back_button()
                     _page_button("NEGOTIATION", 6)
                     _action("CONTRACT", parent.sign_contract)
-                    _action("HAGGLE", parent.haggle_contract)
+                    _action("NEGOTIATE", parent.haggle_contract)
                     _action("EXCLUSIVE", parent.sign_exclusive_contract)
                 6:
                     _back_button()
-                    _action("GOVT DEAL", parent.sign_government_contract)
-                    _action("BUILD DEAL", parent.sign_construction_contract)
+                    _action("GOVERNMENT", parent.sign_government_contract)
+                    _action("CONSTRUCTION", parent.sign_construction_contract)
                     _action("EXPORT DEAL", parent.sign_export_contract)
                 7:
                     _back_button()
@@ -354,18 +354,18 @@ func _refresh() -> void:
                     _action("NEXT RIVAL", _next_rival)
                     _action("COMPETE", parent.compete_alliance)
                     _action("GOALS", parent.victory_progress)
-                    _action("REPUTE", parent.reputation_status)
+                    _action("REPUTATION", parent.reputation_status)
                 2:
                     _back_button()
                     _page_button("CORPORATE", 3)
                     _action("ALLIANCE", parent.make_alliance_offer)
-                    _action("RELATION", parent.improve_alliance)
+                    _action("RELATIONS", parent.improve_alliance)
                     _action("SUPPLY DEAL", parent.propose_supply_deal)
                 3:
                     _back_button()
                     _screen("NETWORK", "CorporationsPanel")
-                    _screen("PACT", "AlliancePanel")
-                    _action("POWER", parent.world_power)
+                    _screen("ALLIANCES", "AlliancePanel")
+                    _action("WORLD POWER", parent.world_power)
                     _action("GOALS", parent.victory_progress)
                 4:
                     _back_button()
@@ -399,7 +399,7 @@ func _refresh() -> void:
                     _action("DIVIDEND", parent.pay_dividend)
                 9:
                     _back_button()
-                    _screen("TECH", "TechnologyPanel")
+                    _screen("TECHNOLOGY", "TechnologyPanel")
                     _screen("PROGRESSION", "EmpireProgressionPanel")
                     _screen("IDENTITY", "EmpireIdentityPanel")
         3:
@@ -424,7 +424,7 @@ func _refresh() -> void:
                 4:
                     _back_button()
                     _screen("MISSIONS", "WorldOpportunitiesPanel")
-                    _screen("LIVE OPS", "LiveOpsPanel")
+                    _screen("LIVE EVENTS", "LiveOpsPanel")
 
 func _set_page(page: int) -> void:
     _page[active_tab] = clampi(page, 0, PAGE_NAMES[active_tab].size() - 1)
