@@ -41,38 +41,68 @@ const SERVICE_PATHS := {
 func _ready() -> void:
     call_deferred("_boot_services")
 
-func _boot_services() -> void:
-    var scene := get_tree().current_scene
+func _scene_root() -> Node:
+    var tree := get_tree()
+    if tree == null:
+        return null
+    var scene := tree.current_scene
+    if scene != null:
+        return scene
+    # Headless/integration runners may attach Main directly to the SceneTree
+    # instead of assigning current_scene. Production lookups should remain
+    # resilient to that lifecycle ordering as well.
+    return tree.root.get_node_or_null("Renew")
+
+func _systems_root(create_if_missing: bool = false) -> Node:
+    var scene := _scene_root()
     if scene == null:
-        return
+        return null
     var systems := scene.get_node_or_null("Systems")
-    if systems == null:
+    if systems == null and create_if_missing:
         systems = Node.new()
         systems.name = "Systems"
         scene.add_child(systems)
+    return systems
+
+func _create_service(service_name: String, systems: Node) -> Node:
+    if systems == null or not SERVICE_PATHS.has(service_name):
+        return null
+    var existing := systems.get_node_or_null(service_name)
+    if existing != null:
+        _services[service_name] = existing
+        return existing
+    var path: String = SERVICE_PATHS[service_name]
+    if not ResourceLoader.exists(path):
+        push_warning("RENEW service script missing: %s" % path)
+        return null
+    var node := Node.new()
+    node.name = service_name
+    node.set_script(load(path))
+    systems.add_child(node)
+    _services[service_name] = node
+    return node
+
+func _boot_services() -> void:
+    var systems := _systems_root(true)
+    if systems == null:
+        return
     for service_name in SERVICE_PATHS.keys():
-        var existing := systems.get_node_or_null(service_name)
-        if existing != null:
-            _services[service_name] = existing
-            continue
-        var path: String = SERVICE_PATHS[service_name]
-        if not ResourceLoader.exists(path):
-            push_warning("RENEW service script missing: %s" % path)
-            continue
-        var node := Node.new()
-        node.name = service_name
-        node.set_script(load(path))
-        systems.add_child(node)
-        _services[service_name] = node
+        _create_service(service_name, systems)
 
 func get_service(service_name: String) -> Node:
     var node: Node = _services.get(service_name)
     if node != null and is_instance_valid(node):
         return node
-    var scene := get_tree().current_scene
-    if scene != null:
-        node = scene.get_node_or_null("Systems/" + service_name)
+
+    var systems := _systems_root(false)
+    if systems != null:
+        node = systems.get_node_or_null(service_name)
         if node != null:
             _services[service_name] = node
             return node
-    return null
+
+    # If the initial deferred boot ran before Main existed, recover lazily on
+    # first lookup rather than leaving every domain service unavailable for
+    # the lifetime of the process.
+    systems = _systems_root(true)
+    return _create_service(service_name, systems)
