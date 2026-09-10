@@ -18,7 +18,6 @@ const SERVICE_PATHS := {
     "RenewCollectionSystem": "res://scripts/collection_system.gd",
     "RenewLiveOpsSystem": "res://scripts/liveops_system.gd",
     "RenewHeadquartersSystem": "res://scripts/headquarters_system.gd",
-    "RenewCorporateLegacy": "res://scripts/corporate_legacy_system.gd",
     "RenewEmployeeSystem": "res://scripts/employee_system.gd",
     "RenewCompanyCultureSystem": "res://scripts/company_culture_system.gd",
     "RenewGlobalRankingSystem": "res://scripts/global_ranking_system.gd",
