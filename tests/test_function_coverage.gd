@@ -33,6 +33,12 @@ func run() -> void:
         if instance == null:
             check(instance != null, "script instantiates: " + path)
             continue
+        # Query helpers in production systems are allowed to consult root-level
+        # infrastructure/services. Mount Node fixtures so smoke calls exercise
+        # the same lifecycle contract as runtime instead of producing false
+        # absolute-path errors from detached Nodes.
+        if instance is Node:
+            root.add_child(instance)
         for signature in _declared_functions(source):
             functions_checked += 1
             var method_name: String = signature.name
@@ -41,9 +47,10 @@ func run() -> void:
             # scene-dependent methods are deliberately validated by presence.
             if instance.has_method(method_name) and signature.required_args == 0 and _safe_query_smoke(method_name):
                 smoke_checked += 1
-                var result = instance.call(method_name)
+                instance.call(method_name)
                 check(instance.has_method(method_name), "smoke callable: %s::%s" % [path, method_name])
-        if instance is Node: instance.free()
+        if instance is Node:
+            instance.free()
     print("RENEW FUNCTION COVERAGE: %d passed, %d failed" % [passed, failed])
     print("Scripts: %d | Functions: %d | Query smoke calls: %d" % [scripts_checked, functions_checked, smoke_checked])
     for failure in failures: print("FAILED: " + failure)
