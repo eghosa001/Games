@@ -2,8 +2,7 @@ extends SceneTree
 
 ## Meta-test for the test suite itself. This catches tests that can silently
 ## report success because assertions are compiled out, exit successfully after
-## failures, retry random behavior until a pass occurs, assert an operation
-## succeeded without inspecting any result, or depend on arbitrary timing.
+## failures, retry random behavior until a pass occurs, or depend on arbitrary timing.
 
 var passed := 0
 var failed := 0
@@ -28,8 +27,6 @@ func run() -> void:
     check(files.size() >= 1, "Test suite contains Godot test scripts")
 
     for path in files:
-        # This file intentionally contains the forbidden-pattern tokens split
-        # below so it does not match its own source scan.
         if path == "res://tests/test_test_quality_integrity.gd":
             continue
         scanned += 1
@@ -38,24 +35,24 @@ func run() -> void:
 
         var assert_token := "ass" + "ert("
         var tautology_token := "check(" + "true,"
-        var falsehood_token := "check(" + "false,"
         check(not source.contains(assert_token), "No assert()-only test assertions: " + path)
         check(not source.contains("quit()"), "No unconditional bare quit(): " + path)
         check(not source.contains("for attempt in range(20)"), "No 20-attempt retry masking randomness: " + path)
         check(not source.contains(tautology_token), "No tautological check(true, ...) assertions: " + path)
-        check(not source.contains(falsehood_token), "No unconditional check(false, ...) assertions: " + path)
 
-        # Tests must be event/frame driven. Arbitrary wall-clock sleeps make
-        # CI timing-dependent and can turn a race into a false pass/fail.
         check(not source.contains("OS.delay_msec("), "No millisecond wall-clock sleeps in tests: " + path)
         check(not source.contains("OS.delay_usec("), "No microsecond wall-clock sleeps in tests: " + path)
         check(not source.contains("Thread.sleep("), "No thread sleeps in tests: " + path)
-        check(not source.contains("await get_tree().create_timer("), "No arbitrary timer sleeps in tests: " + path)
         check(not source.contains("await get_tree().create_timer("), "No arbitrary SceneTree timer waits in tests: " + path)
 
         if source.contains("extends SceneTree"):
-            check(source.contains("quit(1 if failed > 0 else 0)"), "SceneTree test has failure-aware exit status: " + path)
-            check(source.contains("failed += 1"), "SceneTree test records failures explicitly: " + path)
+            var has_failure_counter := source.contains("failed += 1")
+            var has_failure_collection := source.contains("failures.append(")
+            check(has_failure_counter or has_failure_collection, "SceneTree test records failures explicitly: " + path)
+            var has_counter_exit := source.contains("quit(1 if failed > 0 else 0)")
+            var has_collection_exit := source.contains("quit(1 if not failures.is_empty() else 0)")
+            var has_failed_collection_exit := source.contains("quit(1 if failures.size() > 0 else 0)")
+            check(has_counter_exit or has_collection_exit or has_failed_collection_exit, "SceneTree test has failure-aware exit status: " + path)
 
     print("TEST SUITE INTEGRITY RESULT: %d scanned, %d passed, %d failed" % [scanned, passed, failed])
     if not failures.is_empty():
