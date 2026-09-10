@@ -17,7 +17,7 @@ env:
 
 jobs:
   local-fast:
-    runs-on: [self-hosted, Windows]
+    runs-on: self-hosted
     timeout-minutes: 90
     steps:
       - name: Checkout
