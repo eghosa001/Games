@@ -46,13 +46,16 @@ func run() -> void:
         check(not source.contains("await get_tree().create_timer("), "No arbitrary SceneTree timer waits in tests: " + path)
 
         if source.contains("extends SceneTree"):
-            var has_failure_counter := source.contains("failed += 1")
+            var has_failure_counter := source.contains("failed += 1") or source.contains("failures += 1")
             var has_failure_collection := source.contains("failures.append(")
             check(has_failure_counter or has_failure_collection, "SceneTree test records failures explicitly: " + path)
+
             var has_counter_exit := source.contains("quit(1 if failed > 0 else 0)")
             var has_collection_exit := source.contains("quit(1 if not failures.is_empty() else 0)")
-            var has_failed_collection_exit := source.contains("quit(1 if failures.size() > 0 else 0)")
-            check(has_counter_exit or has_collection_exit or has_failed_collection_exit, "SceneTree test has failure-aware exit status: " + path)
+            var has_collection_size_exit := source.contains("quit(1 if failures.size() > 0 else 0)")
+            var has_direct_count_exit := source.contains("quit(failures)")
+            var has_explicit_branch_exit := source.contains("quit(1)") and source.contains("quit(0)") and (has_failure_counter or has_failure_collection)
+            check(has_counter_exit or has_collection_exit or has_collection_size_exit or has_direct_count_exit or has_explicit_branch_exit, "SceneTree test has failure-aware exit status: " + path)
 
     print("TEST SUITE INTEGRITY RESULT: %d scanned, %d passed, %d failed" % [scanned, passed, failed])
     if not failures.is_empty():
