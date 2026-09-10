@@ -22,7 +22,8 @@ func _state():
     return root.get_node_or_null("RenewGameState")
 
 func _service(name: String):
-    return RenewServices.get_service(name)
+    var services = root.get_node_or_null("RenewServices")
+    return services.get_service(name) if services != null else null
 
 func _roster() -> Array:
     var state = _state()
