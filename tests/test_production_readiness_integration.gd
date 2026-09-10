@@ -122,7 +122,7 @@ func await_operational() -> void:
         await process_frame
 
 func test_cross_system_gameplay_flow() -> void:
-    if not await_game_ready():
+    if not await await_game_ready():
         check(false, "Cross-system flow has a live Main scene")
         return
     check(game.command_system != null, "Gameplay command boundary is live")
@@ -149,10 +149,10 @@ func test_cross_system_gameplay_flow() -> void:
     check(bool(game.business_open), "Business system opens after restoration")
 
     var employees_before: Variant = state.get_value("employees", "roster", [])
-    var employee_count_before := employees_before.size() if employees_before is Array else 0
+    var employee_count_before: int = employees_before.size() if employees_before is Array else 0
     game.hire_employee()
     var employees_after: Variant = state.get_value("employees", "roster", [])
-    var employee_count_after := employees_after.size() if employees_after is Array else 0
+    var employee_count_after: int = employees_after.size() if employees_after is Array else 0
     check(employee_count_after >= employee_count_before, "Hiring path remains state-safe")
 
     var finished_before := int(state.get_value("production", "finished_goods", 0))
