@@ -7,7 +7,13 @@ var employee_system = EmployeeSystem.new()
 
 func _ready() -> void:
     add_child(state_adapter); add_child(employee_system); sync_roster()
-func _culture(): return get_node_or_null("/root/RenewCompanyCultureSystem")
+func _service(service_name:String):
+    var registry=get_node_or_null("/root/RenewServices")
+    if registry!=null and registry.has_method("get_service"):
+        var node=registry.get_service(service_name)
+        if node!=null:return node
+    return get_node_or_null("/root/"+service_name)
+func _culture(): return _service("RenewCompanyCultureSystem")
 func _culture_effect(name:String, default_value:float=1.0)->float:
     var culture = _culture()
     if culture != null and culture.has_method("get_effects"):
@@ -44,14 +50,13 @@ func hire_employee()->Dictionary:
         state_adapter.message(str(result.get("message","Unable to hire employee.")))
         return {"ok":false,"message":str(result.get("message","Unable to hire employee."))}
     var actual_cost:=preview_cost
-    if actual_cost != preview_cost:
-        employee_system.fire_employee(str(result["employee"]["id"]),day); state_adapter.message("Hiring cost changed; the candidate was not hired."); sync_roster()
-        return {"ok":false,"message":"Hiring cost changed; the candidate was not hired."}
     var spend: Dictionary = state_adapter.spend(actual_cost,"employee hiring")
     if not bool(spend.get("ok",false)):
         employee_system.fire_employee(str(result["employee"]["id"]),day); state_adapter.message("Hiring cost changed and available cash is insufficient."); sync_roster()
         return {"ok":false,"message":"Hiring cost changed and available cash is insufficient."}
-    sync_roster(); state_adapter.set_value("player","reputation",int(state_adapter.get_value("player","reputation",0))+1); state_adapter.log_message("HIRING: employee %d joined (-$%s)."%[employee_system.get_active_employee_count(),state_adapter.money(actual_cost)]); state_adapter.message("Employee hired. More capacity, higher daily wages."); var _rs=get_node_or_null("/root/RenewReputationSystem");if _rs!=null and _rs.has_method("adjust"):_rs.adjust("employee",2)
+    sync_roster(); state_adapter.set_value("player","reputation",int(state_adapter.get_value("player","reputation",0))+1); state_adapter.log_message("HIRING: employee %d joined (-$%s)."%[employee_system.get_active_employee_count(),state_adapter.money(actual_cost)]); state_adapter.message("Employee hired. More capacity, higher daily wages.")
+    var reputation=_service("RenewReputationSystem")
+    if reputation!=null and reputation.has_method("adjust"):reputation.adjust("employee",2)
     return {"ok":true,"employee":result.get("employee",{}),"cost":actual_cost}
 func appoint_executive(employee_id:String)->Dictionary:
     var day:=int(state_adapter.get_value("player","day",1))
@@ -92,7 +97,9 @@ func assign_employee(employee_id:String,assignment:String)->void:
 func fire_employee(employee_id:String)->void:
     var result=employee_system.fire_employee(employee_id,int(state_adapter.get_value("player","day",1)))
     if not bool(result.get("ok",false)): state_adapter.message(str(result.get("message","Dismissal failed."))); return
-    sync_roster(); state_adapter.message(str(result.get("message","Employee dismissed."))); var _rsf=get_node_or_null("/root/RenewReputationSystem");if _rsf!=null and _rsf.has_method("adjust"):_rsf.adjust("employee",-4)
+    sync_roster(); state_adapter.message(str(result.get("message","Employee dismissed.")))
+    var reputation=_service("RenewReputationSystem")
+    if reputation!=null and reputation.has_method("adjust"):reputation.adjust("employee",-4)
 func daily_update(company_performance:int=0)->Dictionary:
     var result:=employee_system.daily_update(int(state_adapter.get_value("player","day",1)),company_performance)
     var culture = _culture()
