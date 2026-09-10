@@ -30,7 +30,7 @@ func _check_day() -> void:
     var day: int = int(scene.get("day"))
     if day == last_day: return
     last_day = day
-    var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
+    var diplomacy = RenewServices.get_service("RenewDiplomacySystem")
     if diplomacy == null: return
     for treaty in diplomacy.list_treaties("active"):
         _apply(treaty, day)
