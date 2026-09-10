@@ -54,23 +54,56 @@ jobs:
           exit "$status"
 
       - name: Run mobile QA automation
-        run: timeout 300s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/mobile_qa_test.gd
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p test_artifacts/fast-logs
+          set +e
+          timeout 300s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/mobile_qa_test.gd 2>&1 | tee test_artifacts/fast-logs/mobile-qa.log
+          status=${PIPESTATUS[0]}
+          set -e
+          exit "$status"
 
       - name: Run full fast suite
         shell: bash
         run: |
-          set -euo pipefail
+          set -u
+          mkdir -p test_artifacts/fast-logs
+          failures=0
+          failed_tests=()
           for t in tests/test_*.gd tests/integration/test_*.gd tests/release/test_*.gd; do
             [ -f "$t" ] || continue
             case "$t" in
               *test_long_soak.gd|*test_extreme_soak.gd) continue ;;
             esac
             echo "===== $t ====="
-            timeout 180s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script "res://$t"
+            log="test_artifacts/fast-logs/$(echo "$t" | tr '/' '_' | sed 's/\.gd$/.log/')"
+            set +e
+            timeout 180s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script "res://$t" 2>&1 | tee "$log"
+            status=${PIPESTATUS[0]}
+            set -e
+            if [ "$status" -ne 0 ]; then
+              failures=$((failures + 1))
+              failed_tests+=("$t")
+              echo "FAILED: $t (exit $status)"
+            fi
           done
+          if [ "$failures" -ne 0 ]; then
+            printf 'Fast-suite failures (%d):\n' "$failures"
+            printf ' - %s\n' "${failed_tests[@]}"
+            exit 1
+          fi
 
       - name: Run strict visual quality gate under Xvfb
-        run: timeout 600s xvfb-run -a "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --path . --script res://tests/test_quality_gate.gd
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p test_artifacts/fast-logs
+          set +e
+          timeout 600s xvfb-run -a "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --path . --script res://tests/test_quality_gate.gd 2>&1 | tee test_artifacts/fast-logs/visual-quality-gate.log
+          status=${PIPESTATUS[0]}
+          set -e
+          exit "$status"
 
       - name: Verify tests did not modify tracked source
         shell: bash
