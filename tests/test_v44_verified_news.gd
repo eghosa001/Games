@@ -17,12 +17,28 @@ func check(ok: bool, label: String) -> void:
         push_error("FAIL: " + label)
 
 func run() -> void:
-    var history = root.get_node_or_null("RenewHistorySystem")
-    var news = root.get_node_or_null("RenewNewsSystem")
-    check(history != null and news != null, "History and news systems available")
-    if history == null or news == null:
+    var scene = load("res://scenes/Main.tscn")
+    check(scene != null, "Main scene loads with verified news")
+    if scene == null:
         quit(1)
         return
+    var game = scene.instantiate()
+    root.add_child(game)
+    current_scene = game
+    await process_frame
+    await process_frame
+
+    var history = RenewServices.get_service("RenewHistorySystem")
+    var news = RenewServices.get_service("RenewNewsSystem")
+    check(history != null and news != null, "History and news systems available")
+    if history == null or news == null:
+        game.free()
+        quit(1)
+        return
+    if history.has_method("restore_state"):
+        history.restore_state({})
+    if news.has_method("restore_state"):
+        news.restore_state({})
     var lines := [
         "CORPORATE WAR: Apex Materials raids Northstar Logistics in a hostile takeover bid.",
         "EVENT: World event — energy_crisis",
@@ -56,14 +72,7 @@ func run() -> void:
     var total := (issue.get("stories", []) as Array).size() + (again.get("stories", []) as Array).size()
     check(total > 0, "Issues regenerate")
 
-    var scene = load("res://scenes/Main.tscn")
-    check(scene != null, "Main scene loads with verified news")
-    if scene != null:
-        var game = scene.instantiate()
-        root.add_child(game)
-        await process_frame
-        await process_frame
-        game.free()
-        await process_frame
+    game.free()
+    await process_frame
     print("V44 VERIFIED NEWS RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
