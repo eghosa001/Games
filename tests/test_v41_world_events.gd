@@ -82,10 +82,11 @@ func run() -> void:
     if scene != null:
         var game = scene.instantiate()
         root.add_child(game)
+        current_scene = game
         await process_frame
         await process_frame
-        var autoload = root.get_node_or_null("RenewWorldEventSystem")
-        check(autoload != null and not (autoload.get("events") as Dictionary).is_empty(), "Live trigger table seeded")
+        var live_world = RenewServices.get_service("RenewWorldEventSystem")
+        check(live_world != null and not (live_world.get("events") as Dictionary).is_empty(), "Live trigger table seeded")
         game.free()
         await process_frame
     restored.queue_free()
