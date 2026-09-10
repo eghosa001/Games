@@ -36,9 +36,10 @@ func run() -> void:
         return
     if state.has_method("clear"):
         state.clear()
-    var liveops = RenewServices.get_service("RenewLiveOpsSystem")
-    var world = RenewServices.get_service("RenewWorldEventSystem")
-    var tech = RenewServices.get_service("RenewTechnologySystem")
+    var services = root.get_node_or_null("RenewServices")
+    var liveops = services.get_service("RenewLiveOpsSystem") if services != null else null
+    var world = services.get_service("RenewWorldEventSystem") if services != null else null
+    var tech = services.get_service("RenewTechnologySystem") if services != null else null
     check(liveops != null and world != null and tech != null, "LiveOps, world and tech systems available")
     if liveops == null or world == null or tech == null:
         game.free()
