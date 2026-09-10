@@ -6,7 +6,6 @@ var _services: Dictionary = {}
 
 const SERVICE_PATHS := {
     "RenewAutosave": "res://scripts/autosave.gd",
-    "RenewUIRegionCoordinator": "res://scripts/ui_region_coordinator.gd",
     "RenewIdentitySystem": "res://scripts/identity_system.gd",
     "RenewReputationSystem": "res://scripts/reputation_system.gd",
     "RenewAllianceControl": "res://scripts/alliance_control_system.gd",
