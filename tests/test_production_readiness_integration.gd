@@ -208,7 +208,7 @@ func test_edge_cases() -> void:
         var roster_after: Variant = state.get_value("employees", "roster", [])
         check(roster_after is Array, "Employee dismissal edge case preserves roster shape")
     else:
-        check(true, "Employee dismissal edge case has a safe roster fallback")
+        check(roster is Array and roster.size() <= 1, "Employee dismissal edge case has a valid small-roster fallback")
 
     var snapshot: Dictionary = state.capture()
     check(snapshot.has("domains"), "State capture retains domain container after edge cases")
