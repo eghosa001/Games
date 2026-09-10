@@ -95,6 +95,7 @@ func _button(text: String) -> Button:
     var button := Button.new()
     button.text = text
     button.focus_mode = Control.FOCUS_NONE
+    button.clip_text = true
     button.custom_minimum_size = Vector2(0, 46)
     panel.add_child(button)
     return button
@@ -147,7 +148,7 @@ func _layout() -> void:
     primary_button.position = Vector2(side + (action_width + gap) * 2.0, y)
     primary_button.size = Vector2(action_width, 46)
     for button in [close_button, notices_button, primary_button]:
-        button.add_theme_font_size_override("font_size", 10 if compact else 11)
+        button.add_theme_font_size_override("font_size", 9 if compact else 11)
 
 func _refresh(_force: bool) -> void:
     var state = _state()
