@@ -28,8 +28,9 @@ func run() -> void:
     await process_frame
     await process_frame
 
-    var history = RenewServices.get_service("RenewHistorySystem")
-    var news = RenewServices.get_service("RenewNewsSystem")
+    var services = root.get_node_or_null("RenewServices")
+    var history = services.get_service("RenewHistorySystem") if services != null else null
+    var news = services.get_service("RenewNewsSystem") if services != null else null
     check(history != null and news != null, "History and news systems available")
     if history == null or news == null:
         game.free()
