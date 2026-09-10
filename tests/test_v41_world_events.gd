@@ -85,7 +85,8 @@ func run() -> void:
         current_scene = game
         await process_frame
         await process_frame
-        var live_world = RenewServices.get_service("RenewWorldEventSystem")
+        var services = root.get_node_or_null("RenewServices")
+        var live_world = services.get_service("RenewWorldEventSystem") if services != null else null
         check(live_world != null and not (live_world.get("events") as Dictionary).is_empty(), "Live trigger table seeded")
         game.free()
         await process_frame
