@@ -2,14 +2,21 @@ extends SceneTree
 
 ## RENEW production-readiness integration gate.
 ## This gate is intentionally cross-system: it checks that the finished 2D game
-## composes its major economic systems through live autoloads/Main commands,
-## that persistence exposes the same domains, and that the active scene contains
-## no 3D gameplay dependency. It does not fabricate soft-launch metrics.
+## composes its major economic systems through live infrastructure autoloads,
+## scene-owned domain services and Main commands, that persistence exposes the
+## same domains, and that the active scene contains no 3D gameplay dependency.
+## It does not fabricate soft-launch metrics.
 
 const REQUIRED_AUTOLOADS := {
     "RenewGameState": "res://scripts/game_state.gd",
     "RenewFinanceSystem": "res://scripts/finance_system_fixed.gd",
     "RenewProductionSystem": "res://scripts/production_system.gd",
+    "RenewContractSystem": "res://scripts/contract_system.gd",
+    "RenewAllianceSystem": "res://scripts/alliance_v1_system.gd",
+    "RenewServices": "res://scripts/renew_services.gd"
+}
+
+const REQUIRED_SERVICES := {
     "RenewEmployeeSystem": "res://scripts/employee_system.gd",
     "RenewRegionSystem": "res://scripts/region_system.gd",
     "RenewInfrastructureSystem": "res://scripts/infrastructure_system.gd",
@@ -78,11 +85,20 @@ func test_2d_runtime_contract() -> void:
     current_scene = game
     await process_frame
     await process_frame
+    await process_frame
 
     check(game.get_node_or_null("World") != null, "2D world root exists")
     check(game.get_node_or_null("Systems") != null, "System composition root exists")
     check(game.get_node_or_null("UI") != null, "UI composition root exists")
     check(game.get_node_or_null("UI/MainHUD") != null, "Primary management HUD exists")
+
+    var services := root.get_node_or_null("RenewServices")
+    check(services != null and services.has_method("get_service"), "Scene service registry is live")
+    if services != null and services.has_method("get_service"):
+        for service_name in REQUIRED_SERVICES:
+            var path: String = REQUIRED_SERVICES[service_name]
+            check(FileAccess.file_exists(path), "Service source exists: " + path)
+            check(services.get_service(service_name) != null, "Scene service is live: " + service_name)
 
     var forbidden_3d := 0
     var stack: Array[Node] = [game]
