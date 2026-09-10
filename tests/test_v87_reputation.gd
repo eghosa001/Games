@@ -47,7 +47,7 @@ func run() -> void:
     check(int(state.get_value("player", "reputation", 0)) >= 0, "Headline never negative")
     rep.adjust("investor", 500)
     check(int(rep.dimensions().get("investor", -1)) == 100, "Dimensions cap at one hundred")
-    check(str(rep.status_text()).find("REPUTE") >= 0, "Status renders")
+    check(str(rep.status_text()).find("REPUTATION") >= 0, "Status renders with clear terminology")
 
     var scene = load("res://scenes/Main.tscn")
     check(scene != null, "Main scene loads for reputation wiring")
@@ -67,15 +67,17 @@ func run() -> void:
             game.restore_property()
             guard += 1
             await process_frame
-        var auto = root.get_node_or_null("RenewReputationSystem")
-        check(float(auto.dimensions().get("environmental", 0.0)) > 40.0, "Green restoration lifts the Green dimension")
-        var emp_before := float(auto.dimensions().get("employee", 0.0))
-        game.choose_business_purpose(0)
-        game.open_business()
-        game.hire_employee()
-        check(float(auto.dimensions().get("employee", 0.0)) > emp_before, "Hiring lifts the Workplace dimension")
+        var live_rep = RenewServices.get_service("RenewReputationSystem")
+        check(live_rep != null, "Live reputation service resolves")
+        if live_rep != null:
+            check(float(live_rep.dimensions().get("environmental", 0.0)) > 40.0, "Green restoration lifts the Green dimension")
+            var emp_before := float(live_rep.dimensions().get("employee", 0.0))
+            game.choose_business_purpose(0)
+            game.open_business()
+            game.hire_employee()
+            check(float(live_rep.dimensions().get("employee", 0.0)) > emp_before, "Hiring lifts the Workplace dimension")
         game.command_system.reputation_status()
-        check(str(game.command_system._state_value("company", "message", "")).find("REPUTE") >= 0, "Repute command reports")
+        check(str(game.command_system._state_value("company", "message", "")).find("REPUTATION") >= 0, "Reputation command reports")
         game.free()
         await process_frame
     rep.queue_free()
