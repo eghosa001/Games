@@ -34,10 +34,12 @@ func run() -> void:
         quit(1)
         return
     check(game.has_method("charter_valley"), "Main exposes charter_valley")
-    var catalog = root.get_node_or_null("RenewRegionSystem")
-    if catalog == null:
-        catalog = game.get_node_or_null("Systems/RegionSystem")
+    var catalog = RenewServices.get_service("RenewRegionSystem")
     check(catalog != null, "Region catalog resolves")
+    if catalog == null:
+        game.free()
+        quit(1)
+        return
     game.cash = 300000
     state.set_value("player", "reputation", 20)
     var controller: Node = game.get_node_or_null("World/RegionController")
