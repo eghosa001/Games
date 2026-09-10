@@ -72,8 +72,9 @@ func run() -> void:
         var dock: Variant = hud.get("action_dock")
         if dock is Control and (dock as Control).visible:
             var clear := true
+            var dock_top := (dock as Control).get_global_rect().position.y
             for slot in slots:
-                if ((slot as Dictionary)["rect"] as Rect2).end.y > (dock as Control).position.y:
+                if ((slot as Dictionary)["rect"] as Rect2).end.y > dock_top:
                     clear = false
             check(clear, "Map stays clear of the command dock")
     var sig_before: String = str(map._signature())
