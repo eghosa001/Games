@@ -9,18 +9,33 @@ const RelationshipCommandSystem=preload("res://scripts/relationship_command_syst
 const ExpansionCommandSystem=preload("res://scripts/expansion_command_system.gd")
 const SaveSystem=preload("res://scripts/save_system.gd")
 var property_system=PropertySystem.new();var business_system=BusinessSystem.new();var employee_system=EmployeeCommandSystem.new();var finance_system=FinanceCommandSystem.new();var supply_system=SupplyCommandSystem.new();var contract_system=ContractCommandSystem.new();var relationship_system=RelationshipCommandSystem.new();var expansion_system=ExpansionCommandSystem.new();var technology_system=null;var competitor_reactions=null
+func _service(service_name:String):
+    var node=get_node_or_null("/root/"+service_name)
+    if node!=null:return node
+    var registry=get_node_or_null("/root/RenewServices")
+    if registry!=null and registry.has_method("get_service"):
+        node=registry.get_service(service_name)
+        if node!=null:return node
+    var tree=get_tree()
+    var scene=tree.current_scene if tree!=null else null
+    if scene!=null:
+        node=scene.get_node_or_null("Systems/"+service_name)
+        if node!=null:return node
+    return null
+func _refresh_domain_services()->void:
+    if technology_system==null or not is_instance_valid(technology_system):technology_system=_service("RenewTechnologySystem")
+    if competitor_reactions==null or not is_instance_valid(competitor_reactions):competitor_reactions=_service("RenewCompetitorReactionSystem")
+    if competitor_reactions!=null:competitor_reactions.set_rivals(relationship_system.rivals)
 func _ready()->void:
     add_child(property_system);add_child(business_system);add_child(employee_system);add_child(finance_system);add_child(supply_system);add_child(contract_system);add_child(relationship_system);add_child(expansion_system)
-    technology_system=get_node_or_null("/root/RenewTechnologySystem")
     business_system.economy=supply_system.economy;business_system.employee_system=employee_system;business_system.supply_chain.set_economy(supply_system.economy);supply_system.set_chain(business_system.supply_chain);supply_system.rivals=relationship_system.rivals
-    competitor_reactions=get_node_or_null("/root/RenewCompetitorReactionSystem")
-    if competitor_reactions!=null:competitor_reactions.set_rivals(relationship_system.rivals)
+    _refresh_domain_services()
 func _state_value(domain:String,key:String,default_value):var state=get_node_or_null("/root/RenewGameState");return default_value if state==null else state.get_value(domain,key,default_value)
 func _set_state(domain:String,key:String,value)->void:var state=get_node_or_null("/root/RenewGameState");if state!=null:state.set_value(domain,key,value)
 func _log(text:String)->void:
     var logs=_state_value("company","log_lines",[]);if not logs is Array:logs=[];logs=logs.duplicate(true);logs.append(text);if logs.size()>100:logs.pop_front();_set_state("company","log_lines",logs)
 func initialize()->void:
-    randomize();relationship_system.rivals._normalize();expansion_system.initialize();employee_system.sync_roster()
+    randomize();relationship_system.rivals._normalize();expansion_system.initialize();employee_system.sync_roster();_refresh_domain_services()
     if competitor_reactions!=null:competitor_reactions.set_rivals(relationship_system.rivals);competitor_reactions.prime_player_state(_simulation_state())
     if _state_value("company","log_lines",[]).is_empty():_log("Opportunity discovered: an abandoned warehouse in a growing district.")
 func inspect_property()->void:property_system.inspect_property()
@@ -102,19 +117,19 @@ func found_new_company()->Dictionary:
     if not bool(result.get("ok",false)):_set_state("company","message",str(result.get("message","A new dynasty cannot begin yet.")))
     return result
 func identity_status()->void:
-    var identity=get_node_or_null("/root/RenewIdentitySystem")
+    var identity=_service("RenewIdentitySystem")
     if identity==null or not identity.has_method("status_text"):_set_state("company","message","Identities are unavailable.");return
     _set_state("company","message",str(identity.status_text()))
 func reputation_status()->void:
-    var rep=get_node_or_null("/root/RenewReputationSystem")
+    var rep=_service("RenewReputationSystem")
     if rep==null or not rep.has_method("status_text"):_set_state("company","message","Reputation detail is unavailable.");return
     _set_state("company","message",str(rep.status_text()))
 func world_power()->void:
-    var ranking=get_node_or_null("/root/RenewGlobalRankingSystem")
+    var ranking=_service("RenewGlobalRankingSystem")
     if ranking==null or not ranking.has_method("world_power_text"):_set_state("company","message","World power is unavailable.");return
     _set_state("company","message",str(ranking.world_power_text()))
 func check_notifications()->void:
-    var news=get_node_or_null("/root/RenewNewsSystem")
+    var news=_service("RenewNewsSystem")
     if news==null or not news.has_method("read_notifications"):_set_state("company","message","Notifications are unavailable.");return
     var result:Dictionary=news.read_notifications();var total:=int(result.get("unread",0))
     if total<=0:_set_state("company","message","NOTICES: caught up. No unread developments.");return
@@ -150,11 +165,13 @@ func accept_investment()->void:finance_system.accept_investment()
 func decline_investment()->void:finance_system.decline_investment()
 func invest_term()->void:finance_system.invest_term()
 func research_technology(id:String)->void:
+    _refresh_domain_services()
     if technology_system==null:return
     if not bool(_state_value("businesses","business_open",false)):_set_state("company","message","Open an operating business before researching technology.");return
     if not technology_system.research(id):return
     _simulate_elapsed_days(int(technology_system.get_last_research_days()))
 func research_next_technology()->void:
+    _refresh_domain_services()
     if technology_system==null:return
     if not bool(_state_value("businesses","business_open",false)):_set_state("company","message","Open an operating business before researching technology.");return
     if not technology_system.research_next():return
@@ -195,6 +212,7 @@ func _reconcile_books_once()->Dictionary:
     return finance.reconcile_books()
 func _money_text(amount:int)->String:return str(amount)
 func advance_day()->void:
+    _refresh_domain_services()
     var simulation=get_node_or_null("/root/RenewSimulationSystem");if simulation==null:_set_state("company","message","SimulationSystem is unavailable.");return
     var repair:=_reconcile_books_once();var transaction:=_capture_daily_transaction()
     if not bool(transaction.get("ok",false)):_set_state("company","message",str(transaction.get("message","Daily transaction could not start.")));return
@@ -216,7 +234,7 @@ func advance_day()->void:
     var victory=get_node_or_null("/root/RenewVictorySystem")
     if victory!=null and victory.has_method("check_victory"):victory.check_victory()
     if victory!=null and victory.has_method("maybe_endgame_crisis"):victory.maybe_endgame_crisis()
-    var identity=get_node_or_null("/root/RenewIdentitySystem")
+    var identity=_service("RenewIdentitySystem")
     if identity!=null and identity.has_method("evaluate"):identity.evaluate()
     if bool(repair.get("repaired",false)):_set_state("company","message","BOOKS RECONCILED: one-time repair plugged $%s into retained earnings. The save advances again."%_money_text(int(abs(float(repair.get("plugged",0.0))))));_log("BOOKS RECONCILED: one-time repair plugged $%s into retained earnings."%_money_text(int(abs(float(repair.get("plugged",0.0))))))
 func _events():
@@ -237,5 +255,6 @@ func load_game()->void:
     var state=get_node_or_null("/root/RenewGameState");if state!=null:state.restore(snapshot)
     var roster=_state_value("employees","roster",[]);if roster is Array:employee_system.employee_system.restore_state({"employees":roster})
     var saved_warehouse=_state_value("supply_chain","resource_sites",{});if saved_warehouse is Dictionary:business_system.supply_chain.restore_state({"warehouse":saved_warehouse})
+    _refresh_domain_services()
     if competitor_reactions!=null:competitor_reactions.set_rivals(relationship_system.rivals)
     employee_system.sync_roster();_set_state("company","message","Game loaded.")
