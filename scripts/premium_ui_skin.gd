@@ -19,6 +19,10 @@ const PINK := Color("ed7fbd")
 const TEXT := Color("eef8f5")
 const MUTED := Color("8da9ae")
 
+const PRIMARY_SECTORS := ["LIVE", "BUSINESS", "EMPIRE", "WORLD"]
+const PRIMARY_GLYPHS := ["●", "▣", "◆", "◎"]
+const PRIMARY_TINTS := [GREEN, ORANGE, PURPLE, CYAN]
+
 var hud_root: Control
 var viewport_size := Vector2.ZERO
 var _theme: Theme
@@ -100,9 +104,9 @@ func _sector_accent(label: String) -> Color:
         return GREEN
     if t.contains("EMPLOYEE") or t.contains("HIRE") or t.contains("PEOPLE"):
         return PINK
-    if t.contains("PRODUCE") or t.contains("INPUT") or t.contains("OPERAT") or t.contains("INFRA"):
+    if t.contains("PRODUCE") or t.contains("INPUT") or t.contains("OPERAT") or t.contains("INFRA") or t.contains("BUSINESS"):
         return ORANGE
-    if t.contains("NETWORK") or t.contains("ALLIANCE") or t.contains("RIVAL") or t.contains("RELATION"):
+    if t.contains("NETWORK") or t.contains("ALLIANCE") or t.contains("RIVAL") or t.contains("RELATION") or t.contains("EMPIRE"):
         return PURPLE
     if t.contains("WORLD") or t.contains("MARKET") or t.contains("REGION") or t.contains("EXPANSION"):
         return CYAN
@@ -110,6 +114,8 @@ func _sector_accent(label: String) -> Color:
         return BLUE
     if t.contains("NEWS") or t.contains("HISTORY") or t.contains("EVENT"):
         return GOLD
+    if t.contains("LIVE") or t.contains("DASHBOARD") or t.contains("PROPERTY"):
+        return GREEN
     return EDGE
 
 func _style_panel(panel: Panel) -> void:
@@ -172,8 +178,8 @@ func _draw() -> void:
     _corner(Vector2(s.x - 18, top_h + 14), -26.0, CYAN)
 
     # Secondary screens are deliberately presented as focused workspaces.
-    # Hide the persistent navigation chrome while one is open so the player
-    # sees the active task rather than multiple competing command surfaces.
+    # Hide persistent navigation chrome while one is open so the player sees
+    # the active task rather than multiple competing command surfaces.
     var screen_manager := get_tree().root.get_node_or_null("RenewUIScreenManager")
     var secondary_screen_open: bool = screen_manager != null and screen_manager.get_active_screen_name() != ""
     if secondary_screen_open:
@@ -193,27 +199,24 @@ func _draw_mobile_command_dock(s: Vector2, dock_h: float) -> void:
     var dock := Rect2(10, y + 7, s.x - 20, dock_h - 14)
     draw_style_box(_chrome_box(Color(DEEP.r, DEEP.g, DEEP.b, 0.96), EDGE, 20), dock)
     draw_line(Vector2(dock.position.x + 26, y + 7), Vector2(dock.end.x - 26, y + 7), Color(GOLD.r, GOLD.g, GOLD.b, 0.58), 1.0)
-    var labels := ["⌂", "◇", "▣", "◈", "◎"]
-    var names := ["HOME", "ASSETS", "OPS", "NETWORK", "WORLD"]
-    var tints := [GREEN, CYAN, ORANGE, PURPLE, BLUE]
-    var slot := (s.x - 40.0) / 5.0
-    for i in range(5):
+    var slot := (s.x - 40.0) / float(PRIMARY_SECTORS.size())
+    for i in range(PRIMARY_SECTORS.size()):
+        var tint: Color = PRIMARY_TINTS[i]
         var cx := 20.0 + slot * float(i) + slot * 0.5
         draw_circle(Vector2(cx, y + 31), 20.0, Color(SURFACE_2.r, SURFACE_2.g, SURFACE_2.b, 0.92))
-        draw_arc(Vector2(cx, y + 31), 20.0, -2.7, -0.45, 18, Color(tints[i].r, tints[i].g, tints[i].b, 0.72), 2.0)
-        draw_string(ThemeDB.fallback_font, Vector2(cx - 9, y + 37), labels[i], HORIZONTAL_ALIGNMENT_CENTER, 18, 16, tints[i])
-        draw_string(ThemeDB.fallback_font, Vector2(cx - 35, y + 61), names[i], HORIZONTAL_ALIGNMENT_CENTER, 70, 8, MUTED)
+        draw_arc(Vector2(cx, y + 31), 20.0, -2.7, -0.45, 18, Color(tint.r, tint.g, tint.b, 0.72), 2.0)
+        draw_string(ThemeDB.fallback_font, Vector2(cx - 9, y + 37), PRIMARY_GLYPHS[i], HORIZONTAL_ALIGNMENT_CENTER, 18, 16, tint)
+        draw_string(ThemeDB.fallback_font, Vector2(cx - 42, y + 61), PRIMARY_SECTORS[i], HORIZONTAL_ALIGNMENT_CENTER, 84, 8, MUTED)
 
 func _draw_desktop_command_rail(s: Vector2) -> void:
     var rail := Rect2(16, 104, 190, minf(s.y - 128, 470.0))
     draw_style_box(_chrome_box(Color(DEEP.r, DEEP.g, DEEP.b, 0.82), EDGE, 18), rail)
     draw_string(ThemeDB.fallback_font, rail.position + Vector2(16, 28), "COMMAND DECK", HORIZONTAL_ALIGNMENT_LEFT, 150, 10, MUTED)
     draw_line(rail.position + Vector2(16, 38), rail.position + Vector2(174, 38), Color(GOLD.r, GOLD.g, GOLD.b, 0.42), 1.0)
-    var legend := [["FINANCE", GREEN], ["PEOPLE", PINK], ["OPS", ORANGE], ["WORLD", CYAN], ["NETWORK", PURPLE]]
-    for i in range(legend.size()):
-        var tint: Color = legend[i][1]
-        draw_circle(rail.position + Vector2(20, 60 + i * 22), 4.0, tint)
-        draw_string(ThemeDB.fallback_font, rail.position + Vector2(31, 64 + i * 22), legend[i][0], HORIZONTAL_ALIGNMENT_LEFT, 120, 9, MUTED)
+    for i in range(PRIMARY_SECTORS.size()):
+        var tint: Color = PRIMARY_TINTS[i]
+        draw_circle(rail.position + Vector2(20, 60 + i * 24), 4.0, tint)
+        draw_string(ThemeDB.fallback_font, rail.position + Vector2(31, 64 + i * 24), PRIMARY_SECTORS[i], HORIZONTAL_ALIGNMENT_LEFT, 120, 9, MUTED)
 
 func _chrome_box(bg: Color, border: Color, radius: int) -> StyleBoxFlat:
     var box := StyleBoxFlat.new()
