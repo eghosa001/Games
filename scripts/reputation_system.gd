@@ -43,7 +43,7 @@ func status_text() -> String:
     var bits: Array = []
     for dim in DIMS:
         bits.append("%s %d" % [str(DIM_TITLES[dim]), int(dims[dim])])
-    return "REPUTE (headline %d) — %s." % [_headline(), ", ".join(bits)]
+    return "REPUTATION (headline %d) — %s." % [_headline(), ", ".join(bits)]
 
 func _headline() -> int:
     var state: Variant = _state()
