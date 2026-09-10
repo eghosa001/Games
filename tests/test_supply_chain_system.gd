@@ -1,7 +1,7 @@
 extends SceneTree
 
 # Unit test boundary: instantiate the authoritative SupplyChainSystem directly,
-# but mount it in the SceneTree because runtime modifiers are tree services.
+# mounting only the Node system in the SceneTree because runtime modifiers are tree services.
 # Main/composed-game behavior is covered by integration and E2E suites.
 
 var passed := 0
@@ -30,7 +30,6 @@ func run() -> void:
 
     var economy = Economy.new()
     var chain = SupplyChain.new()
-    root.add_child(economy)
     root.add_child(chain)
     await process_frame
     chain.set_economy(economy)
@@ -124,7 +123,6 @@ func run() -> void:
 
     chain.queue_free()
     restored.queue_free()
-    economy.queue_free()
     await process_frame
     print("SUPPLY CHAIN SYSTEM RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
