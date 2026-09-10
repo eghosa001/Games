@@ -1,8 +1,9 @@
 extends SceneTree
 
 ## Pass 5: new screens stay inside small viewports with touch-sized
-## controls, and re-layout when the viewport changes. Geometry is measured in
-## global viewport space because these panels sit beneath CanvasLayers.
+## controls, and re-layout when the viewport changes. The outer panel is
+## measured in viewport space; child controls are measured against their
+## owning panel so CanvasLayer transforms cannot mix coordinate spaces.
 var passed := 0
 var failed := 0
 
@@ -21,6 +22,11 @@ func _inside_viewport(child: Control, viewport_size: Vector2) -> bool:
     if child == null or not child.visible:
         return true
     return Rect2(Vector2.ZERO, viewport_size).encloses(child.get_global_rect())
+
+func _inside_panel(child: Control, panel: Control) -> bool:
+    if child == null or panel == null or not child.visible:
+        return true
+    return panel.get_global_rect().encloses(child.get_global_rect())
 
 func run() -> void:
     var scene = load("res://scenes/Main.tscn")
@@ -66,10 +72,10 @@ func run() -> void:
                 var button := child as Button
                 if button.custom_minimum_size.y < 44.0:
                     small += 1
-                if not _inside_viewport(button, viewport_size):
+                if not _inside_panel(button, box):
                     outside += 1
         check(small == 0, screen_name + " buttons meet touch sizing")
-        check(outside == 0, screen_name + " visible controls stay inside viewport")
+        check(outside == 0, screen_name + " visible controls stay inside panel")
     manager.hide_all_screens()
     root.size = Vector2i(1280, 720)
     await process_frame
