@@ -10,10 +10,25 @@ on:
       - 'Assets/**'
       - 'scenes/**'
       - 'scripts/**'
+      - 'tests/**'
+      - '.github/workflows/android-export.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'project.godot'
+      - 'export_presets.cfg'
+      - 'Assets/**'
+      - 'scenes/**'
+      - 'scripts/**'
+      - 'tests/**'
       - '.github/workflows/android-export.yml'
 
 permissions:
   contents: read
+
+concurrency:
+  group: renew-android-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   GODOT_VERSION: 4.7.2
@@ -25,42 +40,66 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+
       - name: Install Android build dependencies
         run: |
+          set -euo pipefail
           sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "platforms;android-35" "build-tools;35.0.1" "cmake;3.10.2.4988404" "ndk;28.1.13356709"
           yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
-      - name: Install Godot 4.7.2
+
+      - name: Install Godot
         run: |
-          wget -q https://github.com/godotengine/godot/releases/download/4.7.2-stable/Godot_v4.7.2-stable_linux.x86_64.zip
-          unzip -q Godot_v4.7.2-stable_linux.x86_64.zip
-          chmod +x Godot_v4.7.2-stable_linux.x86_64
+          set -euo pipefail
+          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O /tmp/godot.zip
+          unzip -q /tmp/godot.zip
+          chmod +x "Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
+
       - name: Install matching Android export templates
         run: |
+          set -euo pipefail
           templates="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
           mkdir -p "$templates"
-          wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz
-          unzip -q -j Godot_v${GODOT_VERSION}-stable_export_templates.tpz 'templates/*' -d "$templates"
+          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -O /tmp/templates.tpz
+          unzip -q -j /tmp/templates.tpz 'templates/*' -d "$templates"
           printf '%s\n' "${GODOT_VERSION}.stable" > "$templates/version.txt"
           test -s "$templates/android_source.zip"
           test -s "$templates/android_debug.apk"
+
       - name: Import project
-        run: timeout 120s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --editor --path . --quit
+        run: timeout 120s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+
       - name: Validate Android export configuration
-        run: timeout 60s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path . --script res://tests/test_android_release_config.gd
+        run: timeout 60s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_android_release_config.gd
+
+      - name: Run release smoke and new-game gates
+        run: |
+          set -euo pipefail
+          timeout 180s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_release_smoke.gd
+          timeout 300s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_new_game_flow.gd
+          git diff --exit-code
+
       - name: Export installable Android debug APK
         run: |
+          set -euo pipefail
           mkdir -p build
-          timeout 600s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path . --export-debug "Android" build/RENEW-debug.apk
+          timeout 600s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --export-debug "Android" build/RENEW-debug.apk
           test -s build/RENEW-debug.apk
           file build/RENEW-debug.apk
           ls -lh build/RENEW-debug.apk
+
+      - name: Verify source stayed clean
+        run: git diff --exit-code
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:

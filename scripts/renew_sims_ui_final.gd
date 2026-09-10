@@ -7,7 +7,7 @@ const TAB_MUTED := Color("78949a")
 const HUD_REFRESH_INTERVAL := 0.20
 
 var _hud_refresh_accum := 0.0
-var _page := [0, 0, 0, 0]
+var _page: Array[int] = [0, 0, 0, 0]
 
 # Every sector has a hub plus deliberately small task pages. Operational pages
 # stay at five buttons or fewer, including BACK where a page has navigation.
@@ -260,7 +260,7 @@ func _screen(text: String, screen_name: String) -> void:
 func _refresh() -> void:
     if parent == null or action_grid == null: return
     _clear_action_grids()
-    var page := _page[active_tab]
+    var page: int = _page[active_tab]
     action_title.text = ["LIVE", "BUSINESS", "EMPIRE", "WORLD"][active_tab] + " • " + PAGE_NAMES[active_tab][page]
 
     match active_tab:

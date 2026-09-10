@@ -3,13 +3,14 @@ extends SceneTree
 # Architecture integrity smoke test for the Phase 37 Main -> World/Systems/UI tree.
 # This test is intentionally structural and read-only. It verifies that scripts can
 # load/instantiate, that the Main scene exposes its required architecture, and that
-# gameplay scripts do not import retired legacy gameplay contracts.
-# Behavioral correctness and feature coverage belong to the dedicated feature suites.
+# gameplay scripts do not import retired legacy gameplay contracts or address
+# registry-owned services as if they were root autoloads.
 var passed := 0
 var failed := 0
 var failures: Array[String] = []
 var function_count := 0
 var script_count := 0
+var allowed_root_nodes: Dictionary = {"Renew": true}
 
 const LEGACY_IMPORTS := [
     "res://scripts/corporate.gd",
@@ -33,12 +34,25 @@ func check(condition: bool, label: String) -> void:
         push_error("FAIL: " + label)
 
 func run() -> void:
+    _load_allowed_root_nodes()
     await audit_all_scripts()
     await audit_main_screen()
     print("RENEW ARCHITECTURE INTEGRITY: %d passed, %d failed" % [passed, failed])
     print("Scripts checked: %d | Functions structurally checked: %d" % [script_count, function_count])
     for failure in failures: print("FAILED: " + failure)
     quit(1 if failed > 0 else 0)
+
+func _load_allowed_root_nodes() -> void:
+    var source := FileAccess.get_file_as_string("res://project.godot")
+    var in_autoload := false
+    for raw_line in source.split("\n"):
+        var line := raw_line.strip_edges()
+        if line.begins_with("["):
+            in_autoload = line == "[autoload]"
+            continue
+        if in_autoload and line.contains("="):
+            var name := line.get_slice("=", 0).strip_edges()
+            if not name.is_empty(): allowed_root_nodes[name] = true
 
 func audit_all_scripts() -> void:
     var paths: Array[String] = []
@@ -49,6 +63,7 @@ func audit_all_scripts() -> void:
         var source := FileAccess.get_file_as_string(path)
         check(not source.is_empty(), "source readable: " + path)
         _audit_legacy_imports(path, source)
+        _audit_root_service_lookups(path, source)
         var script = load(path)
         check(script != null, "script parses: " + path)
         for method_name in _declared_functions(source):
@@ -66,6 +81,18 @@ func _audit_legacy_imports(path: String, source: String) -> void:
             continue
         var exceptions: Array = LEGACY_IMPORT_EXCEPTIONS.get(legacy_path, [])
         check(path in exceptions, "legacy gameplay import prohibited: %s -> %s" % [path, legacy_path])
+
+func _audit_root_service_lookups(path: String, source: String) -> void:
+    var regex := RegEx.new()
+    var err := regex.compile("/root/(Renew[A-Za-z0-9_]+)")
+    check(err == OK, "root lookup regex compiles")
+    if err != OK: return
+    var seen: Dictionary = {}
+    for match_result in regex.search_all(source):
+        var node_name := match_result.get_string(1)
+        if seen.has(node_name): continue
+        seen[node_name] = true
+        check(allowed_root_nodes.has(node_name), "registry-owned service addressed as root node: %s -> %s" % [path, node_name])
 
 func audit_main_screen() -> void:
     var scene = load("res://scenes/Main.tscn")

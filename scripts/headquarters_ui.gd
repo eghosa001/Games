@@ -32,7 +32,7 @@ var selected_area: String = "executive_offices"
 var area_ids: Array[String] = ["executive_offices", "board_room", "research", "training", "archives", "museum", "technology_center"]
 
 func _ready() -> void:
-    system = get_node_or_null("/root/RenewHeadquartersSystem")
+    system = RenewServices.get_service("RenewHeadquartersSystem")
     finance = get_node_or_null("/root/RenewFinanceSystem")
     main = get_tree().current_scene
     _build_ui()
@@ -44,7 +44,7 @@ func _ready() -> void:
 
 func _resolve_main() -> void:
     if main == null: main = get_tree().current_scene
-    if system == null: system = get_node_or_null("/root/RenewHeadquartersSystem")
+    if system == null: system = RenewServices.get_service("RenewHeadquartersSystem")
     if finance == null: finance = get_node_or_null("/root/RenewFinanceSystem")
 
 func open_screen() -> void:

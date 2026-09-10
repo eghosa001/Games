@@ -10,6 +10,7 @@ const SCREEN_ALIASES := {"MarketPanel": "CustomerSegmentsUI"}
 const CLOSE_BUTTON_NAME := "UniversalCloseButton"
 const MODAL_LAYER_NAME := "FocusedScreenBackdrop"
 const MODAL_LAYER := 50
+const CLOSE_BUTTON_Z_INDEX := 4096
 
 var _previous_visible: Dictionary = {}
 var _active_screen: Node = null
@@ -236,7 +237,7 @@ func _ensure_close_button(screen: Node) -> void:
         existing.tooltip_text = "Close"
         existing.focus_mode = Control.FOCUS_NONE
         existing.mouse_filter = Control.MOUSE_FILTER_STOP
-        existing.z_index = 10000
+        existing.z_index = CLOSE_BUTTON_Z_INDEX
         existing.custom_minimum_size = Vector2(96, 46)
         existing.set_anchors_preset(Control.PRESET_TOP_RIGHT)
         existing.position = Vector2(-112, 14)
@@ -250,7 +251,7 @@ func _ensure_close_button(screen: Node) -> void:
     button.tooltip_text = "Close"
     button.focus_mode = Control.FOCUS_NONE
     button.mouse_filter = Control.MOUSE_FILTER_STOP
-    button.z_index = 10000
+    button.z_index = CLOSE_BUTTON_Z_INDEX
     button.custom_minimum_size = Vector2(96, 46)
     button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
     button.position = Vector2(-112, 14)
