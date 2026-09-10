@@ -253,7 +253,7 @@ func _invite_partner(partner_id: String, partner_name: String) -> void:
     if alliance_system == null or alliance.is_empty():
         _message("Create the Restoration Consortium before inviting corporate partners.")
         return
-    var result := alliance_system.invite_member(str(alliance.get("id", "")), PLAYER_ID, partner_id) if alliance_system.has_method("invite_member") else {"ok": false, "message": "Partner invitations are unavailable."}
+    var result: Dictionary = alliance_system.invite_member(str(alliance.get("id", "")), PLAYER_ID, partner_id) if alliance_system.has_method("invite_member") else {"ok": false, "message": "Partner invitations are unavailable."}
     _message("Invitation sent to %s." % partner_name if bool(result.get("ok", false)) else str(result.get("message", "Partner invitation failed.")))
 
 func _members_line(alliance: Dictionary) -> String:
