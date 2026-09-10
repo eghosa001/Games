@@ -87,6 +87,18 @@ func _boot_services() -> void:
         return
     for service_name in SERVICE_PATHS.keys():
         _create_service(service_name, systems)
+    _wire_service_dependencies()
+
+func _wire_service_dependencies() -> void:
+    var history := get_service("RenewHistorySystem")
+    var news := get_service("RenewNewsSystem")
+    if history == null or news == null:
+        return
+    if not history.has_signal("gameplay_event_recorded") or not news.has_method("_on_history_event"):
+        return
+    var callable := Callable(news, "_on_history_event")
+    if not history.gameplay_event_recorded.is_connected(callable):
+        history.gameplay_event_recorded.connect(callable)
 
 func get_service(service_name: String) -> Node:
     # Keep cached values untyped until validity is checked: assigning a freed
