@@ -15,6 +15,9 @@ var dismissed: Variant = false
 var last_step: Variant = -1
 var _coordinator_active := false
 
+func _coordinator() -> Node:
+    return RenewServices.get_service("RenewUIRegionCoordinator")
+
 func _ready() -> void:
     game = get_tree().root.get_node_or_null("Renew")
     _build()
@@ -23,15 +26,17 @@ func _ready() -> void:
     _layout_responsive()
 
 func _enter_tree() -> void:
-    if RenewUIRegionCoordinator != null:
-        RenewUIRegionCoordinator.set_active_screen("")
+    var coordinator := _coordinator()
+    if coordinator != null:
+        coordinator.set_active_screen("")
 
 func _process(_delta: float) -> void:
     if game == null:
         return
     var screen_name := ""
-    if RenewUIRegionCoordinator != null:
-        screen_name = RenewUIRegionCoordinator.get_active_screen()
+    var coordinator := _coordinator()
+    if coordinator != null:
+        screen_name = coordinator.get_active_screen()
     if screen_name == "":
         _layout_responsive()
     var current_action: String = String(tutorial.current().get("action", "COMPLETE"))
