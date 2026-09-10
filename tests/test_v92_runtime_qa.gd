@@ -64,7 +64,8 @@ func run() -> void:
         current_scene = game
         await process_frame
         await process_frame
-        var ambient = RenewServices.get_service("RenewAmbientAudio")
+        var services = root.get_node_or_null("RenewServices")
+        var ambient = services.get_service("RenewAmbientAudio") if services != null else null
         check(ambient != null, "Soundscape available")
         game.free()
         await process_frame
