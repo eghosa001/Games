@@ -28,7 +28,8 @@ func run() -> void:
     await process_frame
     await process_frame
 
-    var ranking = RenewServices.get_service("RenewGlobalRankingSystem")
+    var services = root.get_node_or_null("RenewServices")
+    var ranking = services.get_service("RenewGlobalRankingSystem") if services != null else null
     check(ranking != null, "Ranking system available")
     if ranking == null:
         game.free()
