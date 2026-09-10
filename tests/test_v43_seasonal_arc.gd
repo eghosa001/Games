@@ -17,18 +17,31 @@ func check(ok: bool, label: String) -> void:
         push_error("FAIL: " + label)
 
 func run() -> void:
+    var scene = load("res://scenes/Main.tscn")
+    check(scene != null, "Main scene loads with seasonal effects")
+    if scene == null:
+        quit(1)
+        return
+    var game = scene.instantiate()
+    root.add_child(game)
+    current_scene = game
+    await process_frame
+    await process_frame
+
     var state = root.get_node_or_null("RenewGameState")
     check(state != null, "GameState is available")
     if state == null:
+        game.free()
         quit(1)
         return
     if state.has_method("clear"):
         state.clear()
-    var liveops = root.get_node_or_null("RenewLiveOpsSystem")
-    var world = root.get_node_or_null("RenewWorldEventSystem")
-    var tech = root.get_node_or_null("RenewTechnologySystem")
+    var liveops = RenewServices.get_service("RenewLiveOpsSystem")
+    var world = RenewServices.get_service("RenewWorldEventSystem")
+    var tech = RenewServices.get_service("RenewTechnologySystem")
     check(liveops != null and world != null and tech != null, "LiveOps, world and tech systems available")
     if liveops == null or world == null or tech == null:
+        game.free()
         quit(1)
         return
 
@@ -64,14 +77,7 @@ func run() -> void:
     check(bool(done.get("ok", false)), "Seasonal challenge completes")
     check(bool((done.get("challenge", {}) as Dictionary).get("completed", false)), "Completion recorded")
 
-    var scene = load("res://scenes/Main.tscn")
-    check(scene != null, "Main scene loads with seasonal effects")
-    if scene != null:
-        var game = scene.instantiate()
-        root.add_child(game)
-        await process_frame
-        await process_frame
-        game.free()
-        await process_frame
+    game.free()
+    await process_frame
     print("V43 SEASONAL ARC RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
