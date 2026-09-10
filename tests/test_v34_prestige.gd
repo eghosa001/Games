@@ -109,7 +109,7 @@ func run() -> void:
         var services = root.get_node_or_null("RenewServices")
         check(game.has_method("found_new_company"), "Main exposes found_new_company")
         state.set_value("ownership", "holdings", [{"rival_id": "r1", "rival_name": "R1", "shares": 50, "avg_price": 10.0, "total_paid": 500.0}])
-        var auto = services.get_service("RenewVictorySystem") if services != null else null
+        var auto = root.get_node_or_null("RenewVictorySystem")
         check(auto != null and bool(auto.check_victory().get("ok", false)), "Second victory wins")
         game.found_new_company()
         check(int(finance.cash) == 75000, "Second heir capital stacks")
