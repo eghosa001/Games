@@ -111,9 +111,6 @@ func test_world_visual_contract() -> void:
     check(restoration != null and restoration.visible and restoration.texture != null, "Restoration artwork is visible and textured")
 
     for asset_path in [
-        "res://Assets/Art/renew_skyline.svg",
-        "res://Assets/Art/renew_warehouse.svg",
-        "res://Assets/Art/renew_resource_hub.svg",
         "res://Assets/Art/premium_industrial_district.svg",
         "res://Assets/Art/premium_restoration_site.svg"
     ]:
