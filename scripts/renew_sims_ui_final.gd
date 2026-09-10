@@ -260,7 +260,7 @@ func _screen(text: String, screen_name: String) -> void:
 func _refresh() -> void:
     if parent == null or action_grid == null: return
     _clear_action_grids()
-    var page := _page[active_tab]
+    var page: int = int(_page[active_tab])
     action_title.text = ["LIVE", "BUSINESS", "EMPIRE", "WORLD"][active_tab] + " • " + PAGE_NAMES[active_tab][page]
 
     match active_tab:
