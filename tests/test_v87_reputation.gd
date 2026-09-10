@@ -67,7 +67,8 @@ func run() -> void:
             game.restore_property()
             guard += 1
             await process_frame
-        var live_rep = RenewServices.get_service("RenewReputationSystem")
+        var services = root.get_node_or_null("RenewServices")
+        var live_rep = services.get_service("RenewReputationSystem") if services != null else null
         check(live_rep != null, "Live reputation service resolves")
         if live_rep != null:
             check(float(live_rep.dimensions().get("environmental", 0.0)) > 40.0, "Green restoration lifts the Green dimension")
