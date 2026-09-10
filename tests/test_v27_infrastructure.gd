@@ -51,6 +51,7 @@ func run() -> void:
     if scene != null:
         var game = scene.instantiate()
         root.add_child(game)
+        current_scene = game
         await process_frame
         await process_frame
         check(game.get_node_or_null("UI/InfrastructurePanel") != null, "Infrastructure panel is mounted")
@@ -59,8 +60,9 @@ func run() -> void:
         game.cash = 300000
         game.infra_type()
         game.infra_build()
-        var autoload_infra = root.get_node_or_null("RenewInfrastructureSystem")
-        check(autoload_infra != null and autoload_infra.list_assets().size() > 0, "Touch command builds infrastructure")
+        var services = root.get_node_or_null("RenewServices")
+        var live_infra = services.get_service("RenewInfrastructureSystem") if services != null else null
+        check(live_infra != null and live_infra.list_assets().size() > 0, "Touch command builds infrastructure")
         game.free()
         await process_frame
     infra.queue_free()
