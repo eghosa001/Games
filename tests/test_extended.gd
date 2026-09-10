@@ -211,6 +211,8 @@ func run() -> void:
     check(bool(produced.get("ok", false)), "ProductionSystem furniture fixture succeeds")
 
     var finance_fixture = load("res://scripts/finance_system.gd").new()
+    root.add_child(finance_fixture)
+    await process_frame
     finance_fixture.cash = 50000
     finance_fixture.debt = 15000
     finance_fixture.loan_payment = 0
@@ -232,6 +234,8 @@ func run() -> void:
     check(float(finance_fixture.financing["loan_b"]["balance"]) == 5001.0, "Second financing balance includes accrued interest")
     check(finance_fixture.debt == debt_before_interest, "Interest does not incorrectly increase principal debt")
     check(bool(finance_fixture.validate_invariants().get("ok", false)), "Finance invariants survive interest accrual")
+    finance_fixture.queue_free()
+    await process_frame
 
     print("EXTENDED RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
