@@ -55,9 +55,18 @@ func run() -> void:
                 active_players += 1
         check(active_players > 0, "SFX calls start at least one playback stream")
         check(int(audio.get("_sfx_cursor")) != before_cursor, "SFX calls advance the playback cursor")
-    var ambient = root.get_node_or_null("RenewAmbientAudio")
-    check(ambient != null, "Soundscape available")
-    await process_frame
-    await process_frame
+
+    var scene = load("res://scenes/Main.tscn")
+    check(scene != null, "Main scene loads for soundscape QA")
+    if scene != null:
+        var game = scene.instantiate()
+        root.add_child(game)
+        current_scene = game
+        await process_frame
+        await process_frame
+        var ambient = RenewServices.get_service("RenewAmbientAudio")
+        check(ambient != null, "Soundscape available")
+        game.free()
+        await process_frame
     print("V92 RUNTIME QA RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
