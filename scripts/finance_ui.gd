@@ -46,6 +46,11 @@ func _process(delta: float) -> void:
         _refresh(false)
 
 func _finance():
+    var services := get_node_or_null("/root/RenewServices")
+    if services != null and services.has_method("get_service"):
+        var finance = services.get_service("RenewFinanceSystem")
+        if finance != null:
+            return finance
     return get_node_or_null("/root/RenewFinanceSystem")
 
 func _game():
