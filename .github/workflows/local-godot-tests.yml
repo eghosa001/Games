@@ -61,7 +61,7 @@ jobs:
           & $env:GODOT_EXE --headless --path . --script res://tests/mobile_qa_test.gd 2>&1 | Tee-Object -FilePath test_artifacts/local-fast-logs/mobile-qa.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-      - name: Run full fast suite
+      - name: Run full fast suite with local quality target
         shell: powershell
         run: |
           $ErrorActionPreference = 'Continue'
@@ -77,8 +77,16 @@ jobs:
             Write-Host "===== $relative ====="
             $logName = ($relative.Replace('/', '_') -replace '\.gd$', '.log')
             $log = Join-Path 'test_artifacts/local-fast-logs' $logName
+
+            $savedCI = $env:CI
+            if ($test.Name -eq 'test_quality_gate.gd') {
+              $env:CI = 'false'
+              Write-Host 'Running strict quality gate with the 20 FPS local target.'
+            }
             & $env:GODOT_EXE --headless --path . --script "res://$relative" 2>&1 | Tee-Object -FilePath $log
             $status = $LASTEXITCODE
+            $env:CI = $savedCI
+
             if ($status -ne 0) {
               $failures += $relative
               Write-Host "FAILED: $relative (exit $status)"
