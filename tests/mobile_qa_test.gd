@@ -78,19 +78,51 @@ func _test_world_tab(hud: Node) -> void:
     check("WORLD tab has actionable controls", actions.get_child_count() > 0)
 
 func _test_gameplay_flow(_scene: Node, hud: Node) -> void:
+    # The production HUD deliberately uses small, nested command pages on touch
+    # layouts. Exercise the same navigation path a player uses instead of
+    # requiring every command to be flattened into the sector overview.
     hud._set_tab(0); await process_frame
-    var steps: Array[String] = ["INSPECT", "ACQUIRE", "RESTORE", "OPEN BUSINESS"]
-    for label: String in steps:
-        var button: Button = _find_button(hud, label)
-        check("touch action exists: %s" % label, button != null)
-        if button != null: button.pressed.emit(); await process_frame
+
+    if await _enter_page(hud, "PROPERTY"):
+        await _exercise_action(hud, "INSPECT")
+        await _exercise_action(hud, "RESTORE")
+
+    hud._set_tab(0); await process_frame
+    if await _enter_page(hud, "OWNERSHIP"):
+        await _exercise_action(hud, "ACQUIRE")
+        await _exercise_action(hud, "OPEN BUSINESS")
+
     hud._set_tab(1); await process_frame
-    var business_steps: Array[String] = ["HIRE", "BUY INPUTS", "PRODUCE", "PRICE", "END DAY"]
-    for label: String in business_steps:
-        var button: Button = _find_button(hud, label)
-        check("touch action exists: %s" % label, button != null)
-        if button != null: button.pressed.emit(); await process_frame
+    if await _enter_page(hud, "PEOPLE"):
+        await _exercise_action(hud, "HIRE")
+
+    hud._set_tab(1); await process_frame
+    if await _enter_page(hud, "PRODUCTION"):
+        await _exercise_action(hud, "BUY INPUTS")
+        await _exercise_action(hud, "PRODUCE")
+        await _exercise_action(hud, "PRICE")
+
+    # END DAY is an always-important simulation command on the LIVE overview.
+    hud._set_tab(0); await process_frame
+    await _exercise_action(hud, "END DAY")
+
     var state: Node = get_root().get_node_or_null("RenewGameState"); check("authoritative GameState remains alive after touch flow", state != null)
+
+func _enter_page(hud: Node, label: String) -> bool:
+    var button: Button = _find_button(hud, label)
+    check("touch navigation exists: %s" % label, button != null)
+    if button == null:
+        return false
+    button.pressed.emit()
+    await process_frame
+    return true
+
+func _exercise_action(hud: Node, label: String) -> void:
+    var button: Button = _find_button(hud, label)
+    check("touch action exists: %s" % label, button != null)
+    if button != null:
+        button.pressed.emit()
+        await process_frame
 
 func _find_button(hud: Node, label: String) -> Button:
     var actions: GridContainer = hud.get("actions") as GridContainer
