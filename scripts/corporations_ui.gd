@@ -49,7 +49,7 @@ func _build_ui() -> void:
 func _label(text: String, size: int, color: Color) -> Label:
     var label := Label.new(); label.text = text; label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; label.add_theme_font_size_override("font_size", size); label.add_theme_color_override("font_color", color); panel.add_child(label); return label
 func _button(text: String) -> Button:
-    var button := Button.new(); button.text = text; button.focus_mode = Control.FOCUS_NONE; button.custom_minimum_size = Vector2(0, 46); panel.add_child(button); return button
+    var button := Button.new(); button.text = text; button.focus_mode = Control.FOCUS_NONE; button.clip_text = true; button.custom_minimum_size = Vector2(0, 46); panel.add_child(button); return button
 func _layout() -> void:
     if get_viewport() == null or panel == null: return
     var viewport: Vector2 = get_viewport().size; var margin := 12.0 if viewport.x < 390.0 else 16.0
