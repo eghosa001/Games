@@ -175,7 +175,7 @@ func _draw() -> void:
     # Hide the persistent navigation chrome while one is open so the player
     # sees the active task rather than multiple competing command surfaces.
     var screen_manager := get_tree().root.get_node_or_null("RenewUIScreenManager")
-    var secondary_screen_open := screen_manager != null and screen_manager.get_active_screen_name() != ""
+    var secondary_screen_open: bool = screen_manager != null and screen_manager.get_active_screen_name() != ""
     if secondary_screen_open:
         return
 
