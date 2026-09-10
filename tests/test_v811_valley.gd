@@ -34,7 +34,8 @@ func run() -> void:
         quit(1)
         return
     check(game.has_method("charter_valley"), "Main exposes charter_valley")
-    var catalog = RenewServices.get_service("RenewRegionSystem")
+    var services = root.get_node_or_null("RenewServices")
+    var catalog = services.get_service("RenewRegionSystem") if services != null else null
     check(catalog != null, "Region catalog resolves")
     if catalog == null:
         game.free()
