@@ -201,7 +201,8 @@ func test_phase_6_global_launch() -> void:
     if g == null:
         return
     check(_system("RenewLiveOpsSystem") != null, "Phase 6: LiveOps system exists")
-    check(_system("RenewLiveOpsUI") != null, "Phase 6: LiveOps UI exists")
+    var liveops_ui := g.get_node_or_null("UI/LiveOpsPanel")
+    check(liveops_ui != null and liveops_ui.get_script() != null and liveops_ui.get_script().resource_path == "res://scripts/liveops_ui.gd", "Phase 6: LiveOps UI exists")
     check(_system("RenewNewsSystem") != null, "Phase 6: recurring world/news surface exists")
     check(_system("RenewDynamicEventController") != null, "Phase 6: dynamic event controller exists")
     check(_system("RenewWorldEventSystem") != null, "Phase 6: world event system exists")
