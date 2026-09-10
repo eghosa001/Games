@@ -43,7 +43,15 @@ jobs:
         run: timeout 180s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
 
       - name: Run master game-plan coverage gate
-        run: timeout 900s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_master_game_plan_coverage.gd
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p test_artifacts/fast-logs
+          set +e
+          timeout 900s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_master_game_plan_coverage.gd 2>&1 | tee test_artifacts/fast-logs/master-game-plan.log
+          status=${PIPESTATUS[0]}
+          set -e
+          exit "$status"
 
       - name: Run mobile QA automation
         run: timeout 300s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/mobile_qa_test.gd
