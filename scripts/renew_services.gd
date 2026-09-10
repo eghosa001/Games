@@ -90,19 +90,25 @@ func _boot_services() -> void:
         _create_service(service_name, systems)
 
 func get_service(service_name: String) -> Node:
-    var node: Node = _services.get(service_name)
-    if node != null and is_instance_valid(node):
-        return node
+    # Keep cached values untyped until validity is checked: assigning a freed
+    # Object directly into a typed Node local raises before is_instance_valid()
+    # can run. Scene replacement in tests and normal game restarts can free the
+    # old Systems tree while this infrastructure autoload stays alive.
+    var cached = _services.get(service_name)
+    if is_instance_valid(cached):
+        return cached as Node
+    if _services.has(service_name):
+        _services.erase(service_name)
 
     var systems := _systems_root(false)
     if systems != null:
-        node = systems.get_node_or_null(service_name)
+        var node := systems.get_node_or_null(service_name)
         if node != null:
             _services[service_name] = node
             return node
 
-    # If the initial deferred boot ran before Main existed, recover lazily on
-    # first lookup rather than leaving every domain service unavailable for
-    # the lifetime of the process.
+    # If the initial deferred boot ran before Main existed, or a prior Main was
+    # freed, recover lazily on first lookup rather than leaving domain services
+    # unavailable for the lifetime of the process.
     systems = _systems_root(true)
     return _create_service(service_name, systems)
