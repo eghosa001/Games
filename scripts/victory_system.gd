@@ -27,6 +27,14 @@ func _state() -> Variant:
 func _finance() -> Variant:
 	return get_node_or_null("/root/RenewFinanceSystem")
 
+func _service(service_name: String) -> Variant:
+	var registry := get_node_or_null("/root/RenewServices")
+	if registry != null and registry.has_method("get_service"):
+		var node = registry.get_service(service_name)
+		if node != null:
+			return node
+	return get_node_or_null("/root/" + service_name)
+
 func _alliance_system() -> Variant:
 	return get_node_or_null("/root/RenewAllianceSystem")
 
@@ -172,10 +180,10 @@ func found_new_company() -> Dictionary:
 	return {"ok": true, "bonuses": bonuses, "prior_path": str(prior.get("path", ""))}
 
 func _reset_satellites() -> void:
-	var world := get_node_or_null("/root/RenewWorldEventSystem")
+	var world := _service("RenewWorldEventSystem")
 	if world != null and world.has_method("restore_state"):
 		world.restore_state({})
-	var liveops := get_node_or_null("/root/RenewLiveOpsSystem")
+	var liveops := _service("RenewLiveOpsSystem")
 	if liveops != null:
 		liveops.set("current_season", 1)
 		liveops.set("season_start_day", 1)
@@ -185,13 +193,13 @@ func _reset_satellites() -> void:
 		if goal is Dictionary:
 			(goal as Dictionary)["progress"] = 0.0
 		liveops.set("last_day", -1)
-	var history := get_node_or_null("/root/RenewHistorySystem")
+	var history := _service("RenewHistorySystem")
 	if history != null and history.has_method("restore_state"):
 		history.restore_state({})
-	var news := get_node_or_null("/root/RenewNewsSystem")
+	var news := _service("RenewNewsSystem")
 	if news != null and news.has_method("restore_state"):
 		news.restore_state({})
-	var bridge := get_node_or_null("/root/RenewDiplomacyControl")
+	var bridge := _service("RenewDiplomacyControl")
 	if bridge != null and bridge.has_method("restore_state"):
 		bridge.restore_state({})
 	var scene: Variant = get_tree().current_scene if get_tree() != null else null
