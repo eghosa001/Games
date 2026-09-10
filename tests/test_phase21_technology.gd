@@ -18,7 +18,7 @@ func run()->void:
     var temp_tech:=false
     if tech==null or not tech.has_method("research"):
         tech=Tech.new();tech.name="TempTechProbe";root.add_child(tech);await process_frame;temp_tech=true
-    var Finance=load("res://scripts/finance_system_fixed.gd")
+    var Finance=load("res://scripts/finance_system.gd")
     var finance=root.get_node_or_null("RenewFinanceSystem")
     if finance==null or not finance.has_method("spend"):
         finance=Node.new();finance.set_script(Finance);finance.name="RenewFinanceSystem";root.add_child(finance);await process_frame
