@@ -6,12 +6,23 @@ const PRODUCT_CONFIG={"consumer_goods":{"base_demand":55.0,"min_demand":0.0,"max
 func get_product_config(product:String="consumer_goods")->Dictionary:return PRODUCT_CONFIG.get(product,{}).duplicate(true)
 func product_ids()->Array:return PRODUCT_CONFIG.keys()
 func get_customer_segments()->Dictionary:return customer_segments.get_segments()
+
+func _service(service_name:String)->Node:
+    var tree:=get_tree() if is_inside_tree() else (Engine.get_main_loop() as SceneTree)
+    if tree==null:return null
+    var direct:=tree.root.get_node_or_null(service_name)
+    if direct!=null:return direct
+    var services:=tree.root.get_node_or_null("RenewServices")
+    if services!=null and services.has_method("get_service"):
+        return services.get_service(service_name)
+    return null
+
 func calculate(product:String,player_price:float,competitor_price:float,reputation:int,quality:int,marketing_level:int,contract_bonus:int,employee_productivity:float,district_multiplier:float,district_pressure:float,alliance_sales:float,deal_sales:float)->Dictionary:
     var resolved_product:String=product
     if resolved_product=="consumer_goods":resolved_product="furniture"
     var tree=get_tree() if is_inside_tree() else (Engine.get_main_loop() as SceneTree)
     var tech_root=tree.root if tree!=null else null
-    var culture:Node=tech_root.get_node_or_null("RenewCompanyCultureSystem") if tech_root!=null else null
+    var culture:Node=_service("RenewCompanyCultureSystem")
     var culture_quality:float=1.0
     if culture!=null and culture.has_method("get_effects"):
         var culture_effects:Dictionary=culture.get_effects()
@@ -24,9 +35,8 @@ func calculate(product:String,player_price:float,competitor_price:float,reputati
     var relationship_modifier:float=clampf(1.0+alliance_sales*0.45+deal_sales*0.50,0.50,1.90)
     var demand_float:float=float(segment_result.get("raw_demand",0.0))*employee_modifier*relationship_modifier
     var market_multiplier:float=1.0
-    var tech_node: Node = null
-    if is_inside_tree(): tech_node = get_node_or_null("/root/RenewTechnologySystem")
-    if tech_node != null and tech_node.has_method("market_demand_multiplier"): market_multiplier = tech_node.market_demand_multiplier()
+    var tech_node:Node=_service("RenewTechnologySystem")
+    if tech_node!=null and tech_node.has_method("market_demand_multiplier"):market_multiplier=tech_node.market_demand_multiplier()
     var event_multiplier:float=1.0
     var state:Node=tech_root.get_node_or_null("RenewGameState") if tech_root!=null else null
     if state!=null:
