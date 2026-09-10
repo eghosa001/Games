@@ -1,6 +1,6 @@
 extends Node
 const PropertySystem=preload("res://scripts/property_system.gd")
-const BusinessSystem=preload("res://scripts/business_system_fixed.gd")
+const BusinessSystem=preload("res://scripts/business_system.gd")
 const EmployeeCommandSystem=preload("res://scripts/employee_command_system.gd")
 const FinanceCommandSystem=preload("res://scripts/finance_command_system.gd")
 const SupplyCommandSystem=preload("res://scripts/supply_command_system.gd")

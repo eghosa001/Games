@@ -9,7 +9,7 @@ extends SceneTree
 
 const REQUIRED_AUTOLOADS := {
     "RenewGameState": "res://scripts/game_state.gd",
-    "RenewFinanceSystem": "res://scripts/finance_system_fixed.gd",
+    "RenewFinanceSystem": "res://scripts/finance_system.gd",
     "RenewProductionSystem": "res://scripts/production_system.gd",
     "RenewContractSystem": "res://scripts/contract_system.gd",
     "RenewAllianceSystem": "res://scripts/alliance_v1_system.gd",

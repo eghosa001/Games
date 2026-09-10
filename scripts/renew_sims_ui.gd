@@ -1,231 +1,446 @@
-extends CanvasLayer
+extends "res://scripts/renew_sims_ui_core.gd"
 
-# Canonical responsive presentation base for renew_sims_ui_final.gd.
-# This layer owns presentation only; all gameplay state and commands remain on Main.
+const ACTIVE_TAB := Color("d7b86f")
+const INACTIVE_TAB := Color("102a32")
+const TAB_TEXT := Color("e7f2ef")
+const TAB_MUTED := Color("78949a")
+const HUD_REFRESH_INTERVAL := 0.20
 
-var parent: Node
-var active_tab: int = 0
-var root: Control
-var top_strip: Panel
-var brand: Label
-var location_label: Label
-var cash_label: Label
-var rep_label: Label
-var day_label: Label
-var mode_rail: Panel
-var tabs: HBoxContainer
-var mode_buttons: Array = []
-var left_rail: Panel
-var selected_card: Panel
-var selected_title: Label
-var selected_meta: Label
-var objective_card: Panel
-var right_card: Panel
-var objective_text: Label
-var action_dock: Panel
-var action_title: Label
-var action_subtitle: Label
-var action_grid: GridContainer
-var actions: GridContainer
-var action_scroll: ScrollContainer
-var network_strip: Panel
-var status_surface: Panel
-var bottom_mobile: Panel
-var mobile_actions: GridContainer
-var mobile_objective: Label
-var status_label: Label
-var goal_label: Label
-var feedback_panel: Panel
-var feedback_label: Label
-var feedback_timer: float = 0.0
-var narrow: bool = false
+var _hud_refresh_accum := 0.0
+var _page := [0, 0, 0, 0]
 
-const PANEL := Color("0b1b22e6")
-const BORDER := Color("31545c")
-const BORDER_SOFT := Color("24434b")
-const TEXT := Color("edf6f3")
-const MUTED := Color("8da7aa")
-const ACCENT := Color("d8b76d")
+# Every sector has a hub plus deliberately small task pages. Operational pages
+# stay at five buttons or fewer, including BACK where a page has navigation.
+const PAGE_NAMES := [
+    ["OVERVIEW", "PROPERTY", "OWNERSHIP", "RECORDS"],
+    ["OVERVIEW", "PRODUCTION", "BUSINESS", "PEOPLE", "COMMERCIAL", "CONTRACTS", "NEGOTIATION", "FINANCE", "FUNDING"],
+    ["OVERVIEW", "RIVALS", "ALLIANCES", "CORPORATE", "GROWTH", "REGIONS", "CHARTERS", "CAPITAL", "EQUITY", "TECHNOLOGY"],
+    ["OVERVIEW", "REGIONAL MANAGEMENT", "OPERATIONS", "EMPIRE MANAGEMENT", "EVENTS"]
+]
 
-func _ready() -> void:
-    parent = get_tree().root.get_node_or_null("Renew")
-    _build_ui()
-    call_deferred("_initialize")
+const PAGE_SUBTITLES := [
+    [
+        "Company overview and the next essential move.",
+        "Inspect, restore and prepare the selected property.",
+        "Acquire, sell, lease and open the selected property.",
+        "Save, load and review company history and world news."
+    ],
+    [
+        "Choose a focused business command area.",
+        "Inputs, imports, production and pricing.",
+        "Business upgrades and marketing.",
+        "Employees and headquarters management.",
+        "Customers and the commercial desk.",
+        "Core contract signing actions.",
+        "Specialized government, construction and export contracts.",
+        "Finance, collections and portfolio.",
+        "Loans, investors and investment decisions."
+    ],
+    [
+        "Choose a focused empire command area.",
+        "Rival selection, competition and reputation.",
+        "Alliances, relationships and supply agreements.",
+        "Corporate network, victory and world power.",
+        "Expansion businesses and strategic acquisitions.",
+        "Regional selection and presence.",
+        "Regional charters and trade routes.",
+        "Loans, investors and public-market capital.",
+        "Shares, dividends and capitalization.",
+        "Technology, progression and corporate identity."
+    ],
+    [
+        "Choose a focused world command area.",
+        "Regions and infrastructure are managed here only.",
+        "World production and logistics commands.",
+        "Empire expansion and intelligence.",
+        "Missions, seasonal events and live opportunities."
+    ]
+]
 
-func _initialize() -> void:
-    parent = get_tree().root.get_node_or_null("Renew")
-    if parent == null: return
-    _layout_responsive()
-    _refresh()
-    if not get_viewport().size_changed.is_connected(_layout_responsive):
-        get_viewport().size_changed.connect(_layout_responsive)
-
-func _build_ui() -> void:
-    root = Control.new()
-    root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    add_child(root)
-
-    top_strip = Panel.new()
-    top_strip.add_theme_stylebox_override("panel", _style(PANEL, BORDER_SOFT, 12))
-    root.add_child(top_strip)
-    brand = _label("RENEW", 19, TEXT)
-    location_label = _label("RESTORATION DISTRICT  •  HEADQUARTERS", 9, MUTED)
-    cash_label = _label("$0", 11, TEXT)
-    rep_label = _label("REP 0", 11, TEXT)
-    day_label = _label("DAY 1", 11, TEXT)
-    top_strip.add_child(brand); top_strip.add_child(location_label); top_strip.add_child(cash_label); top_strip.add_child(rep_label); top_strip.add_child(day_label)
-
-    mode_rail = Panel.new()
-    mode_rail.add_theme_stylebox_override("panel", _style(PANEL, BORDER_SOFT, 10))
-    root.add_child(mode_rail)
-    var mode_row := HBoxContainer.new()
-    mode_row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    mode_rail.add_child(mode_row)
-    tabs = mode_row
-    mode_buttons.clear()
-    for i in range(4):
-        var b := Button.new()
-        b.text = ["LIVE", "BUSINESS", "EMPIRE", "WORLD"][i]
-        b.focus_mode = Control.FOCUS_NONE
-        b.custom_minimum_size = Vector2(44, 44)
-        b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-        b.pressed.connect(_set_tab.bind(i))
-        mode_row.add_child(b)
-        mode_buttons.append(b)
-
-    left_rail = Panel.new()
-    left_rail.add_theme_stylebox_override("panel", _style(PANEL, BORDER_SOFT, 10))
-    root.add_child(left_rail)
-    var left_box := VBoxContainer.new()
-    left_box.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    left_rail.add_child(left_box)
-    for i in range(4):
-        var b := Button.new()
-        b.text = ["HOME", "BUSINESS", "EMPIRE", "WORLD"][i]
-        b.custom_minimum_size = Vector2(76, 52)
-        b.focus_mode = Control.FOCUS_NONE
-        b.pressed.connect(_set_tab.bind(i))
-        left_box.add_child(b)
-
-    selected_card = Panel.new(); selected_card.add_theme_stylebox_override("panel", _style(PANEL, BORDER_SOFT, 12)); root.add_child(selected_card)
-    selected_title = _label("STARTING PROPERTY", 14, TEXT); selected_meta = _label("Restoration required", 10, MUTED); selected_meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    selected_card.add_child(selected_title); selected_card.add_child(selected_meta)
-
-    objective_card = Panel.new(); objective_card.add_theme_stylebox_override("panel", _style(PANEL, BORDER_SOFT, 12)); root.add_child(objective_card)
-    objective_text = _label("Inspect your property and begin restoration.", 10, TEXT); objective_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; objective_card.add_child(objective_text)
-
-    action_dock = Panel.new(); action_dock.add_theme_stylebox_override("panel", _style(Color("091920f2"), BORDER, 14)); root.add_child(action_dock)
-    action_title = _label("LIVE COMMANDS", 12, TEXT); action_subtitle = _label("Choose an action.", 9, MUTED); action_dock.add_child(action_title); action_dock.add_child(action_subtitle)
-    action_scroll = ScrollContainer.new(); action_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; action_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; action_dock.add_child(action_scroll)
-    action_grid = GridContainer.new(); action_grid.columns = 3; action_grid.add_theme_constant_override("h_separation", 7); action_grid.add_theme_constant_override("v_separation", 7); action_scroll.add_child(action_grid)
-    actions = action_grid
-
-    network_strip = Panel.new(); network_strip.add_theme_stylebox_override("panel", _style(PANEL, BORDER_SOFT, 12)); root.add_child(network_strip)
-
-    # Desktop status/feedback live outside the command dock. Ground this area so
-    # the world renderer cannot visually bleed through the executive status rail.
-    status_surface = Panel.new()
-    status_surface.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    status_surface.add_theme_stylebox_override("panel", _style(Color("091920f2"), BORDER_SOFT, 10))
-    root.add_child(status_surface)
-
-    bottom_mobile = Panel.new(); bottom_mobile.visible = false; root.add_child(bottom_mobile)
-    status_label = _label("", 10, TEXT); status_label.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(status_label)
-    feedback_panel = Panel.new(); feedback_panel.add_theme_stylebox_override("panel", _style(PANEL, BORDER, 10)); feedback_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE; feedback_panel.visible = false; root.add_child(feedback_panel)
-    feedback_label = _label("", 10, TEXT); feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; feedback_label.mouse_filter = Control.MOUSE_FILTER_IGNORE; feedback_panel.add_child(feedback_label)
-    goal_label = _label("", 10, MUTED); goal_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; goal_label.mouse_filter = Control.MOUSE_FILTER_IGNORE; root.add_child(goal_label)
-    mobile_actions = GridContainer.new(); mobile_objective = _label("", 10, TEXT); bottom_mobile.add_child(mobile_actions); bottom_mobile.add_child(mobile_objective)
-
-func _label(text: String, size: int, color: Color) -> Label:
-    var l := Label.new(); l.text = text; l.add_theme_font_size_override("font_size", size); l.add_theme_color_override("font_color", color); l.mouse_filter = Control.MOUSE_FILTER_IGNORE; return l
-
-func _style(bg: Color, border: Color, radius: int) -> StyleBoxFlat:
-    var s := StyleBoxFlat.new(); s.bg_color = bg; s.border_color = border; s.set_border_width_all(1); s.set_corner_radius_all(radius); s.content_margin_left = 10; s.content_margin_right = 10; s.content_margin_top = 7; s.content_margin_bottom = 7; return s
+func _style_mode_buttons() -> void:
+    if mode_buttons.is_empty(): return
+    for i in range(mode_buttons.size()):
+        var button := mode_buttons[i] as Button
+        if button == null: continue
+        var normal := StyleBoxFlat.new()
+        normal.bg_color = ACTIVE_TAB if i == active_tab else INACTIVE_TAB
+        normal.border_color = ACTIVE_TAB if i == active_tab else Color("24434b")
+        normal.set_border_width_all(1)
+        normal.set_corner_radius_all(8)
+        normal.content_margin_left = 6
+        normal.content_margin_right = 6
+        normal.content_margin_top = 5
+        normal.content_margin_bottom = 5
+        var hover := normal.duplicate()
+        hover.bg_color = Color("183b43")
+        hover.border_color = ACTIVE_TAB
+        var pressed := hover.duplicate()
+        pressed.bg_color = Color("244f50")
+        button.add_theme_stylebox_override("normal", normal)
+        button.add_theme_stylebox_override("hover", hover)
+        button.add_theme_stylebox_override("pressed", pressed)
+        button.add_theme_color_override("font_color", TAB_TEXT if i == active_tab else TAB_MUTED)
+        button.add_theme_color_override("font_hover_color", Color.WHITE)
+        button.add_theme_font_size_override("font_size", 10 if root.size.x < 390.0 else 11)
+        button.custom_minimum_size = Vector2(44, 44)
 
 func _layout_responsive() -> void:
+    super._layout_responsive()
     if root == null: return
-    var size := root.size
-    var w := maxf(size.x, 320.0)
-    var h := maxf(size.y, 480.0)
-    narrow = w < 700.0
-    top_strip.position = Vector2(8, 8); top_strip.size = Vector2(w - 16, 50)
-    brand.position = Vector2(10, 5); brand.size = Vector2(80, 32)
-    location_label.position = Vector2(92, 12); location_label.size = Vector2(maxf(80.0, w - 330.0), 24); location_label.visible = not narrow
-    cash_label.position = Vector2(w - 235, 8); cash_label.size = Vector2(72, 28)
-    rep_label.position = Vector2(w - 155, 8); rep_label.size = Vector2(65, 28)
-    day_label.position = Vector2(w - 78, 8); day_label.size = Vector2(65, 28)
-    mode_rail.position = Vector2(8, 64); mode_rail.size = Vector2(w - 16, 42)
-    left_rail.visible = not narrow
-    left_rail.position = Vector2(8, 116); left_rail.size = Vector2(88, 220)
-    selected_card.visible = not narrow
-    selected_card.position = Vector2(108, 116); selected_card.size = Vector2(minf(330.0, w * 0.30), 92)
-    selected_title.position = Vector2(10, 8); selected_title.size = Vector2(selected_card.size.x - 20, 28)
-    selected_meta.position = Vector2(10, 40); selected_meta.size = Vector2(selected_card.size.x - 20, 44)
-    objective_card.visible = not narrow
-    objective_card.position = Vector2(450, 116); objective_card.size = Vector2(minf(330.0, w * 0.30), 92)
-    objective_text.position = Vector2(10, 10); objective_text.size = objective_card.size - Vector2(20, 20)
-    network_strip.visible = not narrow
-    network_strip.position = Vector2(w - 250, 216); network_strip.size = Vector2(242, 82)
-    action_dock.position = Vector2(108 if not narrow else 8, 220 if not narrow else h - clampf(h * 0.40, 218.0, 250.0) - 8)
-    action_dock.size = Vector2(w - (116 if not narrow else 16), (h - 228) if not narrow else clampf(h * 0.40, 218.0, 250.0))
-    action_title.position = Vector2(10, 7); action_title.size = Vector2(action_dock.size.x - 20, 20)
-    action_subtitle.position = Vector2(10, 28); action_subtitle.size = Vector2(action_dock.size.x - 20, 20)
-    action_scroll.position = Vector2(8, 50); action_scroll.size = Vector2(action_dock.size.x - 16, action_dock.size.y - 58)
-    action_grid.columns = 2 if narrow else 3
-    if narrow:
-        status_surface.visible = false
-        status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        status_label.position = Vector2(8, 108); status_label.size = Vector2(w - 16, 36)
-        feedback_panel.position = Vector2(8, 148); feedback_panel.size = Vector2(w - 16, 56)
-        feedback_label.position = Vector2(10, 8); feedback_label.size = Vector2(maxf(40.0, w - 52.0), 40)
-        goal_label.position = Vector2(8, 208); goal_label.size = Vector2(w - 16, 40)
-    else:
-        status_surface.visible = true
-        status_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-        var dock_bottom := action_dock.position.y + action_dock.size.y
-        var max_y := maxf(0.0, h - 4.0)
-        status_surface.position = Vector2(4, h * 0.76)
-        status_surface.size = Vector2(minf(460.0, maxf(320.0, w * 0.36)), maxf(80.0, h * 0.24))
-        status_label.position = Vector2(8, minf(dock_bottom + 4.0, max_y - 24.0))
-        status_label.size = Vector2(minf(360.0, w - 16.0), 24)
-        feedback_panel.position = Vector2(8, minf(status_label.position.y + 32.0, max_y - 80.0))
-        feedback_panel.size = Vector2(300, 80)
-        feedback_label.position = Vector2(10, 8)
-        feedback_label.size = Vector2(280, 64)
-        goal_label.position = Vector2(8, minf(feedback_panel.position.y + 88.0, max_y - 44.0))
-        goal_label.size = Vector2(300, 44)
+    var s := root.size
+    var w := maxf(s.x, 320.0)
+    var h := maxf(s.y, 480.0)
+    _style_mode_buttons()
+    if mode_rail != null:
+        mode_rail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        for child in mode_rail.get_children():
+            if child is Control: child.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        for button in mode_buttons:
+            if button is Control: button.mouse_filter = Control.MOUSE_FILTER_STOP
+    if not narrow: return
+    mode_rail.visible = true
+    mode_rail.position = Vector2(8, 64)
+    mode_rail.size = Vector2(w - 16, 44)
+    var dock_height := clampf(h * 0.40, 218.0, 250.0)
+    var dock_top := maxf(114.0, h - dock_height - 8.0)
+    action_dock.visible = true
+    action_dock.position = Vector2(8, dock_top)
+    action_dock.size = Vector2(w - 16, h - dock_top - 8.0)
+    action_title.position = Vector2(10, 7)
+    action_title.size = Vector2(w - 36, 20)
+    action_subtitle.position = Vector2(10, 27)
+    action_subtitle.size = Vector2(w - 36, 20)
+    action_scroll.position = Vector2(8, 50)
+    action_scroll.size = Vector2(w - 32, maxf(132.0, action_dock.size.y - 58.0))
+    action_grid.columns = 2
+    var gap := 8.0
+    var button_width := maxf(0.0, (action_scroll.size.x - gap - 8.0) / 2.0)
+    for child in action_grid.get_children():
+        if child is Button:
+            child.custom_minimum_size = Vector2(button_width, 44.0)
+            child.size_flags_horizontal = Control.SIZE_FILL
+    bottom_mobile.visible = false
+    mobile_actions.visible = false
+    mobile_objective.visible = false
+    left_rail.visible = false
+    selected_card.visible = false
+    objective_card.visible = false
+    if right_card != null: right_card.visible = false
+    network_strip.visible = false
+    top_strip.position = Vector2(8, 8)
+    top_strip.size = Vector2(w - 16, 50)
+    brand.position = Vector2(9, 3)
+    brand.size = Vector2(70, 30)
+    brand.add_theme_font_size_override("font_size", 18 if w >= 380.0 else 16)
+    location_label.visible = false
+    day_label.visible = true
+    var compact := w < 390.0
+    cash_label.position = Vector2(w - (205.0 if compact else 230.0), 5)
+    cash_label.size = Vector2(68.0 if compact else 80.0, 28)
+    rep_label.position = Vector2(w - (130.0 if compact else 150.0), 5)
+    rep_label.size = Vector2(62.0 if compact else 70.0, 28)
+    day_label.position = Vector2(w - 62.0, 5)
+    day_label.size = Vector2(58.0, 28)
+    cash_label.add_theme_font_size_override("font_size", 10 if compact else 11)
+    rep_label.add_theme_font_size_override("font_size", 10 if compact else 11)
+    day_label.add_theme_font_size_override("font_size", 10)
 
 func _set_tab(index: int) -> void:
-    active_tab = clampi(index, 0, 3); _refresh()
-
-func _clear_action_grids() -> void:
-    if action_grid == null: return
-    for child in action_grid.get_children(): child.queue_free()
+    active_tab = clampi(index, 0, 3)
+    _page[active_tab] = 0
+    _refresh()
+    _style_mode_buttons()
 
 func _action(text: String, callback: Callable) -> void:
-    if action_grid == null or not callback.is_valid(): return
-    var b := Button.new(); b.text = text; b.focus_mode = Control.FOCUS_NONE; b.custom_minimum_size = Vector2(140, 44); b.size_flags_horizontal = Control.SIZE_EXPAND_FILL; b.pressed.connect(_run_action.bind(callback)); action_grid.add_child(b)
+    super._action(text, callback)
+    if action_grid == null or action_grid.get_child_count() == 0: return
+    var button := action_grid.get_child(action_grid.get_child_count() - 1) as Button
+    if button == null: return
+    button.tooltip_text = _action_hint(text)
+    button.add_theme_font_size_override("font_size", 10 if narrow else 11)
 
-func _run_action(callback: Callable) -> void:
-    if parent == null or not callback.is_valid(): return
-    var result = callback.call()
-    if result is Dictionary and result.has("message"): parent.message = str(result["message"])
-    if str(parent.message) != "": show_feedback(str(parent.message))
+func _action_hint(text: String) -> String:
+    match text:
+        "END DAY": return "Advance the simulation by one in-game day."
+        "BACK": return "Return to this sector's command hub."
+        "DASHBOARD": return "Open the company overview."
+        "PROPERTY MAP": return "Focus the property and district map."
+        "INSPECT": return "Inspect the selected property."
+        "ACQUIRE": return "Acquire the selected property."
+        "RESTORE": return "Continue restoring the selected property."
+        "SELL": return "Sell the selected property."
+        "LEASE": return "Lease the selected property."
+        "OPEN BUSINESS": return "Open the business at the selected property."
+        "SAVE": return "Save your current company state."
+        "LOAD": return "Load the latest saved company state."
+        "HISTORY": return "Review company history."
+        "NEWS": return "Review current world news."
+        "BUY INPUTS": return "Purchase production inputs."
+        "IMPORT": return "Purchase international inputs."
+        "PRODUCE": return "Run the production command."
+        "UPGRADE": return "Upgrade the current business."
+        "MARKETING": return "Run a marketing campaign."
+        "PRICE": return "Change the current product price."
+        "STAFF": return "Manage employees."
+        "HIRE": return "Hire an employee."
+        "HQ": return "Manage headquarters upgrades and services."
+        "CUSTOMERS": return "Review customer segments and demand."
+        "DEALS": return "Review contracts and commercial deals."
+        "CONTRACT": return "Sign a commercial contract."
+        "NEGOTIATE": return "Negotiate the selected contract."
+        "EXCLUSIVE": return "Sign an exclusive contract."
+        "GOVERNMENT": return "Sign a government contract."
+        "CONSTRUCTION": return "Sign a construction contract."
+        "EXPORT DEAL": return "Sign an export contract."
+        "FINANCE": return "Open financing tools."
+        "COLLECTIONS": return "Open collections management."
+        "PORTFOLIO": return "Review investments and holdings."
+        "NEXT RIVAL": return "Select the next rival."
+        "ALLIANCE": return "Make an alliance offer."
+        "RELATIONS": return "Improve an alliance relationship."
+        "COMPETE": return "Compete against an alliance."
+        "GOALS": return "Review victory progress."
+        "REPUTATION": return "Review reputation status."
+        "SUPPLY DEAL": return "Propose a supply deal."
+        "NETWORK": return "Open the corporate network."
+        "ALLIANCES": return "Open alliance management."
+        "CORPORATIONS": return "Open corporation management."
+        "REGIONS": return "Open regional management."
+        "EXPANSION": return "Manage expansion businesses."
+        "ACQUISITIONS": return "Review and negotiate acquisitions."
+        "UPGRADE EXPANSION": return "Upgrade an expansion business."
+        "TRANSPORT": return "Upgrade empire transport."
+        "NEXT REGION": return "Select the next region."
+        "ESTABLISH": return "Establish regional presence."
+        "CHARTER BASIN": return "Charter the basin region."
+        "CHARTER VALLEY": return "Charter the valley region."
+        "TRADE ROUTE": return "Establish a trade route."
+        "INTELLIGENCE": return "Review empire intelligence."
+        "LOAN": return "Take a company loan."
+        "REPAY": return "Repay a company loan."
+        "INVESTOR": return "Request an investment."
+        "ACCEPT DEAL": return "Accept an investment deal."
+        "DECLINE DEAL": return "Decline an investment deal."
+        "INVEST BILL": return "Invest in a term opportunity."
+        "DIVIDEND": return "Pay a dividend."
+        "BUY SHARES": return "Buy rival shares."
+        "SELL SHARES": return "Sell rival shares."
+        "GO PUBLIC": return "Take the company public."
+        "CAP TABLE": return "Review the capitalization table."
+        "WORLD POWER": return "Review world corporate power."
+        "TECHNOLOGY": return "Open technology management."
+        "PROGRESSION": return "Review empire progression."
+        "IDENTITY": return "Review corporate identity."
+        "PRODUCTION": return "Open production command center."
+        "LOGISTICS": return "Manage supply chain and logistics."
+        "INFRASTRUCTURE": return "Build and repair regional infrastructure."
+        "MISSIONS": return "Review world opportunities and missions."
+        "LIVE EVENTS": return "Review seasonal events and live opportunities."
+        _:
+            return "Execute %s." % text.to_lower()
+
+func _tab_subtitle() -> String:
+    return PAGE_SUBTITLES[active_tab][_page[active_tab]]
+
+func _mobile_context() -> String:
+    if parent == null: return "PROPERTY • INITIALIZING"
+    var ownership := "OWNED" if bool(parent.owned) else "AVAILABLE"
+    var business := "OPEN" if bool(parent.business_open) else "CLOSED"
+    return "PROPERTY %s • %d%% RESTORED • BUSINESS %s" % [ownership, int(parent.restoration), business]
+
+func _page_button(text: String, page: int) -> void:
+    _action(text, Callable(self, "_set_page").bind(page))
+
+func _back_button() -> void:
+    _action("BACK", Callable(self, "_set_page").bind(0))
+
+func _screen(text: String, screen_name: String) -> void:
+    _action(text, Callable(self, "_open_screen").bind(screen_name))
+
+func _refresh() -> void:
+    if parent == null or action_grid == null: return
+    _clear_action_grids()
+    var page: int = int(_page[active_tab])
+    action_title.text = ["LIVE", "BUSINESS", "EMPIRE", "WORLD"][active_tab] + " • " + PAGE_NAMES[active_tab][page]
+
+    match active_tab:
+        0:
+            match page:
+                0:
+                    _screen("DASHBOARD", "DashboardPanel")
+                    _action("PROPERTY MAP", _focus_property_map)
+                    _page_button("PROPERTY", 1)
+                    _page_button("OWNERSHIP", 2)
+                    _page_button("RECORDS", 3)
+                    _action("END DAY", parent.advance_day)
+                1:
+                    _back_button()
+                    _action("INSPECT", parent.inspect_property)
+                    _action("RESTORE", parent.restore_property)
+                2:
+                    _back_button()
+                    _action("ACQUIRE", parent.acquire_property)
+                    _action("SELL", parent.sell_property)
+                    _action("LEASE", parent.lease_property)
+                    _action("OPEN BUSINESS", parent.open_business)
+                3:
+                    _back_button()
+                    _action("SAVE", parent.save_game)
+                    _action("LOAD", parent.load_game)
+                    _screen("HISTORY", "HistoryPanel")
+                    _screen("NEWS", "NewsPanel")
+        1:
+            match page:
+                0:
+                    _page_button("PRODUCTION", 1)
+                    _page_button("BUSINESS", 2)
+                    _page_button("PEOPLE", 3)
+                    _page_button("COMMERCIAL", 4)
+                    _page_button("FINANCE", 7)
+                1:
+                    _back_button()
+                    _action("BUY INPUTS", parent.buy_inputs)
+                    _action("IMPORT", parent.buy_international)
+                    _action("PRODUCE", parent.produce_goods)
+                    _action("PRICE", parent.change_price)
+                2:
+                    _back_button()
+                    _action("UPGRADE", parent.upgrade_business)
+                    _action("MARKETING", parent.marketing_campaign)
+                3:
+                    _back_button()
+                    _action("HIRE", parent.hire_employee)
+                    _screen("STAFF", "EmployeePanel")
+                    _screen("HQ", "HeadquartersPanel")
+                4:
+                    _back_button()
+                    _page_button("CONTRACTS", 5)
+                    _screen("CUSTOMERS", "CustomerSegmentsUI")
+                    _screen("DEALS", "ContractPanel")
+                5:
+                    _back_button()
+                    _page_button("NEGOTIATION", 6)
+                    _action("CONTRACT", parent.sign_contract)
+                    _action("NEGOTIATE", parent.haggle_contract)
+                    _action("EXCLUSIVE", parent.sign_exclusive_contract)
+                6:
+                    _back_button()
+                    _action("GOVERNMENT", parent.sign_government_contract)
+                    _action("CONSTRUCTION", parent.sign_construction_contract)
+                    _action("EXPORT DEAL", parent.sign_export_contract)
+                7:
+                    _back_button()
+                    _page_button("FUNDING", 8)
+                    _screen("FINANCE", "FinancePanel")
+                    _screen("COLLECTIONS", "CollectionPanel")
+                    _screen("PORTFOLIO", "PortfolioPanel")
+                8:
+                    _back_button()
+                    _action("LOAN", parent.take_loan)
+                    _action("REPAY", parent.repay_loan)
+                    _action("INVESTOR", parent.request_investment)
+                    _action("ACCEPT DEAL", parent.accept_investment)
+                    _action("DECLINE DEAL", parent.decline_investment)
+        2:
+            match page:
+                0:
+                    _page_button("RIVALS", 1)
+                    _page_button("ALLIANCES", 2)
+                    _page_button("GROWTH", 4)
+                    _page_button("CAPITAL", 7)
+                    _page_button("TECHNOLOGY", 9)
+                1:
+                    _back_button()
+                    _action("NEXT RIVAL", _next_rival)
+                    _action("COMPETE", parent.compete_alliance)
+                    _action("GOALS", parent.victory_progress)
+                    _action("REPUTATION", parent.reputation_status)
+                2:
+                    _back_button()
+                    _page_button("CORPORATE", 3)
+                    _action("ALLIANCE", parent.make_alliance_offer)
+                    _action("RELATIONS", parent.improve_alliance)
+                    _action("SUPPLY DEAL", parent.propose_supply_deal)
+                3:
+                    _back_button()
+                    _screen("NETWORK", "CorporationsPanel")
+                    _screen("ALLIANCES", "AlliancePanel")
+                    _action("WORLD POWER", parent.world_power)
+                    _action("GOALS", parent.victory_progress)
+                4:
+                    _back_button()
+                    _page_button("REGIONS", 5)
+                    _action("EXPANSION", parent.buy_expansion)
+                    _action("UPGRADE EXPANSION", parent.upgrade_expansion)
+                    _action("TRANSPORT", parent.upgrade_transport)
+                5:
+                    _back_button()
+                    _page_button("CHARTERS", 6)
+                    _screen("REGIONS", "RegionsPanel")
+                    _action("NEXT REGION", parent.next_region)
+                    _action("ESTABLISH", parent.establish_region)
+                    _action("ACQUISITIONS", parent.negotiate_selected_acquisition)
+                6:
+                    _back_button()
+                    _action("CHARTER BASIN", parent.charter_basin)
+                    _action("CHARTER VALLEY", parent.charter_valley)
+                    _action("TRADE ROUTE", parent.establish_trade_route)
+                7:
+                    _back_button()
+                    _page_button("EQUITY", 8)
+                    _action("LOAN", parent.take_loan)
+                    _action("REPAY", parent.repay_loan)
+                    _action("INVESTOR", parent.request_investment)
+                8:
+                    _back_button()
+                    _action("INVEST BILL", parent.invest_term)
+                    _action("BUY SHARES", parent.buy_rival_shares)
+                    _action("SELL SHARES", parent.sell_rival_shares)
+                    _action("DIVIDEND", parent.pay_dividend)
+                9:
+                    _back_button()
+                    _screen("TECHNOLOGY", "TechnologyPanel")
+                    _screen("PROGRESSION", "EmpireProgressionPanel")
+                    _screen("IDENTITY", "EmpireIdentityPanel")
+        3:
+            match page:
+                0:
+                    _page_button("REGIONAL MANAGEMENT", 1)
+                    _page_button("OPERATIONS", 2)
+                    _page_button("EMPIRE MANAGEMENT", 3)
+                    _page_button("EVENTS", 4)
+                1:
+                    _back_button()
+                    _screen("REGIONS", "RegionsPanel")
+                    _screen("INFRASTRUCTURE", "InfrastructurePanel")
+                2:
+                    _back_button()
+                    _screen("PRODUCTION", "ProductionControlPanel")
+                    _screen("LOGISTICS", "SupplyChainPanel")
+                3:
+                    _back_button()
+                    _screen("EXPANSION", "EmpireExpansionPanel")
+                    _screen("INTELLIGENCE", "EmpireIntelligencePanel")
+                4:
+                    _back_button()
+                    _screen("MISSIONS", "WorldOpportunitiesPanel")
+                    _screen("LIVE EVENTS", "LiveOpsPanel")
+
+func _set_page(page: int) -> void:
+    _page[active_tab] = clampi(page, 0, PAGE_NAMES[active_tab].size() - 1)
     _refresh()
 
-func show_feedback(text: String) -> void:
-    if feedback_label == null or feedback_panel == null: return
-    feedback_label.text = text
-    feedback_panel.show()
-    feedback_timer = 7.0
-
-func _goal_text() -> String:
-    if parent == null: return "GOAL: Build your restoration empire."
-    if not bool(parent.owned): return "GOAL: Inspect and acquire the abandoned property."
-    if str(parent.stage) != "Operational": return "GOAL: Restore the property (%d%% complete)." % int(parent.restoration)
-    if not bool(parent.business_open): return "GOAL: Choose a purpose and open your first business."
-    return "GOAL: Produce, sell and expand your empire."
+func _focus_property_map() -> void:
+    var map := get_tree().root.get_node_or_null("Renew/World/PropertyMap")
+    if map != null:
+        map.show()
+        map.queue_redraw()
+        if parent != null:
+            parent.message = "Property map focused. Select a property on the district map."
+            show_feedback(str(parent.message))
+    elif parent != null:
+        parent.message = "Property map is unavailable."
+        show_feedback(str(parent.message))
 
 func _open_screen(screen_name: String) -> void:
     var manager := get_node_or_null("/root/RenewUIScreenManager")
@@ -237,45 +452,13 @@ func _open_screen(screen_name: String) -> void:
             var node := scene.get_node_or_null("UI/" + screen_name)
             if node != null: node.show()
 
-func _selected_title() -> String:
-    if parent == null: return "RENEW"
-    return "%s" % str(parent.stage).to_upper()
-
-func _selected_meta() -> String:
-    if parent == null: return ""
-    return "Property %s  •  Restoration %d%%  •  Business %s" % ["OWNED" if parent.owned else "AVAILABLE", int(parent.restoration), "OPEN" if parent.business_open else "CLOSED"]
-
-func _next_rival() -> void:
-    if parent != null and parent.rivals != null and not parent.rivals.rivals.is_empty(): parent.select_rival((int(parent.selected_rival) + 1) % parent.rivals.rivals.size())
-
-func _refresh() -> void:
-    if parent == null or action_grid == null: return
-    _clear_action_grids()
-    var titles := ["PROPERTY & RESTORATION", "BUSINESS OPERATIONS", "CORPORATE NETWORK", "WORLD & EMPIRE"]
-    action_title.text = titles[active_tab]
-    match active_tab:
-        0:
-            _action("INSPECT", parent.inspect_property); _action("ACQUIRE", parent.acquire_property); _action("RESTORE", parent.restore_property); _action("SELL", parent.sell_property); _action("LEASE", parent.lease_property); _action("OPEN BUSINESS", parent.open_business); _action("DASHBOARD", Callable(self, "_open_screen").bind("DashboardPanel")); _action("ASSETS", Callable(self, "_open_screen").bind("PortfolioPanel")); _action("END DAY", parent.advance_day)
-        1:
-            _action("BUY INPUTS", parent.buy_inputs); _action("IMPORT", parent.buy_international); _action("PRODUCE", parent.produce_goods); _action("HIRE", parent.hire_employee); _action("UPGRADE", parent.upgrade_business); _action("MARKETING", parent.marketing_campaign); _action("PRICE", parent.change_price); _action("CONTRACT", parent.sign_contract); _action("HAGGLE", parent.haggle_contract); _action("EXCLUSIVE", parent.sign_exclusive_contract); _action("GOVT DEAL", parent.sign_government_contract); _action("BUILD DEAL", parent.sign_construction_contract); _action("EXPORT DEAL", parent.sign_export_contract); _action("FINANCE", Callable(self, "_open_screen").bind("FinancePanel")); _action("DEALS", Callable(self, "_open_screen").bind("ContractPanel")); _action("STAFF", Callable(self, "_open_screen").bind("EmployeePanel")); _action("END DAY", parent.advance_day)
-        2:
-            _action("NEXT RIVAL", _next_rival); _action("ALLIANCE", parent.make_alliance_offer); _action("RELATION", parent.improve_alliance); _action("COMPETE", parent.compete_alliance); _action("GOALS", parent.victory_progress); _action("REPUTE", parent.reputation_status); _action("SUPPLY DEAL", parent.propose_supply_deal); _action("ACQUIRE", parent.negotiate_selected_acquisition); _action("BID BATTLE", parent.start_acquisition_battle); _action("RAISE BID", parent.raise_acquisition_bid); _action("WALK AWAY", parent.walk_away_acquisition); _action("BUY SHARES", parent.buy_rival_shares); _action("SELL SHARES", parent.sell_rival_shares); _action("LOAN", parent.take_loan); _action("REPAY", parent.repay_loan); _action("INVESTOR", parent.request_investment); _action("ACCEPT DEAL", parent.accept_investment); _action("DECLINE DEAL", parent.decline_investment); _action("INVEST BILL", parent.invest_term); _action("DIVIDEND", parent.pay_dividend); _action("GO PUBLIC", parent.go_public); _action("CAP TABLE", parent.cap_table); _action("POWER", parent.world_power); _action("NETWORK", Callable(self, "_open_screen").bind("CorporationsPanel")); _action("PACT", Callable(self, "_open_screen").bind("AlliancePanel")); _action("END DAY", parent.advance_day)
-        3:
-            _action("EXPANSION", parent.buy_expansion); _action("UPGRADE", parent.upgrade_expansion); _action("TRANSPORT", parent.upgrade_transport); _action("NEXT REGION", parent.next_region); _action("ESTABLISH", parent.establish_region); _action("CHARTER BASIN", parent.charter_basin); _action("CHARTER VALLEY", parent.charter_valley); _action("TRADE ROUTE", parent.establish_trade_route); _action("DISPATCH", parent.dispatch_goods); _action("INFRA BUILD", parent.infra_build); _action("INFRA TYPE", parent.infra_type); _action("INFRA REPAIR", parent.infra_repair); _action("SAVE", parent.save_game); _action("LOAD", parent.load_game); _action("NEW COMPANY", parent.found_new_company); _action("IDENTITY", parent.identity_status); _action("NOTICES", parent.check_notifications); _action("TECH", Callable(self, "_open_screen").bind("TechnologyPanel")); _action("NEWS", Callable(self, "_open_screen").bind("NewsPanel")); _action("PAST", Callable(self, "_open_screen").bind("HistoryPanel")); _action("END DAY", parent.advance_day)
-
 func _process(delta: float) -> void:
+    _hud_refresh_accum += delta
+    if _hud_refresh_accum < HUD_REFRESH_INTERVAL:
+        return
+    _hud_refresh_accum = 0.0
     if parent == null: return
-    cash_label.text = "$%s" % _money(int(parent.cash))
-    rep_label.text = "REP %d" % int(parent.reputation)
-    day_label.text = "DAY %d" % int(parent.day)
-    if status_label != null:
-        status_label.text = "CASH $%s   |   REP %d   |   DAY %d" % [_money(int(parent.cash)), int(parent.reputation), int(parent.day)]
-    if goal_label != null:
-        goal_label.text = _goal_text()
-    if feedback_timer > 0.0:
-        feedback_timer -= delta
-        if feedback_timer <= 0.0 and feedback_panel != null:
-            feedback_panel.hide()
-
-func _money(value: int) -> String:
-    return String.num_int64(value)
+    if action_subtitle != null: action_subtitle.text = _tab_subtitle()
+    if selected_title != null: selected_title.text = _selected_title()
+    if selected_meta != null: selected_meta.text = _selected_meta()
+    if narrow and status_label != null: status_label.text = _mobile_context()

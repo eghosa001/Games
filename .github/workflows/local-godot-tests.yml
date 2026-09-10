@@ -1,0 +1,118 @@
+name: RENEW Local Godot Tests
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: local-godot-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  local-fast:
+    runs-on: self-hosted
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare Godot
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $version = $env:GODOT_VERSION
+          $exe = Join-Path $PWD "Godot_v$version-stable_win64.exe"
+          if (-not (Test-Path $exe)) {
+            $zip = Join-Path $env:RUNNER_TEMP "godot-$version.zip"
+            $url = "https://github.com/godotengine/godot/releases/download/$version-stable/Godot_v$version-stable_win64.exe.zip"
+            Invoke-WebRequest -Uri $url -OutFile $zip
+            Expand-Archive -Path $zip -DestinationPath $PWD -Force
+          }
+          if (-not (Test-Path $exe)) { throw "Godot executable not found at $exe" }
+          "GODOT_EXE=$exe" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          & $exe --version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Import project
+        shell: powershell
+        run: |
+          & $env:GODOT_EXE --headless --editor --path . --quit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run master game-plan coverage gate
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path test_artifacts/local-fast-logs | Out-Null
+          & $env:GODOT_EXE --headless --path . --script res://tests/test_master_game_plan_coverage.gd 2>&1 | Tee-Object -FilePath test_artifacts/local-fast-logs/master-game-plan.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run mobile QA automation
+        shell: powershell
+        run: |
+          & $env:GODOT_EXE --headless --path . --script res://tests/mobile_qa_test.gd 2>&1 | Tee-Object -FilePath test_artifacts/local-fast-logs/mobile-qa.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Run full fast suite with local quality target
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Continue'
+          New-Item -ItemType Directory -Force -Path test_artifacts/local-fast-logs | Out-Null
+          $tests = @()
+          $tests += Get-ChildItem tests -Filter 'test_*.gd' -File
+          if (Test-Path tests/integration) { $tests += Get-ChildItem tests/integration -Filter 'test_*.gd' -File }
+          if (Test-Path tests/release) { $tests += Get-ChildItem tests/release -Filter 'test_*.gd' -File }
+          $failures = @()
+          foreach ($test in $tests) {
+            if ($test.Name -in @('test_long_soak.gd', 'test_extreme_soak.gd')) { continue }
+            $relative = $test.FullName.Substring($PWD.Path.Length + 1).Replace('\', '/')
+            Write-Host "===== $relative ====="
+            $logName = ($relative.Replace('/', '_') -replace '\.gd$', '.log')
+            $log = Join-Path 'test_artifacts/local-fast-logs' $logName
+
+            $savedCI = $env:CI
+            if ($test.Name -eq 'test_quality_gate.gd') {
+              $env:CI = 'false'
+              Write-Host 'Running strict quality gate with the 20 FPS local target.'
+            }
+            & $env:GODOT_EXE --headless --path . --script "res://$relative" 2>&1 | Tee-Object -FilePath $log
+            $status = $LASTEXITCODE
+            $env:CI = $savedCI
+
+            if ($status -ne 0) {
+              $failures += $relative
+              Write-Host "FAILED: $relative (exit $status)"
+            }
+          }
+          if ($failures.Count -gt 0) {
+            Write-Host "Local fast-suite failures ($($failures.Count)):"
+            $failures | ForEach-Object { Write-Host " - $_" }
+            exit 1
+          }
+
+      - name: Verify tests did not modify tracked source
+        shell: powershell
+        run: |
+          git diff --quiet -- .
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host 'ERROR: validation modified tracked repository files.'
+            git diff -- .
+            exit 1
+          }
+
+      - name: Upload local test logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: renew-local-godot-logs
+          path: test_artifacts/local-fast-logs/**
+          if-no-files-found: ignore
+          retention-days: 14

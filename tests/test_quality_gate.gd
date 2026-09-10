@@ -53,10 +53,19 @@ func test_project_contract() -> void:
     check(not source.is_empty(), "project.godot is readable")
     check(source.contains("run/main_scene=\"res://scenes/Main.tscn\""), "Main.tscn is the configured entry scene")
     check(source.contains("RenewGameState=\"*res://scripts/game_state.gd\""), "canonical GameState autoload is configured")
-    check(source.contains("RenewFinanceSystem=\"*res://scripts/finance_system_fixed.gd\""), "canonical FinanceSystem autoload is configured")
+    check(source.contains("RenewFinanceSystem=\"*res://scripts/finance_system.gd\""), "canonical FinanceSystem autoload is configured")
     check(source.contains("renderer/rendering_method=\"gl_compatibility\""), "supported compatibility renderer is configured")
+    check(not FileAccess.file_exists("res://scripts/business_system_fixed.gd"), "obsolete business fixed wrapper is absent")
+    check(not FileAccess.file_exists("res://scripts/finance_system_fixed.gd"), "obsolete finance fixed wrapper is absent")
+    check(not FileAccess.file_exists("res://scripts/renew_sims_ui_final.gd"), "obsolete final HUD wrapper is absent")
+    check(FileAccess.file_exists("res://scripts/business_system.gd"), "canonical BusinessSystem exists")
+    check(FileAccess.file_exists("res://scripts/finance_system.gd"), "canonical FinanceSystem exists")
+    check(FileAccess.file_exists("res://scripts/renew_sims_ui.gd"), "canonical primary HUD exists")
 
 func test_main_scene_contract() -> void:
+    var scene_source := FileAccess.get_file_as_string("res://scenes/Main.tscn")
+    check(scene_source.contains("res://scripts/renew_sims_ui.gd"), "Main scene uses canonical primary HUD")
+    check(not scene_source.contains("renew_sims_ui_final.gd"), "Main scene contains no obsolete HUD path")
     var packed := load("res://scenes/Main.tscn") as PackedScene
     check(packed != null, "Main.tscn loads as PackedScene")
     if packed == null:
@@ -125,6 +134,7 @@ func test_ui_contract() -> void:
     check(hud != null, "MainHUD exists")
     if hud == null:
         return
+    check(hud.get_script() != null and hud.get_script().resource_path == "res://scripts/renew_sims_ui.gd", "MainHUD script is canonical")
     check(hud.has_method("_layout_responsive"), "MainHUD owns responsive layout")
     check(hud.has_method("_set_tab"), "MainHUD owns tab switching")
     var required_ui := [
@@ -224,8 +234,6 @@ func test_render_checkpoint() -> void:
     if texture == null:
         return
     var image := texture.get_image()
-    # In headless mode the viewport may exist but hold no GPU-rendered pixels.
-    # Skip pixel-density checks while still recording that the viewport was present.
     if image == null or image.is_empty():
         print("QUALITY GATE: skipped pixel checkpoint (no GPU texture — headless mode)")
         return
@@ -249,17 +257,12 @@ func test_render_checkpoint() -> void:
     var variance := maxf(sum_sq / maxf(float(sample_count), 1.0) - mean * mean, 0.0)
     check(nonzero >= MIN_NONZERO_SAMPLE_PIXELS, "Rendered frame contains substantial visible content")
     check(variance >= MIN_PIXEL_VARIANCE, "Rendered frame has meaningful visual variation")
-    # Verify the PremiumWorldBackdrop actually paints its signature teal sky
-    # rather than leaving the canvas as clear-color black. This catches cases
-    # where the node is present and `visible == true` but `_draw()` produces
-    # nothing (null viewport, early-return bugs, transform issues).
     var teal_count := 0
     step_x = maxi(1, image.get_width() / 16)
     step_y = maxi(1, image.get_height() / 9)
     for y in range(0, image.get_height(), step_y):
         for x in range(0, image.get_width(), step_x):
             var c := image.get_pixel(x, y)
-            # Backdrop teal bands: G > R, B >= G, luminance in 0.04–0.30 range.
             if c.g > c.r and c.b >= c.g and c.r > 0.02 and (c.r + c.g + c.b) / 3.0 < 0.35:
                 teal_count += 1
     var total_samples := 1
@@ -273,8 +276,6 @@ func test_render_checkpoint() -> void:
     print("QUALITY SCREENSHOT: " + ProjectSettings.globalize_path(screenshot_path))
 
 func test_runtime_stability() -> void:
-    # Give renderer/shader/resource work from the screenshot checkpoint time to settle
-    # before measuring runtime responsiveness.
     for _i in range(RUNTIME_WARMUP_FRAMES):
         await process_frame
 
@@ -286,10 +287,6 @@ func test_runtime_stability() -> void:
     var frames := Engine.get_process_frames() - start_frames
     var fps := float(frames) / elapsed
 
-    # GitHub-hosted runners under Xvfb are shared virtual machines and their
-    # software-rendered wall-clock FPS is not representative of player hardware.
-    # Preserve the 20 FPS release target for normal/local runs while CI verifies
-    # that the rendered game continues advancing frames instead of stalling.
     var running_in_ci := OS.get_environment("CI").to_lower() == "true"
     var minimum_fps := CI_MIN_RUNTIME_FPS if running_in_ci else LOCAL_MIN_RUNTIME_FPS
     var environment_label := "CI responsiveness floor" if running_in_ci else "local runtime target"

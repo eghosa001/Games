@@ -107,7 +107,7 @@ func run() -> void:
     check(bankruptcy.contains("finance.record_asset_sale"), "Bankruptcy asset disposals use the accounting asset-sale transaction")
     check(not bankruptcy.contains("finance.receive(int(proceeds), \"liquidation proceeds\")"), "Liquidation does not misclassify asset proceeds as operating revenue")
 
-    var finance_script := _read("res://scripts/finance_system.gd")
+    var finance_script := _read("res://scripts/finance_system.gd") + "\n" + _read("res://scripts/finance_system_core.gd")
     check(finance_script.contains("const OPENING_EQUITY := 25000.0"), "Finance ledger has an explicit opening equity balance")
     check(finance_script.contains("retained_earnings -= float(amount)"), "Finance spending records the equity effect of expenses")
     check(finance_script.contains("retained_earnings += float(amount)"), "Finance receipts record the equity effect of revenue")
