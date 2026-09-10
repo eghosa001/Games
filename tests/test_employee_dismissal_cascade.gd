@@ -9,7 +9,7 @@ func _init() -> void:
     var result: Dictionary = system.fire_employee("emp_0002", 10)
     if not bool(result.get("ok", false)):
         failures.append("Employee dismissal should succeed for a normal active employee")
-    var coworker := system.get_employee("emp_james_001")
+    var coworker: Dictionary = system.get_employee("emp_james_001")
     if int(coworker.get("morale", 78)) != 74:
         failures.append("Dismissal must reduce morale of coworkers sharing the affected assignment")
     if int(result.get("affected_coworkers", 0)) != 1:
