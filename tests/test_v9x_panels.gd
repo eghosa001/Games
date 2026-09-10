@@ -92,7 +92,7 @@ func run() -> void:
     for child in (hud.get("action_grid") as Node).get_children():
         if child is Button:
             texts[str((child as Button).text)] = child
-    check(texts.has("DASHBOARD") and texts.has("ASSETS"), "Tab zero links screens")
+    check(texts.has("DASHBOARD") and texts.has("PROPERTY") and texts.has("OWNERSHIP"), "LIVE hub links dashboard and focused property workspaces")
     (texts["DASHBOARD"] as Button).pressed.emit()
     await process_frame
     await process_frame
