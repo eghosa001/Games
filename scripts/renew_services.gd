@@ -66,12 +66,13 @@ func _boot_services() -> void:
         _services[service_name] = node
 
 func get_service(service_name: String) -> Node:
-    var node: Node = _services.get(service_name)
-    if node != null and is_instance_valid(node):
-        return node
+    var cached = _services.get(service_name, null)
+    if cached != null and is_instance_valid(cached):
+        return cached as Node
+    _services.erase(service_name)
     var scene := get_tree().current_scene
     if scene != null:
-        node = scene.get_node_or_null("Systems/" + service_name)
+        var node := scene.get_node_or_null("Systems/" + service_name)
         if node != null:
             _services[service_name] = node
             return node
