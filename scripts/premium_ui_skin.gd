@@ -174,8 +174,8 @@ func _draw() -> void:
     # Secondary screens are deliberately presented as focused workspaces.
     # Hide the persistent navigation chrome while one is open so the player
     # sees the active task rather than multiple competing command surfaces.
-    var screen_manager := get_tree().root.get_node_or_null("RenewUIScreenManager")
-    var secondary_screen_open := screen_manager != null and screen_manager.get_active_screen_name() != ""
+    var screen_manager: Node = get_tree().root.get_node_or_null("RenewUIScreenManager")
+    var secondary_screen_open: bool = screen_manager != null and screen_manager.has_method("get_active_screen_name") and str(screen_manager.get_active_screen_name()) != ""
     if secondary_screen_open:
         return
 
