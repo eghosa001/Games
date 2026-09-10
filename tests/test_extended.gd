@@ -113,8 +113,11 @@ func run() -> void:
     state.set_value("technology", "research_points", 20)
     state.set_value("technology", "technology", {})
     state.set_value("player", "day", 10)
-    var tech_system = get_root().get_node_or_null("RenewTechnologySystem")
-    check(tech_system != null, "TechnologySystem autoload exists")
+    var tech_system: Node = null
+    var services := get_root().get_node_or_null("RenewServices")
+    if services != null and services.has_method("get_service"):
+        tech_system = services.get_service("RenewTechnologySystem")
+    check(tech_system != null, "TechnologySystem service exists")
     if tech_system != null:
         var tech_cash_before: int = int(finance.get("cash"))
         var direct_research_ok: bool = tech_system.research("efficient_production")
