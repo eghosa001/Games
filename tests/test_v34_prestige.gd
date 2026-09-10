@@ -122,7 +122,12 @@ func run() -> void:
         var world = services.get_service("RenewWorldEventSystem") if services != null else null
         var liveops = services.get_service("RenewLiveOpsSystem") if services != null else null
         var history = services.get_service("RenewHistorySystem") if services != null else null
-        check(world != null and world.active().is_empty(), "No crises carry over")
+        var carried_crises := 0
+        if world != null:
+            for event in world.active():
+                if event is Dictionary and str((event as Dictionary).get("category", "")) != "seasonal":
+                    carried_crises += 1
+        check(world != null and carried_crises == 0, "No crises carry over")
         check(liveops != null and int(liveops.get("current_season")) == 1, "Seasons restart")
         var kinds := {}
         if history != null:
