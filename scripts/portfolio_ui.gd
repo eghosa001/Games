@@ -57,7 +57,7 @@ func _label(text: String, size: int, color: Color) -> Label:
     var label := Label.new(); label.text = text; label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; label.add_theme_font_size_override("font_size", size); label.add_theme_color_override("font_color", color); panel.add_child(label); return label
 
 func _button(text: String) -> Button:
-    var button := Button.new(); button.text = text; button.focus_mode = Control.FOCUS_NONE; button.custom_minimum_size = Vector2(0, 46); panel.add_child(button); return button
+    var button := Button.new(); button.text = text; button.focus_mode = Control.FOCUS_NONE; button.clip_text = true; button.custom_minimum_size = Vector2(0, 46); panel.add_child(button); return button
 
 func _layout() -> void:
     if get_viewport() == null or panel == null: return
@@ -74,7 +74,7 @@ func _layout() -> void:
     detail_label.position = Vector2(side, panel.size.y - 238.0); detail_label.size = Vector2(width - side * 2.0, 70.0); detail_label.add_theme_font_size_override("font_size", 10 if compact else 11)
     var y := panel.size.y - 164.0; var gap := 7.0; var action_width := maxf(72.0, (width - side * 2.0 - gap * 2.0) / 3.0)
     next_button.position = Vector2(side, y); next_button.size = Vector2(action_width, 46); sell_button.position = Vector2(side + action_width + gap, y); sell_button.size = Vector2(action_width, 46); lease_button.position = Vector2(side + (action_width + gap) * 2.0, y); lease_button.size = Vector2(action_width, 46)
-    for button in [next_button, sell_button, lease_button]: button.add_theme_font_size_override("font_size", 10 if compact else 11)
+    for button in [next_button, sell_button, lease_button]: button.add_theme_font_size_override("font_size", 9 if compact else 11)
     close_button.position = Vector2(side, panel.size.y - 56.0); close_button.size = Vector2(width - side * 2.0, 46)
 
 func _catalog() -> Array:
