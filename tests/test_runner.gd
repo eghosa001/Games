@@ -49,6 +49,12 @@ func _new_game() -> Node:
     seed(123456)
     return game
 
+func _service(service_name: String) -> Node:
+    var services := root.get_node_or_null("RenewServices")
+    if services != null and services.has_method("get_service"):
+        return services.get_service(service_name)
+    return root.get_node_or_null(service_name)
+
 func test_main_composition() -> void:
     var game = await _new_game()
     if game == null:
@@ -160,7 +166,7 @@ func test_main_command_integration() -> void:
     check(game.transport_level >= 2, "integration transport upgrade command")
     check(game.transport_capacity >= 60, "integration transport capacity updated")
 
-    var reaction = root.get_node_or_null("RenewCompetitorReactionSystem")
+    var reaction = _service("RenewCompetitorReactionSystem")
     check(reaction != null, "integration competitor reaction system available")
     if reaction != null:
         reaction._remember(game.day, "integration_regression", {"ok": true})

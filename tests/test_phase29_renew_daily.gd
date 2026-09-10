@@ -16,9 +16,25 @@ func check(ok: bool, label: String) -> void:
         push_error("FAIL: " + label)
 
 func run() -> void:
-    var news = root.get_node_or_null("RenewNewsSystem")
-    check(news != null, "NewsSystem autoload is available")
+    var packed := load("res://scenes/Main.tscn") as PackedScene
+    check(packed != null, "Main scene loads for RENEW Daily integration")
+    if packed == null:
+        quit(1)
+        return
+    var game := packed.instantiate()
+    root.add_child(game)
+    current_scene = game
+    await process_frame
+    await process_frame
+    await process_frame
+
+    var news: Node = null
+    var services := root.get_node_or_null("RenewServices")
+    if services != null and services.has_method("get_service"):
+        news = services.get_service("RenewNewsSystem")
+    check(news != null, "NewsSystem service is available")
     if news == null:
+        game.free()
         quit(1)
         return
     check(news.has_method("generate_daily"), "Daily generation API exists")
@@ -39,5 +55,7 @@ func run() -> void:
         if not news.SECTIONS.has(str(story.get("section", ""))):
             stories_ok = false
     check(stories_ok, "Every story has source, headline and valid section")
+    game.free()
+    await process_frame
     print("PHASE 29 RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)

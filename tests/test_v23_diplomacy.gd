@@ -45,16 +45,21 @@ func run() -> void:
     if scene != null:
         var game = scene.instantiate()
         root.add_child(game)
+        current_scene = game
         await process_frame
         await process_frame
         game.cash = 100000
         game.select_rival(0)
-        var rel_before := int(game.command_system.relationship_system.rivals.rivals[0].get("relationship", 0))
-        var trust_before := float(root.get_node_or_null("RenewDiplomacySystem").get_trust("player", "apex_materials"))
-        game.send_envoy_gift()
-        check(int(game.command_system.relationship_system.rivals.rivals[0].get("relationship", 0)) > rel_before, "Envoy gift improves relations")
-        check(float(root.get_node_or_null("RenewDiplomacySystem").get_trust("player", "apex_materials")) > trust_before, "Envoy gift builds treaty trust")
-        check(int(game.cash) < 100000, "Envoy gift spends treasury cash")
+        var services = root.get_node_or_null("RenewServices")
+        var live_diplomacy = services.get_service("RenewDiplomacySystem") if services != null else null
+        check(live_diplomacy != null, "Live diplomacy service resolves")
+        if live_diplomacy != null:
+            var rel_before := int(game.command_system.relationship_system.rivals.rivals[0].get("relationship", 0))
+            var trust_before := float(live_diplomacy.get_trust("player", "apex_materials"))
+            game.send_envoy_gift()
+            check(int(game.command_system.relationship_system.rivals.rivals[0].get("relationship", 0)) > rel_before, "Envoy gift improves relations")
+            check(float(live_diplomacy.get_trust("player", "apex_materials")) > trust_before, "Envoy gift builds treaty trust")
+            check(int(game.cash) < 100000, "Envoy gift spends treasury cash")
         game.free()
         await process_frame
     diplomacy.queue_free()

@@ -28,6 +28,12 @@ func _ready() -> void:
     add_child(state_adapter)
     _ensure_catalog()
 
+func _service(service_name:String):
+    var registry=get_node_or_null("/root/RenewServices")
+    if registry!=null and registry.has_method("get_service"):
+        var node=registry.get_service(service_name)
+        if node!=null:return node
+    return get_node_or_null("/root/"+service_name)
 func _ensure_catalog() -> void:
     var stored = state_adapter.get_value("properties", "catalog", [])
     if not stored is Array or stored.size() != PROPERTY_CATALOG.size():
@@ -85,7 +91,8 @@ func restore_step(step: String, property_id: String = "") -> Dictionary:
     if is_operational(property):
         state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + 8); state_adapter.message("RESTORATION COMPLETE. Your neglected property is now productive capital.")
     else: state_adapter.message("%s %d%% complete: the property is visibly changing." % [step.capitalize(), progress])
-    var _rs=get_node_or_null("/root/RenewReputationSystem");if step == "cleaning" and _rs!=null and _rs.has_method("adjust"):_rs.adjust("environmental",2)
+    var reputation=_service("RenewReputationSystem")
+    if step == "cleaning" and reputation!=null and reputation.has_method("adjust"):reputation.adjust("environmental",2)
     return {"ok":true,"property":property.duplicate(true),"step":step,"cost":cost}
 func restore_property() -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)): state_adapter.message("Acquire the property first."); return

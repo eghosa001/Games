@@ -95,7 +95,8 @@ func _button(text: String) -> Button:
     var button := Button.new()
     button.text = text
     button.focus_mode = Control.FOCUS_NONE
-    button.custom_minimum_size = Vector2(0, 46)
+    button.clip_text = true
+    button.custom_minimum_size = Vector2(44, 46)
     panel.add_child(button)
     return button
 
@@ -124,30 +125,39 @@ func _layout() -> void:
     overview_label.position = Vector2(side, 48)
     overview_label.size = Vector2(width - side * 2.0, 46)
     overview_label.add_theme_font_size_override("font_size", 11 if compact else 12)
-
     objective_label.position = Vector2(side, 100)
     objective_label.size = Vector2(width - side * 2.0, 42)
     objective_label.add_theme_font_size_override("font_size", 11 if compact else 12)
-
     ops_label.position = Vector2(side, 146)
     ops_label.size = Vector2(width - side * 2.0, 54)
     ops_label.add_theme_font_size_override("font_size", 10 if compact else 11)
-
     events_label.position = Vector2(side, 208)
-    events_label.size = Vector2(width - side * 2.0, maxf(52.0, panel.size.y - 394.0))
     events_label.add_theme_font_size_override("font_size", 10 if compact else 11)
 
     var gap := 7.0
-    var action_width := maxf(72.0, (width - side * 2.0 - gap * 2.0) / 3.0)
-    var y := panel.size.y - 56.0
-    close_button.position = Vector2(side, y)
-    close_button.size = Vector2(action_width, 46)
-    notices_button.position = Vector2(side + action_width + gap, y)
-    notices_button.size = Vector2(action_width, 46)
-    primary_button.position = Vector2(side + (action_width + gap) * 2.0, y)
-    primary_button.size = Vector2(action_width, 46)
+    if compact:
+        var half := (width - side * 2.0 - gap) / 2.0
+        var row_two_y := panel.size.y - 56.0
+        var row_one_y := row_two_y - 53.0
+        close_button.position = Vector2(side, row_one_y)
+        close_button.size = Vector2(half, 46)
+        notices_button.position = Vector2(side + half + gap, row_one_y)
+        notices_button.size = Vector2(half, 46)
+        primary_button.position = Vector2(side, row_two_y)
+        primary_button.size = Vector2(width - side * 2.0, 46)
+        events_label.size = Vector2(width - side * 2.0, maxf(40.0, row_one_y - 216.0))
+    else:
+        var action_width := (width - side * 2.0 - gap * 2.0) / 3.0
+        var y := panel.size.y - 56.0
+        close_button.position = Vector2(side, y)
+        close_button.size = Vector2(action_width, 46)
+        notices_button.position = Vector2(side + action_width + gap, y)
+        notices_button.size = Vector2(action_width, 46)
+        primary_button.position = Vector2(side + (action_width + gap) * 2.0, y)
+        primary_button.size = Vector2(action_width, 46)
+        events_label.size = Vector2(width - side * 2.0, maxf(52.0, panel.size.y - 394.0))
     for button in [close_button, notices_button, primary_button]:
-        button.add_theme_font_size_override("font_size", 10 if compact else 11)
+        button.add_theme_font_size_override("font_size", 9 if compact else 11)
 
 func _refresh(_force: bool) -> void:
     var state = _state()

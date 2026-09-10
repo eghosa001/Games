@@ -35,7 +35,7 @@ func _ui_root() -> Node:
     return game_root.get_node_or_null("UI") if game_root != null else null
 
 func _coordinator() -> Node:
-    return get_tree().root.get_node_or_null("RenewUIRegionCoordinator")
+    return RenewServices.get_service("RenewUIRegionCoordinator")
 
 func _canonical_screen_name(screen_name: String) -> String:
     return String(SCREEN_ALIASES.get(screen_name, screen_name))
@@ -236,10 +236,13 @@ func _ensure_close_button(screen: Node) -> void:
         existing.tooltip_text = "Close"
         existing.focus_mode = Control.FOCUS_NONE
         existing.mouse_filter = Control.MOUSE_FILTER_STOP
-        existing.z_index = 10000
+        existing.z_index = 4096
         existing.custom_minimum_size = Vector2(96, 46)
         existing.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-        existing.position = Vector2(-112, 14)
+        existing.offset_left = -112.0
+        existing.offset_top = 14.0
+        existing.offset_right = -16.0
+        existing.offset_bottom = 60.0
         if not existing.pressed.is_connected(_on_close_pressed):
             existing.pressed.connect(_on_close_pressed)
         return
@@ -250,10 +253,13 @@ func _ensure_close_button(screen: Node) -> void:
     button.tooltip_text = "Close"
     button.focus_mode = Control.FOCUS_NONE
     button.mouse_filter = Control.MOUSE_FILTER_STOP
-    button.z_index = 10000
+    button.z_index = 4096
     button.custom_minimum_size = Vector2(96, 46)
     button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-    button.position = Vector2(-112, 14)
+    button.offset_left = -112.0
+    button.offset_top = 14.0
+    button.offset_right = -16.0
+    button.offset_bottom = 60.0
     button.pressed.connect(_on_close_pressed)
     host.add_child(button)
 

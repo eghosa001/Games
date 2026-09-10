@@ -8,6 +8,12 @@ var rivals = Rivals.new()
 func _ready() -> void:
     add_child(state_adapter)
 
+func _service(service_name:String):
+    var registry=get_node_or_null("/root/RenewServices")
+    if registry!=null and registry.has_method("get_service"):
+        var node=registry.get_service(service_name)
+        if node!=null:return node
+    return get_node_or_null("/root/"+service_name)
 func _selected_index() -> int:
     if rivals.rivals.is_empty(): return -1
     return clamp(int(state_adapter.get_value("competitors", "selected_rival", 0)), 0, rivals.rivals.size() - 1)
@@ -34,7 +40,7 @@ func send_envoy_gift() -> void:
     var gain := 12 if amount >= 5000 else 5
     rivals.rivals[selected]["relationship"] = min(100, int(rivals.rivals[selected].get("relationship", 0)) + gain)
     state_adapter.set_value("competitors", "relationship", int(rivals.rivals[selected].get("relationship", 0)))
-    var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
+    var diplomacy = _service("RenewDiplomacySystem")
     if diplomacy != null and diplomacy.has_method("get_trust") and diplomacy.has_method("set_trust"):
         var trust_gain := 15.0 if amount >= 5000 else 8.0
         diplomacy.set_trust("player", rival_id, min(100.0, float(diplomacy.get_trust("player", rival_id)) + trust_gain))

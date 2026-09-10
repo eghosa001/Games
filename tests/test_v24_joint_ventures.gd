@@ -29,10 +29,12 @@ func run() -> void:
     await process_frame
     var state = root.get_node_or_null("RenewGameState")
     var finance = root.get_node_or_null("RenewFinanceSystem")
-    var diplomacy = root.get_node_or_null("RenewDiplomacySystem")
-    var bridge = root.get_node_or_null("RenewDiplomacyControl")
+    var services = root.get_node_or_null("RenewServices")
+    var diplomacy = services.get_service("RenewDiplomacySystem") if services != null else null
+    var bridge = services.get_service("RenewDiplomacyControl") if services != null else null
     check(state != null and finance != null and diplomacy != null and bridge != null, "Diplomacy stack resolves")
     if state == null or finance == null or diplomacy == null or bridge == null:
+        game.free()
         quit(1)
         return
     game.cash = 100000

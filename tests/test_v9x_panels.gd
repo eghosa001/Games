@@ -51,20 +51,19 @@ func run() -> void:
     await process_frame
 
     var state = root.get_node_or_null("RenewGameState")
-    var finance = root.get_node_or_null("RenewFinanceSystem")
     game.cash = 250000
     game.day = 1
     game.inspect_property()
     game.acquire_property()
     var dashboard: Node = panels["DashboardPanel"]
     dashboard._refresh(true)
-    check(str(dashboard.overview_label.text).find("Day") >= 0, "Dashboard shows overview")
+    check(str(dashboard.overview_label.text).to_lower().find("day") >= 0, "Dashboard shows overview")
     check(str(dashboard.objective_label.text).find("NEXT") >= 0, "Dashboard names the objective")
-    check(str(dashboard.primary_button.text).is_empty() == false, "Dashboard offers a primary action")
+    check(not str(dashboard.primary_button.text).is_empty(), "Dashboard offers a primary action")
     var ledger: Node = panels["FinancePanel"]
     ledger._refresh(true)
-    check(str(ledger.overview_label.text).find("Cash") >= 0, "Finance shows the ledger")
-    check(str(ledger.credit_label.text).find("Credit") >= 0, "Finance shows credit standing")
+    check(str(ledger.overview_label.text).to_lower().find("cash") >= 0, "Finance shows the ledger")
+    check(str(ledger.credit_label.text).to_lower().find("credit") >= 0, "Finance shows credit standing")
     var portfolio: Node = panels["PortfolioPanel"]
     portfolio._refresh(true)
     check(str(portfolio.list_label.text).find("Riverside") >= 0, "Portfolio lists surveyed assets")
@@ -92,7 +91,7 @@ func run() -> void:
     for child in (hud.get("action_grid") as Node).get_children():
         if child is Button:
             texts[str((child as Button).text)] = child
-    check(texts.has("DASHBOARD") and texts.has("ASSETS"), "Tab zero links screens")
+    check(texts.has("DASHBOARD") and texts.has("PROPERTY") and texts.has("OWNERSHIP"), "LIVE hub links dashboard and focused property workspaces")
     (texts["DASHBOARD"] as Button).pressed.emit()
     await process_frame
     await process_frame

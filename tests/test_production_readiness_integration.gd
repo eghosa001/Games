@@ -2,14 +2,21 @@ extends SceneTree
 
 ## RENEW production-readiness integration gate.
 ## This gate is intentionally cross-system: it checks that the finished 2D game
-## composes its major economic systems through live autoloads/Main commands,
-## that persistence exposes the same domains, and that the active scene contains
-## no 3D gameplay dependency. It does not fabricate soft-launch metrics.
+## composes its major economic systems through live infrastructure autoloads,
+## scene-owned domain services and Main commands, that persistence exposes the
+## same domains, and that the active scene contains no 3D gameplay dependency.
+## It does not fabricate soft-launch metrics.
 
 const REQUIRED_AUTOLOADS := {
     "RenewGameState": "res://scripts/game_state.gd",
     "RenewFinanceSystem": "res://scripts/finance_system_fixed.gd",
     "RenewProductionSystem": "res://scripts/production_system.gd",
+    "RenewContractSystem": "res://scripts/contract_system.gd",
+    "RenewAllianceSystem": "res://scripts/alliance_v1_system.gd",
+    "RenewServices": "res://scripts/renew_services.gd"
+}
+
+const REQUIRED_SERVICES := {
     "RenewEmployeeSystem": "res://scripts/employee_system.gd",
     "RenewRegionSystem": "res://scripts/region_system.gd",
     "RenewInfrastructureSystem": "res://scripts/infrastructure_system.gd",
@@ -78,11 +85,20 @@ func test_2d_runtime_contract() -> void:
     current_scene = game
     await process_frame
     await process_frame
+    await process_frame
 
     check(game.get_node_or_null("World") != null, "2D world root exists")
     check(game.get_node_or_null("Systems") != null, "System composition root exists")
     check(game.get_node_or_null("UI") != null, "UI composition root exists")
     check(game.get_node_or_null("UI/MainHUD") != null, "Primary management HUD exists")
+
+    var services := root.get_node_or_null("RenewServices")
+    check(services != null and services.has_method("get_service"), "Scene service registry is live")
+    if services != null and services.has_method("get_service"):
+        for service_name in REQUIRED_SERVICES:
+            var path: String = REQUIRED_SERVICES[service_name]
+            check(FileAccess.file_exists(path), "Service source exists: " + path)
+            check(services.get_service(service_name) != null, "Scene service is live: " + service_name)
 
     var forbidden_3d := 0
     var stack: Array[Node] = [game]
@@ -122,7 +138,7 @@ func await_operational() -> void:
         await process_frame
 
 func test_cross_system_gameplay_flow() -> void:
-    if not await_game_ready():
+    if not await await_game_ready():
         check(false, "Cross-system flow has a live Main scene")
         return
     check(game.command_system != null, "Gameplay command boundary is live")
@@ -149,10 +165,10 @@ func test_cross_system_gameplay_flow() -> void:
     check(bool(game.business_open), "Business system opens after restoration")
 
     var employees_before: Variant = state.get_value("employees", "roster", [])
-    var employee_count_before := employees_before.size() if employees_before is Array else 0
+    var employee_count_before: int = employees_before.size() if employees_before is Array else 0
     game.hire_employee()
     var employees_after: Variant = state.get_value("employees", "roster", [])
-    var employee_count_after := employees_after.size() if employees_after is Array else 0
+    var employee_count_after: int = employees_after.size() if employees_after is Array else 0
     check(employee_count_after >= employee_count_before, "Hiring path remains state-safe")
 
     var finished_before := int(state.get_value("production", "finished_goods", 0))
@@ -192,7 +208,7 @@ func test_edge_cases() -> void:
         var roster_after: Variant = state.get_value("employees", "roster", [])
         check(roster_after is Array, "Employee dismissal edge case preserves roster shape")
     else:
-        check(true, "Employee dismissal edge case has a safe roster fallback")
+        check(roster is Array and roster.size() <= 1, "Employee dismissal edge case has a valid small-roster fallback")
 
     var snapshot: Dictionary = state.capture()
     check(snapshot.has("domains"), "State capture retains domain container after edge cases")

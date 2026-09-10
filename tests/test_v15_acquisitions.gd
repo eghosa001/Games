@@ -53,7 +53,6 @@ func run() -> void:
     var nothing: Dictionary = rivals.raise_acquisition_bid(0, 1000000)
     check(not bool(nothing.get("ok", false)), "Raise fails with no active battle")
 
-    # Forced win: rival bid below the opening ask resolves immediately.
     var opened2: Dictionary = rivals.start_acquisition_battle(1, 1000000, 100)
     check(bool(opened2.get("ok", false)), "Second battle opens")
     rivals.rivals[1]["battle_rival_bid"] = 1
@@ -66,7 +65,6 @@ func run() -> void:
     check(bool(retaliated.get("ok", false)), "Victory triggers rival retaliation")
     check(int(rivals.rivals[1].get("retaliation", 0)) > 0, "Retaliation pressure is recorded")
 
-    # Forced loss: rival bid far above any affordable raise still resolves.
     var opened3: Dictionary = rivals.start_acquisition_battle(2, 5000000, 100)
     check(bool(opened3.get("ok", false)), "Third battle opens")
     rivals.rivals[2]["battle_rival_bid"] = 5000000
@@ -81,12 +79,12 @@ func run() -> void:
     restored.restore_state(snapshot)
     check(restored.battle_status(1).get("active", true) == false, "Battle state survives save/load")
 
-    # Command layer: instant acquisition charges once and provokes retaliation.
     var scene = load("res://scenes/Main.tscn")
     check(scene != null, "Main scene loads for acquisition commands")
     if scene != null:
         var game = scene.instantiate()
         root.add_child(game)
+        current_scene = game
         await process_frame
         await process_frame
         game.cash = 500000
@@ -103,7 +101,8 @@ func run() -> void:
         check(bool(game.command_system.relationship_system.rivals.rivals[game.selected_rival].get("battle_active", false)), "Battle command opens bidding")
         game.walk_away_acquisition()
         check(not bool(game.command_system.relationship_system.rivals.rivals[game.selected_rival].get("battle_active", false)), "Walk-away command ends bidding")
-        var history = root.get_node_or_null("RenewHistorySystem")
+        var services = root.get_node_or_null("RenewServices")
+        var history = services.get_service("RenewHistorySystem") if services != null else null
         check(history != null, "History system is available")
         game.free()
         await process_frame

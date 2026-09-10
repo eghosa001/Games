@@ -1,7 +1,8 @@
 extends SceneTree
 
 ## Function-level release gate: every declared function must resolve to a callable method.
-## Safe getter/query methods with zero required arguments are smoke-invoked.
+## Safe zero-argument queries are smoke-invoked only for non-Node fixtures;
+## scene-dependent Node behavior is covered by integration/E2E suites.
 var passed := 0
 var failed := 0
 var scripts_checked := 0
@@ -37,13 +38,17 @@ func run() -> void:
             functions_checked += 1
             var method_name: String = signature.name
             check(instance.has_method(method_name), "callable: %s::%s" % [path, method_name])
-            # Only invoke zero-argument query methods. Mutating methods and
-            # scene-dependent methods are deliberately validated by presence.
-            if instance.has_method(method_name) and signature.required_args == 0 and _safe_query_smoke(method_name):
+            # Mounting arbitrary Node scripts invokes _ready() without their
+            # required scene composition and creates false runtime errors.
+            # Their methods are presence-checked here and behavior-tested by
+            # scene/integration suites. Pure RefCounted/Object queries remain
+            # safe to smoke-call directly.
+            if not (instance is Node) and instance.has_method(method_name) and signature.required_args == 0 and _safe_query_smoke(method_name):
                 smoke_checked += 1
-                var result = instance.call(method_name)
+                instance.call(method_name)
                 check(instance.has_method(method_name), "smoke callable: %s::%s" % [path, method_name])
-        if instance is Node: instance.free()
+        if instance is Node:
+            instance.free()
     print("RENEW FUNCTION COVERAGE: %d passed, %d failed" % [passed, failed])
     print("Scripts: %d | Functions: %d | Query smoke calls: %d" % [scripts_checked, functions_checked, smoke_checked])
     for failure in failures: print("FAILED: " + failure)

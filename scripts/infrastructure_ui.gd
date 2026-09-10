@@ -33,8 +33,16 @@ var list: VBoxContainer
 var refresh_clock := 0.0
 var last_signature := ""
 
+func _resolve_system():
+    var services := get_node_or_null("/root/RenewServices")
+    if services != null and services.has_method("get_service"):
+        var resolved = services.get_service("RenewInfrastructureSystem")
+        if resolved != null:
+            return resolved
+    return get_node_or_null("/root/RenewInfrastructureSystem")
+
 func _ready() -> void:
-    system = get_node_or_null("/root/RenewInfrastructureSystem")
+    system = _resolve_system()
     parent = get_tree().current_scene
     add_child(state_adapter)
     z_index = 57
@@ -138,7 +146,7 @@ func _close() -> void:
 
 func _process(delta: float) -> void:
     if parent == null: parent = get_tree().current_scene
-    if system == null: system = get_node_or_null("/root/RenewInfrastructureSystem")
+    if system == null: system = _resolve_system()
     if not visible: return
     refresh_clock += delta
     if refresh_clock >= 1.0:

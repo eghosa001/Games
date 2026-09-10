@@ -1,5 +1,6 @@
 extends Node
-## class_name removed: "RenewLiveOpsSystem" conflicts with project.godot autoload.
+## Scene-owned LiveOps service. Domain dependencies resolve through RenewServices;
+## infrastructure state/finance remain true autoloads.
 
 const SEASON_LENGTH := 30
 const CHECK_INTERVAL_SECONDS := 0.25
@@ -16,6 +17,14 @@ var seasonal_catalog: Array = [
     {"id":"global_trade_week","title":"Global Trade Week","duration":7,"reward":{"sales":1.15,"logistics":0.90}},
     {"id":"innovation_month","title":"Innovation Drive","duration":14,"reward":{"research":1.25,"technology":1.10}}
 ]
+
+func _service(service_name: String):
+    var registry := get_node_or_null("/root/RenewServices")
+    if registry != null and registry.has_method("get_service"):
+        var node = registry.get_service(service_name)
+        if node != null:
+            return node
+    return get_node_or_null("/root/" + service_name)
 
 func _ready() -> void:
     _ensure_content(_day())
@@ -54,7 +63,7 @@ func process_day(day: int) -> void:
     _advance_community_goal(day)
 
 func _ensure_content(day: int) -> void:
-    var world = get_node_or_null("/root/RenewWorldEventSystem")
+    var world = _service("RenewWorldEventSystem")
     if world == null: return
     var catalog_index: int = (current_season - 1) % seasonal_catalog.size()
     var season_def: Dictionary = seasonal_catalog[catalog_index]
@@ -123,7 +132,7 @@ func restore_state(state: Dictionary) -> void:
     last_day = int(state.get("last_day",-1))
 
 func _track(name: String, data: Dictionary) -> void:
-    var analytics = get_node_or_null("/root/RenewAnalyticsSystem")
+    var analytics = _service("RenewAnalyticsSystem")
     if analytics != null and analytics.has_method("track"): analytics.track(name, data)
 
 func _day() -> int:

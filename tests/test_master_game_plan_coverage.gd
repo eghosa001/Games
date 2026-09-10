@@ -2,15 +2,12 @@ extends SceneTree
 
 ## RENEW MASTER GAME-PLAN COVERAGE GATE
 ## Source basis: game-plan.txt, game-plan-revised.txt and UI.txt.
-## Purpose: one executable acceptance gate spanning the documented development
-## phases, V0/V1/V1.5/V2/V3 roadmap, gameplay pillars, retention, LiveOps,
-## authoritative-system integration, persistence and responsive presentation.
-## Future-only systems are tested as roadmap readiness rather than fabricated
-## gameplay: the gate never creates fake state just to make a future phase pass.
+## Domain systems are resolved through RenewServices; infrastructure autoloads
+## remain available directly at the SceneTree root.
 
 const MOBILE_TARGETS := [Vector2i(320, 568), Vector2i(360, 640), Vector2i(390, 844), Vector2i(412, 915)]
 const DESKTOP_TARGETS := [Vector2i(768, 1024), Vector2i(1024, 768), Vector2i(1280, 720), Vector2i(1440, 900), Vector2i(1920, 1080)]
-const REQUIRED_AUTOLOADS := {
+const REQUIRED_SYSTEMS := {
     "RenewGameState": "res://scripts/game_state.gd",
     "RenewFinanceSystem": "res://scripts/finance_system_fixed.gd",
     "RenewProductionSystem": "res://scripts/production_system.gd",
@@ -55,6 +52,22 @@ func skip(label: String) -> void:
     skips.append(label)
     print("SKIP (roadmap/future): " + label)
 
+func _system(node_name: String) -> Node:
+    var node := root.get_node_or_null(node_name)
+    if node != null:
+        return node
+    var services := root.get_node_or_null("RenewServices")
+    if services != null and services.has_method("get_service"):
+        node = services.get_service(node_name)
+        if node != null:
+            return node
+    if game != null and is_instance_valid(game):
+        node = game.get_node_or_null("Systems/" + node_name)
+        if node != null:
+            return node
+        node = game.find_child(node_name, true, false)
+    return node
+
 func run() -> void:
     print("============================================================")
     print("RENEW MASTER GAME-PLAN COVERAGE GATE")
@@ -84,6 +97,7 @@ func _new_game() -> Node:
         return null
     root.add_child(game)
     current_scene = game
+    await process_frame
     await process_frame
     await process_frame
     return game
@@ -122,14 +136,13 @@ func test_phase_2_vertical_slice() -> void:
     var g := await _new_game()
     if g == null:
         return
-    var state := root.get_node_or_null("RenewGameState")
-    check(state != null, "Phase 2: GameState available")
+    check(_system("RenewGameState") != null, "Phase 2: GameState available")
     check(g.expansion != null and g.expansion.properties.size() >= 3, "Phase 2: multiple property choices exist")
     check(g.command_system != null and g.command_system.business_system != null, "Phase 2: composed business system exists")
-    check(root.get_node_or_null("RenewEmployeeSystem") != null, "Phase 2: employee system exists")
-    check(root.get_node_or_null("RenewContractSystem") != null, "Phase 2: contract system exists")
-    check(root.get_node_or_null("RenewTechnologySystem") != null, "Phase 2: technology system exists")
-    check(root.get_node_or_null("RenewCompetitorReactionSystem") != null, "Phase 2: competitor reaction system exists")
+    check(_system("RenewEmployeeSystem") != null, "Phase 2: employee system exists")
+    check(_system("RenewContractSystem") != null, "Phase 2: contract system exists")
+    check(_system("RenewTechnologySystem") != null, "Phase 2: technology system exists")
+    check(_system("RenewCompetitorReactionSystem") != null, "Phase 2: competitor reaction system exists")
     var hud := g.get_node_or_null("UI/MainHUD")
     check(hud != null, "Phase 2: playable management HUD exists")
     if hud != null:
@@ -139,17 +152,21 @@ func test_phase_2_vertical_slice() -> void:
     await process_frame
 
 func test_phase_3_closed_alpha() -> void:
-    check(root.get_node_or_null("RenewAnalyticsSystem") != null, "Phase 3: analytics/measurement system exists")
-    check(root.get_node_or_null("RenewHistorySystem") != null, "Phase 3: player history measurement surface exists")
-    check(root.get_node_or_null("RenewNewsSystem") != null, "Phase 3: player-facing world feedback exists")
+    var g := await _new_game()
+    if g == null:
+        return
+    check(_system("RenewAnalyticsSystem") != null, "Phase 3: analytics/measurement system exists")
+    check(_system("RenewHistorySystem") != null, "Phase 3: player history measurement surface exists")
+    check(_system("RenewNewsSystem") != null, "Phase 3: player-facing world feedback exists")
     check(FileAccess.file_exists("res://tests/test_long_soak.gd"), "Phase 3: long-session stability test exists")
     check(FileAccess.file_exists("res://tests/test_extreme_soak.gd"), "Phase 3: extreme-session stability test exists")
     check(FileAccess.file_exists("res://tests/mobile_qa_test.gd"), "Phase 3: mobile QA automation exists")
     check(FileAccess.file_exists("res://tests/test_quality_gate.gd"), "Phase 3: release quality gate exists")
-    # The design calls for D1/D7 retention measurement; the executable gate
-    # verifies the analytics surface exists without inventing real-player data.
-    var analytics := root.get_node_or_null("RenewAnalyticsSystem")
+    var analytics := _system("RenewAnalyticsSystem")
     check(analytics != null and analytics.has_method("_process"), "Phase 3: analytics system is a live node, not only a placeholder")
+    g.free()
+    game = null
+    await process_frame
 
 func test_phase_4_v1_production() -> void:
     var g := await _new_game()
@@ -160,13 +177,13 @@ func test_phase_4_v1_production() -> void:
     if g.economy != null:
         for resource in ["timber", "iron", "energy"]:
             check(g.economy.resources.has(resource), "Phase 4: canonical resource exists: " + resource)
-    check(root.get_node_or_null("RenewProductionSystem") != null, "Phase 4: production system")
-    check(root.get_node_or_null("RenewContractSystem") != null, "Phase 4: contracts")
-    check(root.get_node_or_null("RenewAllianceSystem") != null, "Phase 4: basic alliances")
-    check(root.get_node_or_null("RenewWorldEventSystem") != null, "Phase 4: dynamic world events")
-    check(root.get_node_or_null("RenewSeasonalRestorationSystem") != null, "Phase 4: seasonal restoration event")
-    check(root.get_node_or_null("RenewRegionSystem") != null, "Phase 4: one-region world model")
-    check(root.get_node_or_null("RenewGlobalRankingSystem") != null, "Phase 4: ranking/progression foundation")
+    check(_system("RenewProductionSystem") != null, "Phase 4: production system")
+    check(_system("RenewContractSystem") != null, "Phase 4: contracts")
+    check(_system("RenewAllianceSystem") != null, "Phase 4: basic alliances")
+    check(_system("RenewWorldEventSystem") != null, "Phase 4: dynamic world events")
+    check(_system("RenewSeasonalRestorationSystem") != null, "Phase 4: seasonal restoration event")
+    check(_system("RenewRegionSystem") != null, "Phase 4: one-region world model")
+    check(_system("RenewGlobalRankingSystem") != null, "Phase 4: ranking/progression foundation")
     g.free()
     game = null
     await process_frame
@@ -178,25 +195,25 @@ func test_phase_5_soft_launch() -> void:
     check(FileAccess.file_exists("res://Docs/GAME_QUALITY_STANDARD.md"), "Phase 5: measurable quality standard exists")
     check(FileAccess.file_exists("res://tests/QUALITY_TEST_PROTOCOL.md"), "Phase 5: strict QA protocol exists")
     check(FileAccess.file_exists("res://tests/release/test_full_coverage.gd") or FileAccess.file_exists("res://tests/release/test_release_smoke.gd"), "Phase 5: release suite exists")
-    # Real-player onboarding/difficulty/economy/retention/monetization results
-    # cannot be fabricated by an automated local test; the required measurement
-    # and regression surfaces are checked instead.
-    if root.get_node_or_null("RenewAnalyticsSystem") == null:
-        skip("Real-player soft-launch metrics require the analytics service")
 
 func test_phase_6_global_launch() -> void:
-    check(root.get_node_or_null("RenewLiveOpsSystem") != null, "Phase 6: LiveOps system exists")
-    check(root.get_node_or_null("RenewLiveOpsUI") != null, "Phase 6: LiveOps UI exists")
-    check(root.get_node_or_null("RenewNewsSystem") != null, "Phase 6: recurring world/news surface exists")
-    check(root.get_node_or_null("RenewDynamicEventController") != null, "Phase 6: dynamic event controller exists")
-    check(root.get_node_or_null("RenewWorldEventSystem") != null, "Phase 6: world event system exists")
-    check(root.get_node_or_null("RenewSeasonalRestorationSystem") != null, "Phase 6: seasonal restoration content hook exists")
-    check(root.get_node_or_null("RenewGlobalRankingSystem") != null, "Phase 6: global ranking hook exists")
+    var g := await _new_game()
+    if g == null:
+        return
+    check(_system("RenewLiveOpsSystem") != null, "Phase 6: LiveOps system exists")
+    var liveops_ui := g.get_node_or_null("UI/LiveOpsPanel")
+    check(liveops_ui != null and liveops_ui.get_script() != null and liveops_ui.get_script().resource_path == "res://scripts/liveops_ui.gd", "Phase 6: LiveOps UI exists")
+    check(_system("RenewNewsSystem") != null, "Phase 6: recurring world/news surface exists")
+    check(_system("RenewDynamicEventController") != null, "Phase 6: dynamic event controller exists")
+    check(_system("RenewWorldEventSystem") != null, "Phase 6: world event system exists")
+    check(_system("RenewSeasonalRestorationSystem") != null, "Phase 6: seasonal restoration content hook exists")
+    check(_system("RenewGlobalRankingSystem") != null, "Phase 6: global ranking hook exists")
+    g.free()
+    game = null
+    await process_frame
 
 func test_v0_to_v3_roadmap() -> void:
-    # V0: fun loop.
     check(FileAccess.file_exists("res://tests/test_new_game_flow.gd") or FileAccess.file_exists("res://tests/test_runner.gd"), "V0: restore -> business -> revenue regression path exists")
-    # V1: all explicitly listed playable pillars.
     var v1_scripts := [
         "res://scripts/employee_system.gd", "res://scripts/contract_system.gd",
         "res://scripts/technology_system.gd", "res://scripts/region_system.gd",
@@ -204,7 +221,6 @@ func test_v0_to_v3_roadmap() -> void:
     ]
     for path in v1_scripts:
         check(FileAccess.file_exists(path), "V1: system file exists: " + path)
-    # V1.5: acquisitions/executives/deeper alliances/more regions/finance/ownership.
     var v15_candidates := [
         "res://scripts/acquisition_system.gd", "res://scripts/executive_system.gd",
         "res://scripts/ownership_system.gd", "res://scripts/investment_system.gd"
@@ -214,8 +230,7 @@ func test_v0_to_v3_roadmap() -> void:
         if FileAccess.file_exists(path):
             v15_present += 1
     check(v15_present > 0 or FileAccess.file_exists("res://Docs/V1_IMPLEMENTATION.md"), "V1.5: expansion architecture or implementation documentation exists")
-    check(root.get_node_or_null("RenewFinanceSystem") != null, "V1.5: financial system foundation exists")
-    # V2: international trade, JV, player contracts, alliance competitions, investment/shares/diplomacy.
+    check(_system("RenewFinanceSystem") != null, "V1.5: financial system foundation exists")
     var v2_candidates := [
         "res://scripts/joint_venture_system.gd", "res://scripts/trade_system.gd",
         "res://scripts/share_system.gd", "res://scripts/investment_system.gd",
@@ -226,56 +241,67 @@ func test_v0_to_v3_roadmap() -> void:
         if FileAccess.file_exists(path):
             v2_present += 1
     check(v2_present >= 2, "V2: multiple international/diplomacy/ownership expansion systems are present")
-    # V3: global economy, player-driven markets, advanced diplomacy, massive
-    # infrastructure, world-changing events, global corporations, stock market.
-    var v3_found := 0
-    for node_name in ["RenewGlobalRankingSystem", "RenewDiplomacySystem", "RenewInfrastructureSystem", "RenewLiveOpsSystem"]:
-        if root.get_node_or_null(node_name) != null:
-            v3_found += 1
-    check(v3_found >= 3, "V3: global-scale simulation foundations are present")
+    var g := await _new_game()
+    if g != null:
+        var v3_found := 0
+        for node_name in ["RenewGlobalRankingSystem", "RenewDiplomacySystem", "RenewInfrastructureSystem", "RenewLiveOpsSystem"]:
+            if _system(node_name) != null:
+                v3_found += 1
+        check(v3_found >= 3, "V3: global-scale simulation foundations are present")
+        g.free()
+        game = null
+        await process_frame
 
 func test_five_pillars_and_player_journey() -> void:
     var g := await _new_game()
     if g == null:
         return
-    # Restore -> Build -> Compete -> Collaborate -> Influence.
     g.cash = 1000000
-    g.inspect_property(); g.acquire_property()
+    g.inspect_property()
+    g.acquire_property()
     check(bool(g.owned), "Pillar Restore/Build: property ownership is reachable")
     for _i in range(8):
-        g.restore_property(); await process_frame
+        g.restore_property()
+        await process_frame
     check(str(g.stage) == "Operational", "Pillar Restore: property becomes operational")
-    g.choose_business_purpose(0); g.open_business()
+    g.choose_business_purpose(0)
+    g.open_business()
     check(bool(g.business_open), "Pillar Build: restored asset becomes business")
-    g.buy_inputs(); g.produce_goods(); g.sign_contract()
-    check(root.get_node_or_null("RenewContractSystem") != null, "Pillar Compete: contract economy is available")
-    var reaction := root.get_node_or_null("RenewCompetitorReactionSystem")
-    check(reaction != null, "Pillar Compete: competitor reaction system is available")
-    var alliance := root.get_node_or_null("RenewAllianceSystem")
-    check(alliance != null, "Pillar Collaborate: alliance system is available")
-    check(root.get_node_or_null("RenewGlobalRankingSystem") != null, "Pillar Influence: ranking/influence foundation is available")
-    g.free(); game = null; await process_frame
+    g.buy_inputs()
+    g.produce_goods()
+    g.sign_contract()
+    check(_system("RenewContractSystem") != null, "Pillar Compete: contract economy is available")
+    check(_system("RenewCompetitorReactionSystem") != null, "Pillar Compete: competitor reaction system is available")
+    check(_system("RenewAllianceSystem") != null, "Pillar Collaborate: alliance system is available")
+    check(_system("RenewGlobalRankingSystem") != null, "Pillar Influence: ranking/influence foundation is available")
+    g.free()
+    game = null
+    await process_frame
 
 func test_retention_and_session_structure() -> void:
-    # Source retention model: short-term restoration, daily business, weekly
-    # alliance work, long-term corporate growth, plus surprise events.
-    check(root.get_node_or_null("RenewAutosave") != null, "Retention: autosave supports unfinished progression")
-    check(root.get_node_or_null("RenewNewsSystem") != null, "Retention: daily news surface")
-    check(root.get_node_or_null("RenewAllianceSystem") != null, "Retention: alliance activity surface")
-    check(root.get_node_or_null("RenewLiveOpsSystem") != null, "Retention: surprise/live event surface")
-    check(root.get_node_or_null("RenewProgressionSystem") != null, "Retention: long-term progression surface")
-    check(root.get_node_or_null("RenewHistorySystem") != null, "Retention: persistent journey/history surface")
+    var g := await _new_game()
+    if g == null:
+        return
+    check(_system("RenewAutosave") != null, "Retention: autosave supports unfinished progression")
+    check(_system("RenewNewsSystem") != null, "Retention: daily news surface")
+    check(_system("RenewAllianceSystem") != null, "Retention: alliance activity surface")
+    check(_system("RenewLiveOpsSystem") != null, "Retention: surprise/live event surface")
+    check(_system("RenewProgressionSystem") != null, "Retention: long-term progression surface")
+    check(_system("RenewHistorySystem") != null, "Retention: persistent journey/history surface")
+    g.free()
+    game = null
+    await process_frame
 
 func test_authoritative_integration_and_persistence() -> void:
     var g := await _new_game()
     if g == null:
         return
-    for node_name in REQUIRED_AUTOLOADS.keys():
-        check(root.get_node_or_null(node_name) != null, "Authoritative integration: autoload alive: " + node_name)
+    for node_name in REQUIRED_SYSTEMS.keys():
+        check(_system(node_name) != null, "Authoritative integration: system alive: " + node_name)
     check(g.command_system != null, "Authoritative integration: command boundary exists")
     check(g.economy != null, "Authoritative integration: economy is wired")
     check(g.expansion != null, "Authoritative integration: expansion is wired")
-    var state := root.get_node_or_null("RenewGameState")
+    var state := _system("RenewGameState")
     check(state != null and state.has_method("capture") and state.has_method("restore"), "Persistence: GameState capture/restore API exists")
     if state != null:
         var snapshot: Dictionary = state.capture()
@@ -286,7 +312,9 @@ func test_authoritative_integration_and_persistence() -> void:
     g.cash = 1
     g.load_game()
     check(int(g.cash) == 246810, "Persistence: Main save/load preserves authoritative cash")
-    g.free(); game = null; await process_frame
+    g.free()
+    game = null
+    await process_frame
 
 func test_responsive_ui_contract() -> void:
     var g := await _new_game()
@@ -295,7 +323,9 @@ func test_responsive_ui_contract() -> void:
     var hud := g.get_node_or_null("UI/MainHUD")
     check(hud != null, "UI: MainHUD exists")
     if hud == null:
-        g.free(); game = null; return
+        g.free()
+        game = null
+        return
     var ui_root := hud.get("root") as Control
     check(ui_root != null, "UI: responsive root Control exists")
     if ui_root != null:
@@ -312,7 +342,9 @@ func test_responsive_ui_contract() -> void:
                     if button != null:
                         check(button.size.x >= 44 and button.size.y >= 44, "UI: tab touch target >=44px at %dx%d" % [target.x, target.y])
     check(hud.has_method("_set_tab"), "UI: deterministic tab switching API exists")
-    g.free(); game = null; await process_frame
+    g.free()
+    game = null
+    await process_frame
 
 func test_runtime_stability() -> void:
     var g := await _new_game()
@@ -326,7 +358,9 @@ func test_runtime_stability() -> void:
     var fps := float(Engine.get_process_frames() - start_frames) / elapsed
     check(fps >= 30.0, "Runtime: sustained sample >=30 FPS (%.1f)" % fps)
     check(g.is_inside_tree(), "Runtime: Main remains alive after stability sample")
-    g.free(); game = null; await process_frame
+    g.free()
+    game = null
+    await process_frame
 
 func finish() -> void:
     print("============================================================")

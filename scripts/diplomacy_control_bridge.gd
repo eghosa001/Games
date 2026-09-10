@@ -8,6 +8,14 @@ var applied: Dictionary = {}
 var defense_pacts: Dictionary = {}
 var last_day: Variant = -1
 
+func _service(service_name: String):
+    var registry := get_node_or_null("/root/RenewServices")
+    if registry != null and registry.has_method("get_service"):
+        var node = registry.get_service(service_name)
+        if node != null:
+            return node
+    return get_node_or_null("/root/" + service_name)
+
 func _process(_delta: float) -> void:
     var tree: Variant = Engine.get_main_loop()
     var scene = tree.get_current_scene() if tree != null else null
@@ -15,7 +23,7 @@ func _process(_delta: float) -> void:
     var day: Variant = int(scene.get("day"))
     if day == last_day: return
     last_day = day
-    var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
+    var diplomacy = _service("RenewDiplomacySystem")
     if diplomacy == null: return
     _sync(diplomacy, day)
 
@@ -30,8 +38,7 @@ func _ownership():
     return ownership
 
 func _finance():
-    var root = get_node_or_null("/root/RenewFinanceSystem")
-    return root
+    return get_node_or_null("/root/RenewFinanceSystem")
 
 func _sync(diplomacy, day: int) -> void:
     var active_ids: Dictionary = {}
@@ -131,12 +138,10 @@ func _apply_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
 
 func _fund_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
     var finance = _finance()
-    if finance == null:
-        return
+    if finance == null: return
     var terms: Dictionary = treaty.get("terms", {})
     var total := max(0, int(round(float(terms.get("joint_capital", 3000.0)))))
-    if total <= 0:
-        return
+    if total <= 0: return
     var player_pct := _party_percent(treaty, "player")
     var player_amount := int(round(float(total) * player_pct / 100.0))
     var paid: Dictionary = finance.spend(player_amount, "joint venture capital:%s" % treaty.get("id", ""))
@@ -154,24 +159,18 @@ func _fund_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
     state["last_payout_day"] = -1
 
 func _settle_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
-    if not bool(state.get("funded", false)):
-        return
+    if not bool(state.get("funded", false)): return
     var scene = _scene()
     var day := -1
-    if scene != null:
-        day = int(scene.get("day"))
-    if day >= 0 and int(state.get("last_payout_day", -1)) == day:
-        return
+    if scene != null: day = int(scene.get("day"))
+    if day >= 0 and int(state.get("last_payout_day", -1)) == day: return
     var finance = _finance()
-    if finance == null:
-        return
+    if finance == null: return
     var profit := int(round(float(state.get("funded_capital", 0)) * 0.015))
-    if profit <= 0:
-        return
+    if profit <= 0: return
     var player_pct := _party_percent(treaty, "player")
     var player_share := int(round(float(profit) * player_pct / 100.0))
-    if player_share > 0:
-        finance.receive(player_share, "joint venture profit:%s" % treaty.get("id", ""))
+    if player_share > 0: finance.receive(player_share, "joint venture profit:%s" % treaty.get("id", ""))
     if scene != null and scene.get("rivals") != null:
         for rival in scene.get("rivals").rivals:
             if rival is Dictionary and (str(rival.get("id", "")) == str(treaty.get("party_a", "")) or str(rival.get("id", "")) == str(treaty.get("party_b", ""))) and str(rival.get("id", "")) != "player":

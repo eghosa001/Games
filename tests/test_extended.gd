@@ -113,8 +113,11 @@ func run() -> void:
     state.set_value("technology", "research_points", 20)
     state.set_value("technology", "technology", {})
     state.set_value("player", "day", 10)
-    var tech_system = get_root().get_node_or_null("RenewTechnologySystem")
-    check(tech_system != null, "TechnologySystem autoload exists")
+    var tech_system: Node = null
+    var services := get_root().get_node_or_null("RenewServices")
+    if services != null and services.has_method("get_service"):
+        tech_system = services.get_service("RenewTechnologySystem")
+    check(tech_system != null, "TechnologySystem service exists")
     if tech_system != null:
         var tech_cash_before: int = int(finance.get("cash"))
         var direct_research_ok: bool = tech_system.research("efficient_production")
@@ -208,6 +211,8 @@ func run() -> void:
     check(bool(produced.get("ok", false)), "ProductionSystem furniture fixture succeeds")
 
     var finance_fixture = load("res://scripts/finance_system.gd").new()
+    root.add_child(finance_fixture)
+    await process_frame
     finance_fixture.cash = 50000
     finance_fixture.debt = 15000
     finance_fixture.loan_payment = 0
@@ -229,6 +234,8 @@ func run() -> void:
     check(float(finance_fixture.financing["loan_b"]["balance"]) == 5001.0, "Second financing balance includes accrued interest")
     check(finance_fixture.debt == debt_before_interest, "Interest does not incorrectly increase principal debt")
     check(bool(finance_fixture.validate_invariants().get("ok", false)), "Finance invariants survive interest accrual")
+    finance_fixture.queue_free()
+    await process_frame
 
     print("EXTENDED RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)

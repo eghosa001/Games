@@ -31,8 +31,12 @@ func soak_days(days: int) -> void:
     game.cash = 1000000
     game.inspect_property()
     game.acquire_property()
-    for _i in range(5):
+    var restoration_steps := 0
+    while str(game.stage) != "Operational" and restoration_steps < 20:
         game.restore_property()
+        restoration_steps += 1
+        await process_frame
+    check(str(game.stage) == "Operational", "V1 soak fixture reaches operational restoration")
     game.choose_business_purpose(0)
     game.open_business()
     check(bool(game.business_open), "V1 soak fixture opens a business")

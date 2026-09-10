@@ -175,18 +175,20 @@ func _layout_responsive() -> void:
     action_grid.columns = 2 if narrow else 3
     if narrow:
         status_surface.visible = false
-        status_label.position = Vector2(8, 108); status_label.size = Vector2(w - 16, 22)
-        feedback_panel.position = Vector2(8, 134); feedback_panel.size = Vector2(w - 16, 56)
+        status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        status_label.position = Vector2(8, 108); status_label.size = Vector2(w - 16, 36)
+        feedback_panel.position = Vector2(8, 148); feedback_panel.size = Vector2(w - 16, 56)
         feedback_label.position = Vector2(10, 8); feedback_label.size = Vector2(maxf(40.0, w - 52.0), 40)
-        goal_label.position = Vector2(8, 194); goal_label.size = Vector2(w - 16, 40)
+        goal_label.position = Vector2(8, 208); goal_label.size = Vector2(w - 16, 40)
     else:
         status_surface.visible = true
+        status_label.autowrap_mode = TextServer.AUTOWRAP_OFF
         var dock_bottom := action_dock.position.y + action_dock.size.y
         var max_y := maxf(0.0, h - 4.0)
         status_surface.position = Vector2(4, h * 0.76)
         status_surface.size = Vector2(minf(460.0, maxf(320.0, w * 0.36)), maxf(80.0, h * 0.24))
         status_label.position = Vector2(8, minf(dock_bottom + 4.0, max_y - 24.0))
-        status_label.size = Vector2(240, 24)
+        status_label.size = Vector2(minf(360.0, w - 16.0), 24)
         feedback_panel.position = Vector2(8, minf(status_label.position.y + 32.0, max_y - 80.0))
         feedback_panel.size = Vector2(300, 80)
         feedback_label.position = Vector2(10, 8)

@@ -67,27 +67,27 @@ func _map_area() -> Rect2:
 	if hud != null:
 		var dock: Variant = hud.get("action_dock")
 		if dock is Control and (dock as Control).visible:
-			bottom = minf(bottom, (dock as Control).position.y - 8.0)
+			bottom = minf(bottom, (dock as Control).get_global_rect().position.y - 8.0)
 		var selected: Variant = hud.get("selected_card")
 		if selected is Control and selected.visible:
-			top = maxf(top, selected.position.y + selected.size.y + 4.0)
+			top = maxf(top, (selected as Control).get_global_rect().end.y + 4.0)
 		else:
 			var objective: Variant = hud.get("objective_card")
 			if objective is Control and objective.visible:
-				top = maxf(top, objective.position.y + objective.size.y + 4.0)
+				top = maxf(top, (objective as Control).get_global_rect().end.y + 4.0)
 			else:
 				top = maxf(top, 212.0)
 		var left_rail: Variant = hud.get("left_rail")
 		var rail_right: float = 16.0
 		if left_rail is Control and left_rail.visible:
-			rail_right = maxf(rail_right, left_rail.position.x + left_rail.size.x + 4.0)
+			rail_right = maxf(rail_right, (left_rail as Control).get_global_rect().end.x + 4.0)
 		elif dock is Control and dock.visible:
-			rail_right = maxf(rail_right, dock.position.x + 4.0)
+			rail_right = maxf(rail_right, (dock as Control).get_global_rect().position.x + 4.0)
 		left = rail_right
 		width = maxf(100.0, viewport.x - left - 16.0)
 	if bottom - top < 90.0:
-		bottom = top + 90.0
-	return Rect2(left, top, maxf(width, 100.0), maxf(90.0, bottom - top))
+		top = maxf(8.0, bottom - 90.0)
+	return Rect2(left, top, maxf(width, 100.0), maxf(40.0, bottom - top))
 
 func map_rects() -> Array:
 	var out: Array = []
@@ -119,7 +119,7 @@ func map_rects() -> Array:
 		var col: int = index % cols
 		var row: int = index / cols
 		var origin := area.position + Vector2(col * cell.x + 6.0, row * cell.y + 4.0)
-		var size := Vector2(maxf(40.0, cell.x - 12.0), maxf(40.0, cell.y - 32.0))
+		var size := Vector2(maxf(40.0, cell.x - 12.0), maxf(24.0, cell.y - 32.0))
 		out.append({"id": str(entry.get("id", "")), "rect": Rect2(origin, size)})
 		index += 1
 	return out

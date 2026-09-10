@@ -17,9 +17,22 @@ func check(ok: bool, label: String) -> void:
         push_error("FAIL: " + label)
 
 func run() -> void:
-    var ranking = root.get_node_or_null("RenewGlobalRankingSystem")
+    var scene = load("res://scenes/Main.tscn")
+    check(scene != null, "Main scene loads for power wiring")
+    if scene == null:
+        quit(1)
+        return
+    var game = scene.instantiate()
+    root.add_child(game)
+    current_scene = game
+    await process_frame
+    await process_frame
+
+    var services = root.get_node_or_null("RenewServices")
+    var ranking = services.get_service("RenewGlobalRankingSystem") if services != null else null
     check(ranking != null, "Ranking system available")
     if ranking == null:
+        game.free()
         quit(1)
         return
     var state = root.get_node_or_null("RenewGameState")
@@ -46,17 +59,10 @@ func run() -> void:
     check(float(strong.get("cultural", 0.0)) == 80.0, "Culture mirrors reputation")
     check(str(ranking.world_power_text()).find("WORLD POWER") >= 0, "Power renders as text")
 
-    var scene = load("res://scenes/Main.tscn")
-    check(scene != null, "Main scene loads for power wiring")
-    if scene != null:
-        var game = scene.instantiate()
-        root.add_child(game)
-        await process_frame
-        await process_frame
-        check(game.has_method("world_power"), "Main exposes world_power")
-        game.command_system.world_power()
-        check(str(game.command_system._state_value("company", "message", "")).find("WORLD POWER") >= 0, "Power command reports")
-        game.free()
-        await process_frame
+    check(game.has_method("world_power"), "Main exposes world_power")
+    game.command_system.world_power()
+    check(str(game.command_system._state_value("company", "message", "")).find("WORLD POWER") >= 0, "Power command reports")
+    game.free()
+    await process_frame
     print("V810 POWER RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)

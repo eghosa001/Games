@@ -16,6 +16,13 @@ func _ready() -> void:
     last_day=parent.day
     queue_redraw()
 
+func _service(service_name:String):
+    var registry=get_node_or_null("/root/RenewServices")
+    if registry!=null and registry.has_method("get_service"):
+        var node=registry.get_service(service_name)
+        if node!=null:return node
+    return get_node_or_null("/root/"+service_name)
+
 func _process(_delta:float)->void:
     if parent == null: return
     regions.update_unlocks(parent.reputation)
@@ -46,10 +53,7 @@ func select_region(index:int)->void:
 func next_region()->void: select_region(regions.selected+1)
 func previous_region()->void: select_region(regions.selected-1)
 func charter_basin()->void:
-    var catalog = get_node_or_null("/root/RenewRegionSystem")
-    if catalog == null:
-        var scene = get_tree().current_scene if get_tree() != null else null
-        catalog = scene.get_node_or_null("Systems/RegionSystem") if scene != null else null
+    var catalog=_service("RenewRegionSystem")
     if catalog == null or not catalog.has_method("charter_basin"):
         message = "Regional survey office is unavailable."
         return
@@ -65,10 +69,7 @@ func charter_basin()->void:
     message=str(check.get("message","Iron Basin chartered."))
     parent._log("REGIONAL EXPANSION: Iron Basin chartered (-$%s, +5 reputation)." % _money(int(check.get("cost", 15000))))
 func charter_valley()->void:
-    var catalog = get_node_or_null("/root/RenewRegionSystem")
-    if catalog == null:
-        var scene = get_tree().current_scene if get_tree() != null else null
-        catalog = scene.get_node_or_null("Systems/RegionSystem") if scene != null else null
+    var catalog=_service("RenewRegionSystem")
     if catalog == null or not catalog.has_method("charter_valley"):
         message = "Regional survey office is unavailable."
         return

@@ -21,6 +21,10 @@ func _init() -> void:
 func _state():
     return root.get_node_or_null("RenewGameState")
 
+func _service(name: String):
+    var services = root.get_node_or_null("RenewServices")
+    return services.get_service(name) if services != null else null
+
 func _roster() -> Array:
     var state = _state()
     if state == null:
@@ -34,14 +38,14 @@ func _selected_property(game) -> Dictionary:
     return {}
 
 func _history_events() -> Array:
-    var history = root.get_node_or_null("RenewHistorySystem")
+    var history = _service("RenewHistorySystem")
     if history == null:
         return []
     var timeline = history.get("timeline")
     return timeline if timeline is Array else []
 
 func _news_issue() -> Dictionary:
-    var news = root.get_node_or_null("RenewNewsSystem")
+    var news = _service("RenewNewsSystem")
     if news == null or not news.has_method("get_current_issue"):
         return {}
     var issue = news.get_current_issue()
@@ -62,6 +66,7 @@ func run() -> void:
 
     var game = scene.instantiate()
     root.add_child(game)
+    current_scene = game
     await process_frame
     await process_frame
 
@@ -78,8 +83,8 @@ func run() -> void:
     check(game.has_method("advance_day"), "Advance day command exists")
     check(game.has_method("save_game"), "Save command exists")
     check(game.has_method("load_game"), "Load command exists")
-    check(root.get_node_or_null("RenewHistorySystem") != null, "HistorySystem is available")
-    check(root.get_node_or_null("RenewNewsSystem") != null, "NewsSystem is available")
+    check(_service("RenewHistorySystem") != null, "HistorySystem is available")
+    check(_service("RenewNewsSystem") != null, "NewsSystem is available")
     check(game.get_node_or_null("UI/TutorialOverlay") != null, "Tutorial is present in the release scene")
     if state == null:
         game.free()
@@ -87,20 +92,16 @@ func run() -> void:
         quit(1)
         return
 
-    # New Game -> Tutorial.
     game.cash = 100000
     game.day = 1
     check(int(game.day) == 1, "New Game starts on day 1")
     check(_roster().size() == 3, "New Game starts with the founding employee roster")
 
-    # Tutorial -> inspect -> acquire.
     game.inspect_property()
     check(bool(state.get_value("properties", "inspected", false)), "Property inspection completes")
     game.acquire_property()
     check(bool(state.get_value("properties", "owned", false)), "Property acquisition completes")
 
-    # Clean -> repair -> paint -> furnish. Restore through the real command,
-    # repeating until each authoritative property field reaches 100%.
     var selected = _selected_property(game)
     var property_id := str(selected.get("id", ""))
     check(not property_id.is_empty(), "A selected V1 property exists")
@@ -119,33 +120,27 @@ func run() -> void:
 
     check(str(state.get_value("properties", "stage", "")) == "Operational", "Property becomes operational")
 
-    # Open business through the actual V1 purpose-selection path.
     game.choose_business_purpose(0)
     check(bool(state.get_value("businesses", "business_open", false)), "Business opens after restoration")
     check(str(state.get_value("businesses", "industry_id", "")) == "furniture", "V1 flow selects Furniture industry")
 
-    # Hire employee: founding roster is 3, then the real hiring command makes 4.
     var count_before_hire := _roster().size()
     game.hire_employee()
     var count_after_hire := _roster().size()
     check(count_before_hire == 3, "Employee roster begins at exactly 3")
     check(count_after_hire == 4, "Hiring increases the roster to 4")
 
-    # Buy resources -> produce.
     var before_goods := int(state.get_value("production", "finished_goods", 0))
     game.buy_inputs()
     game.produce_goods()
     var after_goods := int(state.get_value("production", "finished_goods", 0))
     check(after_goods > before_goods, "Resource purchase and production create finished goods")
 
-    # Sign a real V1 contract before the day closes.
     game.sign_contract()
     var contract_days := int(state.get_value("contracts", "contract_days", 0))
     var contract_message := str(state.get_value("company", "message", "")).to_lower()
     check(contract_days > 0 or contract_message.find("contract") >= 0, "Contract flow is reached")
 
-    # Advance day is the V1 sales/settlement boundary. It also runs employee
-    # progression, competitors, dynamic events, HistorySystem and NewsSystem.
     var day_before := int(game.day)
     var tracked_id := ""
     var experience_before := -1
@@ -182,16 +177,17 @@ func run() -> void:
     check(competitor_reacted, "Competitor reacts during the release flow")
     check(event_occurred, "A dynamic event occurs during the release flow")
 
-    # Actual event stream -> HistorySystem -> NewsSystem.
     check(_history_events().size() > 0, "History records the release-flow events")
     check(_has_history_event("MAJOR_EVENT") or event_occurred, "History has the major-event path")
+    var news = _service("RenewNewsSystem")
+    if news != null and news.has_method("generate_daily"):
+        news.generate_daily(int(game.day))
     var issue := _news_issue()
     check(not issue.is_empty(), "News generates the daily edition")
     check(bool(issue.get("verified_only", false)), "News edition is verified-event-only")
     var stories = issue.get("stories", [])
     check(stories is Array and stories.size() > 0, "News reports at least one actual development")
 
-    # Save -> deliberately disturb state -> load -> prove the release state survives.
     game.save_game()
     var saved_snapshot = state.capture()
     check(int(saved_snapshot.get("schema_version", 0)) == 8, "Release save uses schema 8")

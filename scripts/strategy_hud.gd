@@ -8,6 +8,9 @@ var panel: Panel
 var label: Label
 var _coordinator_active := false
 
+func _coordinator() -> Node:
+    return RenewServices.get_service("RenewUIRegionCoordinator")
+
 func _ready() -> void:
     game = get_tree().root.get_node_or_null("Renew")
     root = Control.new()
@@ -30,8 +33,9 @@ func _ready() -> void:
     _layout_responsive()
 
 func _enter_tree() -> void:
-    if RenewUIRegionCoordinator != null:
-        RenewUIRegionCoordinator.set_active_screen("")
+    var coordinator := _coordinator()
+    if coordinator != null:
+        coordinator.set_active_screen("")
 
 func _layout_responsive() -> void:
     if root == null or panel == null or label == null:
@@ -70,8 +74,9 @@ func _process(_delta: float) -> void:
     if game == null or label == null:
         return
     var screen_name := ""
-    if RenewUIRegionCoordinator != null:
-        screen_name = RenewUIRegionCoordinator.get_active_screen()
+    var coordinator := _coordinator()
+    if coordinator != null:
+        screen_name = coordinator.get_active_screen()
     if screen_name == "":
         _layout_responsive()
     var market = game.get_node_or_null("Systems/MarketDirector")

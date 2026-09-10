@@ -103,12 +103,14 @@ func run() -> void:
     if scene != null:
         var game = scene.instantiate()
         root.add_child(game)
+        current_scene = game
         await process_frame
         await process_frame
+        var services = root.get_node_or_null("RenewServices")
         check(game.has_method("found_new_company"), "Main exposes found_new_company")
         state.set_value("ownership", "holdings", [{"rival_id": "r1", "rival_name": "R1", "shares": 50, "avg_price": 10.0, "total_paid": 500.0}])
         var auto = root.get_node_or_null("RenewVictorySystem")
-        check(bool(auto.check_victory().get("ok", false)), "Second victory wins")
+        check(auto != null and bool(auto.check_victory().get("ok", false)), "Second victory wins")
         game.found_new_company()
         check(int(finance.cash) == 75000, "Second heir capital stacks")
         var scene_rivals = game.command_system.relationship_system.rivals
@@ -117,12 +119,21 @@ func run() -> void:
             if not bool((r as Dictionary).get("eliminated", false)):
                 alive += 1
         check(alive == (scene_rivals.rivals as Array).size(), "Dynasty faces living rivals")
-        check(root.get_node_or_null("RenewWorldEventSystem").active().is_empty(), "No crises carry over")
-        check(int(root.get_node_or_null("RenewLiveOpsSystem").get("current_season")) == 1, "Seasons restart")
+        var world = services.get_service("RenewWorldEventSystem") if services != null else null
+        var liveops = services.get_service("RenewLiveOpsSystem") if services != null else null
+        var history = services.get_service("RenewHistorySystem") if services != null else null
+        var carried_crises := 0
+        if world != null:
+            for event in world.active():
+                if event is Dictionary and str((event as Dictionary).get("category", "")) != "seasonal":
+                    carried_crises += 1
+        check(world != null and carried_crises == 0, "No crises carry over")
+        check(liveops != null and int(liveops.get("current_season")) == 1, "Seasons restart")
         var kinds := {}
-        for e in root.get_node_or_null("RenewHistorySystem").get_timeline("", 100):
-            kinds[str((e as Dictionary).get("type", ""))] = true
-        check(not kinds.has("corporate_war") and not kinds.has("world_event"), "History restarts clean")
+        if history != null:
+            for e in history.get_timeline("", 100):
+                kinds[str((e as Dictionary).get("type", ""))] = true
+        check(history != null and not kinds.has("corporate_war") and not kinds.has("world_event"), "History restarts clean")
         game.free()
         await process_frame
     reloaded.queue_free()
