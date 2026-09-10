@@ -90,6 +90,8 @@ func _prepare_new_game(game, state) -> void:
         guard += 1
         await process_frame
     game.choose_business_purpose(0)
+    game.open_business()
+    check(bool(game.business_open), "Long-run fixture opens an operating business")
     game.hire_employee()
     game.buy_inputs()
     game.produce_goods()
