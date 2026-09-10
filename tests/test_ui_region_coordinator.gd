@@ -33,7 +33,8 @@ func run() -> void:
     var hud := game.get_node_or_null("UI/MainHUD")
     var strategy := game.get_node_or_null("UI/StrategyHUD")
     var tutorial := game.get_node_or_null("UI/TutorialOverlay")
-    var coordinator: Node = RenewServices.get_service("RenewUIRegionCoordinator")
+    var services = root.get_node_or_null("RenewServices")
+    var coordinator: Node = services.get_service("RenewUIRegionCoordinator") if services != null else null
     check("coordinator service resolves", coordinator != null)
     if coordinator == null:
         game.free()
