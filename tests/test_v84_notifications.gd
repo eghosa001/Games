@@ -28,8 +28,9 @@ func run() -> void:
     await process_frame
     await process_frame
 
-    var news = RenewServices.get_service("RenewNewsSystem")
-    var history = RenewServices.get_service("RenewHistorySystem")
+    var services = root.get_node_or_null("RenewServices")
+    var news = services.get_service("RenewNewsSystem") if services != null else null
+    var history = services.get_service("RenewHistorySystem") if services != null else null
     check(news != null, "News system available")
     check(history != null, "History system available")
     if news == null or history == null:
