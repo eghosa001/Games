@@ -14,12 +14,12 @@ func settle_debt_day() -> Dictionary:
     for id in financing:
         var instrument: Dictionary = financing[id]
         var principal := max(0.0, float(instrument.get("principal", 0.0)))
-        var remaining_periods := int(instrument.get("remaining_periods", instrument.get("term", 0)))
-        if principal <= 0.0 or remaining_periods <= 0:
+        if principal <= 0.0:
             instrument["payment"] = 0
             financing[id] = instrument
             continue
 
+        var remaining_periods := int(instrument.get("remaining_periods", instrument.get("term", 0)))
         var annual_rate := max(0.0, float(instrument.get("annual_rate", 0.0)))
         var accrued := max(0.0, float(instrument.get("accrued_interest", 0.0)))
         var instrument_interest := max(0, int(round(principal * annual_rate / 365.0)))
@@ -30,19 +30,22 @@ func settle_debt_day() -> Dictionary:
         instrument["accrued_interest"] = accrued
         instrument["balance"] = instrument["principal"] + accrued
 
-        var instrument_type := str(instrument.get("type", INSTRUMENT_LOAN))
+        # Legacy/manual financing records may predate term tracking. They still
+        # accrue interest, but they do not acquire a synthetic scheduled payment.
         var due := 0
-        if remaining_periods == 1:
-            due = int(round(principal + accrued))
-        elif instrument_type == INSTRUMENT_BOND:
-            due = int(round(accrued))
-        else:
-            var rate_per_period: float = annual_rate / 365.0
-            if rate_per_period > 0.0:
-                due = int(round(principal * rate_per_period / max(0.0001, 1.0 - pow(1.0 + rate_per_period, -remaining_periods))))
+        if remaining_periods > 0:
+            var instrument_type := str(instrument.get("type", INSTRUMENT_LOAN))
+            if remaining_periods == 1:
+                due = int(round(principal + accrued))
+            elif instrument_type == INSTRUMENT_BOND:
+                due = int(round(accrued))
             else:
-                due = int(ceil(principal / float(remaining_periods)))
-            due = max(due, int(round(accrued)))
+                var rate_per_period: float = annual_rate / 365.0
+                if rate_per_period > 0.0:
+                    due = int(round(principal * rate_per_period / max(0.0001, 1.0 - pow(1.0 + rate_per_period, -remaining_periods))))
+                else:
+                    due = int(ceil(principal / float(remaining_periods)))
+                due = max(due, int(round(accrued)))
         instrument["payment"] = max(0, due)
         financing[id] = instrument
         scheduled_due += max(0, due)
