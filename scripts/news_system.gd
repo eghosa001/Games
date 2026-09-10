@@ -1,7 +1,7 @@
 extends Node
 
 ## RENEW DAILY: personalized newspaper generated only from verified simulation events.
-## Phase 30: HistorySystem emits gameplay_event_recorded and this system subscribes to it.
+## History, employee and other domain services are scene-owned and resolve through RenewServices.
 const SYSTEM_VERSION := 3
 const MAX_ARCHIVE := 2000
 const MAX_STORIES_PER_ISSUE := 12
@@ -10,13 +10,20 @@ var archive:Array=[]
 var current_issue:Dictionary={}
 var _last_day:=-1
 var _seen_sources:Dictionary={}
+
+func _service(service_name:String):
+    var registry=get_node_or_null("/root/RenewServices")
+    if registry!=null and registry.has_method("get_service"):
+        var node=registry.get_service(service_name)
+        if node!=null:return node
+    return get_node_or_null("/root/"+service_name)
 func _ready()->void:
     call_deferred("_initialize_from_game");call_deferred("_connect_history")
 func _process(_delta:float)->void:_watch_day()
 func _initialize_from_game()->void:
     var state=get_node_or_null("/root/RenewGameState");var main=_main();var day:=int(state.get_value("player","day",1)) if state!=null else (int(main.get("day")) if main!=null else 1);if _last_day<0:_last_day=day;if current_issue.is_empty():generate_daily(day)
 func _connect_history()->void:
-    var history=get_node_or_null("/root/RenewHistorySystem")
+    var history=_service("RenewHistorySystem")
     if history!=null and history.has_signal("gameplay_event_recorded"):
         var callable:=Callable(self,"_on_history_event");if not history.gameplay_event_recorded.is_connected(callable):history.gameplay_event_recorded.connect(callable)
 func _on_history_event(event:Dictionary)->void:
@@ -100,7 +107,7 @@ func restore_state(snapshot:Dictionary)->void:
             var source:=str(story.get("source_key",""));if not source.is_empty():_seen_sources[source]=true
     if current_issue.is_empty() and not archive.is_empty():current_issue=archive.back().duplicate(true)
 func _collect_events(day:int)->Array[Dictionary]:
-    var result:Array[Dictionary]=[];var main=_main();var history=get_node_or_null("/root/RenewHistorySystem");var employees=get_node_or_null("/root/RenewEmployeeSystem")
+    var result:Array[Dictionary]=[];var main=_main();var history=_service("RenewHistorySystem");var employees=_service("RenewEmployeeSystem")
     var covered:Dictionary={}
     if history!=null:
         for event in history.get_timeline("",120):
@@ -198,7 +205,7 @@ func _details(details:Dictionary)->String:
         parts.append("%s: %s"%[str(key).replace("_"," ").capitalize(),str(details[key])])
     return "; ".join(parts) if not parts.is_empty() else "Verified gameplay event."
 func _employee_by_id(employee_id: String) -> Dictionary:
-    var employees = get_node_or_null("/root/RenewEmployeeSystem")
+    var employees = _service("RenewEmployeeSystem")
     if employees == null or not employees.has_method("get_employee"):
         return {}
     return employees.get_employee(employee_id)
