@@ -35,7 +35,7 @@ func _ui_root() -> Node:
     return game_root.get_node_or_null("UI") if game_root != null else null
 
 func _coordinator() -> Node:
-    return get_tree().root.get_node_or_null("RenewUIRegionCoordinator")
+    return RenewServices.get_service("RenewUIRegionCoordinator")
 
 func _canonical_screen_name(screen_name: String) -> String:
     return String(SCREEN_ALIASES.get(screen_name, screen_name))
