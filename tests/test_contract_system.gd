@@ -21,6 +21,8 @@ func run() -> void:
         quit(1)
         return
     var contracts = ContractSystem.new()
+    root.add_child(contracts)
+    await process_frame
     var created = contracts.create_customer_contract(["RENEW", "Buyer"], "steel", 10, 200, 70, {"frequency":"daily", "quantity_per_delivery":5, "duration_days":2, "start_day":1}, "Port Warehouse", 50, {"player_can_cancel":true, "fee":100}, {"eligible":true, "term_days":2, "price_adjustment":0.1}, {"on_fulfilled":3, "on_failed":-8})
     check(bool(created["ok"]), "Contract creation succeeds")
     var contract_id = str(created["contract"]["id"])
@@ -57,10 +59,15 @@ func run() -> void:
 
     var snapshot = contracts.capture_state()
     var restored = ContractSystem.new()
+    root.add_child(restored)
+    await process_frame
     restored.restore_state(snapshot)
     check(restored.completed_contracts.size() == contracts.completed_contracts.size(), "Completed contracts persist")
     check(restored.history.size() == contracts.history.size(), "Contract execution history persists")
     check(restored.active_contracts.size() == contracts.active_contracts.size(), "Active contracts persist")
 
+    contracts.queue_free()
+    restored.queue_free()
+    await process_frame
     print("CONTRACT SYSTEM RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
