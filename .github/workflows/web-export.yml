@@ -20,33 +20,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Generate current full source dump for this build
-        shell: bash
-        run: |
-          set -euo pipefail
-          {
-            echo "// ===== GAMES PROJECT - COMPLETE SOURCE ====="
-            echo "// Generated on: $(date -u '+%a %b %e %H:%M:%S UTC %Y')"
-            echo
-            echo "// Source snapshot commit: $(git rev-parse HEAD)"
-            echo
-            find . -type f \
-              ! -path './.git/*' \
-              ! -path './build/*' \
-              ! -path './full_source_code.txt' \
-              \( -name '*.gd' -o -name '*.tscn' -o -name '*.tres' -o -name '*.godot' -o -name '*.cfg' -o -name '*.json' -o -name '*.md' -o -name '*.yml' -o -name '*.yaml' -o -name '*.txt' -o -name '*.svg' -o -name '*.css' -o -name '*.html' -o -name '*.js' \) \
-              -print | sort | while IFS= read -r file; do
-                echo
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                echo "File: ${file#./}"
-                echo "Lines: $(wc -l < "$file")"
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                cat "$file"
-                echo
-              done
-          } > full_source_code.txt
-          test -s full_source_code.txt
-
       - name: Install Godot export templates
         shell: bash
         run: |
@@ -84,6 +57,13 @@ jobs:
         run: |
           set -euo pipefail
           timeout 120s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+
+      - name: Run release smoke gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 120s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/release/test_release_smoke.gd
+          timeout 180s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/release/test_full_new_game_flow.gd
 
       - name: Export Web build
         shell: bash
@@ -123,6 +103,3 @@ jobs:
           publish_branch: gh-pages
           publish_dir: ./build/web
           force_orphan: true
-
-# The test workflow owns updates to full_source_code.txt so source snapshots
-# are committed only after service migration and presentation repairs finish.
