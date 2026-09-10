@@ -50,7 +50,8 @@ func run() -> void:
         await process_frame
         game.cash = 100000
         game.select_rival(0)
-        var live_diplomacy = RenewServices.get_service("RenewDiplomacySystem")
+        var services = root.get_node_or_null("RenewServices")
+        var live_diplomacy = services.get_service("RenewDiplomacySystem") if services != null else null
         check(live_diplomacy != null, "Live diplomacy service resolves")
         if live_diplomacy != null:
             var rel_before := int(game.command_system.relationship_system.rivals.rivals[0].get("relationship", 0))
