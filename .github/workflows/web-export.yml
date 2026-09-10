@@ -1,128 +1,85 @@
 name: Godot Web Export
 
 on:
-  push:
-    branches: [main]
-  workflow_dispatch:
+  workflow_run:
+    workflows: ["RENEW Godot Tests"]
+    types: [completed]
 
 permissions:
   contents: write
 
+concurrency:
+  group: renew-web-production
+  cancel-in-progress: true
+
 env:
   GODOT_VERSION: 4.7.2
-  GODOT_TEMPLATE_VERSION: 4.7.2.stable
 
 jobs:
-  export-web:
+  export-and-deploy:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Checkout
+      - name: Checkout exact validated commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Generate current full source dump for this build
-        shell: bash
-        run: |
-          set -euo pipefail
-          {
-            echo "// ===== GAMES PROJECT - COMPLETE SOURCE ====="
-            echo "// Generated on: $(date -u '+%a %b %e %H:%M:%S UTC %Y')"
-            echo
-            echo "// Source snapshot commit: $(git rev-parse HEAD)"
-            echo
-            find . -type f \
-              ! -path './.git/*' \
-              ! -path './build/*' \
-              ! -path './full_source_code.txt' \
-              \( -name '*.gd' -o -name '*.tscn' -o -name '*.tres' -o -name '*.godot' -o -name '*.cfg' -o -name '*.json' -o -name '*.md' -o -name '*.yml' -o -name '*.yaml' -o -name '*.txt' -o -name '*.svg' -o -name '*.css' -o -name '*.html' -o -name '*.js' \) \
-              -print | sort | while IFS= read -r file; do
-                echo
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                echo "File: ${file#./}"
-                echo "Lines: $(wc -l < "$file")"
-                echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                cat "$file"
-                echo
-              done
-          } > full_source_code.txt
-          test -s full_source_code.txt
-
-      - name: Install Godot export templates
-        shell: bash
-        run: |
-          set -euo pipefail
-          export XDG_DATA_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}"
-          TEMPLATES_DIR="$XDG_DATA_HOME/godot/export_templates/$GODOT_TEMPLATE_VERSION"
-          mkdir -p "$TEMPLATES_DIR" /tmp/godot_templates
-          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -O /tmp/templates.tpz
-          test -s /tmp/templates.tpz
-          7z x /tmp/templates.tpz -o/tmp/godot_templates >/dev/null
-          for template in web_nothreads_debug.zip web_nothreads_release.zip; do
-            source_file="$(find /tmp/godot_templates -type f -name "$template" -print -quit)"
-            test -n "$source_file"
-            cp -f "$source_file" "$TEMPLATES_DIR/$template"
-          done
-          version_file="$(find /tmp/godot_templates -type f -name version.txt -print -quit || true)"
-          [ -z "$version_file" ] || cp -f "$version_file" "$TEMPLATES_DIR/version.txt"
-          for template in web_nothreads_debug.zip web_nothreads_release.zip; do
-            test -s "$TEMPLATES_DIR/$template"
-          done
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y unzip wget
 
       - name: Install Godot
-        shell: bash
         run: |
           set -euo pipefail
-          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O /tmp/godot.zip
-          rm -rf "$HOME/godot"
-          mkdir -p "$HOME/godot"
-          7z x /tmp/godot.zip -o"$HOME/godot" >/dev/null
-          chmod +x "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
-          "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O /tmp/godot.zip
+          unzip -q /tmp/godot.zip
+          chmod +x "Godot_v${GODOT_VERSION}-stable_linux.x86_64"
 
-      - name: Validate project before export
-        shell: bash
+      - name: Install matching export templates
         run: |
           set -euo pipefail
-          timeout 120s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+          templates="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$templates"
+          wget -q "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -O /tmp/templates.tpz
+          unzip -q -j /tmp/templates.tpz 'templates/*' -d "$templates"
+          printf '%s\n' "${GODOT_VERSION}.stable" > "$templates/version.txt"
 
-      - name: Export Web build
-        shell: bash
+      - name: Import untouched project
+        run: timeout 120s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+
+      - name: Re-run critical release gates
         run: |
           set -euo pipefail
-          rm -rf build/web
+          timeout 180s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_release_smoke.gd
+          timeout 300s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_new_game_flow.gd
+          git diff --exit-code
+
+      - name: Export Web release
+        run: |
+          set -euo pipefail
           mkdir -p build/web
-          timeout 600s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --export-release "Web" build/web/index.html
+          timeout 600s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --export-release "Web" build/web/index.html
           test -s build/web/index.html
+          test -n "$(find build/web -maxdepth 1 -name '*.wasm' -print -quit)"
+          test -n "$(find build/web -maxdepth 1 -name '*.pck' -print -quit)"
 
-      - name: Verify single-threaded Web export
-        shell: bash
+      - name: Verify single-threaded Web configuration
         run: |
           set -euo pipefail
-          grep -q 'GODOT_THREADS_ENABLED = false' build/web/index.html
-          if grep -q 'GODOT_THREADS_ENABLED = true' build/web/index.html; then
-            echo 'ERROR: Web export still has thread support enabled.'
+          grep -q 'variant/thread_support=false' export_presets.cfg
+          if grep -R -q 'SharedArrayBuffer' build/web; then
+            echo "ERROR: single-threaded export unexpectedly references SharedArrayBuffer"
             exit 1
           fi
-          echo 'Verified: Web export is single-threaded.'
 
-      - name: Add static-hosting headers file
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat > build/web/_headers <<'EOF'
-          /*
-            Cross-Origin-Opener-Policy: same-origin
-            Cross-Origin-Embedder-Policy: require-corp
-            Cross-Origin-Resource-Policy: cross-origin
-          EOF
+      - name: Verify source stayed clean
+        run: git diff --exit-code
 
-      - name: Publish Web build to gh-pages
+      - name: Deploy validated build to gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
           publish_dir: ./build/web
+          publish_branch: gh-pages
           force_orphan: true
-
-# The test workflow owns updates to full_source_code.txt so source snapshots
-# are committed only after service migration and presentation repairs finish.
