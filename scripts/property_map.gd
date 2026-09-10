@@ -86,7 +86,7 @@ func _map_area() -> Rect2:
 		left = rail_right
 		width = maxf(100.0, viewport.x - left - 16.0)
 	if bottom - top < 90.0:
-		bottom = minf(viewport.y - 8.0, top + 90.0)
+		top = maxf(8.0, bottom - 90.0)
 	return Rect2(left, top, maxf(width, 100.0), maxf(40.0, bottom - top))
 
 func map_rects() -> Array:
