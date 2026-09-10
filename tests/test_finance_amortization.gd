@@ -15,7 +15,7 @@ func _init() -> void:
     call_deferred("run")
 
 func _finance() -> Node:
-    var script = load("res://scripts/finance_system_fixed.gd")
+    var script = load("res://scripts/finance_system.gd")
     var finance = Node.new()
     finance.set_script(script)
     root.add_child(finance)
