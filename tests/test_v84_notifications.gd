@@ -47,6 +47,8 @@ func run() -> void:
         state.clear()
     if history.has_method("restore_state"):
         history.restore_state({})
+    if news.has_method("restore_state"):
+        news.restore_state({})
     state.set_value("player", "day", 10)
     var first: Dictionary = news.read_notifications()
     check(bool(first.get("ok", false)) and int(first.get("unread", -1)) == 0, "First opening sets the watermark")
