@@ -8,6 +8,7 @@ func _initialize() -> void:
     call_deferred("_run")
 
 func _run() -> void:
+    root.size = Vector2i(1280, 720)
     var packed := load("res://scenes/Main.tscn") as PackedScene
     check("Main scene loads", packed != null)
     if packed == null:
@@ -78,7 +79,7 @@ func _run() -> void:
         var escape := InputEventKey.new()
         escape.keycode = KEY_ESCAPE
         escape.pressed = true
-        Input.parse_input_event(escape)
+        get_root().push_input(escape, false)
         await process_frame
         check("ESC closes active screen", not manager.is_screen_open("NewsPanel"))
 
@@ -140,21 +141,23 @@ func _mouse_click(button: Button) -> void:
     var motion := InputEventMouseMotion.new()
     motion.position = center
     motion.global_position = center
-    Input.parse_input_event(motion)
+    get_root().push_input(motion, false)
     await process_frame
     var down := InputEventMouseButton.new()
     down.button_index = MOUSE_BUTTON_LEFT
     down.position = center
     down.global_position = center
     down.pressed = true
-    Input.parse_input_event(down)
+    down.button_mask = MOUSE_BUTTON_MASK_LEFT
+    get_root().push_input(down, false)
     await process_frame
     var up := InputEventMouseButton.new()
     up.button_index = MOUSE_BUTTON_LEFT
     up.position = center
     up.global_position = center
     up.pressed = false
-    Input.parse_input_event(up)
+    up.button_mask = 0
+    get_root().push_input(up, false)
     await process_frame
 
 func _touch_click(button: Button) -> void:
@@ -164,13 +167,13 @@ func _touch_click(button: Button) -> void:
     down.index = 0
     down.position = center
     down.pressed = true
-    Input.parse_input_event(down)
+    get_root().push_input(down, false)
     await process_frame
     var up := InputEventScreenTouch.new()
     up.index = 0
     up.position = center
     up.pressed = false
-    Input.parse_input_event(up)
+    get_root().push_input(up, false)
     await process_frame
 
 func _find_screen(manager: Node, screen_name: String) -> Node:

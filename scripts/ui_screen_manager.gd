@@ -120,7 +120,16 @@ func _set_node_visible(node: Node, value: bool) -> void:
             # direct canvas roots and preserve all nested conditional visibility.
             _set_direct_canvas_children_visible(node, value)
         else:
+            # Startup hiding disables direct canvas roots. Re-enable their
+            # processing before invoking lifecycle hooks. If an older screen hook
+            # only toggles the CanvasLayer and leaves its direct panel/scrim hidden,
+            # recover those direct roots without touching nested conditional UI.
+            for child in node.get_children():
+                if child is CanvasItem or child is CanvasLayer:
+                    child.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
             _call_screen_hook(node, value)
+            if value and not _is_node_visible(node):
+                _set_direct_canvas_children_visible(node, true)
         return
 
     if node is CanvasLayer:
