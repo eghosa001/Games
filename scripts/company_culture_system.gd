@@ -1,8 +1,8 @@
 extends Node
-## class_name removed: "RenewCompanyCultureSystem" conflicts with project.godot autoload.
 
 ## V2: persistent company culture profile.
 ## Culture is a strategic modifier built from leadership choices and employee conditions.
+const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 const SYSTEM_VERSION := 1
 const CHECK_INTERVAL_SECONDS := 0.50
 const DIMENSIONS := [
@@ -46,7 +46,7 @@ func _exit_tree() -> void:
         _timer = null
 
 func _state() -> Node:
-    return get_node_or_null("/root/RenewGameState")
+    return RuntimeResolver.resolve("RenewGameState")
 
 func _day() -> int:
     var state := _state()
@@ -91,7 +91,7 @@ func daily_update(day: int) -> Dictionary:
         return {"day": resolved_day, "changed": false, "profile": get_profile()}
     _last_day = resolved_day
     var before := get_profile()
-    var employee_system := get_node_or_null("/root/RenewEmployeeSystem")
+    var employee_system := RuntimeResolver.resolve("RenewEmployeeSystem", "Systems/RenewEmployeeSystem")
     if employee_system != null:
         var morale := 70.0
         if employee_system.has_method("get_morale_multiplier"):
