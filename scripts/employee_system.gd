@@ -1,10 +1,14 @@
 extends Node
 ## class_name removed: "RenewEmployeeSystem" conflicts with project.godot autoload.
 
-const SYSTEM_VERSION := 4
+const SYSTEM_VERSION := 5
 const JAMES_ID := "emp_james_001"
 const EXECUTIVE_SEATS := ["CEO", "COO", "CFO", "CTO"]
 const EXECUTIVE_BONUSES := {"COO": {"production": 1.10}, "CFO": {"operating_cost": 0.90}, "CTO": {"research": 1.25}, "CEO": {"hiring": 0.80}}
+const TRAINABLE_SKILLS := ["production", "logistics", "management"]
+const TRAINING_SKILL_GAIN := 6
+const TRAINING_EXPERIENCE_GAIN := 2
+const TRAINING_DURATION_DAYS := 1
 var employees: Array = []
 var candidates: Array = []
 var next_id: int = 1
@@ -30,7 +34,9 @@ func _create_initial_roster() -> void:
     _record("emp_0003", "hired", {"reason":"founding roster"})
 
 func _make_employee(id:String,name:String,role:String,specialization:String,skills:Dictionary,experience:int,salary:int,loyalty:int,morale:int,productivity:float,ambition:int,level:int,assignment:String,hire_date:int)->Dictionary:
-    return {"id":id,"name":name,"role":role,"level":level,"skills":skills.duplicate(true),"experience":experience,"salary":salary,"loyalty":loyalty,"morale":morale,"productivity":clamp(productivity,0.2,1.0),"specialization":specialization,"status":"active","assignment":assignment,"ambition":ambition,"executive_seat":"","personality":_personality_for(name),"hire_date":hire_date,"promotion_date":0,"relationships":{},"history":[]}
+    var employee := {"id":id,"name":name,"role":role,"level":level,"skills":skills.duplicate(true),"experience":experience,"salary":salary,"loyalty":loyalty,"morale":morale,"productivity":clamp(productivity,0.2,1.0),"specialization":specialization,"status":"active","assignment":assignment,"ambition":ambition,"executive_seat":"","personality":_personality_for(name),"hire_date":hire_date,"promotion_date":0,"relationships":{},"history":[],"last_training_day":0,"training_until_day":0,"training_count":0}
+    employee["management_capacity"] = _management_capacity_for(employee)
+    return employee
 
 func _personality_for(name:String)->String:
     match name:
@@ -71,7 +77,7 @@ func get_daily_wage_total()->int:
 func total_productivity()->float:
     var total:=0.0
     for employee in employees:
-        if employee.get("status","active")=="active": total+=float(employee.get("productivity",0.0))
+        if employee.get("status","active")=="active" and _available_for_work(employee): total+=float(employee.get("productivity",0.0))
     return total
 
 func get_morale_multiplier()->float:
@@ -102,27 +108,48 @@ func _assignment_skill(employee:Dictionary,assignment:String)->float:
     elif normalized.find("retail")>=0 or normalized.find("sales")>=0: key="production"
     return float(skills.get(key,0))/100.0
 
+func _available_for_work(employee: Dictionary) -> bool:
+    return int(employee.get("training_until_day", 0)) <= int(_day)
+
 func get_productivity_multiplier(assignment:String="factory_001")->float:
     var active:=get_active_employee_count()
     if active<=0: return 0.55
     var total:=0.0
+    var contributors:=0
     for employee in employees:
-        if employee.get("status","active")!="active": continue
+        if employee.get("status","active")!="active" or not _available_for_work(employee): continue
         var employee_assignment:=str(employee.get("assignment",""))
         var assigned_match:=employee_assignment.is_empty() or employee_assignment==assignment
         if not assigned_match: continue
         var skill_factor:=_assignment_skill(employee,assignment)
         var loyalty_factor:=0.85+float(employee.get("loyalty",50))/100.0*0.15
         total+=float(employee.get("productivity",0.75))*(0.65+skill_factor*0.35)*loyalty_factor
+        contributors+=1
     if total<=0.0:
         for employee in employees:
-            if employee.get("status","active")=="active": total+=float(employee.get("productivity",0.75))*0.65
-    return clamp(total/max(1.0,float(active)),0.35,1.50) * _culture_effect("productivity_multiplier", 1.0)
+            if employee.get("status","active")=="active" and _available_for_work(employee):
+                total+=float(employee.get("productivity",0.75))*0.65
+                contributors+=1
+    if contributors<=0: return 0.35 * _culture_effect("productivity_multiplier", 1.0)
+    return clamp(total/float(contributors),0.35,1.50) * _culture_effect("productivity_multiplier", 1.0)
 
 func get_employee(employee_id:String)->Dictionary:
     for employee in employees:
         if employee.get("id","")==employee_id: return employee
     return {}
+
+func get_management_capacity()->int:
+    var total:=0
+    for employee in employees:
+        if employee is Dictionary and employee.get("status","active")=="active":
+            total+=int(employee.get("management_capacity",_management_capacity_for(employee)))
+    return total
+
+func _management_capacity_for(employee: Dictionary) -> int:
+    var level:=clampi(int(employee.get("level",1)),1,4)
+    var skills:Dictionary=employee.get("skills",{})
+    var management:=clampi(int(skills.get("management",0)),0,100)
+    return max(0,(level-1)*2+int(floor(float(management)/25.0)))
 
 func get_executives() -> Dictionary:
     var seats: Dictionary = {}
@@ -153,6 +180,7 @@ func appoint_executive(employee_id: String, seat: String, day: int) -> Dictionar
             _record(str(other.get("id", "")), "executive_unseated", {"day": day, "seat": seat})
     employee["executive_seat"] = seat; employee["role"] = seat; employee["assignment"] = "hq_001"
     employee["morale"] = min(100, int(employee.get("morale", 70)) + 8); employee["loyalty"] = min(100, int(employee.get("loyalty", 50)) + 10)
+    employee["management_capacity"] = max(int(employee.get("management_capacity",0)),_management_capacity_for(employee)+2)
     _record(employee_id, "executive_appointed", {"day": day, "seat": seat})
     return {"ok": true, "employee": employee.duplicate(true), "seat": seat, "message": "%s appointed %s." % [employee["name"], seat]}
 
@@ -209,30 +237,60 @@ func fire_employee(employee_id:String,day:int)->Dictionary:
     _record(employee_id,"fired",{"day":day,"assignment":dismissed_assignment,"coworkers_affected":affected})
     return {"ok":true,"affected_coworkers":affected,"message":"%s was dismissed. %d nearby coworkers lost morale."%[dismissed_name,affected]}
 
-func train_employee(employee_id:String,day:int,cost:int=900)->Dictionary:
+func _default_training_skill(employee: Dictionary) -> String:
+    var primary:=str(employee.get("specialization","manufacturing"))
+    if primary=="logistics": return "logistics"
+    if primary in ["operations","executive_operations"]: return "management"
+    return "production"
+
+func train_employee(employee_id:String,day:int,cost:int=900,requested_skill:String="")->Dictionary:
     var employee:=get_employee(employee_id)
     if employee.is_empty() or employee.get("status","active")!="active": return {"ok":false,"message":"Employee is not active."}
+    if int(employee.get("last_training_day",0))==day: return {"ok":false,"message":"%s has already trained today."%employee.get("name","Employee")}
+    var skill_key:=requested_skill.to_lower().strip_edges()
+    if skill_key.is_empty(): skill_key=_default_training_skill(employee)
+    if not TRAINABLE_SKILLS.has(skill_key): return {"ok":false,"message":"Unknown training skill: %s."%skill_key}
+    _day=maxi(int(_day),day)
     var skills:Dictionary=employee.get("skills",{}).duplicate(true)
-    var primary:=str(employee.get("specialization","manufacturing"))
-    var skill_key:="production" if primary=="manufacturing" or primary=="production" else ("logistics" if primary=="logistics" else ("management" if primary=="operations" else "production"))
-    skills[skill_key]=min(100,int(skills.get(skill_key,0))+6); employee["skills"]=skills
-    employee["experience"]=int(employee["experience"])+2; employee["productivity"]=min(1.0,float(employee["productivity"])+0.05)
-    employee["morale"]=min(100,int(employee["morale"])+5); employee["loyalty"]=min(100,int(employee["loyalty"])+4)
-    _record(employee_id,"trained",{"day":day,"cost":cost,"skill":skill_key}); return {"ok":true,"cost":cost,"employee":employee.duplicate(true)}
+    var before_skill:=int(skills.get(skill_key,0))
+    skills[skill_key]=min(100,before_skill+TRAINING_SKILL_GAIN); employee["skills"]=skills
+    employee["experience"]=int(employee.get("experience",0))+TRAINING_EXPERIENCE_GAIN
+    employee["productivity"]=min(1.0,float(employee.get("productivity",0.75))+0.05)
+    employee["morale"]=min(100,int(employee.get("morale",70))+5); employee["loyalty"]=min(100,int(employee.get("loyalty",50))+4)
+    employee["last_training_day"]=day; employee["training_until_day"]=day+TRAINING_DURATION_DAYS; employee["training_count"]=int(employee.get("training_count",0))+1
+    employee["management_capacity"]=_management_capacity_for(employee)
+    _record(employee_id,"trained",{"day":day,"cost":cost,"skill":skill_key,"before":before_skill,"after":int(skills[skill_key]),"duration_days":TRAINING_DURATION_DAYS})
+    return {"ok":true,"cost":cost,"skill":skill_key,"training_days":TRAINING_DURATION_DAYS,"employee":employee.duplicate(true),"message":"%s began %s training."%[employee.get("name","Employee"),skill_key.capitalize()]}
+
+func _promoted_role(employee: Dictionary, new_level: int) -> String:
+    if str(employee.get("id",""))==JAMES_ID and new_level>=4: return "COO"
+    if new_level==2:
+        var current:=str(employee.get("role","Worker"))
+        return current if current.begins_with("Senior ") else "Senior "+current
+    if new_level==3: return "Supervisor"
+    if new_level>=4: return "Manager"
+    return str(employee.get("role","Worker"))
 
 func promote_employee(employee_id:String,day:int)->Dictionary:
     var employee:=get_employee(employee_id)
     if employee.is_empty() or employee.get("status","active")!="active": return {"ok":false,"message":"Employee is not active."}
     var level:=int(employee.get("level",1))
     if level>=4: return {"ok":false,"message":"%s is already at the highest career level."%employee["name"]}
-    if int(employee["experience"])<level*10 and employee_id!=JAMES_ID: return {"ok":false,"message":"More experience is needed before promotion."}
-    level+=1; employee["level"]=level; employee["promotion_date"]=day; employee["salary"]=int(employee["salary"])+140+level*30
-    employee["morale"]=min(100,int(employee["morale"])+12); employee["loyalty"]=min(100,int(employee["loyalty"])+8)
+    var required_experience:=level*10
+    if int(employee.get("experience",0))<required_experience and employee_id!=JAMES_ID: return {"ok":false,"message":"More experience is needed before promotion.","required_experience":required_experience}
+    var previous_role:=str(employee.get("role","Worker"))
+    var previous_productivity:=float(employee.get("productivity",0.75))
+    var previous_capacity:=int(employee.get("management_capacity",_management_capacity_for(employee)))
+    level+=1; employee["level"]=level; employee["promotion_date"]=day; employee["salary"]=int(employee.get("salary",0))+140+level*30
+    employee["role"]=_promoted_role(employee,level)
+    employee["productivity"]=min(1.0,previous_productivity+0.06)
+    var skills:Dictionary=employee.get("skills",{}).duplicate(true); skills["management"]=min(100,int(skills.get("management",0))+5); employee["skills"]=skills
+    employee["morale"]=min(100,int(employee.get("morale",70))+12); employee["loyalty"]=min(100,int(employee.get("loyalty",50))+8)
     if employee_id==JAMES_ID and level>=4:
-        employee["role"]="COO"; employee["specialization"]="executive_operations"; employee["assignment"]="hq_001"
-    elif level==2: employee["role"]="Senior "+str(employee["role"])
-    elif level==3: employee["role"]="Supervisor"
-    _record(employee_id,"promoted",{"day":day,"level":level}); return {"ok":true,"employee":employee.duplicate(true),"message":"%s promoted to %s."%[employee["name"],employee["role"]]}
+        employee["specialization"]="executive_operations"; employee["assignment"]="hq_001"
+    employee["management_capacity"]=max(previous_capacity+1,_management_capacity_for(employee))
+    _record(employee_id,"promoted",{"day":day,"level":level,"previous_role":previous_role,"role":employee["role"],"productivity_before":previous_productivity,"productivity_after":employee["productivity"],"management_capacity_before":previous_capacity,"management_capacity_after":employee["management_capacity"]})
+    return {"ok":true,"employee":employee.duplicate(true),"message":"%s promoted to %s."%[employee["name"],employee["role"]]}
 
 func assign_employee(employee_id:String,assignment:String,day:int)->Dictionary:
     var employee:=get_employee(employee_id)
@@ -249,10 +307,11 @@ func daily_update(day:int,company_performance:int=0)->Dictionary:
     _day=day; var warnings:Array[String]=[]; var resignations:Array[String]=[]
     for employee in employees:
         if employee.get("status","active")!="active": continue
-        employee["experience"]=int(employee["experience"])+1
+        var in_training:=not _available_for_work(employee)
+        if not in_training: employee["experience"]=int(employee.get("experience",0))+1
         var morale_delta:=1 if company_performance>=0 else -2
-        employee["morale"]=clamp(int(employee["morale"])+morale_delta,0,100)
-        if int(employee["morale"])<35: employee["loyalty"]=max(0,int(employee["loyalty"])-2); warnings.append("%s is becoming unhappy."%employee["name"])
+        employee["morale"]=clamp(int(employee.get("morale",70))+morale_delta,0,100)
+        if int(employee["morale"])<35: employee["loyalty"]=max(0,int(employee.get("loyalty",50))-2); warnings.append("%s is becoming unhappy."%employee["name"])
         var skills:Dictionary=employee.get("skills",{}); var production_skill:=int(skills.get("production",0)); var logistics_skill:=int(skills.get("logistics",0)); var management_skill:=int(skills.get("management",0))
         var primary_skill:=production_skill
         if str(employee.get("specialization",""))=="logistics": primary_skill=logistics_skill
@@ -260,6 +319,7 @@ func daily_update(day:int,company_performance:int=0)->Dictionary:
         var performance:=primary_skill+int(employee["morale"])/2+int(employee["loyalty"])/2
         var skill_bonus:=float(max(production_skill,max(logistics_skill,management_skill)))/100.0
         employee["productivity"]=clamp(float(performance)/200.0+skill_bonus*0.15,0.2,1.0)
+        employee["management_capacity"]=_management_capacity_for(employee)
         var loyalty:=int(employee["loyalty"]); var morale:=int(employee["morale"])
         if loyalty<30 and morale<40 and employee.get("id","")!=JAMES_ID and randi_range(1,100)<=12:
             employee["status"]="resigned"; resignations.append(str(employee["name"])); _record(str(employee["id"]),"resigned",{"day":day,"loyalty":loyalty,"morale":morale})
@@ -267,7 +327,7 @@ func daily_update(day:int,company_performance:int=0)->Dictionary:
         elif loyalty<=80 and randi_range(1,100)<=1: warnings.append("%s may consider outside offers."%employee["name"])
         if int(employee["ambition"])>=80 and int(employee.get("level",1))<4 and int(employee["experience"])%12==0: warnings.append("%s is ready for a career conversation."%employee["name"])
     refresh_candidates(); sync_roster_to_state()
-    return {"warnings":warnings,"resignations":resignations,"salary":get_daily_wage_total(),"productivity":total_productivity()}
+    return {"warnings":warnings,"resignations":resignations,"salary":get_daily_wage_total(),"productivity":total_productivity(),"management_capacity":get_management_capacity()}
 
 func poach_candidate(employee_id:String,rival_name:String,day:int)->Dictionary:
     var employee:=get_employee(employee_id)
@@ -321,6 +381,11 @@ func _normalize_roster()->void:
         if not employee.has("history"): employee["history"]=[]
         if not employee.has("loyalty"): employee["loyalty"]=50
         if not employee.has("morale"): employee["morale"]=70
+        if not employee.has("promotion_date"): employee["promotion_date"]=0
+        if not employee.has("last_training_day"): employee["last_training_day"]=0
+        if not employee.has("training_until_day"): employee["training_until_day"]=0
+        if not employee.has("training_count"): employee["training_count"]=0
+        employee["management_capacity"]=_management_capacity_for(employee)
 func _ensure_james()->void:
     if not get_employee(JAMES_ID).is_empty(): return
     employees.push_front(_make_employee(JAMES_ID,"James","Worker","manufacturing",{"production":58,"logistics":35,"management":25},6,450,82,78,0.82,76,1,"factory_001",1)); _record(JAMES_ID,"restored_identity",{})
