@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 ## Responsive treaty desk. Gameplay mutations remain owned by DiplomacySystem.
+const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 const SURFACE := Color("0d2028")
 const SURFACE_2 := Color("102831")
 const BORDER := Color("274852")
@@ -20,22 +21,28 @@ var visible_width := 1280.0
 
 func _ready() -> void:
     layer = 58
-    _build()
-    _layout()
-    _refresh()
+    _build(); _layout(); _refresh()
     if not get_viewport().size_changed.is_connected(_layout): get_viewport().size_changed.connect(_layout)
+
+func open_screen() -> void:
+    visible = true
+    if dimmer != null: dimmer.visible = true
+    if panel != null: panel.visible = true
+    _refresh()
+
+func close_screen() -> void:
+    visible = false
+    if dimmer != null: dimmer.visible = false
+    if panel != null: panel.visible = false
 
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and visible:
-        _close()
-        get_viewport().set_input_as_handled()
+        _close(); get_viewport().set_input_as_handled()
 
 func _style(bg: Color, border: Color, radius := 10) -> StyleBoxFlat:
     var s := StyleBoxFlat.new(); s.bg_color = bg; s.border_color = border; s.set_border_width_all(1); s.set_corner_radius_all(radius); return s
-
 func _button_style(bg: Color = SURFACE_2, border: Color = BORDER) -> StyleBoxFlat:
     var s := _style(bg, border, 8); s.content_margin_left = 10; s.content_margin_right = 10; s.content_margin_top = 6; s.content_margin_bottom = 6; return s
-
 func _style_button(b: Button, bg: Color = SURFACE_2, border: Color = BORDER) -> void:
     b.add_theme_stylebox_override("normal", _button_style(bg, border)); b.add_theme_stylebox_override("hover", _button_style(Color("17343d"), ACCENT)); b.add_theme_stylebox_override("pressed", _button_style(Color("1b454c"), ACCENT)); b.add_theme_color_override("font_color", TEXT); b.add_theme_color_override("font_hover_color", Color.WHITE); b.add_theme_font_size_override("font_size", 9 if visible_width < 390.0 else 10)
 
@@ -52,65 +59,55 @@ func _build() -> void:
     for entry in TREATIES:
         var b := Button.new(); b.text = "PROPOSE %s  •  30 DAYS" % entry[0]; b.custom_minimum_size = Vector2(0,44); b.focus_mode = Control.FOCUS_NONE; b.tooltip_text = "Propose a 30-day %s treaty." % entry[0].to_lower(); b.pressed.connect(_propose.bind(entry[1])); _style_button(b); treaty_list.add_child(b)
     var action_title := Label.new(); action_title.name = "ActionsTitle"; action_title.text = "TREATY ACTIONS"; action_title.add_theme_font_size_override("font_size",10); action_title.add_theme_color_override("font_color",MUTED); panel.add_child(action_title)
-    _action_button("AcceptIncoming","ACCEPT INCOMING TREATY",_accept_incoming)
-    _action_button("SendGift","SEND ENVOY GIFT",_send_gift)
-    _action_button("CancelTreaty","CANCEL ACTIVE TREATY",_cancel_active,Color("301d22"),Color("75424a"))
-    _action_button("RefreshTreatyLedger","REFRESH TREATY LEDGER",_refresh)
+    _action_button("AcceptIncoming","ACCEPT INCOMING TREATY",_accept_incoming); _action_button("SendGift","SEND ENVOY GIFT",_send_gift); _action_button("CancelTreaty","CANCEL ACTIVE TREATY",_cancel_active,Color("301d22"),Color("75424a")); _action_button("RefreshTreatyLedger","REFRESH TREATY LEDGER",_refresh)
     summary = Label.new(); summary.name = "Summary"; summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; summary.add_theme_font_size_override("font_size",10); summary.add_theme_color_override("font_color",MUTED); panel.add_child(summary)
 
 func _nav_button(id: String, text: String, callback: Callable) -> void:
     var b := Button.new(); b.name = id; b.text = text; b.custom_minimum_size = Vector2(0,44); b.focus_mode = Control.FOCUS_NONE; b.pressed.connect(callback); _style_button(b); panel.add_child(b)
-
 func _action_button(id: String, text: String, callback: Callable, bg: Color = SURFACE_2, border: Color = BORDER) -> void:
     var b := Button.new(); b.name = id; b.text = text; b.custom_minimum_size = Vector2(0,44); b.focus_mode = Control.FOCUS_NONE; b.pressed.connect(callback); _style_button(b,bg,border); panel.add_child(b)
-
+func _diplomacy() -> Node: return RuntimeResolver.resolve("RenewDiplomacySystem", "Systems/RenewDiplomacySystem")
+func _control() -> Node: return RuntimeResolver.resolve("RenewDiplomacyControl", "Systems/RenewDiplomacyControl")
 func _close() -> void:
-    var manager = get_node_or_null("/root/RenewUIScreenManager")
+    var manager = RuntimeResolver.resolve("RenewUIScreenManager")
     if manager != null and manager.has_method("hide_all_screens"): manager.hide_all_screens()
-    else: visible = false
-
+    else: close_screen()
 func _main():
     var tree: Variant = Engine.get_main_loop(); return tree.get_current_scene() if tree != null else null
-
 func _rival() -> Dictionary:
     var main = _main()
     if main == null or main.get("rivals") == null: return {}
     var list: Array = main.get("rivals").rivals
     if list.is_empty(): return {}
     selected_index = clampi(selected_index,0,list.size()-1); return list[selected_index]
-
 func _previous_rival() -> void: selected_index -= 1; _refresh()
 func _next_rival() -> void: selected_index += 1; _refresh()
 
 func _propose(treaty_type: String) -> void:
-    var rival := _rival(); var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
+    var rival := _rival(); var diplomacy = _diplomacy()
     if rival.is_empty() or diplomacy == null: return
     var terms: Variant = {"obligations":{"good_faith":true},"benefits":{"trust_per_day":0.05},"penalties":{"trust_damage":8.0,"cancellation_fee":1000},"trust_effect":2.0}
     if treaty_type == "joint_venture": terms = {"obligations":{"joint_capital":6000},"benefits":{"trust_per_day":0.12},"penalties":{"trust_damage":10.0,"cancellation_fee":2000},"party_a_percent":50.0,"party_b_percent":50.0,"trust_effect":3.0}
     var result = diplomacy.propose_treaty("player",str(rival.get("id","")),treaty_type,terms,30); summary.text = str(result.get("message","Proposal submitted.")); _refresh()
-
 func _nudge_rival(rival_id: String, amount: int) -> void:
     var main = _main()
     if main == null or main.get("rivals") == null: return
     for i in range(main.get("rivals").rivals.size()):
         if str(main.get("rivals").rivals[i].get("id","")) == rival_id:
             main.get("rivals").rivals[i]["relationship"] = clamp(int(main.get("rivals").rivals[i].get("relationship",0))+amount,-100,100); return
-
 func _accept_incoming() -> void:
-    var rival := _rival(); var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
+    var rival := _rival(); var diplomacy = _diplomacy()
     if rival.is_empty() or diplomacy == null: return
     for treaty in diplomacy.get_party_treaties("player",false):
         if treaty.get("status") == "proposed" and treaty.get("party_b") == "player" and treaty.get("party_a") == rival.get("id"):
             var result = diplomacy.accept_treaty(str(treaty["id"]),"player"); summary.text = str(result.get("message","Proposal submitted.")); if bool(result.get("ok",false)): _nudge_rival(str(rival.get("id","")),3); _refresh(); return
     summary.text = "No incoming proposal from this rival."
-
 func _send_gift() -> void:
     var main = _main()
     if main == null or not main.has_method("send_envoy_gift"): summary.text = "Envoy service is unavailable."; return
     main.send_envoy_gift(); _refresh()
-
 func _cancel_active() -> void:
-    var rival := _rival(); var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
+    var rival := _rival(); var diplomacy = _diplomacy()
     if rival.is_empty() or diplomacy == null: return
     for treaty in diplomacy.get_party_treaties("player",true):
         var other: Variant = str(treaty.get("party_b","")) if treaty.get("party_a") == "player" else str(treaty.get("party_a",""))
@@ -121,7 +118,7 @@ func _cancel_active() -> void:
 func _refresh() -> void:
     var rival := _rival()
     if rival.is_empty(): rival_label.text = "NO RIVAL SELECTED"; summary.text = "No rival is available."; return
-    var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
+    var diplomacy = _diplomacy()
     if diplomacy == null: rival_label.text = "DIPLOMACY SYSTEM UNAVAILABLE"; summary.text = "The treaty ledger cannot be loaded right now."; return
     rival_label.text = "COUNTERPARTY  •  %s" % str(rival.get("name","Rival"))
     var trust: Variant = diplomacy.get_trust("player",str(rival.get("id",""))); var state := "STRONG" if float(trust)>=70.0 else ("STABLE" if float(trust)>=45.0 else "FRAGILE")
@@ -133,9 +130,8 @@ func _refresh() -> void:
             if str(treaty.get("type","")) == "joint_venture": lines.append(_jv_status_line(str(treaty.get("id",""))))
     if active_count == 0: lines.append("No active treaties with this rival.")
     summary.text = "\n".join(lines)
-
 func _jv_status_line(treaty_id: String) -> String:
-    var bridge = get_node_or_null("/root/RenewDiplomacyControl")
+    var bridge = _control()
     if bridge == null or not bridge.has_method("get_materialized_state"): return "Venture status unavailable."
     var state: Dictionary = bridge.get_materialized_state(treaty_id)
     if state.is_empty() or not bool(state.get("materialized",false)): return "Venture forming."
