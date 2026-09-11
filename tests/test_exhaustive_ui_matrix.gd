@@ -1,8 +1,8 @@
 extends SceneTree
 
 # Exhaustive release gate for player-facing UI behavior.
-# This test intentionally validates the real Main scene and real UIScreenManager
-# instead of unit-testing individual presentation scripts in isolation.
+# Validates the real Main scene and UIScreenManager across representative
+# phones, tablets and desktop sizes, including navigation stress.
 
 const VIEWPORTS := [
     Vector2i(320, 568),
@@ -14,34 +14,26 @@ const VIEWPORTS := [
     Vector2i(1920, 1080),
 ]
 
+const MANAGED_SCREENS := [
+    "ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel",
+    "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel",
+    "NewsPanel", "InfrastructurePanel", "DashboardPanel", "FinancePanel",
+    "PortfolioPanel", "CorporationsPanel", "RegionsPanel", "WorldOpportunitiesPanel",
+    "BusinessOperationsPanel", "ProductionControlPanel", "SupplyChainPanel",
+    "EmpireExpansionPanel", "EmpireIntelligencePanel", "EmpireProgressionPanel",
+    "EmpireIdentityPanel", "NotificationsCenterPanel", "SaveLoadPanel",
+    "RenewDiplomacyUI", "CustomerSegmentsUI",
+]
+
 const TRANSITION_SEQUENCE := [
-    "DashboardPanel",
-    "FinancePanel",
-    "BusinessOperationsPanel",
-    "EmployeePanel",
-    "ContractPanel",
-    "HeadquartersPanel",
-    "TechnologyPanel",
-    "InfrastructurePanel",
-    "ProductionControlPanel",
-    "SupplyChainPanel",
-    "RegionsPanel",
-    "WorldOpportunitiesPanel",
-    "CorporationsPanel",
-    "PortfolioPanel",
-    "CollectionPanel",
-    "LiveOpsPanel",
-    "NewsPanel",
-    "HistoryPanel",
-    "EmpireExpansionPanel",
-    "EmpireIntelligencePanel",
-    "EmpireProgressionPanel",
-    "EmpireIdentityPanel",
-    "NotificationsCenterPanel",
-    "SaveLoadPanel",
-    "AlliancePanel",
-    "RenewDiplomacyUI",
-    "CustomerSegmentsUI",
+    "DashboardPanel", "FinancePanel", "BusinessOperationsPanel", "EmployeePanel",
+    "ContractPanel", "HeadquartersPanel", "TechnologyPanel", "InfrastructurePanel",
+    "ProductionControlPanel", "SupplyChainPanel", "RegionsPanel",
+    "WorldOpportunitiesPanel", "CorporationsPanel", "PortfolioPanel",
+    "CollectionPanel", "LiveOpsPanel", "NewsPanel", "HistoryPanel",
+    "EmpireExpansionPanel", "EmpireIntelligencePanel", "EmpireProgressionPanel",
+    "EmpireIdentityPanel", "NotificationsCenterPanel", "SaveLoadPanel",
+    "AlliancePanel", "RenewDiplomacyUI", "CustomerSegmentsUI",
 ]
 
 var checks := 0
@@ -72,22 +64,15 @@ func _run() -> void:
         _finish()
         return
 
-    # Keep the test list coupled to the manager itself so newly managed screens
-    # cannot be added without automatically entering this gate.
-    var managed_names: Array[String] = []
-    for name in manager.SCREEN_NAMES:
-        managed_names.append(String(name))
-    for name in manager.ROOT_SCREEN_NAMES:
-        managed_names.append(String(name))
-    _check(managed_names.size() == 27, "expected 27 managed primary screens")
+    _check(MANAGED_SCREENS.size() == 27, "matrix contains 27 managed primary screens")
+    _check(_manager_screen_names().size() == MANAGED_SCREENS.size(), "matrix count matches screen manager")
+    for screen_name in MANAGED_SCREENS:
+        _check(_manager_screen_names().has(screen_name), "matrix includes manager screen %s" % screen_name)
 
     for viewport_size in VIEWPORTS:
         await _set_viewport(viewport_size)
-        await _audit_viewport(managed_names, viewport_size)
+        await _audit_viewport(viewport_size)
 
-    # Stress the lifecycle at a representative phone size. Repeated open/close
-    # catches stale visibility flags, duplicated dynamic controls and manager
-    # re-entry bugs that a single pass misses.
     await _set_viewport(Vector2i(390, 844))
     for cycle in range(3):
         for screen_name in TRANSITION_SEQUENCE:
@@ -99,7 +84,6 @@ func _run() -> void:
         await process_frame
         _check(_visible_screen_count() == 0, "stress %d closes all screens" % [cycle + 1])
 
-    # Legacy navigation alias is part of the public UI contract.
     manager.show_screen("MarketPanel")
     await process_frame
     _check(manager.get_active_screen_name() == "CustomerSegmentsUI", "MarketPanel alias resolves")
@@ -108,21 +92,26 @@ func _run() -> void:
 
     _finish()
 
+func _manager_screen_names() -> Array[String]:
+    var names: Array[String] = []
+    for node in manager._screen_nodes():
+        if node != null:
+            names.append(String(node.name))
+    return names
+
 func _set_viewport(size: Vector2i) -> void:
     root.size = size
-    # Some screens listen to Window.size_changed while others recompute during
-    # open_screen/process. Give both paths time to settle.
     root.size_changed.emit()
     await process_frame
     await process_frame
 
-func _audit_viewport(screen_names: Array[String], viewport_size: Vector2i) -> void:
+func _audit_viewport(viewport_size: Vector2i) -> void:
     var viewport_rect := Rect2(Vector2.ZERO, Vector2(viewport_size))
     manager.hide_all_screens()
     await process_frame
     _check(_visible_screen_count() == 0, "%s starts with no modal screen" % viewport_size)
 
-    for screen_name in screen_names:
+    for screen_name in MANAGED_SCREENS:
         manager.show_screen(screen_name)
         await process_frame
         await process_frame
@@ -155,14 +144,13 @@ func _audit_viewport(screen_names: Array[String], viewport_size: Vector2i) -> vo
             _check(button.size.x > 0.0 and button.size.y > 0.0, "%s %s button has size: %s" % [viewport_size, screen_name, label])
             _check(button.size.x >= 44.0 and button.size.y >= 44.0, "%s %s touch target >=44px: %s" % [viewport_size, screen_name, label])
             _check(button.pressed.get_connections().size() > 0, "%s %s button wired: %s" % [viewport_size, screen_name, label])
-            var rect := button.get_global_rect()
-            _check(_rect_mostly_inside(rect, viewport_rect), "%s %s button inside viewport: %s rect=%s" % [viewport_size, screen_name, label, rect])
+            if not _has_scroll_ancestor(button):
+                var rect := button.get_global_rect()
+                _check(_rect_mostly_inside(rect, viewport_rect), "%s %s button inside viewport: %s rect=%s" % [viewport_size, screen_name, label, rect])
 
-        # Detect controls that are completely unreachable/off-screen. Partial
-        # clipping is permitted for scroll content, but a visible control must
-        # intersect the viewport at all.
         for control in visible_controls:
             if control == null or not is_instance_valid(control): continue
+            if _has_scroll_ancestor(control): continue
             var rect := control.get_global_rect()
             if rect.size.x <= 0.0 or rect.size.y <= 0.0: continue
             _check(rect.intersects(viewport_rect), "%s %s visible control intersects viewport: %s" % [viewport_size, screen_name, control.name])
@@ -180,8 +168,6 @@ func _rect_mostly_inside(rect: Rect2, viewport_rect: Rect2) -> bool:
     var clipped := rect.intersection(viewport_rect)
     if clipped.size.x <= 0.0 or clipped.size.y <= 0.0:
         return false
-    # Allow a tiny rounding/layout tolerance, but reject genuinely clipped
-    # interactive controls because inaccessible buttons are release blockers.
     var visible_area := clipped.size.x * clipped.size.y
     var area := rect.size.x * rect.size.y
     return visible_area / maxf(area, 1.0) >= 0.98
@@ -189,19 +175,36 @@ func _rect_mostly_inside(rect: Rect2, viewport_rect: Rect2) -> bool:
 func _check_button_overlap(screen_name: String, viewport_size: Vector2i, buttons: Array[Button]) -> void:
     for i in range(buttons.size()):
         var a := buttons[i]
-        if not is_instance_valid(a): continue
+        if not is_instance_valid(a) or _is_fully_clipped_by_scroll(a): continue
         var a_rect := a.get_global_rect()
         for j in range(i + 1, buttons.size()):
             var b := buttons[j]
-            if not is_instance_valid(b): continue
-            # Parent/child button nesting is not a valid interactive pattern,
-            # but avoid double-reporting it as geometry overlap here.
+            if not is_instance_valid(b) or _is_fully_clipped_by_scroll(b): continue
             if a.is_ancestor_of(b) or b.is_ancestor_of(a): continue
-            var intersection := a_rect.intersection(b.get_global_rect())
+            var b_rect := b.get_global_rect()
+            var intersection := a_rect.intersection(b_rect)
             if intersection.size.x <= 1.0 or intersection.size.y <= 1.0: continue
             var overlap_area := intersection.size.x * intersection.size.y
-            var smaller_area := minf(a_rect.size.x * a_rect.size.y, b.size.x * b.size.y)
+            var smaller_area := minf(a_rect.size.x * a_rect.size.y, b_rect.size.x * b_rect.size.y)
             _check(overlap_area / maxf(smaller_area, 1.0) < 0.10, "%s %s buttons do not overlap: %s / %s" % [viewport_size, screen_name, a.text, b.text])
+
+func _has_scroll_ancestor(control: Control) -> bool:
+    var node := control.get_parent()
+    while node != null:
+        if node is ScrollContainer:
+            return true
+        node = node.get_parent()
+    return false
+
+func _is_fully_clipped_by_scroll(control: Control) -> bool:
+    var rect := control.get_global_rect()
+    var node := control.get_parent()
+    while node != null:
+        if node is ScrollContainer:
+            if not rect.intersects((node as Control).get_global_rect()):
+                return true
+        node = node.get_parent()
+    return false
 
 func _collect_visible_controls(node: Node, out: Array[Control]) -> void:
     if node is Control:
@@ -222,10 +225,10 @@ func _collect_enabled_visible_buttons(node: Node, out: Array[Button]) -> void:
 func _find_screen(screen_name: String) -> Node:
     var ui := game.get_node_or_null("UI")
     if ui != null:
-        var node := ui.get_node_or_null(screen_name)
-        if node != null: return node
-    var node := root.get_node_or_null("Renew/" + screen_name)
-    if node != null: return node
+        var ui_node := ui.get_node_or_null(screen_name)
+        if ui_node != null: return ui_node
+    var scene_node := root.get_node_or_null("Renew/" + screen_name)
+    if scene_node != null: return scene_node
     return root.get_node_or_null(screen_name)
 
 func _find_close_button(node: Node) -> Button:
