@@ -39,7 +39,7 @@ jobs:
           )
 
           echo "Evaluating RENEW release readiness for ${TARGET_SHA}"
-          echo "Live Browser QA must be the post-Web-export workflow_run, not the early push check."
+          echo "Live Browser QA must be a non-skipped post-Web-export workflow_run."
 
           for attempt in $(seq 1 90); do
             runs="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${TARGET_SHA}&per_page=100")"
@@ -47,24 +47,28 @@ jobs:
 
             for workflow in "${required[@]}"; do
               if [[ "$workflow" == "Live Browser QA" ]]; then
-                row="$(jq -r --arg name "$workflow" --arg sha "$TARGET_SHA" '
-                  [.workflow_runs[]
-                   | select(.name == $name and .head_sha == $sha and .event == "workflow_run")]
-                  | sort_by(.run_number)
-                  | last
-                  | if . == null then "MISSING\t\t" else [.status, (.conclusion // ""), .html_url] | @tsv end
-                ' <<<"$runs")"
+                filter='[.workflow_runs[]
+                  | select(.name == $name and .head_sha == $sha and .event == "workflow_run")
+                  | select(.status != "completed" or (.conclusion // "") != "skipped")]
+                  | sort_by(.run_number) | last'
               else
-                row="$(jq -r --arg name "$workflow" --arg sha "$TARGET_SHA" '
-                  [.workflow_runs[]
-                   | select(.name == $name and .head_sha == $sha and .event == "push")]
-                  | sort_by(.run_number)
-                  | last
-                  | if . == null then "MISSING\t\t" else [.status, (.conclusion // ""), .html_url] | @tsv end
-                ' <<<"$runs")"
+                filter='[.workflow_runs[]
+                  | select(.name == $name and .head_sha == $sha and .event == "push")]
+                  | sort_by(.run_number) | last'
               fi
 
-              IFS=$'\t' read -r status conclusion url <<<"$row"
+              run_json="$(jq -c --arg name "$workflow" --arg sha "$TARGET_SHA" "$filter" <<<"$runs")"
+
+              if [[ "$run_json" == "null" ]]; then
+                status="MISSING"
+                conclusion=""
+                url=""
+              else
+                status="$(jq -r '.status // ""' <<<"$run_json")"
+                conclusion="$(jq -r '.conclusion // ""' <<<"$run_json")"
+                url="$(jq -r '.html_url // ""' <<<"$run_json")"
+              fi
+
               printf '%-24s status=%-12s conclusion=%-10s %s\n' "$workflow" "$status" "$conclusion" "$url"
 
               if [[ "$status" == "MISSING" || "$status" != "completed" ]]; then
@@ -83,7 +87,7 @@ jobs:
               exit 0
             fi
 
-            echo "Release-critical checks are still running or not yet created (attempt ${attempt}/90)."
+            echo "Release-critical checks are still running or not yet available (attempt ${attempt}/90)."
             sleep 60
           done
 
