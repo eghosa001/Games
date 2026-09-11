@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 ## Executive notification center. NewsSystem remains authoritative for notification state.
+const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 const SURFACE := Color("0d2028")
 const SURFACE_2 := Color("102831")
 const BORDER := Color("274852")
@@ -34,7 +35,7 @@ func close_screen() -> void:
 func toggle() -> void:
     if open: close_screen()
     else: open_screen()
-func _news(): return get_node_or_null("/root/RenewNewsSystem")
+func _news(): return RuntimeResolver.resolve("RenewNewsSystem", "Systems/RenewNewsSystem")
 func _style(bg: Color, border: Color = BORDER, radius := 14) -> StyleBoxFlat:
     var s := StyleBoxFlat.new(); s.bg_color = bg; s.border_color = border; s.set_border_width_all(1); s.set_corner_radius_all(radius)
     s.content_margin_left = 12; s.content_margin_right = 12; s.content_margin_top = 10; s.content_margin_bottom = 10; return s
@@ -80,7 +81,7 @@ func _mark_read() -> void:
     var game = get_tree().current_scene; if game != null and game.has_method("check_notifications"): game.check_notifications()
     _refresh()
 func _open_daily() -> void:
-    var manager = get_node_or_null("/root/RenewUIScreenManager"); if manager != null and manager.has_method("show_screen"): manager.show_screen("NewsPanel")
+    var manager = RuntimeResolver.resolve("RenewUIScreenManager"); if manager != null and manager.has_method("show_screen"): manager.show_screen("NewsPanel")
 func _layout() -> void:
     if panel == null: return
     var size := get_viewport().get_visible_rect().size; var narrow := size.x < 760.0
@@ -90,16 +91,8 @@ func _layout() -> void:
     if actions == null: return
     actions.add_theme_constant_override("separation", 7 if narrow else 8)
     if narrow:
-        actions.remove_child(refresh_button); actions.remove_child(mark_button); actions.remove_child(daily_button)
-        actions.add_child(refresh_button); actions.add_child(mark_button); actions.add_child(daily_button)
         for button in [refresh_button, mark_button, daily_button]:
-            button.custom_minimum_size = Vector2(0, 46)
-            button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-            button.add_theme_font_size_override("font_size", 9)
+            button.custom_minimum_size = Vector2(0, 46); button.size_flags_horizontal = Control.SIZE_EXPAND_FILL; button.add_theme_font_size_override("font_size", 9)
     else:
-        refresh_button.custom_minimum_size = Vector2(110, 46)
-        mark_button.custom_minimum_size = Vector2(120, 46)
-        daily_button.custom_minimum_size = Vector2(100, 46)
-        refresh_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-        mark_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-        daily_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+        refresh_button.custom_minimum_size = Vector2(110, 46); mark_button.custom_minimum_size = Vector2(120, 46); daily_button.custom_minimum_size = Vector2(100, 46)
+        refresh_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER; mark_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER; daily_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
