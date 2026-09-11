@@ -3,7 +3,7 @@ extends SceneTree
 # Whole-repository architecture and parser integrity gate.
 # This remains read-only: it parses every GDScript under scripts/ and tests/,
 # loads every scene/theme/shader resource, validates load-bearing res:// references,
-# and verifies the complete Main world/system/UI tree.
+# and verifies the complete Main world/system/UI tree and service registry.
 var passed := 0
 var failed := 0
 var failures: Array[String] = []
@@ -19,6 +19,7 @@ const LEGACY_IMPORTS := [
 ]
 
 const LEGACY_IMPORT_EXCEPTIONS := {
+    "res://scripts/corporate_legacy_system.gd": ["res://scripts/renew_services.gd"],
     "res://scripts/production.gd": ["res://scripts/business_system.gd"]
 }
 
@@ -62,8 +63,6 @@ func audit_all_scripts() -> void:
             _audit_legacy_imports(path, source)
         var script := ResourceLoader.load(path) as Script
         check(script != null, "script parses: " + path)
-        # Test scripts extend SceneTree and often start work from _init(). Loading them
-        # is sufficient to validate every line parses; never instantiate them here.
         if not path.begins_with("res://scripts/"):
             continue
         for method_name in _declared_functions(source):
@@ -165,6 +164,17 @@ func audit_main_screen() -> void:
     for node_name in ui_nodes:
         check(game.get_node_or_null("UI/" + node_name) != null, "UI node: " + node_name)
 
+    var services := root.get_node_or_null("RenewServices")
+    check(services != null, "RenewServices autoload is live")
+    if services != null:
+        var systems := game.get_node_or_null("Systems")
+        for service_name in services.SERVICE_PATHS.keys():
+            var service = services.get_service(str(service_name))
+            check(service != null, "service resolves: " + str(service_name))
+            if service != null:
+                check(service.is_inside_tree(), "service is live in tree: " + str(service_name))
+                check(service.get_parent() == systems, "service is scene-owned under Systems: " + str(service_name))
+
     for method_name in [
         "inspect_property", "acquire_property", "restore_property", "sell_property",
         "lease_property", "open_business", "choose_business_purpose", "create_business",
@@ -176,9 +186,29 @@ func audit_main_screen() -> void:
 
     var hq := game.get_node_or_null("UI/HeadquartersPanel")
     check(hq != null and hq.get("headquarters_visual") != null, "Headquarters screen owns staged visual")
-    if hq != null and hq.get("headquarters_visual") != null:
-        var visual: Node = hq.get("headquarters_visual")
-        check(visual.has_method("set_headquarters_state"), "Headquarters staged visual exposes update contract")
+    if hq != null:
+        check(hq.get("system") != null, "Headquarters screen resolves live system")
+        check(hq.get("finance") != null, "Headquarters screen resolves finance")
+        if hq.get("headquarters_visual") != null:
+            var visual: Node = hq.get("headquarters_visual")
+            check(visual.has_method("set_headquarters_state"), "Headquarters staged visual exposes update contract")
+
+    var screen_contracts := {
+        "TechnologyPanel": ["open_screen", "close_screen"],
+        "HistoryPanel": ["open_screen", "close_screen"],
+        "NewsPanel": ["open_screen", "close_screen"],
+        "CollectionPanel": ["open_screen", "close_screen"],
+        "LiveOpsPanel": ["open_screen", "close_screen"],
+        "RenewDiplomacyUI": ["open_screen", "close_screen"],
+        "EmpireIdentityPanel": ["open_screen", "close_screen"],
+        "NotificationsCenterPanel": ["open_screen", "close_screen"]
+    }
+    for screen_name in screen_contracts.keys():
+        var screen := game.get_node_or_null("UI/" + str(screen_name))
+        check(screen != null, "screen contract target exists: " + str(screen_name))
+        if screen != null:
+            for method_name in screen_contracts[screen_name]:
+                check(screen.has_method(str(method_name)), "%s exposes %s" % [screen_name, method_name])
 
     game.free()
     current_scene = null
