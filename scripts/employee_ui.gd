@@ -223,8 +223,8 @@ func _layout_responsive() -> void:
     _status.add_theme_font_size_override("font_size", 9 if phone else 10)
     _summary.add_theme_font_size_override("font_size", 9 if phone else 10)
     _feedback.add_theme_font_size_override("font_size", 9 if phone else 10)
-    _list_scroll.custom_minimum_size.y = 64 if phone else (128 if mobile else 0)
-    _detail_scroll.custom_minimum_size.y = 92 if phone else (126 if mobile else 116)
+    _list_scroll.custom_minimum_size.y = 52 if phone else (128 if mobile else 0)
+    _detail_scroll.custom_minimum_size.y = 78 if phone else (126 if mobile else 116)
     _actions.columns = 3 if phone else 2
     for child in _actions.get_children():
         if child is Button:

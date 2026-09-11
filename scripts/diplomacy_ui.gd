@@ -158,5 +158,7 @@ func _layout() -> void:
     var names := ["AcceptIncoming","SendGift","CancelTreaty","RefreshTreatyLedger"]; var bw: float=(width-35.0)*0.5
     for i in range(names.size()):
         var b := panel.get_node_or_null(names[i]) as Button
-        if b != null: b.position=Vector2(14+(i%2)*(bw+7),actions_y+24+(i/2)*50); b.size=Vector2(bw,44); b.add_theme_font_size_override("font_size",9 if phone else 10)
+        if b != null:
+            b.custom_minimum_size=Vector2(0,44); b.clip_text=true
+            b.position=Vector2(14+(i%2)*(bw+7),actions_y+24+(i/2)*50); b.size=Vector2(bw,44); b.add_theme_font_size_override("font_size",9 if phone else 10)
     summary.position=Vector2(14,height-72); summary.size=Vector2(width-28,62)

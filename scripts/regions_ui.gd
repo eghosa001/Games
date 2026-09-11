@@ -63,7 +63,7 @@ func _layout() -> void:
     var size := get_viewport().get_visible_rect().size; var w := maxf(size.x, 320.0); var h := maxf(size.y, 480.0); var narrow := w < 720.0; var phone := w < 430.0
     var margin := 8.0 if phone else (10.0 if narrow else 28.0); panel.position = Vector2(margin, margin + 8.0); panel.size = Vector2(w - margin * 2.0, h - margin * 2.0 - 8.0)
     title_label.position = Vector2(14, 10); title_label.size = Vector2(panel.size.x - 110, 28); summary_label.position = Vector2(14, 38); summary_label.size = Vector2(panel.size.x - 110, 18); close_button.position = Vector2(panel.size.x - 88, 10); close_button.size = Vector2(76, 44)
-    region_scroll.position = Vector2(12, 62); region_scroll.size = Vector2(panel.size.x - 24, panel.size.y * (0.43 if narrow else 0.44)); region_grid.columns = 1 if narrow else 2
+    region_scroll.position = Vector2(12, 62); region_scroll.size = Vector2(panel.size.x - 24, panel.size.y * (0.35 if phone else (0.43 if narrow else 0.44))); region_grid.columns = 1 if narrow else 2
     detail_label.position = Vector2(14, region_scroll.position.y + region_scroll.size.y + 8); detail_label.size = Vector2(panel.size.x - 28, 86 if phone else (74 if narrow else 66))
     action_grid.position = Vector2(12, detail_label.position.y + detail_label.size.y + 6); action_grid.size = Vector2(panel.size.x - 24, 104 if phone else 54); action_grid.columns = 2 if narrow else 3
     for child in action_grid.get_children():

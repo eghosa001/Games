@@ -359,7 +359,7 @@ func _layout() -> void:
     var offer_gap_total := float(offer_columns - 1) * 7.0
     var offer_button_width := maxf(72.0, (width - 44.0 - offer_gap_total) / float(offer_columns))
     for child in offer_grid.get_children():
-        child.custom_minimum_size = Vector2(offer_button_width, 42.0)
+        child.custom_minimum_size = Vector2(offer_button_width, 46.0)
         if child is Button:
             child.add_theme_font_size_override("font_size", 8 if phone else 10)
             child.clip_text = true
