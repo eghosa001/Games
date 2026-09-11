@@ -39,32 +39,35 @@ func _run() -> void:
             "ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel",
             "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel",
             "NewsPanel", "InfrastructurePanel", "DashboardPanel", "FinancePanel",
-            "PortfolioPanel", "CorporationsPanel", "RenewDiplomacyUI", "CustomerSegmentsUI"
+            "PortfolioPanel", "CorporationsPanel", "RegionsPanel", "WorldOpportunitiesPanel",
+            "BusinessOperationsPanel", "ProductionControlPanel", "SupplyChainPanel",
+            "EmpireExpansionPanel", "EmpireIntelligencePanel", "EmpireProgressionPanel",
+            "EmpireIdentityPanel", "NotificationsCenterPanel", "SaveLoadPanel",
+            "RenewDiplomacyUI", "CustomerSegmentsUI"
         ]
 
         # The first playable frame must not contain an accidental modal/window.
         for screen_name in screen_names:
             check("startup screen hidden: %s" % screen_name, not manager.is_screen_open(screen_name))
 
+        # Every managed screen must open alone, expose a usable close path and
+        # have no visible enabled Button without a pressed callback.
         for screen_name in screen_names:
             manager.show_screen(screen_name)
             await process_frame
             check("opens primary screen: %s" % screen_name, manager.is_screen_open(screen_name))
+            check("only one primary screen visible: %s" % screen_name, _visible_screen_count(manager) == 1)
             var screen := _find_screen(manager, screen_name)
+            check("screen node found after open: %s" % screen_name, screen != null)
+            if screen != null:
+                _check_button_wiring(screen, screen_name)
             var close_button := _find_close_button(screen)
             check("has usable close button: %s" % screen_name, close_button != null and close_button.visible and close_button.size.x > 0.0 and close_button.size.y > 0.0)
             if close_button != null:
                 check("close button accepts mouse/touch: %s" % screen_name, close_button.mouse_filter != Control.MOUSE_FILTER_IGNORE)
-                await _click_at(close_button)
-                check("real mouse click closes screen: %s" % screen_name, not manager.is_screen_open(screen_name))
-            if manager.is_screen_open(screen_name):
-                # Exercise the touch route too when a mouse route did not close
-                # it. This is real InputEventScreenTouch dispatch, not a signal
-                # shortcut, so the test covers the reported interception bug.
-                if close_button != null:
-                    await _touch_at(close_button)
-                check("real touch closes screen: %s" % screen_name, close_button != null and not manager.is_screen_open(screen_name))
-            check("screen is closed after real input: %s" % screen_name, not manager.is_screen_open(screen_name))
+                await _activate_button(close_button)
+                check("close action closes screen: %s" % screen_name, not manager.is_screen_open(screen_name))
+            check("screen is closed after close action: %s" % screen_name, not manager.is_screen_open(screen_name))
 
         # ESC must close the currently active primary screen as a second,
         # independent escape path.
@@ -83,6 +86,15 @@ func _run() -> void:
     # not paint their auxiliary cards over the primary command sheet.
     await _check_layout_contract(scene, hud)
     _finish()
+
+func _check_button_wiring(node: Node, screen_name: String) -> void:
+    if node is Button:
+        var button := node as Button
+        if button.visible and not button.disabled and button.mouse_filter != Control.MOUSE_FILTER_IGNORE:
+            var label := button.text.strip_edges()
+            check("button wired: %s / %s" % [screen_name, label if not label.is_empty() else button.name], button.pressed.get_connections().size() > 0)
+    for child in node.get_children():
+        _check_button_wiring(child, screen_name)
 
 func _check_layout_contract(scene: Node, hud: Node) -> void:
     var root_control := hud.get("root") as Control
@@ -127,11 +139,7 @@ func _inside_viewport(control: Control, size: Vector2) -> bool:
     var viewport_rect := Rect2(Vector2.ZERO, size)
     return viewport_rect.encloses(rect)
 
-func _click_at(button: Button) -> void:
-    button.pressed.emit()
-    await process_frame
-
-func _touch_at(button: Button) -> void:
+func _activate_button(button: Button) -> void:
     button.pressed.emit()
     await process_frame
 
@@ -142,6 +150,12 @@ func _find_screen(manager: Node, screen_name: String) -> Node:
         if node != null:
             return node
     return manager.get_tree().root.get_node_or_null("Renew/" + screen_name)
+
+func _visible_screen_count(manager: Node) -> int:
+    var count := 0
+    for screen in manager._screen_nodes():
+        if manager._is_node_visible(screen): count += 1
+    return count
 
 func _find_close_button(node: Node) -> Button:
     if node == null:
