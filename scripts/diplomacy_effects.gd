@@ -1,6 +1,7 @@
 extends Node
 
 ## Applies active treaty benefits to the real game systems once per game day.
+const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 const CHECK_INTERVAL_SECONDS := 0.25
 var last_day: int = -1
 var applied: Dictionary = {}
@@ -30,7 +31,7 @@ func _check_day() -> void:
     var day: int = int(scene.get("day"))
     if day == last_day: return
     last_day = day
-    var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
+    var diplomacy = RuntimeResolver.resolve("RenewDiplomacySystem", "Systems/RenewDiplomacySystem")
     if diplomacy == null: return
     for treaty in diplomacy.list_treaties("active"):
         _apply(treaty, day)
@@ -41,8 +42,8 @@ func _apply(treaty: Dictionary, day: int) -> void:
     if a != "player" and b != "player": return
     var benefits: Dictionary = treaty.get("benefits", {})
     var obligations: Dictionary = treaty.get("obligations", {})
-    var finance = get_node_or_null("/root/RenewFinanceSystem")
-    var production = get_node_or_null("/root/RenewProductionSystem")
+    var finance = RuntimeResolver.resolve("RenewFinanceSystem")
+    var production = RuntimeResolver.resolve("RenewProductionSystem")
     var main = Engine.get_main_loop().get_current_scene()
     match str(treaty.get("type", "")):
         "trade":
@@ -71,6 +72,7 @@ func _apply(treaty: Dictionary, day: int) -> void:
                     if production.machines.has(machine_id): production.machines[machine_id]["capacity"] = int(production.machines[machine_id].get("capacity", 1)) + 1
                 _mark(id, "infrastructure", true)
         "joint_venture":
+            # Joint ventures are materialized and settled by RenewDiplomacyControl.
             pass
 
 func _mark(id: String, key: String, value) -> void:
