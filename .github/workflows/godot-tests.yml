@@ -74,7 +74,7 @@ jobs:
           for t in tests/test_*.gd tests/integration/test_*.gd tests/release/test_*.gd; do
             [ -f "$t" ] || continue
             case "$t" in
-              *test_long_soak.gd|*test_extreme_soak.gd) continue ;;
+              *test_long_soak.gd|*test_extreme_soak.gd|*test_visual_ui_matrix.gd) continue ;;
             esac
             echo "===== $t ====="
             log="test_artifacts/fast-logs/$(echo "$t" | tr '/' '_' | sed 's/\.gd$/.log/')"
@@ -101,6 +101,17 @@ jobs:
           mkdir -p test_artifacts/fast-logs
           set +e
           timeout 600s xvfb-run -a "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --path . --script res://tests/test_quality_gate.gd 2>&1 | tee test_artifacts/fast-logs/visual-quality-gate.log
+          status=${PIPESTATUS[0]}
+          set -e
+          exit "$status"
+
+      - name: Run rendered UI matrix under Xvfb
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p test_artifacts/fast-logs artifacts/ui-matrix
+          set +e
+          timeout 900s xvfb-run -a "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --path . --script res://tests/test_visual_ui_matrix.gd 2>&1 | tee test_artifacts/fast-logs/visual-ui-matrix.log
           status=${PIPESTATUS[0]}
           set -e
           exit "$status"
