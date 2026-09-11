@@ -119,7 +119,9 @@ func map_rects() -> Array:
 		var col: int = index % cols
 		var row: int = index / cols
 		var origin := area.position + Vector2(col * cell.x + 6.0, row * cell.y + 4.0)
-		var size := Vector2(maxf(40.0, cell.x - 12.0), maxf(24.0, cell.y - 32.0))
+		var preferred_size := Vector2(maxf(40.0, cell.x - 12.0), maxf(24.0, cell.y - 32.0))
+		var cell_safe_size := Vector2(maxf(8.0, cell.x - 8.0), maxf(8.0, cell.y - 8.0))
+		var size := Vector2(minf(preferred_size.x, cell_safe_size.x), minf(preferred_size.y, cell_safe_size.y))
 		out.append({"id": str(entry.get("id", "")), "rect": Rect2(origin, size)})
 		index += 1
 	return out
