@@ -96,7 +96,11 @@ def assert_screenshot(path, vw, vh):
         results.append(assert_dark_surface(img, *R(104, 112, 440, 212), PANEL_DARK, "selected_card"))
 
     dock_bottom = int(vh * 0.78) if narrow else int(vh * 0.80)
-    results.append(assert_dark_surface(img, *R(4, dock_bottom, int(vw * 0.35), vh), BG_DARK, "status-area-bg"))
+    # In the compact layout this region is occupied by the overview panel,
+    # not the exposed base background used by desktop. Validate the rendered
+    # panel palette on mobile while preserving the stricter desktop baseline.
+    status_surface = PANEL_DARK if narrow else BG_DARK
+    results.append(assert_dark_surface(img, *R(4, dock_bottom, int(vw * 0.35), vh), status_surface, "status-area-bg"))
     return results
 
 
