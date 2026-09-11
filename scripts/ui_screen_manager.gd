@@ -266,17 +266,19 @@ func _ensure_close_button(screen: Node) -> void:
 
     var existing := _find_close_button(screen)
     if existing != null:
+        # Preserve screen-owned layout for native close controls. Re-anchoring an
+        # existing button here breaks Container layouts and can push the control
+        # outside narrow phone viewports after a resize. The manager only enforces
+        # a touch-safe minimum and the shared close behavior.
         existing.name = CLOSE_BUTTON_NAME
         existing.tooltip_text = "Close"
         existing.focus_mode = Control.FOCUS_NONE
         existing.mouse_filter = Control.MOUSE_FILTER_STOP
         existing.z_index = 4096
-        existing.custom_minimum_size = Vector2(96, 46)
-        existing.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-        existing.offset_left = -112.0
-        existing.offset_top = 14.0
-        existing.offset_right = -16.0
-        existing.offset_bottom = 60.0
+        existing.custom_minimum_size = Vector2(
+            maxf(existing.custom_minimum_size.x, 44.0),
+            maxf(existing.custom_minimum_size.y, 44.0)
+        )
         if not existing.pressed.is_connected(_on_close_pressed):
             existing.pressed.connect(_on_close_pressed)
         return
