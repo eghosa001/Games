@@ -58,7 +58,7 @@ func select_district(index: int) -> void:
         state_adapter.log_message("DISTRICT: %s selected." % districts.current()["name"])
 
 func management_capacity() -> Dictionary:
-    var headquarters = get_node_or_null("/root/RenewHeadquartersSystem")
+    var headquarters = state_adapter.service("RenewHeadquartersSystem", "Systems/RenewHeadquartersSystem")
     var office_capacity := 0
     if headquarters != null and headquarters.has_method("executive_capacity"):
         office_capacity = int(headquarters.executive_capacity())

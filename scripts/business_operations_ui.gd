@@ -36,7 +36,7 @@ func _ready() -> void:
     _build()
     visible = false
     _layout()
-    get_viewport().size_changed.connect(_layout)
+    if not get_viewport().size_changed.is_connected(_layout): get_viewport().size_changed.connect(_layout)
 
 func _build() -> void:
     scrim = ColorRect.new()
@@ -108,25 +108,17 @@ func _layout() -> void:
     inventory_label.position = Vector2(14, 116); inventory_label.size = Vector2(w - 28, 56)
     machine_label.position = Vector2(14, 174); machine_label.size = Vector2(w - 28, 56)
     var buttons := [produce_button, buy_inputs_button, upgrade_button, marketing_button, price_button, staff_button]
-    if phone:
-        var y := 238.0
-        for button in buttons:
-            button.position = Vector2(14, y)
-            button.size = Vector2(w - 28, 46)
-            button.add_theme_font_size_override("font_size", 9)
-            y += 51.0
-        status.position = Vector2(14, minf(y + 2.0, panel.size.y - 48.0)); status.size = Vector2(w - 28, 42)
-    else:
-        var gap := 7.0
-        var bw := (w - 28.0 - gap) / 2.0
-        var y := 238.0
-        for i in range(buttons.size()):
-            var row := i / 2
-            var col := i % 2
-            buttons[i].position = Vector2(14.0 + col * (bw + gap), y + row * 53.0)
-            buttons[i].size = Vector2(bw, 46)
-        status.position = Vector2(14, panel.size.y - 56); status.size = Vector2(w - 28, 44)
-        for button in buttons: button.add_theme_font_size_override("font_size", 10 if not narrow else 9)
+    var gap := 7.0
+    var bw := (w - 28.0 - gap) / 2.0
+    var actions_y := 238.0
+    for i in range(buttons.size()):
+        var row := i / 2
+        var col := i % 2
+        buttons[i].position = Vector2(14.0 + col * (bw + gap), actions_y + row * 53.0)
+        buttons[i].size = Vector2(bw, 46)
+        buttons[i].add_theme_font_size_override("font_size", 9 if phone or narrow else 10)
+    status.position = Vector2(14, minf(actions_y + 3.0 * 53.0 + 8.0, panel.size.y - 48.0))
+    status.size = Vector2(w - 28, 42)
 
 func open_screen() -> void:
     visible = true

@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 ## Responsive RENEW DAILY reader. News data remains authoritative in RenewNewsSystem.
+const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 const SURFACE := Color("0d2028")
 const SURFACE_2 := Color("102831")
 const BORDER := Color("274852")
@@ -19,9 +20,7 @@ var last_signature := ""
 
 func _ready() -> void:
     layer = 70
-    _build()
-    _layout()
-    close_screen()
+    _build(); _layout(); close_screen()
     if not get_viewport().size_changed.is_connected(_layout): get_viewport().size_changed.connect(_layout)
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -31,8 +30,7 @@ func _unhandled_input(event: InputEvent) -> void:
             else: open_screen()
             get_viewport().set_input_as_handled()
         elif event.keycode == KEY_ESCAPE and open:
-            close_screen()
-            get_viewport().set_input_as_handled()
+            close_screen(); get_viewport().set_input_as_handled()
 
 func open_screen() -> void:
     open = true
@@ -44,13 +42,10 @@ func close_screen() -> void:
 func toggle() -> void:
     if open: close_screen()
     else: open_screen()
-func _news(): return get_node_or_null("/root/RenewNewsSystem")
+func _news(): return RuntimeResolver.resolve("RenewNewsSystem", "Systems/RenewNewsSystem")
 
 func _style(bg: Color, border: Color = BORDER, radius := 14) -> StyleBoxFlat:
-    var s := StyleBoxFlat.new()
-    s.bg_color = bg; s.border_color = border; s.set_border_width_all(1); s.set_corner_radius_all(radius)
-    s.content_margin_left = 12; s.content_margin_right = 12; s.content_margin_top = 10; s.content_margin_bottom = 10
-    return s
+    var s := StyleBoxFlat.new(); s.bg_color = bg; s.border_color = border; s.set_border_width_all(1); s.set_corner_radius_all(radius); s.content_margin_left = 12; s.content_margin_right = 12; s.content_margin_top = 10; s.content_margin_bottom = 10; return s
 
 func _build() -> void:
     panel = PanelContainer.new(); panel.name = "RenewDaily"; panel.add_theme_stylebox_override("panel", _style(SURFACE)); add_child(panel)
