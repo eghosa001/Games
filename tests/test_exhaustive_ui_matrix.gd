@@ -2,7 +2,7 @@ extends SceneTree
 
 # Exhaustive release gate for player-facing UI behavior.
 # Validates the real Main scene and UIScreenManager across representative
-# phones, tablets and desktop sizes, including navigation stress.
+# phones, tablets and desktop sizes, including every persistent command page.
 
 const VIEWPORTS := [
     Vector2i(320, 568),
@@ -24,6 +24,8 @@ const MANAGED_SCREENS := [
     "EmpireIdentityPanel", "NotificationsCenterPanel", "SaveLoadPanel",
     "RenewDiplomacyUI", "CustomerSegmentsUI",
 ]
+
+const PAGE_COUNTS := [4, 9, 10, 5]
 
 const TRANSITION_SEQUENCE := [
     "DashboardPanel", "FinancePanel", "BusinessOperationsPanel", "EmployeePanel",
@@ -71,6 +73,7 @@ func _run() -> void:
 
     for viewport_size in VIEWPORTS:
         await _set_viewport(viewport_size)
+        await _audit_persistent_shell(viewport_size)
         await _audit_viewport(viewport_size)
 
     await _set_viewport(Vector2i(390, 844))
@@ -104,6 +107,61 @@ func _set_viewport(size: Vector2i) -> void:
     root.size_changed.emit()
     await process_frame
     await process_frame
+
+func _audit_persistent_shell(viewport_size: Vector2i) -> void:
+    manager.hide_all_screens()
+    await process_frame
+    var hud := game.get_node_or_null("UI/MainHUD")
+    _check(hud != null, "%s MainHUD resolves" % viewport_size)
+    if hud == null:
+        return
+    if hud.has_method("_layout_responsive"):
+        hud._layout_responsive()
+        await process_frame
+
+    var tabs := hud.get("tabs") as HBoxContainer
+    var actions := hud.get("actions") as GridContainer
+    var action_dock := hud.get("action_dock") as Control
+    _check(tabs != null, "%s primary tabs resolve" % viewport_size)
+    _check(actions != null, "%s action grid resolves" % viewport_size)
+    _check(action_dock != null, "%s action dock resolves" % viewport_size)
+    if tabs != null:
+        _check(tabs.get_child_count() == 4, "%s exactly four primary tabs" % viewport_size)
+        for child in tabs.get_children():
+            var button := child as Button
+            if button == null: continue
+            _check(button.size.x >= 44.0 and button.size.y >= 44.0, "%s primary tab >=44px: %s" % [viewport_size, button.text])
+            _check(button.pressed.get_connections().size() > 0, "%s primary tab wired: %s" % [viewport_size, button.text])
+
+    if action_dock != null and action_dock.visible:
+        _check(_rect_mostly_inside(action_dock.get_global_rect(), Rect2(Vector2.ZERO, Vector2(viewport_size))), "%s action dock inside viewport" % viewport_size)
+
+    # Exercise every command page without invoking business mutations. This
+    # verifies the navigation structure, button creation and responsive sizing
+    # for all 28 HUD pages.
+    if hud.has_method("_set_tab") and hud.has_method("_set_page"):
+        for tab_index in range(PAGE_COUNTS.size()):
+            hud._set_tab(tab_index)
+            await process_frame
+            for page_index in range(PAGE_COUNTS[tab_index]):
+                hud._set_page(page_index)
+                await process_frame
+                var page_buttons: Array[Button] = []
+                if actions != null:
+                    _collect_enabled_visible_buttons(actions, page_buttons)
+                _check(not page_buttons.is_empty(), "%s HUD tab %d page %d has actions" % [viewport_size, tab_index, page_index])
+                _check(page_buttons.size() <= 6, "%s HUD tab %d page %d keeps action count <=6" % [viewport_size, tab_index, page_index])
+                for button in page_buttons:
+                    var label := button.text.strip_edges().replace("\n", " ")
+                    _check(button.size.x >= 44.0 and button.size.y >= 44.0, "%s HUD action >=44px: %s" % [viewport_size, label])
+                    _check(button.pressed.get_connections().size() > 0, "%s HUD action wired: %s" % [viewport_size, label])
+                    if not _has_scroll_ancestor(button):
+                        _check(_rect_mostly_inside(button.get_global_rect(), Rect2(Vector2.ZERO, Vector2(viewport_size))), "%s HUD action inside viewport: %s" % [viewport_size, label])
+
+    # Restore the default landing page so later screen tests start consistently.
+    if hud.has_method("_set_tab"):
+        hud._set_tab(0)
+        await process_frame
 
 func _audit_viewport(viewport_size: Vector2i) -> void:
     var viewport_rect := Rect2(Vector2.ZERO, Vector2(viewport_size))
