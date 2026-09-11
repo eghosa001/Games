@@ -35,9 +35,9 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android build dependencies
+      - name: Install Android 16 build dependencies
         run: |
-          sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "platforms;android-35" "build-tools;35.0.1" "cmake;3.10.2.4988404" "ndk;28.1.13356709"
+          sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "platforms;android-36" "build-tools;36.1.0" "cmake;3.22.1" "ndk;29.0.14206865"
           yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
 
       - name: Install Godot
