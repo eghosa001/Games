@@ -4,6 +4,7 @@ extends Node
 ## NPCs can propose, accept, cancel and occasionally breach treaties based on
 ## relationships, strategic needs and risk tolerance.
 
+const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 const CHECK_INTERVAL_SECONDS := 0.25
 var last_day: Variant = -1
 var _check_timer: Timer
@@ -31,7 +32,7 @@ func _check_current_day() -> void:
     var day: Variant = int(scene.get("day"))
     if day == last_day: return
     last_day = day
-    var diplomacy = get_node_or_null("/root/RenewDiplomacySystem")
+    var diplomacy = RuntimeResolver.resolve("RenewDiplomacySystem", "Systems/RenewDiplomacySystem")
     if diplomacy == null: return
     diplomacy.process_day(day)
     var rivals = scene.get("rivals")
