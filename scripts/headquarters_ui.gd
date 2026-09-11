@@ -2,6 +2,7 @@ extends CanvasLayer
 
 ## Executive headquarters command surface.
 ## All financial mutations remain delegated to RenewHeadquartersSystem.
+const HeadquartersVisual = preload("res://scripts/headquarters_visual.gd")
 const SURFACE := Color("0d2028")
 const SURFACE_2 := Color("102831")
 const BORDER := Color("274852")
@@ -18,6 +19,7 @@ var panel: PanelContainer
 var content: VBoxContainer
 var status_label: Label
 var stage_label: Label
+var headquarters_visual: Control
 var progress_bar: ProgressBar
 var area_label: Label
 var area_status: Label
@@ -118,6 +120,11 @@ func _build_ui() -> void:
     content.add_child(stage_label)
     status_label = _label("Loading headquarters intelligence...", 11, MUTED)
     content.add_child(status_label)
+
+    headquarters_visual = HeadquartersVisual.new()
+    headquarters_visual.name = "HeadquartersProgressionVisual"
+    headquarters_visual.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    content.add_child(headquarters_visual)
 
     progress_bar = ProgressBar.new()
     progress_bar.custom_minimum_size = Vector2(0, 8)
@@ -221,6 +228,8 @@ func _refresh() -> void:
     elif stage_index < 4: next_text = str(check.get("reason", "Locked"))
     stage_label.text = "%s  •  %s" % [str(system.get_stage()).to_upper(), str(system.headquarters_region) if not str(system.headquarters_region).is_empty() else "CORPORATE COMMAND"]
     status_label.text = "INVESTED  $%s   •   CASH  $%s\nNEXT  %s   •   AREAS  %d/%d" % [_money(int(system.headquarters_value)), _money(cash), next_text, _built_count(), area_ids.size()]
+    if headquarters_visual != null and headquarters_visual.has_method("set_headquarters_state"):
+        headquarters_visual.set_headquarters_state(stage_index, str(system.get_stage()), int(system.headquarters_value))
     upgrade_button.disabled = stage_index >= 4 or not bool(check.get("ok", false))
     museum_button.disabled = not system.museum_available()
     progress_bar.max_value = 4.0
@@ -260,6 +269,8 @@ func _layout() -> void:
     var height := maxf(430.0, size.y - 86.0) if narrow else minf(680.0, size.y - 110.0)
     panel.position = Vector2(8, 70) if narrow else Vector2(maxf(18.0, (size.x - width) * 0.5), 82)
     panel.size = Vector2(width, height)
+    if headquarters_visual != null:
+        headquarters_visual.custom_minimum_size.y = 118.0 if narrow else 150.0
     if top_actions != null:
         top_actions.alignment = BoxContainer.ALIGNMENT_BEGIN
         if narrow:
