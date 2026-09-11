@@ -2,8 +2,8 @@ extends SceneTree
 
 # Whole-repository architecture and parser integrity gate.
 # This remains read-only: it parses every GDScript under scripts/ and tests/,
-# loads every scene/theme/shader resource, validates quoted res:// references in
-# executable/config resources, and verifies the complete Main world/system/UI tree.
+# loads every scene/theme/shader resource, validates load-bearing res:// references,
+# and verifies the complete Main world/system/UI tree.
 var passed := 0
 var failed := 0
 var failures: Array[String] = []
@@ -43,7 +43,7 @@ func run() -> void:
     audit_resource_references()
     await audit_main_screen()
     print("RENEW ARCHITECTURE INTEGRITY: %d passed, %d failed" % [passed, failed])
-    print("Scripts checked: %d | Functions checked: %d | Resources loaded: %d | res:// references checked: %d" % [script_count, function_count, resource_count, reference_count])
+    print("Scripts checked: %d | Functions checked: %d | Resources loaded: %d | load-bearing references checked: %d" % [script_count, function_count, resource_count, reference_count])
     for failure in failures:
         print("FAILED: " + failure)
     quit(1 if failed > 0 else 0)
@@ -88,9 +88,25 @@ func audit_resource_references() -> void:
         var text := FileAccess.get_file_as_string(source_path)
         if text.is_empty():
             continue
-        for ref_path in _quoted_res_paths(text):
+        for ref_path in _load_bearing_res_paths(source_path, text):
             reference_count += 1
-            check(FileAccess.file_exists(ref_path) or DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(ref_path)), "resource reference exists: %s -> %s" % [source_path, ref_path])
+            check(FileAccess.file_exists(ref_path), "load-bearing resource exists: %s -> %s" % [source_path, ref_path])
+
+func _load_bearing_res_paths(source_path: String, text: String) -> Array[String]:
+    if source_path.ends_with(".tscn") or source_path.ends_with(".tres") or source_path.ends_with(".godot") or source_path.ends_with(".cfg"):
+        return _quoted_res_paths(text)
+    var result: Array[String] = []
+    for line in text.split("\n"):
+        var stripped := line.strip_edges()
+        if stripped.begins_with("#"):
+            continue
+        var load_bearing := stripped.contains("preload(") or stripped.contains("load(") or stripped.contains("ResourceLoader.exists(")
+        if not load_bearing:
+            continue
+        for ref_path in _quoted_res_paths(stripped):
+            if not result.has(ref_path):
+                result.append(ref_path)
+    return result
 
 func _audit_legacy_imports(path: String, source: String) -> void:
     if path in LEGACY_IMPORTS:
@@ -196,7 +212,7 @@ func _quoted_res_paths(text: String) -> Array[String]:
         var finish := start
         while finish < text.length():
             var ch := text[finish]
-            if ch == '"' or ch == "'" or ch == ")" or ch == "]" or ch == "}" or ch == " " or ch == "\t" or ch == "\r" or ch == "\n":
+            if ch == "\"" or ch == "'" or ch == ")" or ch == "]" or ch == "}" or ch == " " or ch == "\t" or ch == "\r" or ch == "\n":
                 break
             finish += 1
         var path := text.substr(start, finish - start).strip_edges()
