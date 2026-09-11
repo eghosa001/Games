@@ -62,6 +62,10 @@ func audit_all_scripts() -> void:
             _audit_legacy_imports(path, source)
         var script := ResourceLoader.load(path) as Script
         check(script != null, "script parses: " + path)
+        # Test scripts extend SceneTree and often start work from _init(). Loading them
+        # is sufficient to validate every line parses; never instantiate them here.
+        if not path.begins_with("res://scripts/"):
+            continue
         for method_name in _declared_functions(source):
             function_count += 1
             if script != null and script.can_instantiate():
