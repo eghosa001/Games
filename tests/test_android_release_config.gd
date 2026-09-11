@@ -24,6 +24,7 @@ func _run() -> void:
     check("production Android export is an AAB", text.contains("export_path=\"build/RENEW-release.aab\"") and text.contains("gradle_build/export_format=1"))
     check("production Android export uses Gradle", text.contains("gradle_build/use_gradle_build=true"))
     check("production Android export uses release build type", text.contains("gradle_build/target_build_type=\"release\""))
+    check("production Android export targets Play API 36", text.contains("gradle_build/target_sdk=\"36\""))
     check("production Android export has explicit version metadata", text.contains("version/code=1") and text.contains("version/name=\"1.0.0\""))
 
     var autosave := FileAccess.get_file_as_string("res://scripts/autosave.gd")
@@ -35,7 +36,7 @@ func _run() -> void:
     check("no undeclared analytics/network implementation exists", not analytics_present)
 
     print("--- ANDROID RELEASE CONFIG SUMMARY ---")
-    print("Checks: %d | Failures: %d" % [19, failures.size()])
+    print("Checks: %d | Failures: %d" % [20, failures.size()])
     for failure in failures:
         print("FAILED: %s" % failure)
     if failures.size() > 0:
