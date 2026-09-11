@@ -4,14 +4,6 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - 'project.godot'
-      - 'export_presets.cfg'
-      - 'Assets/**'
-      - 'scenes/**'
-      - 'scripts/**'
-      - 'tests/**'
-      - '.github/workflows/android-export.yml'
 
 permissions:
   contents: read
