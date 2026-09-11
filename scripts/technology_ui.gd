@@ -93,6 +93,14 @@ func _research(id: String) -> void:
         feedback = "Technology service is unavailable."
     last_signature = ""; _refresh(true)
 
+func open_screen() -> void:
+    visible = true
+    last_signature = ""
+    _refresh(true)
+
+func close_screen() -> void:
+    _close()
+
 func _close() -> void:
     var manager := RuntimeResolver.resolve("RenewUIScreenManager")
     if manager != null and manager.has_method("hide_all_screens"): manager.hide_all_screens()
