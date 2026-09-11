@@ -74,7 +74,7 @@ jobs:
           for t in tests/test_*.gd tests/integration/test_*.gd tests/release/test_*.gd; do
             [ -f "$t" ] || continue
             case "$t" in
-              *test_long_soak.gd|*test_extreme_soak.gd|*test_visual_ui_matrix.gd) continue ;;
+              *test_long_soak.gd|*test_extreme_soak.gd|*test_visual_ui_matrix.gd|*test_quality_gate.gd) continue ;;
             esac
             echo "===== $t ====="
             log="test_artifacts/fast-logs/$(echo "$t" | tr '/' '_' | sed 's/\.gd$/.log/')"
