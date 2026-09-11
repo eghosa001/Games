@@ -168,13 +168,22 @@ func _build_ui() -> void:
     close_button.pressed.connect(_close)
     _actions.add_child(close_button)
 
+func open_screen() -> void:
+    if panel != null: panel.visible = true
+    if dimmer != null: dimmer.visible = true
+    _layout_responsive()
+    _refresh()
+
+func close_screen() -> void:
+    if panel != null: panel.visible = false
+    if dimmer != null: dimmer.visible = false
+
 func _close() -> void:
     var manager = get_node_or_null("/root/RenewUIScreenManager")
     if manager != null and manager.has_method("hide_all_screens"):
         manager.hide_all_screens()
     else:
-        panel.visible = false
-        dimmer.visible = false
+        close_screen()
 
 func _add_action(parent_node: GridContainer, text: String, action: String) -> void:
     var button := Button.new()
@@ -214,13 +223,14 @@ func _layout_responsive() -> void:
     _status.add_theme_font_size_override("font_size", 9 if phone else 10)
     _summary.add_theme_font_size_override("font_size", 9 if phone else 10)
     _feedback.add_theme_font_size_override("font_size", 9 if phone else 10)
-    _list_scroll.custom_minimum_size.y = 128 if mobile else 0
-    _detail_scroll.custom_minimum_size.y = 126 if mobile else 116
-    _actions.columns = 2
+    _list_scroll.custom_minimum_size.y = 64 if phone else (128 if mobile else 0)
+    _detail_scroll.custom_minimum_size.y = 92 if phone else (126 if mobile else 116)
+    _actions.columns = 3 if phone else 2
     for child in _actions.get_children():
         if child is Button:
             child.custom_minimum_size = Vector2(0, 44 if phone else 46)
-            child.add_theme_font_size_override("font_size", 9 if phone else 10)
+            child.add_theme_font_size_override("font_size", 8 if phone else 10)
+            child.clip_text = true
 
 func _refresh() -> void:
     if panel == null:
@@ -371,8 +381,7 @@ func _money(amount: int) -> String:
     return str(amount)
 
 func toggle() -> void:
-    panel.visible = not panel.visible
-    dimmer.visible = panel.visible
-    if panel.visible:
-        _layout_responsive()
-        _refresh()
+    if panel != null and panel.visible:
+        close_screen()
+    else:
+        open_screen()
