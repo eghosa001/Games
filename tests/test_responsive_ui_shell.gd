@@ -46,14 +46,12 @@ func _run() -> void:
             "RenewDiplomacyUI", "CustomerSegmentsUI"
         ]
 
-        # The first playable frame must not contain an accidental modal/window.
         for screen_name in screen_names:
             check("startup screen hidden: %s" % screen_name, not manager.is_screen_open(screen_name))
 
-        # Every managed screen must open alone, expose a usable close path and
-        # have no visible enabled Button without a pressed callback.
         for screen_name in screen_names:
             manager.show_screen(screen_name)
+            await process_frame
             await process_frame
             check("opens primary screen: %s" % screen_name, manager.is_screen_open(screen_name))
             check("only one primary screen visible: %s" % screen_name, _visible_screen_count(manager) == 1)
@@ -65,12 +63,15 @@ func _run() -> void:
             check("has usable close button: %s" % screen_name, close_button != null and close_button.visible and close_button.size.x > 0.0 and close_button.size.y > 0.0)
             if close_button != null:
                 check("close button accepts mouse/touch: %s" % screen_name, close_button.mouse_filter != Control.MOUSE_FILTER_IGNORE)
-                await _activate_button(close_button)
-                check("close action closes screen: %s" % screen_name, not manager.is_screen_open(screen_name))
+                await _mouse_click(close_button)
+                if manager.is_screen_open(screen_name):
+                    await _touch_click(close_button)
+                check("real pointer/touch closes screen: %s" % screen_name, not manager.is_screen_open(screen_name))
             check("screen is closed after close action: %s" % screen_name, not manager.is_screen_open(screen_name))
+            if manager.is_screen_open(screen_name):
+                manager.hide_all_screens()
+                await process_frame
 
-        # ESC must close the currently active primary screen as a second,
-        # independent escape path.
         manager.show_screen("NewsPanel")
         await process_frame
         check("ESC test opens NewsPanel", manager.is_screen_open("NewsPanel"))
@@ -81,9 +82,6 @@ func _run() -> void:
         await process_frame
         check("ESC closes active screen", not manager.is_screen_open("NewsPanel"))
 
-    # Validate the actual geometry contract at representative desktop/mobile
-    # sizes. These checks target the root cause: independent CanvasLayers must
-    # not paint their auxiliary cards over the primary command sheet.
     await _check_layout_contract(scene, hud)
     _finish()
 
@@ -107,9 +105,6 @@ func _check_layout_contract(scene: Node, hud: Node) -> void:
     for viewport_size in [Vector2(390, 844), Vector2(320, 568), Vector2(1280, 720)]:
         root_control.size = viewport_size
         hud._layout_responsive()
-        # Propagate the simulated viewport size to floating-panel roots so their
-        # responsive layouts recompute for the target size instead of the boot
-        # viewport size.
         var tutorial := scene.get_node_or_null("UI/TutorialOverlay")
         var strategy := scene.get_node_or_null("UI/StrategyHUD")
         if tutorial != null:
@@ -139,8 +134,43 @@ func _inside_viewport(control: Control, size: Vector2) -> bool:
     var viewport_rect := Rect2(Vector2.ZERO, size)
     return viewport_rect.encloses(rect)
 
-func _activate_button(button: Button) -> void:
-    button.pressed.emit()
+func _mouse_click(button: Button) -> void:
+    if button == null or not button.is_visible_in_tree(): return
+    var center := button.get_global_rect().get_center()
+    var motion := InputEventMouseMotion.new()
+    motion.position = center
+    motion.global_position = center
+    Input.parse_input_event(motion)
+    await process_frame
+    var down := InputEventMouseButton.new()
+    down.button_index = MOUSE_BUTTON_LEFT
+    down.position = center
+    down.global_position = center
+    down.pressed = true
+    Input.parse_input_event(down)
+    await process_frame
+    var up := InputEventMouseButton.new()
+    up.button_index = MOUSE_BUTTON_LEFT
+    up.position = center
+    up.global_position = center
+    up.pressed = false
+    Input.parse_input_event(up)
+    await process_frame
+
+func _touch_click(button: Button) -> void:
+    if button == null or not button.is_visible_in_tree(): return
+    var center := button.get_global_rect().get_center()
+    var down := InputEventScreenTouch.new()
+    down.index = 0
+    down.position = center
+    down.pressed = true
+    Input.parse_input_event(down)
+    await process_frame
+    var up := InputEventScreenTouch.new()
+    up.index = 0
+    up.position = center
+    up.pressed = false
+    Input.parse_input_event(up)
     await process_frame
 
 func _find_screen(manager: Node, screen_name: String) -> Node:
@@ -160,14 +190,14 @@ func _visible_screen_count(manager: Node) -> int:
 func _find_close_button(node: Node) -> Button:
     if node == null:
         return null
+    if node is Button:
+        var self_button := node as Button
+        var self_label := self_button.text.strip_edges().to_upper()
+        if self_label == "CLOSE" or self_label == "X" or self_label == "×" or self_button.name.to_lower().contains("close"):
+            return self_button
     var children := node.get_children()
     for i in range(children.size() - 1, -1, -1):
         var child := children[i]
-        var button := child as Button
-        if button != null:
-            var label := button.text.strip_edges().to_upper()
-            if label == "CLOSE" or label == "X" or label == "×" or button.name.to_lower().contains("close"):
-                return button
         var nested := _find_close_button(child)
         if nested != null:
             return nested
