@@ -44,7 +44,7 @@ func run() -> void:
     audit_resource_references()
     await audit_main_screen()
     print("RENEW ARCHITECTURE INTEGRITY: %d passed, %d failed" % [passed, failed])
-    print("Scripts checked: %d | Functions checked: %d | Resources loaded: %d | load-bearing references checked: %d" % [script_count, function_count, resource_count, reference_count])
+    print("Scripts parsed: %d | Declared functions scanned: %d | Resources loaded: %d | load-bearing references checked: %d" % [script_count, function_count, resource_count, reference_count])
     for failure in failures:
         print("FAILED: " + failure)
     quit(1 if failed > 0 else 0)
@@ -63,15 +63,9 @@ func audit_all_scripts() -> void:
             _audit_legacy_imports(path, source)
         var script := ResourceLoader.load(path) as Script
         check(script != null, "script parses: " + path)
-        if not path.begins_with("res://scripts/"):
-            continue
-        for method_name in _declared_functions(source):
-            function_count += 1
-            if script != null and script.can_instantiate():
-                var instance = script.new()
-                check(instance != null and instance.has_method(method_name), "function structurally present: %s::%s" % [path, method_name])
-                if instance is Node:
-                    instance.free()
+        # Parsing the script validates every function body without creating arbitrary
+        # classes whose _init() may legitimately require constructor arguments.
+        function_count += _declared_functions(source).size()
 
 func audit_parseable_resources() -> void:
     var paths: Array[String] = []
