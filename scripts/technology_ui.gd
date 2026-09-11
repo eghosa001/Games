@@ -99,7 +99,7 @@ func open_screen() -> void:
     _refresh(true)
 
 func close_screen() -> void:
-    _close()
+    visible = false
 
 func _close() -> void:
     var manager := RuntimeResolver.resolve("RenewUIScreenManager")
