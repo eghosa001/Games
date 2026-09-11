@@ -108,9 +108,6 @@ func _build() -> void:
     project.add_theme_color_override("font_color", ACCENT)
     panel.add_child(project)
 
-    # Keep the primary council actions compact. Infrastructure and research
-    # are intentionally not duplicated here; they belong to their dedicated
-    # gameplay screens, preventing action overload and accidental popups.
     _add_button("CREATE ALLIANCE  •  $1,000", _create_alliance)
     _add_button("CONTRIBUTE  •  $1,000", _contribute)
     _add_button("START RAILWAY", _project)
@@ -325,6 +322,8 @@ func _layout() -> void:
     var bw := (width - 42.0) / float(cols)
     for i in range(buttons.size()):
         buttons[i].position = Vector2(14 + (i % cols) * (bw + 7), y + floori(i / cols) * 50)
+        buttons[i].custom_minimum_size = Vector2(0, 44)
+        buttons[i].clip_text = true
         buttons[i].size = Vector2(bw, 44)
         buttons[i].add_theme_font_size_override("font_size", 9 if phone else 10)
     var partners_title := panel.get_node_or_null("PartnersTitle") as Label
