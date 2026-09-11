@@ -1,10 +1,9 @@
 name: Hosted Runner Smoke Test
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - '.github/workflows/runner-smoke.yml'
+  push:
+    branches:
+      - diagnostic/hosted-runner-smoke
   workflow_dispatch:
 
 permissions:
