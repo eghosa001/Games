@@ -5,6 +5,7 @@ extends Node
 #
 # Finance is the canonical cash/debt ledger. Legacy domain buckets are read-only
 # mirrors for financial fields; callers must use FinanceSystem transactions.
+# Never allow generic domain writes to mutate authoritative finance state.
 
 const EmployeeEffects = preload("res://scripts/employee_system.gd")
 const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
