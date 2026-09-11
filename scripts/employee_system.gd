@@ -131,7 +131,7 @@ func get_productivity_multiplier(assignment:String="factory_001")->float:
                 total+=float(employee.get("productivity",0.75))*0.65
                 contributors+=1
     if contributors<=0: return 0.35 * _culture_effect("productivity_multiplier", 1.0)
-    return clamp(total/float(contributors),0.35,1.50) * _culture_effect("productivity_multiplier", 1.0)
+    return clamp(total/max(1.0,float(active)),0.35,1.50) * _culture_effect("productivity_multiplier", 1.0)
 
 func get_employee(employee_id:String)->Dictionary:
     for employee in employees:
