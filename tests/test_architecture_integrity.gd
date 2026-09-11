@@ -63,8 +63,6 @@ func audit_all_scripts() -> void:
             _audit_legacy_imports(path, source)
         var script := ResourceLoader.load(path) as Script
         check(script != null, "script parses: " + path)
-        # Parsing the script validates every function body without creating arbitrary
-        # classes whose _init() may legitimately require constructor arguments.
         function_count += _declared_functions(source).size()
 
 func audit_parseable_resources() -> void:
@@ -244,7 +242,7 @@ func _quoted_res_paths(text: String) -> Array[String]:
                 break
             finish += 1
         var path := text.substr(start, finish - start).strip_edges()
-        while path.ends_with(",") or path.ends_with(";"):
+        while path.ends_with(",") or path.ends_with(";") or path.ends_with("\\"):
             path = path.left(path.length() - 1)
         if path != "res://" and not result.has(path):
             result.append(path)
