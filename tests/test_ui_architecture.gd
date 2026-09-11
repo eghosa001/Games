@@ -52,6 +52,29 @@ func _run() -> void:
         check("active screen is %s" % screen_name, manager.get_active_screen_name() == screen_name)
         check("only one managed screen visible after %s" % screen_name, _visible_screen_count(manager) == 1)
 
+    # Regression: switching away from a screen whose user-facing close action
+    # delegates to the manager must not recursively clear the newly active screen.
+    manager.show_screen("LiveOpsPanel")
+    await process_frame
+    manager.show_screen("NewsPanel")
+    await process_frame
+    check("screen switch survives LiveOps close lifecycle", manager.get_active_screen_name() == "NewsPanel")
+    check("screen switch leaves exactly one managed screen visible", _visible_screen_count(manager) == 1)
+
+    # Regression: the manager controls the screen root, not every descendant.
+    # Nested conditional controls must stay hidden when their containing screen opens.
+    var probe_layer := CanvasLayer.new()
+    var probe_root := Panel.new()
+    var hidden_conditional := ColorRect.new()
+    probe_root.add_child(hidden_conditional)
+    probe_layer.add_child(probe_root)
+    root.add_child(probe_layer)
+    hidden_conditional.visible = false
+    manager._set_node_visible(probe_layer, true)
+    check("opening a screen preserves nested conditional visibility", not hidden_conditional.visible)
+    probe_layer.queue_free()
+    await process_frame
+
     manager.show_screen("MarketPanel")
     await process_frame
     check("legacy MarketPanel alias resolves to CustomerSegmentsUI", manager.get_active_screen_name() == "CustomerSegmentsUI")
