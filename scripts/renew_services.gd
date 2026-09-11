@@ -34,6 +34,7 @@ const SERVICE_PATHS := {
     "RenewHistorySystem": "res://scripts/history_system.gd",
     "RenewHistoryEventBridge": "res://scripts/history_event_bridge.gd",
     "RenewNewsSystem": "res://scripts/news_system.gd",
+    "RenewCorporateLegacy": "res://scripts/corporate_legacy_system.gd",
     "RenewAmbientAudio": "res://scripts/ambient_audio.gd"
 }
 
@@ -47,9 +48,6 @@ func _scene_root() -> Node:
     var scene := tree.current_scene
     if scene != null:
         return scene
-    # Headless/integration runners may attach Main directly to the SceneTree
-    # instead of assigning current_scene. Production lookups should remain
-    # resilient to that lifecycle ordering as well.
     return tree.root.get_node_or_null("Renew")
 
 func _systems_root(create_if_missing: bool = false) -> Node:
@@ -101,10 +99,6 @@ func _wire_service_dependencies() -> void:
         history.gameplay_event_recorded.connect(callable)
 
 func get_service(service_name: String) -> Node:
-    # Keep cached values untyped until validity is checked: assigning a freed
-    # Object directly into a typed Node local raises before is_instance_valid()
-    # can run. Scene replacement in tests and normal game restarts can free the
-    # old Systems tree while this infrastructure autoload stays alive.
     var cached = _services.get(service_name)
     if is_instance_valid(cached):
         return cached as Node
@@ -118,8 +112,5 @@ func get_service(service_name: String) -> Node:
             _services[service_name] = node
             return node
 
-    # If the initial deferred boot ran before Main existed, or a prior Main was
-    # freed, recover lazily on first lookup rather than leaving domain services
-    # unavailable for the lifetime of the process.
     systems = _systems_root(true)
     return _create_service(service_name, systems)
