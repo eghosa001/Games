@@ -3,6 +3,7 @@ extends CanvasLayer
 ## Executive headquarters command surface.
 ## All financial mutations remain delegated to RenewHeadquartersSystem.
 const HeadquartersVisual = preload("res://scripts/headquarters_visual.gd")
+const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 const SURFACE := Color("0d2028")
 const SURFACE_2 := Color("102831")
 const BORDER := Color("274852")
@@ -34,8 +35,8 @@ var selected_area: String = "executive_offices"
 var area_ids: Array[String] = ["executive_offices", "board_room", "research", "training", "archives", "museum", "technology_center"]
 
 func _ready() -> void:
-    system = get_node_or_null("/root/RenewHeadquartersSystem")
-    finance = get_node_or_null("/root/RenewFinanceSystem")
+    system = RuntimeResolver.resolve("RenewHeadquartersSystem", "Systems/RenewHeadquartersSystem")
+    finance = RuntimeResolver.resolve("RenewFinanceSystem")
     main = get_tree().current_scene
     _build_ui()
     _layout()
@@ -46,11 +47,13 @@ func _ready() -> void:
 
 func _resolve_main() -> void:
     if main == null: main = get_tree().current_scene
-    if system == null: system = get_node_or_null("/root/RenewHeadquartersSystem")
-    if finance == null: finance = get_node_or_null("/root/RenewFinanceSystem")
+    if system == null: system = RuntimeResolver.resolve("RenewHeadquartersSystem", "Systems/RenewHeadquartersSystem")
+    if finance == null: finance = RuntimeResolver.resolve("RenewFinanceSystem")
+    _refresh()
 
 func open_screen() -> void:
     if panel == null: return
+    if system == null or finance == null: _resolve_main()
     panel.visible = true
     _refresh()
 
@@ -177,6 +180,7 @@ func _message(text: String) -> void:
     _refresh()
 
 func _upgrade_hq() -> void:
+    if system == null or finance == null: _resolve_main()
     if system == null or finance == null: return
     if not system.has_method("upgrade_with_finance"):
         _message("HQ finance transaction is unavailable.")
@@ -190,6 +194,7 @@ func _upgrade_hq() -> void:
         _message(str(result.get("reason", "HQ upgrade unavailable.")))
 
 func _build_area() -> void:
+    if system == null or finance == null: _resolve_main()
     if system == null or finance == null: return
     if not system.has_method("build_area_with_finance"):
         _message("HQ area finance transaction is unavailable.")
@@ -208,6 +213,7 @@ func _next_area() -> void:
     _refresh()
 
 func _open_museum() -> void:
+    if system == null: _resolve_main()
     var manager := get_node_or_null("/root/RenewUIScreenManager")
     if manager != null and manager.has_method("show_screen") and system != null and system.museum_available():
         manager.show_screen("HistoryPanel")
@@ -219,18 +225,19 @@ func _close() -> void:
     if manager != null and manager.has_method("hide_all_screens"): manager.hide_all_screens()
 
 func _refresh() -> void:
+    if system == null or finance == null: _resolve_main()
     if system == null or finance == null or status_label == null: return
     var cash := int(finance.cash)
     var stage_index: int = int(system.get_stage_index())
-    var check: Dictionary = system.can_upgrade(cash)
+    var check_result: Dictionary = system.can_upgrade(cash)
     var next_text := "FINAL STAGE"
-    if bool(check.get("ok", false)): next_text = "%s • $%s" % [check.get("stage", "Next"), _money(int(check.get("cost", 0)))]
-    elif stage_index < 4: next_text = str(check.get("reason", "Locked"))
+    if bool(check_result.get("ok", false)): next_text = "%s • $%s" % [check_result.get("stage", "Next"), _money(int(check_result.get("cost", 0)))]
+    elif stage_index < 4: next_text = str(check_result.get("reason", "Locked"))
     stage_label.text = "%s  •  %s" % [str(system.get_stage()).to_upper(), str(system.headquarters_region) if not str(system.headquarters_region).is_empty() else "CORPORATE COMMAND"]
     status_label.text = "INVESTED  $%s   •   CASH  $%s\nNEXT  %s   •   AREAS  %d/%d" % [_money(int(system.headquarters_value)), _money(cash), next_text, _built_count(), area_ids.size()]
     if headquarters_visual != null and headquarters_visual.has_method("set_headquarters_state"):
         headquarters_visual.set_headquarters_state(stage_index, str(system.get_stage()), int(system.headquarters_value))
-    upgrade_button.disabled = stage_index >= 4 or not bool(check.get("ok", false))
+    upgrade_button.disabled = stage_index >= 4 or not bool(check_result.get("ok", false))
     museum_button.disabled = not system.museum_available()
     progress_bar.max_value = 4.0
     progress_bar.value = float(stage_index)
@@ -248,6 +255,7 @@ func _refresh() -> void:
 
 func _built_count() -> int:
     var count := 0
+    if system == null: return count
     for area_id in area_ids:
         if system.has_area(area_id): count += 1
     return count
@@ -278,13 +286,5 @@ func _layout() -> void:
             upgrade_button.custom_minimum_size = Vector2(0, 46)
             museum_button.custom_minimum_size = Vector2(0, 46)
             top_actions.add_theme_constant_override("separation", 6)
-            if upgrade_button.get_parent() == top_actions:
-                top_actions.remove_child(upgrade_button)
-                top_actions.remove_child(museum_button)
-                top_actions.add_child(upgrade_button)
-                top_actions.add_child(museum_button)
-                upgrade_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-                museum_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-        else:
-            upgrade_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-            museum_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        upgrade_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        museum_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
