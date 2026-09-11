@@ -20,6 +20,12 @@ func _run() -> void:
     check("network-state permission is explicitly disabled", text.contains("permissions/access_network_state=false"))
     check("Wi-Fi-state permission is explicitly disabled", text.contains("permissions/access_wifi_state=false"))
 
+    check("production Android Release preset exists", text.contains("name=\"Android Release\""))
+    check("production Android export is an AAB", text.contains("export_path=\"build/RENEW-release.aab\"") and text.contains("gradle_build/export_format=1"))
+    check("production Android export uses Gradle", text.contains("gradle_build/use_gradle_build=true"))
+    check("production Android export uses release build type", text.contains("gradle_build/target_build_type=\"release\""))
+    check("production Android export has explicit version metadata", text.contains("version/code=1") and text.contains("version/name=\"1.0.0\""))
+
     var autosave := FileAccess.get_file_as_string("res://scripts/autosave.gd")
     check("autosave handles Android pause", autosave.contains("NOTIFICATION_APPLICATION_PAUSED"))
     check("autosave handles Android back/close", autosave.contains("NOTIFICATION_WM_GO_BACK_REQUEST") and autosave.contains("NOTIFICATION_WM_CLOSE_REQUEST"))
@@ -29,7 +35,7 @@ func _run() -> void:
     check("no undeclared analytics/network implementation exists", not analytics_present)
 
     print("--- ANDROID RELEASE CONFIG SUMMARY ---")
-    print("Checks: %d | Failures: %d" % [13, failures.size()])
+    print("Checks: %d | Failures: %d" % [19, failures.size()])
     for failure in failures:
         print("FAILED: %s" % failure)
     if failures.size() > 0:
