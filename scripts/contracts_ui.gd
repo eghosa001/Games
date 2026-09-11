@@ -139,6 +139,7 @@ func _make_action(text: String, callback: Callable) -> Button:
     var button := Button.new()
     button.text = text
     button.focus_mode = Control.FOCUS_NONE
+    button.clip_text = true
     button.custom_minimum_size = Vector2(0, 46)
     button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     button.add_theme_stylebox_override("normal", _button_style(SURFACE_2))
@@ -313,50 +314,78 @@ func _show_detail(contract: Dictionary) -> void:
     haggle_button.disabled = false
     cancel_button.disabled = false
 
+func open_screen() -> void:
+    visible = true
+    _layout()
+    _refresh(true)
+
+func close_screen() -> void:
+    visible = false
+
 func _layout() -> void:
     if panel == null: return
     var size := get_viewport().get_visible_rect().size
     var narrow := size.x < 760.0
     var phone := size.x < 430.0
     var width := maxf(304.0, size.x - 16.0) if narrow else minf(560.0, size.x - 36.0)
-    var height := maxf(500.0, size.y - 84.0) if narrow else minf(720.0, size.y - 110.0)
-    panel.position = Vector2(8, 62) if narrow else Vector2(maxf(18.0, size.x - width - 18.0), 72)
+    var height := size.y - 16.0 if phone else (maxf(500.0, size.y - 84.0) if narrow else minf(720.0, size.y - 110.0))
+    panel.position = Vector2(8, 8) if phone else (Vector2(8, 62) if narrow else Vector2(maxf(18.0, size.x - width - 18.0), 72))
     panel.size = Vector2(width, height)
     title_label.position = Vector2(14, 9)
     title_label.size = Vector2(width - 110.0, 30)
+    title_label.add_theme_font_size_override("font_size", 16 if phone else 20)
     status_label.position = Vector2(14, 36)
     status_label.size = Vector2(width - 110.0, 18)
+    status_label.add_theme_font_size_override("font_size", 8 if phone else 10)
     close_button.position = Vector2(width - 90.0, 7)
     close_button.size = Vector2(80, 46)
     summary_label.position = Vector2(14, 56)
     summary_label.size = Vector2(width - 28.0, 34)
-    var offer_height := 154.0 if phone else 146.0
+    summary_label.add_theme_font_size_override("font_size", 9 if phone else 11)
+
+    var offer_height := 172.0 if phone else 146.0
     offer_panel.position = Vector2(12, 92)
     offer_panel.size = Vector2(width - 24.0, offer_height)
     offer_title.position = Vector2(10, 8)
     offer_title.size = Vector2(width - 44.0, 22)
+    offer_title.add_theme_font_size_override("font_size", 11 if phone else 13)
     offer_detail.position = Vector2(10, 31)
     offer_detail.size = Vector2(width - 44.0, 35)
+    offer_detail.add_theme_font_size_override("font_size", 8 if phone else 10)
+    offer_grid.columns = 3 if phone else 2
     offer_grid.position = Vector2(10, 69)
     offer_grid.size = Vector2(width - 44.0, offer_height - 78.0)
-    for child in offer_grid.get_children(): child.custom_minimum_size = Vector2(maxf(120.0, (width - 54.0) / 2.0), 42.0)
-    var detail_height := 190.0 if phone else 180.0
+    var offer_columns := 3 if phone else 2
+    var offer_gap_total := float(offer_columns - 1) * 7.0
+    var offer_button_width := maxf(72.0, (width - 44.0 - offer_gap_total) / float(offer_columns))
+    for child in offer_grid.get_children():
+        child.custom_minimum_size = Vector2(offer_button_width, 42.0)
+        if child is Button:
+            child.add_theme_font_size_override("font_size", 8 if phone else 10)
+            child.clip_text = true
+
+    var detail_height := 130.0 if phone else 180.0
     detail_panel.position = Vector2(12, height - detail_height - 62.0)
     detail_panel.size = Vector2(width - 24.0, detail_height)
     detail_label.position = Vector2(10, 8)
     detail_label.size = Vector2(width - 44.0, detail_height - 16.0)
     detail_label.custom_minimum_size = Vector2(width - 48.0, 0)
+    detail_label.add_theme_font_size_override("font_size", 9 if phone else 11)
     action_row.position = Vector2(12, height - 56.0)
     action_row.size = Vector2(width - 24.0, 46)
-    contract_scroll.position = Vector2(12, 236 if phone else 232)
-    contract_scroll.size = Vector2(width - 24.0, maxf(92.0, detail_panel.position.y - contract_scroll.position.y - 8.0))
+
+    var contracts_top := offer_panel.position.y + offer_panel.size.y + 8.0
+    var contracts_bottom := detail_panel.position.y - 8.0
+    contract_scroll.position = Vector2(12, contracts_top)
+    contract_scroll.size = Vector2(width - 24.0, maxf(40.0, contracts_bottom - contracts_top))
     contract_list.custom_minimum_size.x = width - 24.0
-    empty_label.position = Vector2(18, contract_scroll.position.y + 8.0)
-    empty_label.size = Vector2(width - 36.0, 76)
+    empty_label.position = Vector2(18, contract_scroll.position.y + 4.0)
+    empty_label.size = Vector2(width - 36.0, minf(70.0, contract_scroll.size.y - 4.0))
+    empty_label.add_theme_font_size_override("font_size", 9 if phone else 11)
 
 func _close() -> void:
     var manager = get_node_or_null("/root/RenewUIScreenManager")
     if manager != null and manager.has_method("hide_all_screens"):
         manager.hide_all_screens()
     else:
-        visible = false
+        close_screen()
