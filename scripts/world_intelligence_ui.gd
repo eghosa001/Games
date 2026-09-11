@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 ## World standing, identity paths and notices. Read-only presentation over authoritative systems.
+const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 const BG := Color("0b1b22F8")
 const CARD := Color("102a33")
 const BORDER := Color("2d5059")
@@ -20,15 +21,15 @@ var signature := ""
 
 func _ready() -> void:
     layer = 75
-    _build()
-    _layout()
-    close_screen()
+    _build(); _layout(); close_screen()
     if not get_viewport().size_changed.is_connected(_layout): get_viewport().size_changed.connect(_layout)
 
-func _game() -> Node: return get_tree().root.get_node_or_null("Renew")
-func _ranking() -> Node: return get_node_or_null("/root/RenewGlobalRankingSystem")
-func _identity() -> Node: return get_node_or_null("/root/RenewIdentitySystem")
-func _news() -> Node: return get_node_or_null("/root/RenewNewsSystem")
+func _game() -> Node:
+    var tree := get_tree()
+    return tree.current_scene if tree != null else null
+func _ranking() -> Node: return RuntimeResolver.resolve("RenewGlobalRankingSystem", "Systems/RenewGlobalRankingSystem")
+func _identity() -> Node: return RuntimeResolver.resolve("RenewIdentitySystem", "Systems/RenewIdentitySystem")
+func _news() -> Node: return RuntimeResolver.resolve("RenewNewsSystem", "Systems/RenewNewsSystem")
 
 func _style(bg:Color,border:Color=BORDER,radius:=12)->StyleBoxFlat:
     var s:=StyleBoxFlat.new(); s.bg_color=bg; s.border_color=border; s.set_border_width_all(1); s.set_corner_radius_all(radius); s.content_margin_left=12; s.content_margin_right=12; s.content_margin_top=10; s.content_margin_bottom=10; return s
@@ -83,7 +84,7 @@ func _refresh(force:=false)->void:
     _card("EXECUTIVE PRIORITY","Use World Power to identify strategic weaknesses, Identity Paths to shape long-term specialization, and Notices to react to changing conditions.",ACCENT)
 
 func _close()->void:
-    var manager:=get_node_or_null("/root/RenewUIScreenManager")
+    var manager:=RuntimeResolver.resolve("RenewUIScreenManager")
     if manager!=null and manager.has_method("hide_all_screens"):manager.hide_all_screens()
     else:close_screen()
 func open_screen()->void:open=true; panel.visible=true; _refresh(true)
