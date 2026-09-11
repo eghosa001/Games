@@ -80,6 +80,7 @@ func _is_node_visible(node: Node) -> bool:
     if node == null or not is_instance_valid(node): return false
     if node is CanvasLayer:
         for child in node.get_children():
+            if child is CanvasItem and child.visible and child.is_visible_in_tree(): return true
             if _has_visible_canvas_item(child): return true
         return false
     return (node is CanvasItem and node.visible and node.is_visible_in_tree()) or _has_visible_canvas_item(node)
@@ -95,19 +96,43 @@ func _call_screen_hook(node: Node, value: bool) -> void:
     if value and node.has_method("open_screen"): node.open_screen()
     elif not value and node.has_method("close_screen"): node.close_screen()
 
+func _set_direct_canvas_children_visible(node: Node, value: bool) -> void:
+    for child in node.get_children():
+        if child is CanvasItem:
+            child.visible = value
+            if child is Control:
+                child.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
+        elif child is CanvasLayer:
+            child.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
+
 func _set_node_visible(node: Node, value: bool) -> void:
     if node == null or not is_instance_valid(node): return
+
+    # A screen's lifecycle hook is authoritative for its internal visibility.
+    # Never recurse through every descendant and force it visible: many screens
+    # intentionally keep confirmation panels, empty states, scrims, tabs or
+    # conditional controls hidden while the screen itself is open.
+    if node.has_method("open_screen") or node.has_method("close_screen"):
+        node.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
+        if _suppress_hooks:
+            # Initialization/hard reset cannot call hooks because some legacy
+            # close handlers delegate to this manager. Hide/show only the screen's
+            # direct canvas roots and preserve all nested conditional visibility.
+            _set_direct_canvas_children_visible(node, value)
+        else:
+            _call_screen_hook(node, value)
+        return
+
     if node is CanvasLayer:
         node.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
-        for child in node.get_children(): _set_node_visible(child, value)
+        _set_direct_canvas_children_visible(node, value)
     elif node is CanvasItem:
         node.visible = value
         if node is Control:
             node.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
     else:
         node.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
-        for child in node.get_children(): _set_node_visible(child, value)
-    _call_screen_hook(node, value)
+        _set_direct_canvas_children_visible(node, value)
 
 func _ensure_modal_backdrop() -> void:
     if _modal_layer != null and is_instance_valid(_modal_layer) and _modal_backdrop != null and is_instance_valid(_modal_backdrop):
