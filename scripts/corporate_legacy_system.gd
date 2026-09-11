@@ -1,6 +1,7 @@
 extends Node
 class_name RenewCorporateLegacySystem
 
+const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 const CATEGORIES := ["founding", "products", "employees", "contracts", "acquisitions", "failures", "awards", "rankings", "technologies", "alliances", "crisis_recoveries"]
 const MAX_ITEMS := 500
 
@@ -59,7 +60,7 @@ func _scan(day: int) -> void:
     _scan_hq(day)
 
 func _scan_employees(day: int) -> void:
-    var employees = get_node_or_null("/root/RenewEmployeeSystem")
+    var employees = RuntimeResolver.resolve("RenewEmployeeSystem", "Systems/RenewEmployeeSystem")
     if employees == null: return
     for employee in employees.get_roster():
         var id: Variant = str(employee.get("id", ""))
@@ -70,7 +71,7 @@ func _scan_employees(day: int) -> void:
             record("employees", "%s reached executive level" % name, {"employee_id":id,"role":employee.get("role", "")}, day, "employee_exec|%s|%d" % [id, int(employee.get("level", 1))])
 
 func _scan_research(day: int) -> void:
-    var research = get_node_or_null("/root/RenewResearchSystem")
+    var research = RuntimeResolver.resolve("RenewResearchSystem", "Systems/RenewResearchSystem")
     if research == null: return
     for project in research.list_projects():
         var id: Variant = str(project.get("id", ""))
@@ -83,7 +84,7 @@ func _scan_research(day: int) -> void:
                 record("technologies", "Discovery — %s" % discovery.get("id", "unknown"), {"project_id":id,"discovery":discovery}, int(discovery.get("day", day)), "discovery|%s|%s" % [id, discovery.get("id", "")])
 
 func _scan_rankings(day: int) -> void:
-    var ranking = get_node_or_null("/root/RenewGlobalRankingSystem")
+    var ranking = RuntimeResolver.resolve("RenewGlobalRankingSystem", "Systems/RenewGlobalRankingSystem")
     if ranking == null: return
     for category in ["valuation", "revenue", "profit", "assets", "market_share", "employees", "technology", "infrastructure", "regional_presence", "reputation", "resource_control", "alliance_influence"]:
         var rows: Variant = ranking.get_ranking(category, 3)
@@ -94,7 +95,7 @@ func _scan_rankings(day: int) -> void:
                 record("rankings", "Top %d — %s ranking" % [rank, category.replace("_", " ").capitalize()], {"category":category,"rank":rank,"score":row.get("score", 0)}, day, "ranking|%s|%d|%d" % [category, day, rank])
 
 func _scan_alliances(day: int) -> void:
-    var alliance = get_node_or_null("/root/RenewAllianceSystem")
+    var alliance = RuntimeResolver.resolve("RenewAllianceSystem")
     if alliance == null: return
     for org in alliance.list_alliances():
         var id: Variant = str(org.get("id", ""))
@@ -104,7 +105,7 @@ func _scan_alliances(day: int) -> void:
             record("alliances", "Alliance project — %s" % project.get("name", "Project"), {"alliance_id":id,"type":project.get("type", "")}, int(project.get("started_day", day)), "alliance_project|%s|%s" % [id, project.get("name", "")])
 
 func _scan_history(day: int) -> void:
-    var history = get_node_or_null("/root/RenewHistorySystem")
+    var history = RuntimeResolver.resolve("RenewHistorySystem", "Systems/RenewHistorySystem")
     if history == null: return
     for event in history.get_chronological_timeline():
         var type: Variant = str(event.get("type", ""))
@@ -118,7 +119,7 @@ func _scan_history(day: int) -> void:
         elif type == "bankruptcy": record("crisis_recoveries", title, event.get("details", {}), event_day, "history_bankruptcy|" + str(event.get("id", title)))
 
 func _scan_hq(day: int) -> void:
-    var hq = get_node_or_null("/root/RenewHeadquartersSystem")
+    var hq = RuntimeResolver.resolve("RenewHeadquartersSystem", "Systems/RenewHeadquartersSystem")
     if hq == null: return
     for entry in hq.expansion_history:
         record("founding", "Headquarters milestone — %s" % entry.get("stage", "HQ"), entry, int(entry.get("day", day)), "hq_stage|%s" % entry.get("stage", ""))
