@@ -58,7 +58,8 @@ func open_screen() -> void:
     _refresh(true)
 
 func close_screen() -> void:
-    _close()
+    if panel != null: panel.visible = false
+    refresh_clock = 0.0
 
 func _refresh(force: bool = false) -> void:
     var system = RuntimeResolver.resolve("RenewLiveOpsSystem", "Systems/RenewLiveOpsSystem")
@@ -115,8 +116,7 @@ func _add_progress_card(title: String, progress: float, target: float, pct: floa
         var expiry_label := Label.new(); expiry_label.text = "Expires Day %d" % expiry; expiry_label.add_theme_font_size_override("font_size", 9); expiry_label.add_theme_color_override("font_color", MUTED); box.add_child(expiry_label)
 
 func _close() -> void:
-    if panel != null: panel.visible = false
-    refresh_clock = 0.0
+    close_screen()
     var manager = RuntimeResolver.resolve("RenewUIScreenManager")
     if manager != null and manager.has_method("hide_all_screens"): manager.hide_all_screens()
     if get_viewport() != null: get_viewport().set_input_as_handled()
