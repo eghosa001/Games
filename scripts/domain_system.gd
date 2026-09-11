@@ -7,6 +7,7 @@ extends Node
 # mirrors for financial fields; callers must use FinanceSystem transactions.
 
 const EmployeeEffects = preload("res://scripts/employee_system.gd")
+const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 
 const FINANCE_MIRROR_FIELDS := {
     "economy": ["cash", "last_sales", "last_profit", "total_profit"],
@@ -15,11 +16,14 @@ const FINANCE_MIRROR_FIELDS := {
 
 const EXECUTIVE_SEATS := ["CEO", "COO", "CFO", "CTO"]
 
+func service(service_name: String, scene_path: String = "") -> Node:
+    return RuntimeResolver.resolve(service_name, scene_path)
+
 func game_state():
-    return get_node_or_null("/root/RenewGameState")
+    return service("RenewGameState")
 
 func _finance():
-    return get_node_or_null("/root/RenewFinanceSystem")
+    return service("RenewFinanceSystem")
 
 func get_value(domain: String, key: String, default_value):
     var state = game_state()
@@ -30,8 +34,6 @@ func get_value(domain: String, key: String, default_value):
     return default_value if state == null else state.get_value(domain, key, default_value)
 
 func set_value(domain: String, key: String, value) -> void:
-    # Never allow generic domain writes to mutate authoritative finance state.
-    # Financial state changes must be represented by FinanceSystem transactions.
     if FINANCE_MIRROR_FIELDS.has(domain) and FINANCE_MIRROR_FIELDS[domain].has(key):
         return
     var state = game_state()
@@ -39,9 +41,6 @@ func set_value(domain: String, key: String, value) -> void:
         state.set_value(domain, key, value)
 
 func spend(amount: int, reason: String = "expense") -> Dictionary:
-    # Compatibility bridge for existing domain systems. FinanceSystem remains
-    # authoritative; this method deliberately delegates instead of maintaining
-    # or mutating a second cash ledger.
     var finance = _finance()
     if finance == null:
         return {"ok": false, "message": "FinanceSystem unavailable."}
@@ -51,9 +50,6 @@ func spend(amount: int, reason: String = "expense") -> Dictionary:
     return result
 
 func receive(amount: int, reason: String = "income") -> Dictionary:
-    # Compatibility bridge for existing domain systems. FinanceSystem remains
-    # authoritative; this method deliberately delegates instead of maintaining
-    # or mutating a second cash ledger.
     var finance = _finance()
     if finance == null:
         return {"ok": false, "message": "FinanceSystem unavailable."}
@@ -124,20 +120,14 @@ func executive_seats() -> Dictionary:
 func executive_bonus(kind: String) -> float:
     var seats := executive_seats()
     match kind:
-        "production":
-            return float(EmployeeEffects.EXECUTIVE_BONUSES["COO"].get("production", 1.0)) if seats.has("COO") else 1.0
-        "operating_cost":
-            return float(EmployeeEffects.EXECUTIVE_BONUSES["CFO"].get("operating_cost", 1.0)) if seats.has("CFO") else 1.0
-        "research":
-            return float(EmployeeEffects.EXECUTIVE_BONUSES["CTO"].get("research", 1.0)) if seats.has("CTO") else 1.0
-        "hiring":
-            return float(EmployeeEffects.EXECUTIVE_BONUSES["CEO"].get("hiring", 1.0)) if seats.has("CEO") else 1.0
+        "production": return float(EmployeeEffects.EXECUTIVE_BONUSES["COO"].get("production", 1.0)) if seats.has("COO") else 1.0
+        "operating_cost": return float(EmployeeEffects.EXECUTIVE_BONUSES["CFO"].get("operating_cost", 1.0)) if seats.has("CFO") else 1.0
+        "research": return float(EmployeeEffects.EXECUTIVE_BONUSES["CTO"].get("research", 1.0)) if seats.has("CTO") else 1.0
+        "hiring": return float(EmployeeEffects.EXECUTIVE_BONUSES["CEO"].get("hiring", 1.0)) if seats.has("CEO") else 1.0
     return 1.0
 
 func infra_modifier(key: String) -> float:
-    if not is_inside_tree():
-        return 1.0
-    var infra = get_node_or_null("/root/RenewInfrastructureSystem")
-    if infra == null or not infra.has_method("founder_modifiers"):
-        return 1.0
+    if not is_inside_tree(): return 1.0
+    var infra = service("RenewInfrastructureSystem", "Systems/RenewInfrastructureSystem")
+    if infra == null or not infra.has_method("founder_modifiers"): return 1.0
     return float(infra.founder_modifiers().get(key, 1.0))
