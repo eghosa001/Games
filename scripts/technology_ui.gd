@@ -1,6 +1,7 @@
 extends CanvasLayer
 
 ## Responsive technology command surface. Reads GameState and routes research through Main.
+const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 const SURFACE := Color("0d2028")
 const SURFACE_2 := Color("102831")
 const BORDER := Color("274852")
@@ -49,7 +50,8 @@ func _build_ui() -> void:
     list = VBoxContainer.new(); list.add_theme_constant_override("separation", 8); scroll.add_child(list)
 
 func _refresh(force: bool = false) -> void:
-    var state := get_node_or_null("/root/RenewGameState"); var tech := get_node_or_null("/root/RenewTechnologySystem")
+    var state := RuntimeResolver.resolve("RenewGameState")
+    var tech := RuntimeResolver.resolve("RenewTechnologySystem", "Systems/RenewTechnologySystem")
     if panel == null or state == null or tech == null: return
     var rp := int(state.get_value("technology", "research_points", 20)); var cash := int(state.get_value("economy", "cash", 25000))
     summary_label.text = "RESEARCH %d RP   •   CASH $%s\nResearch costs, prerequisites and timing are validated by the technology system." % [rp, _money(cash)]
@@ -92,7 +94,7 @@ func _research(id: String) -> void:
     last_signature = ""; _refresh(true)
 
 func _close() -> void:
-    var manager := get_node_or_null("/root/RenewUIScreenManager")
+    var manager := RuntimeResolver.resolve("RenewUIScreenManager")
     if manager != null and manager.has_method("hide_all_screens"): manager.hide_all_screens()
     else: visible = false
 
