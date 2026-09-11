@@ -1,0 +1,91 @@
+name: RENEW Release Gate
+
+on:
+  workflow_run:
+    workflows:
+      - RENEW Godot Tests
+      - Godot Web Export
+      - RENEW Android Export
+      - Live Browser QA
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: renew-release-gate-${{ github.event.workflow_run.head_sha }}
+  cancel-in-progress: true
+
+jobs:
+  release-gate:
+    if: github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Wait for all release-critical workflows
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          required=(
+            "RENEW Godot Tests"
+            "Godot Web Export"
+            "RENEW Android Export"
+            "Live Browser QA"
+          )
+
+          echo "Evaluating RENEW release readiness for ${TARGET_SHA}"
+          echo "Live Browser QA must be the post-Web-export workflow_run, not the early push check."
+
+          for attempt in $(seq 1 90); do
+            runs="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${TARGET_SHA}&per_page=100")"
+            pending=0
+
+            for workflow in "${required[@]}"; do
+              if [[ "$workflow" == "Live Browser QA" ]]; then
+                row="$(jq -r --arg name "$workflow" --arg sha "$TARGET_SHA" '
+                  [.workflow_runs[]
+                   | select(.name == $name and .head_sha == $sha and .event == "workflow_run")]
+                  | sort_by(.run_number)
+                  | last
+                  | if . == null then "MISSING\t\t" else [.status, (.conclusion // ""), .html_url] | @tsv end
+                ' <<<"$runs")"
+              else
+                row="$(jq -r --arg name "$workflow" --arg sha "$TARGET_SHA" '
+                  [.workflow_runs[]
+                   | select(.name == $name and .head_sha == $sha and .event == "push")]
+                  | sort_by(.run_number)
+                  | last
+                  | if . == null then "MISSING\t\t" else [.status, (.conclusion // ""), .html_url] | @tsv end
+                ' <<<"$runs")"
+              fi
+
+              IFS=$'\t' read -r status conclusion url <<<"$row"
+              printf '%-24s status=%-12s conclusion=%-10s %s\n' "$workflow" "$status" "$conclusion" "$url"
+
+              if [[ "$status" == "MISSING" || "$status" != "completed" ]]; then
+                pending=1
+                continue
+              fi
+
+              if [[ "$conclusion" != "success" ]]; then
+                echo "RELEASE GATE FAILED: ${workflow} concluded ${conclusion}."
+                exit 1
+              fi
+            done
+
+            if [[ "$pending" -eq 0 ]]; then
+              echo "RENEW RELEASE GATE PASSED for ${TARGET_SHA}."
+              exit 0
+            fi
+
+            echo "Release-critical checks are still running or not yet created (attempt ${attempt}/90)."
+            sleep 60
+          done
+
+          echo "RELEASE GATE FAILED: timed out waiting for release-critical workflows for ${TARGET_SHA}."
+          exit 1
