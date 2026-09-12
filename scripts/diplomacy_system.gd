@@ -196,8 +196,7 @@ func _trust_key(a: String, b: String) -> String: return _mirror_key(a, b)
 func _other_party(treaty: Dictionary, party: String) -> String:
     return str(treaty["party_b"]) if party == treaty["party_a"] else str(treaty["party_a"])
 func _adjust_trust(a: String, b: String, delta: float) -> void:
-    set_trust(a, b, get_trust(a, b) + delta
-)
+    set_trust(a, b, get_trust(a, b) + delta)
     set_trust(b, a, get_trust(b, a) + delta)
 func _event(kind: String, message: String, data: Dictionary = {}) -> void:
     events.append({"day": _day(), "type": kind, "message": message, "data": data})
