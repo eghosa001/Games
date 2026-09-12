@@ -98,8 +98,9 @@ func research(id:String)->bool:
 func get_research_time_days(id:String)->int:
     var tech:=get_technology(id)
     if tech.is_empty(): return 0
-    var base_days:=max(1,int(tech.get("time_days",1)))
-    var multiplier:=max(0.50,_culture_effect("research_multiplier",1.0)) * _hq_speed_multiplier()
+    var base_days:int=max(1,int(tech.get("time_days",1)))
+    var culture_multiplier:float=maxf(0.50,_culture_effect("research_multiplier",1.0))
+    var multiplier:float=culture_multiplier * _hq_speed_multiplier()
     return max(1,int(ceil(float(base_days) / multiplier)))
 func get_last_research_days()->int:
     return last_research_days
