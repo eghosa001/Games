@@ -4,18 +4,14 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/resource-leak-audit.yml'
-      - 'tests/capture_visual_audit.gd'
-      - 'scenes/**'
-      - 'scripts/**'
-      - 'project.godot'
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
 
 concurrency:
-  group: renew-resource-leak-audit-${{ github.ref }}
+  group: renew-resource-leak-audit-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -25,6 +21,7 @@ env:
 
 jobs:
   leak-audit:
+    name: Godot shutdown leak audit
     runs-on: ubuntu-latest
     timeout-minutes: 35
 
@@ -85,8 +82,9 @@ jobs:
           summary='artifacts/resource-leak-audit/summary.txt'
           evidence='artifacts/resource-leak-audit/leak-evidence.txt'
 
-          if [ ! -f "$log" ]; then
-            echo 'verbose log was not produced' > "$summary"
+          if [ ! -s "$log" ]; then
+            echo 'ERROR: verbose lifecycle log was not produced' | tee "$summary"
+            echo 'LEAK_LOG_VALID=0' >> "$GITHUB_ENV"
             exit 0
           fi
 
@@ -100,12 +98,14 @@ jobs:
             echo "Resources still in use: ${resources}"
             echo "ObjectDB baseline: ${OBJECTDB_BASELINE}"
             echo "Resource baseline: ${RESOURCE_BASELINE}"
+            echo "Godot lifecycle exit status: ${{ steps.lifecycle.outputs.godot_status }}"
           } | tee "$summary"
 
           grep -Ei \
             'leak|still in use|orphan|ObjectDB|resource|RID|Node|CanvasItem|RefCounted|WARNING:|ERROR:' \
             "$log" > "$evidence" || true
 
+          echo "LEAK_LOG_VALID=1" >> "$GITHUB_ENV"
           echo "OBJECTDB_COUNT=${objectdb}" >> "$GITHUB_ENV"
           echo "RESOURCE_COUNT=${resources}" >> "$GITHUB_ENV"
 
@@ -124,7 +124,10 @@ jobs:
             echo 'Leak summary was not generated.' >> "$GITHUB_STEP_SUMMARY"
           fi
 
-          if [ "${OBJECTDB_COUNT:-0}" -eq 0 ] && [ "${RESOURCE_COUNT:-0}" -eq 0 ]; then
+          if [ "${LEAK_LOG_VALID:-0}" -ne 1 ]; then
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '❌ Leak diagnostics are invalid or missing.' >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${OBJECTDB_COUNT:-0}" -eq 0 ] && [ "${RESOURCE_COUNT:-0}" -eq 0 ]; then
             echo '' >> "$GITHUB_STEP_SUMMARY"
             echo '✅ No Godot shutdown leaks detected.' >> "$GITHUB_STEP_SUMMARY"
           elif [ "${OBJECTDB_COUNT:-0}" -le "$OBJECTDB_BASELINE" ] && [ "${RESOURCE_COUNT:-0}" -le "$RESOURCE_BASELINE" ]; then
@@ -151,6 +154,12 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
+          if [ "${LEAK_LOG_VALID:-0}" -ne 1 ]; then
+            echo 'Leak audit did not produce a valid verbose log.' >&2
+            exit 1
+          fi
+
           objectdb=${OBJECTDB_COUNT:-999999}
           resources=${RESOURCE_COUNT:-999999}
 
