@@ -57,33 +57,25 @@ func charter_basin()->void:
     if catalog == null or not catalog.has_method("charter_basin"):
         message = "Regional survey office is unavailable."
         return
-    var check: Dictionary = catalog.charter_basin(parent.reputation)
-    if not bool(check.get("ok", false)):
-        message = str(check.get("message", "The Iron Basin cannot be chartered yet."))
-        return
-    var spend=state_adapter.spend(int(check.get("cost", 15000)),"iron basin charter")
-    if not bool(spend.get("ok",false)):
-        message=str(spend.get("message","The basin charter payment failed."))
+    var result: Dictionary = catalog.charter_basin(parent.reputation)
+    if not bool(result.get("ok", false)):
+        message = str(result.get("message", "The Iron Basin cannot be chartered yet."))
         return
     parent.reputation+=5
-    message=str(check.get("message","Iron Basin chartered."))
-    parent._log("REGIONAL EXPANSION: Iron Basin chartered (-$%s, +5 reputation)." % _money(int(check.get("cost", 15000))))
+    message=str(result.get("message","Iron Basin chartered."))
+    parent._log("REGIONAL EXPANSION: Iron Basin chartered (-$%s, +5 reputation)." % _money(int(result.get("cost", 15000))))
 func charter_valley()->void:
     var catalog=_service("RenewRegionSystem")
     if catalog == null or not catalog.has_method("charter_valley"):
         message = "Regional survey office is unavailable."
         return
-    var check: Dictionary = catalog.charter_valley(parent.reputation)
-    if not bool(check.get("ok", false)):
-        message = str(check.get("message", "Energy Valley cannot be chartered yet."))
-        return
-    var spend=state_adapter.spend(int(check.get("cost", 25000)),"energy valley charter")
-    if not bool(spend.get("ok",false)):
-        message=str(spend.get("message","The valley charter payment failed."))
+    var result: Dictionary = catalog.charter_valley(parent.reputation)
+    if not bool(result.get("ok", false)):
+        message = str(result.get("message", "Energy Valley cannot be chartered yet."))
         return
     parent.reputation+=5
-    message=str(check.get("message","Energy Valley chartered."))
-    parent._log("REGIONAL EXPANSION: Energy Valley chartered (-$%s, +5 reputation)." % _money(int(check.get("cost", 25000))))
+    message=str(result.get("message","Energy Valley chartered."))
+    parent._log("REGIONAL EXPANSION: Energy Valley chartered (-$%s, +5 reputation)." % _money(int(result.get("cost", 25000))))
 
 func establish_region()->void:
     var before_presence=regions.player_presence.duplicate(true)
