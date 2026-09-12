@@ -105,7 +105,7 @@ func run() -> void:
         var ui_before := int(game.cash)
         var services = root.get_node_or_null("RenewServices")
         var live_infra = services.get_service("RenewInfrastructureSystem") if services != null else null
-        var assets_before := live_infra.list_assets().size() if live_infra != null else 0
+        var assets_before:int = int(live_infra.list_assets().size()) if live_infra != null else 0
         game.infra_build()
         await process_frame
         check(live_infra != null and live_infra.list_assets().size() > assets_before, "Touch command builds infrastructure")
