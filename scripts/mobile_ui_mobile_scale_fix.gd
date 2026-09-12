@@ -119,14 +119,14 @@ func _apply_legacy_visibility() -> void:
     var hud := get_parent() as CanvasLayer
     if hud != null:
         hud.scale = Vector2.ONE
-        for child in hud.get_children():
-            if child is Control and child != shell:
-                child.visible = not mobile
 
     var renew := get_tree().root.get_node_or_null("Renew")
     if renew == null:
         return
 
+    # The persistent HUD command grid and the managed screens own their
+    # responsive layouts and stay visible on phones; only the legacy
+    # full-screen world layers yield to the mobile shell.
     var legacy_world_paths := [
         "World/EmpireController", "World/Corporate", "World/WorldMissions",
         "World/RegionController", "World/BranchController", "World/RivalSupplyController"
@@ -135,27 +135,6 @@ func _apply_legacy_visibility() -> void:
         var node := renew.get_node_or_null(path)
         if node is CanvasItem:
             node.visible = not mobile
-
-    var hide_layers := [
-        "UI/StrategyHUD", "UI/TutorialOverlay", "UI/V1Celebration",
-        "UI/TechnologyPanel", "UI/HistoryPanel", "UI/NewsPanel",
-        "UI/AlliancePanel", "UI/HeadquartersPanel", "UI/CollectionPanel",
-        "UI/LiveOpsPanel", "UI/CustomerSegmentsUI", "UI/RenewDiplomacyUI",
-        "UI/InfrastructurePanel", "UI/ContractPanel", "UI/EmployeePanel",
-        "UI/DashboardPanel", "UI/FinancePanel", "UI/PortfolioPanel",
-        "UI/CorporationsPanel", "UI/RegionsPanel", "UI/WorldOpportunitiesPanel",
-        "UI/ProductionControlPanel", "UI/SupplyChainPanel",
-        "UI/EmpireExpansionPanel", "UI/EmpireIntelligencePanel", "UI/SaveLoadPanel"
-    ]
-    if mobile:
-        for path in hide_layers:
-            var layer := renew.get_node_or_null(path)
-            if layer is CanvasLayer:
-                for child in layer.get_children():
-                    if child is CanvasItem:
-                        child.visible = false
-            elif layer is CanvasItem:
-                layer.visible = false
 
 func _build_shell() -> void:
     if shell != null:

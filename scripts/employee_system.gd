@@ -116,9 +116,13 @@ func get_productivity_multiplier(assignment:String="factory_001")->float:
     if active<=0: return 0.55
     var total:=0.0
     var contributors:=0
+    var idle_count:=0
     for employee in employees:
         if employee.get("status","active")!="active" or not _available_for_work(employee): continue
         var employee_assignment:=str(employee.get("assignment",""))
+        if employee_assignment.to_lower().find("bench")>=0 and employee_assignment!=assignment:
+            idle_count+=1
+            continue
         var assigned_match:=employee_assignment.is_empty() or employee_assignment==assignment
         if not assigned_match: continue
         var skill_factor:=_assignment_skill(employee,assignment)
@@ -131,7 +135,7 @@ func get_productivity_multiplier(assignment:String="factory_001")->float:
                 total+=float(employee.get("productivity",0.75))*0.65
                 contributors+=1
     if contributors<=0: return 0.35 * _culture_effect("productivity_multiplier", 1.0)
-    return clamp(total/float(contributors),0.35,1.50) * _culture_effect("productivity_multiplier", 1.0)
+    return clamp(total/float(contributors+idle_count),0.35,1.50) * _culture_effect("productivity_multiplier", 1.0)
 
 func get_employee(employee_id:String)->Dictionary:
     for employee in employees:

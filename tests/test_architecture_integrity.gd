@@ -25,7 +25,7 @@ const LEGACY_IMPORT_EXCEPTIONS := {
 
 const PARSEABLE_RESOURCE_EXTENSIONS := [".gd", ".tscn", ".tres", ".gdshader"]
 const REFERENCE_SOURCE_EXTENSIONS := [".gd", ".tscn", ".tres", ".godot", ".cfg"]
-const SKIP_DIRECTORIES := [".git", ".godot", "artifacts", "test_artifacts"]
+const SKIP_DIRECTORIES := [".git", ".godot", "artifacts", "test_artifacts", "build"]
 
 func _init() -> void:
     call_deferred("run")
