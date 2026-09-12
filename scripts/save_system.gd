@@ -16,6 +16,7 @@ static func save_game(_state: Dictionary) -> bool:
     var payload: Dictionary = game_state.capture() if game_state != null and _state.is_empty() else _state.duplicate(true)
     payload["schema_version"] = CURRENT_VERSION
     _capture_runtime_ownership(payload)
+    _capture_runtime_services(payload)
     if payload.has("domains") and not validate_save(payload):
         return false
 
@@ -105,8 +106,10 @@ static func load_game() -> Dictionary:
                 if not game_state.restore(data):
                     continue
                 _restore_runtime_ownership(data)
+                _restore_runtime_services(data)
                 return game_state.capture()
         _restore_runtime_ownership(data)
+        _restore_runtime_services(data)
         return data
     return {}
 
@@ -179,6 +182,56 @@ static func _restore_runtime_ownership(data: Dictionary) -> void:
     var ownership = _ownership_node()
     if ownership != null and ownership.has_method("load_state"):
         ownership.load_state(ledger)
+
+## Service-owned systems live outside GameState. Persist their explicit snapshots
+## inside the existing company domain so schema v8 remains backward-compatible.
+static func _capture_runtime_services(data: Dictionary) -> void:
+    if not data.has("domains") or not (data["domains"] is Dictionary):
+        return
+    var registry = _service_registry()
+    if registry == null or not registry.has_method("capture_persistent_state"):
+        return
+    var snapshot = registry.capture_persistent_state()
+    if not snapshot is Dictionary:
+        return
+    var domains: Dictionary = data["domains"]
+    var company_domain = domains.get("company", {})
+    if not company_domain is Dictionary:
+        company_domain = {}
+    company_domain["runtime_services"] = snapshot.duplicate(true)
+    domains["company"] = company_domain
+    data["domains"] = domains
+
+static func _restore_runtime_services(data: Dictionary) -> void:
+    if not data.has("domains") or not (data["domains"] is Dictionary):
+        return
+    var domains: Dictionary = data["domains"]
+    var company_domain = domains.get("company", {})
+    if not company_domain is Dictionary:
+        return
+    var snapshot = company_domain.get("runtime_services", {})
+    if not snapshot is Dictionary or snapshot.is_empty():
+        return
+    var registry = _service_registry()
+    if registry != null and registry.has_method("restore_persistent_state"):
+        registry.restore_persistent_state(snapshot)
+
+static func _service_registry():
+    var tree = Engine.get_main_loop()
+    if not tree:
+        return null
+    var root = tree.get_root()
+    if not root:
+        return null
+    var registry = root.get_node_or_null("RenewServices")
+    if registry != null:
+        return registry
+    var scene = tree.get_current_scene()
+    if scene != null:
+        registry = scene.get_node_or_null("RenewServices")
+        if registry != null:
+            return registry
+    return null
 
 static func _ownership_node():
     var tree = Engine.get_main_loop()
