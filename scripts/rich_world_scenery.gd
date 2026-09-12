@@ -236,7 +236,7 @@ func _iso_room(center: Vector2, footprint: Vector2, wall_h: float, wall: Color, 
     draw_string(ThemeDB.fallback_font, center + Vector2(-footprint.x*0.26, footprint.y*0.18), label, HORIZONTAL_ALIGNMENT_LEFT, footprint.x*0.62, maxi(7,int(9*s)), Color(INK.r,INK.g,INK.b,0.74))
 
 func _desk_cluster(p: Vector2, s: float, variant: int) -> void:
-    var wood := [Color("b9865c"),Color("a67658"),Color("c39b69"),Color("93735c")][variant]
+    var wood: Color = [Color("b9865c"),Color("a67658"),Color("c39b69"),Color("93735c")][variant]
     _iso_plate(p, 52*s, 26*s, 4*s, wood, wood.darkened(0.22))
     # monitors
     draw_rect(Rect2(p + Vector2(-9,-19)*s, Vector2(18,10)*s), Color("19343b"), true)
@@ -339,17 +339,18 @@ func draw_ellipse(center: Vector2, rx: float, ry: float, fill: Color, edge: Colo
     draw_polyline(pts,edge,1.5)
 
 func _person(p: Vector2, s: float, variant: int) -> void:
-    var shirts := [Color("d36d55"),Color("527aa3"),Color("d7a846"),Color("5a9d82"),Color("8b6f9e")]
-    var skin := [Color("6d402c"),Color("9a6448"),Color("c48b68"),Color("5d3829")][variant%4]
-    var shirt := shirts[variant%shirts.size()]
+    var shirts: Array[Color] = [Color("d36d55"),Color("527aa3"),Color("d7a846"),Color("5a9d82"),Color("8b6f9e")]
+    var skins: Array[Color] = [Color("6d402c"),Color("9a6448"),Color("c48b68"),Color("5d3829")]
+    var skin: Color = skins[variant%skins.size()]
+    var shirt: Color = shirts[variant%shirts.size()]
     draw_circle(p+Vector2(0,-12)*s,4.2*s,skin)
     draw_line(p+Vector2(0,-7)*s,p+Vector2(0,5)*s,shirt,5*s)
     draw_line(p+Vector2(0,4)*s,p+Vector2(-5,12)*s,Color("26373c"),2*s)
     draw_line(p+Vector2(0,4)*s,p+Vector2(5,12)*s,Color("26373c"),2*s)
 
 func _vehicle(p: Vector2, s: float, variant: int) -> void:
-    var cols := [Color("d8b65d"),Color("6da7a0"),Color("c76d59")]
-    var c := cols[variant%cols.size()]
+    var cols: Array[Color] = [Color("d8b65d"),Color("6da7a0"),Color("c76d59")]
+    var c: Color = cols[variant%cols.size()]
     _iso_plate(p,44*s,22*s,6*s,c,c.darkened(0.25))
     draw_rect(Rect2(p+Vector2(-10,-11)*s,Vector2(20,7)*s),Color("21464e"),true)
     draw_circle(p+Vector2(-13,9)*s,4*s,Color("142126"))
