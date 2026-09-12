@@ -72,12 +72,19 @@ func cancel_treaty(treaty_id: String, party_id: String, reason: String = "cancel
         return {"ok": false, "message": "Party is not bound by this treaty."}
     if treaty.get("status") not in [STATUS_PROPOSED, STATUS_ACTIVE]:
         return {"ok": false, "message": "Treaty cannot be cancelled in its current state."}
+
+    var early := treaty.get("start_day", -1) >= 0 and _day() < int(treaty.get("end_day", -1))
+    if early:
+        var settlement: Dictionary = _settle_cancellation_fee(treaty, party_id)
+        if not bool(settlement.get("ok", false)):
+            return settlement
+
     treaty["status"] = STATUS_CANCELLED
     treaty["history"].append({"day": _day(), "event": "cancelled", "party": party_id, "reason": reason})
     treaties[treaty_id] = treaty
     var other: Variant = _other_party(treaty, party_id)
     _adjust_trust(party_id, other, -3.0)
-    if treaty.get("start_day", -1) >= 0 and _day() < int(treaty["end_day"]):
+    if early:
         _apply_penalty(treaty, party_id, "early_cancellation")
     _event("treaty_cancelled", "Treaty %s cancelled by %s." % [treaty_id, party_id], {"treaty_id": treaty_id, "reason": reason})
     return {"ok": true, "treaty": get_treaty(treaty_id), "message": "Treaty cancelled."}
@@ -161,6 +168,20 @@ func _apply_daily_benefits(treaty: Dictionary) -> void:
     var benefit_trust: Variant = float(benefits.get("trust_per_day", 0.0))
     if absf(benefit_trust) > 0.001:
         _adjust_trust(str(treaty["party_a"]), str(treaty["party_b"]), benefit_trust)
+
+func _settle_cancellation_fee(treaty: Dictionary, party_id: String) -> Dictionary:
+    var penalties: Dictionary = treaty.get("penalties", {})
+    var fee := max(0, int(round(float(penalties.get("cancellation_fee", 0.0)))))
+    if fee <= 0 or party_id != "player":
+        return {"ok": true, "amount": 0}
+    var finance = get_node_or_null("/root/RenewFinanceSystem")
+    if finance == null or not finance.has_method("spend"):
+        return {"ok": false, "message": "Treaty cancellation finance is unavailable."}
+    var result: Dictionary = finance.spend(fee, "treaty cancellation fee:%s" % str(treaty.get("id", "")))
+    if not bool(result.get("ok", false)):
+        return {"ok": false, "message": "Treaty cancellation requires $%d." % fee, "required": fee}
+    _event("treaty_penalty_paid", "Cancellation fee paid by %s." % party_id, {"amount": fee, "treaty_id": treaty.get("id", "")})
+    return {"ok": true, "amount": fee}
 
 func _apply_penalty(treaty: Dictionary, breaching_party: String, context: String) -> void:
     var penalties: Dictionary = treaty.get("penalties", {})
