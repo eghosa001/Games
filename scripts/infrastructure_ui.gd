@@ -1,7 +1,5 @@
 extends Control
 
-const DomainSystem = preload("res://scripts/domain_system.gd")
-
 const SURFACE := Color("0d2028")
 const SURFACE_2 := Color("102831")
 const BORDER := Color("274852")
@@ -14,7 +12,6 @@ const SCRIM := Color(0.02, 0.08, 0.10, 0.72)
 
 var parent
 var system
-var state_adapter = DomainSystem.new()
 var message: String = ""
 var selected_type: int = 0
 var dimmer: ColorRect
@@ -44,7 +41,6 @@ func _resolve_system():
 func _ready() -> void:
     system = _resolve_system()
     parent = get_tree().current_scene
-    add_child(state_adapter)
     z_index = 57
     _build_ui()
     _layout()
@@ -185,14 +181,8 @@ func build_selected() -> void:
         message = "Infrastructure system is unavailable."
         _refresh()
         return
-    var ownership_snapshot := _capture_ownership_state()
     var result = system.build(system.TYPES[selected_type], _region_index(), "founder", int(game.cash), int(game.day))
     message = str(result.get("message", "Construction request completed."))
-    if bool(result.get("ok", false)) and not _spend_result(result, "infrastructure construction"):
-        var asset_id := str(result.get("id", ""))
-        if asset_id != "": system.assets.erase(asset_id)
-        _restore_ownership_state(ownership_snapshot)
-        message = "Construction payment failed; the site was cancelled."
     last_signature = ""
     _refresh()
 
@@ -206,12 +196,8 @@ func _upgrade_selected() -> void:
         message = "No active infrastructure to upgrade in this region."
         _refresh()
         return
-    var before = system.assets.get(target, {}).duplicate(true)
     var result = system.upgrade(target, "founder", int(game.cash), int(game.day))
     message = str(result.get("message", "Upgrade request completed."))
-    if bool(result.get("ok", false)) and not _spend_result(result, "infrastructure upgrade"):
-        system.assets[target] = before
-        message = "Upgrade payment failed."
     last_signature = ""
     _refresh()
 
@@ -231,12 +217,8 @@ func repair_damaged() -> void:
         message = "No disrupted infrastructure to repair in this region."
         _refresh()
         return
-    var before = system.assets.get(target, {}).duplicate(true)
     var result = system.repair(target, "founder", int(game.cash), int(game.day))
     message = str(result.get("message", "Repair request completed."))
-    if bool(result.get("ok", false)) and not _spend_result(result, "infrastructure repair"):
-        system.assets[target] = before
-        message = "Repair payment failed."
     last_signature = ""
     _refresh()
 
@@ -249,36 +231,6 @@ func _first_asset(status: String) -> String:
 func _type_name() -> String:
     if system == null or system.TYPES.is_empty(): return "Infrastructure"
     return str(system.TYPES[selected_type]).replace("_", " ").capitalize()
-
-func _spend_result(result: Dictionary, reason: String) -> bool:
-    if not bool(result.get("ok", false)): return false
-    var spend = state_adapter.spend(int(result.get("cost", 0)), reason)
-    if bool(spend.get("ok", false)): return true
-    message = str(spend.get("message", "Payment failed."))
-    return false
-
-func _capture_ownership_state() -> Dictionary:
-    var ownership = get_node_or_null("/root/RenewOwnershipSystem")
-    if ownership == null:
-        var scene = get_tree().current_scene if get_tree() != null else null
-        if scene != null:
-            ownership = scene.get_node_or_null("Systems/OwnershipSystem")
-            if ownership == null: ownership = scene.get_node_or_null("OwnershipSystem")
-    if ownership != null and ownership.has_method("capture_state"): return ownership.capture_state()
-    if ownership != null and ownership.has_method("save_state"): return ownership.save_state()
-    return {}
-
-func _restore_ownership_state(snapshot: Dictionary) -> void:
-    if snapshot.is_empty(): return
-    var ownership = get_node_or_null("/root/RenewOwnershipSystem")
-    if ownership == null:
-        var scene = get_tree().current_scene if get_tree() != null else null
-        if scene != null:
-            ownership = scene.get_node_or_null("Systems/OwnershipSystem")
-            if ownership == null: ownership = scene.get_node_or_null("OwnershipSystem")
-    if ownership == null: return
-    if ownership.has_method("restore_state"): ownership.restore_state(snapshot)
-    elif ownership.has_method("load_state"): ownership.load_state(snapshot)
 
 func _refresh() -> void:
     if system == null: return
