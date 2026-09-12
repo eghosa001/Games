@@ -60,7 +60,19 @@ jobs:
             2>&1 | tee test_artifacts/complete-visual-audit.log
           status=${PIPESTATUS[0]}
           set -e
-          exit "$status"
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
+
+          # A screenshot can still be written after a GDScript/runtime failure.
+          # Treat engine-side script failures as a broken screen even when Godot
+          # eventually exits with status 0. Driver/CI environment warnings are
+          # intentionally not matched here.
+          if grep -E -q 'SCRIPT ERROR:|Parse Error:|Invalid call\.|Invalid access|Required object ".*" is null' test_artifacts/complete-visual-audit.log; then
+            echo "Visual audit encountered a Godot script/runtime error." >&2
+            grep -E 'SCRIPT ERROR:|Parse Error:|Invalid call\.|Invalid access|Required object ".*" is null' test_artifacts/complete-visual-audit.log >&2 || true
+            exit 1
+          fi
 
       - name: Summarize capture
         if: always()
