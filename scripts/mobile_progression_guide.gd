@@ -40,19 +40,20 @@ func _process(delta: float) -> void:
     if _refresh_clock < 0.12:
         return
     _refresh_clock = 0.0
-    var mobile := _mobile_shell()
+    var mobile = _mobile_shell()
     if mobile == null or not bool(mobile.call("_is_mobile_layout")):
         return
     var action_box = mobile.get("action_box")
     if action_box == null or not is_instance_valid(action_box):
         return
-    var progression := _progression()
+    var progression = _progression()
     if progression == null:
         return
     var tab := int(mobile.get("active_tab"))
     var level := int(progression.get_level()) if progression.has_method("get_level") else 1
     _apply_existing_visibility(action_box, progression)
-    _remove_stale_injections(action_box)
+    if tab != _last_tab or level != _last_level:
+        _remove_stale_injections(action_box)
     if tab == 1:
         _inject_entries(mobile, action_box, progression, BUSINESS_INJECTIONS)
     elif tab == 2:
@@ -63,7 +64,7 @@ func _process(delta: float) -> void:
     _last_level = level
 
 func _progression():
-    var services := get_node_or_null("/root/RenewServices")
+    var services = get_node_or_null("/root/RenewServices")
     if services != null and services.has_method("get_service"):
         return services.get_service("RenewProgressionSystem")
     return get_node_or_null("/root/RenewProgressionSystem")
@@ -102,8 +103,6 @@ func _inject_entries(mobile: Node, action_box: Node, progression, entries: Array
         _add_progression_screen(mobile, action_box, str(entry.get("text", "")), str(entry.get("screen", "")))
 
 func _inject_company_menu(mobile: Node, action_box: Node, progression) -> void:
-    # The MORE tab remains a records/save area, but unlocked strategic layers
-    # are mirrored here so a player can always find a newly earned capability.
     var entries := [
         {"feature":"contracts", "text":"CONTRACTS", "screen":"ContractPanel"},
         {"feature":"alliances", "text":"ALLIANCES", "screen":"AlliancePanel"},
@@ -137,6 +136,6 @@ func _add_progression_screen(mobile: Node, action_box: Node, text: String, scree
     action_box.add_child(button)
 
 func _open_screen(screen: String) -> void:
-    var manager := get_node_or_null("/root/RenewUIScreenManager")
+    var manager = get_node_or_null("/root/RenewUIScreenManager")
     if manager != null and manager.has_method("show_screen"):
         manager.show_screen(screen)
