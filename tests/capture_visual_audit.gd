@@ -148,7 +148,26 @@ func _finish() -> void:
     print("Failures: %d" % failures.size())
     for failure in failures:
         print("FAILED: " + failure)
+
+    # Tear the audited scene down deterministically before quitting. Keeping
+    # SceneTree.current_scene pointed at a freed/closing scene can pollute
+    # Godot's shutdown leak report and make the CI gate report false leaks.
+    if manager != null and is_instance_valid(manager):
+        manager.hide_all_screens()
+        await _settle(2)
+
+    if current_scene == game:
+        current_scene = null
+
     if game != null and is_instance_valid(game):
-        game.free()
+        game.queue_free()
+        await process_frame
+        await process_frame
+
+    game = null
+    manager = null
+    hud = null
     await process_frame
+    await process_frame
+
     quit(1 if not failures.is_empty() else 0)
