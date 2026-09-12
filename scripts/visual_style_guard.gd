@@ -25,9 +25,26 @@ func _process(_delta: float) -> void:
     _sync_distress_overlay()
 
 func _on_node_added(node: Node) -> void:
-    if node is Control and _premium_theme != null:
-        (node as Control).theme = _premium_theme
+    if node is Control:
+        var control := node as Control
+        if _premium_theme != null:
+            control.theme = _premium_theme
+        _normalize_mobile_shell_background(control)
     _queue_refresh()
+
+func _normalize_mobile_shell_background(control: Control) -> void:
+    var parent := control.get_parent()
+    if parent == null or parent.name != "MobileGameShell":
+        return
+    if not (control is TextureRect or control is ColorRect):
+        return
+    var uses_stretch_anchors := not is_equal_approx(control.anchor_left, control.anchor_right) or not is_equal_approx(control.anchor_top, control.anchor_bottom)
+    if not uses_stretch_anchors:
+        return
+    control.set_anchor(SIDE_LEFT, 0.0, true)
+    control.set_anchor(SIDE_TOP, 0.0, true)
+    control.set_anchor(SIDE_RIGHT, 0.0, true)
+    control.set_anchor(SIDE_BOTTOM, 0.0, true)
 
 func _queue_refresh() -> void:
     if _refresh_queued:
