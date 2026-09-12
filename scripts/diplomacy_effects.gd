@@ -54,9 +54,23 @@ func _apply(treaty: Dictionary, day: int) -> void:
                 production.add_inventory("iron", qty)
                 production.add_inventory("energy", max(1, int(round(qty * 0.2))))
         "research":
-            if production != null and int(applied.get(id, {}).get("research_day", -1)) != day:
-                production.unlock_technology("logistics", max(1, int(production.technologies.get("logistics", 0)) + 1))
-                _mark(id, "research_day", day)
+            if finance != null and production != null:
+                var research_state: Dictionary = applied.get(id, {})
+                if not bool(research_state.get("funded", false)):
+                    var contribution := max(0, int(round(float(obligations.get("research_contribution", 1500.0)))))
+                    var payment: Dictionary = finance.spend(contribution, "treaty research contribution:%s" % id)
+                    if not bool(payment.get("ok", false)):
+                        _mark(id, "funding_blocked", true)
+                        return
+                    _mark(id, "funded", true)
+                    _mark(id, "funding_blocked", false)
+                    _mark(id, "research_contribution", contribution)
+                    _mark(id, "funding_day", day)
+                    research_state = applied.get(id, {})
+                if not bool(research_state.get("technology_shared", false)):
+                    production.unlock_technology("logistics", max(1, int(production.technologies.get("logistics", 0)) + 1))
+                    _mark(id, "technology_shared", true)
+                    _mark(id, "technology_share_day", day)
         "defense", "non_aggression", "territory":
             if main != null and int(applied.get(id, {}).get("reputation_day", -1)) != day:
                 main.reputation = int(main.reputation) + 1
