@@ -1,0 +1,2 @@
+Manual CI trigger for RENEW Android AI Playtest and RENEW Android Chaos Playtest.
+Triggered by ChatGPT on 2026-09-13 at the user's request.
