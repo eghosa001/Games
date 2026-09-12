@@ -35,6 +35,14 @@ func _ready() -> void:
     _refresh_state()
     _feed(0.75)
 
+func _exit_tree() -> void:
+    set_process(false)
+    _playback = null
+    if is_instance_valid(_player):
+        _player.stop()
+        _player.stream = null
+    _player = null
+
 func _process(delta: float) -> void:
     _last_state_refresh += delta
     if _last_state_refresh >= 0.15:
@@ -59,6 +67,8 @@ func _refresh_state() -> void:
     _city_level = lerpf(_city_level, target_city, 0.06)
 
 func _feed(delta: float) -> void:
+    if _player == null:
+        return
     if _playback == null or not _player.is_playing():
         _player.play()
         if not _player.is_playing():
