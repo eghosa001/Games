@@ -2,6 +2,7 @@ extends Node
 
 ## Phase 23: one focused V1 region with several cities and resource locations.
 ## Region facts live in GameState.regions; this system owns region behavior/query rules.
+const DomainSystem = preload("res://scripts/domain_system.gd")
 const REGION_ID := "renew_region"
 const REGION_NAME := "Renew Region"
 const CITIES := [{"id":"capital_city","name":"Capital City","type":"capital","description":"Administrative and commercial center of Renew Region."},{"id":"industrial_city","name":"Industrial City","type":"industrial","description":"Manufacturing center connected to the region's resource network."},{"id":"port_city","name":"Port City","type":"port","description":"Regional trade and logistics gateway."},{"id":"rural_town","name":"Rural Town","type":"rural","description":"Agricultural community supplying the region."}]
@@ -19,7 +20,11 @@ const VALLEY_CHARTER_COST := 25000
 const VALLEY_CITIES := [{"id":"geothermal_town","name":"Geothermal Town","type":"industrial","description":"Power town built over the valley's geothermal fields."},{"id":"solar_flats","name":"Solar Flats","type":"rural","description":"Mirror arrays stretching across the valley floor."},{"id":"grid_port","name":"Grid Port","type":"port","description":"Energy export terminal feeding the regional grid."}]
 const VALLEY_LOCATIONS := [{"id":"geothermal_vent","name":"Geothermal Vent","resource":"energy","city_id":"geothermal_town","capacity":200,"description":"The valley's prize: relentless geothermal output."},{"id":"solar_array","name":"Solar Array","resource":"energy","city_id":"solar_flats","capacity":120,"description":"Utility-scale solar across the flats."},{"id":"valley_timber","name":"Valley Timber Belt","resource":"timber","city_id":"solar_flats","capacity":60,"description":"Managed timber buffering the arrays."},{"id":"grid_workshops","name":"Grid Workshops","resource":"electronics","city_id":"grid_port","capacity":40,"description":"Component shops serving the energy trade."}]
 var state_adapter = null
-func _ready() -> void: state_adapter = get_node_or_null("/root/RenewGameState"); _ensure_region_state()
+var finance_adapter = DomainSystem.new()
+func _ready() -> void:
+    state_adapter = get_node_or_null("/root/RenewGameState")
+    add_child(finance_adapter)
+    _ensure_region_state()
 func _state():
     if state_adapter == null: state_adapter = get_node_or_null("/root/RenewGameState")
     return state_adapter
@@ -53,31 +58,37 @@ func charter_basin(reputation: int) -> Dictionary:
     var state = _state(); if state == null: return {"ok":false,"reason":"state_unavailable","message":"Region state is unavailable."}
     var districts = state.get_value("regions", "districts", {}).duplicate(true)
     if not districts is Dictionary or not districts.has(BASIN_ID): return {"ok":false,"reason":"region_not_found","message":"Iron Basin survey data is missing."}
+    var spend: Dictionary = finance_adapter.spend(BASIN_CHARTER_COST, "iron basin charter")
+    if not bool(spend.get("ok", false)):
+        return {"ok":false,"reason":"money","cost":BASIN_CHARTER_COST,"message":str(spend.get("message","The basin charter requires sufficient cash."))}
     districts[BASIN_ID]["chartered"] = true
     state.set_value("regions", "districts", districts)
     var sites = state.get_value("supply_chain", "resource_sites", {}).duplicate(true); if not sites is Dictionary: sites = {}
     for location in BASIN_LOCATIONS:
         if not sites.has(location["id"]): sites[location["id"]] = {"id":location["id"],"name":location["name"],"resource":location["resource"],"city_id":location["city_id"],"capacity":location["capacity"],"active":true}
     state.set_value("supply_chain", "resource_sites", sites)
-    return {"ok":true,"cost":BASIN_CHARTER_COST,"message":"Iron Basin chartered. Deep iron and coal seams are now accessible."}
+    return {"ok":true,"cost":BASIN_CHARTER_COST,"payment":spend,"message":"Iron Basin chartered. Deep iron and coal seams are now accessible."}
 func is_valley_chartered() -> bool:
     var state = _state(); if state == null: return false
     var districts = state.get_value("regions", "districts", {})
     if not districts is Dictionary: return false
     return bool(districts.get(VALLEY_ID, {}).get("chartered", false))
 func charter_valley(reputation: int) -> Dictionary:
-    if is_valley_chartered(): return {"ok":false,"reason":"already_chartered","message":"Energy Valley is already chartered."}
+    if is_valley_chartered(): return {"ok":false,"reason":"already_chartered","message":"The Energy Valley is already chartered."}
     if reputation < VALLEY_UNLOCK_REPUTATION: return {"ok":false,"reason":"reputation","required":VALLEY_UNLOCK_REPUTATION,"message":"The Energy Valley charter requires %d reputation." % VALLEY_UNLOCK_REPUTATION}
     var state = _state(); if state == null: return {"ok":false,"reason":"state_unavailable","message":"Region state is unavailable."}
     var districts = state.get_value("regions", "districts", {}).duplicate(true)
     if not districts is Dictionary or not districts.has(VALLEY_ID): return {"ok":false,"reason":"region_not_found","message":"Energy Valley survey data is missing."}
+    var spend: Dictionary = finance_adapter.spend(VALLEY_CHARTER_COST, "energy valley charter")
+    if not bool(spend.get("ok", false)):
+        return {"ok":false,"reason":"money","cost":VALLEY_CHARTER_COST,"message":str(spend.get("message","The valley charter requires sufficient cash."))}
     districts[VALLEY_ID]["chartered"] = true
     state.set_value("regions", "districts", districts)
     var sites = state.get_value("supply_chain", "resource_sites", {}).duplicate(true); if not sites is Dictionary: sites = {}
     for location in VALLEY_LOCATIONS:
         if not sites.has(location["id"]): sites[location["id"]] = {"id":location["id"],"name":location["name"],"resource":location["resource"],"city_id":location["city_id"],"capacity":location["capacity"],"active":true}
     state.set_value("supply_chain", "resource_sites", sites)
-    return {"ok":true,"cost":VALLEY_CHARTER_COST,"message":"Energy Valley chartered. Geothermal and solar output flow to the grid."}
+    return {"ok":true,"cost":VALLEY_CHARTER_COST,"payment":spend,"message":"Energy Valley chartered. Geothermal and solar output flow to the grid."}
 func get_region() -> Dictionary: return {"id":REGION_ID,"name":REGION_NAME,"cities":CITIES.duplicate(true),"resource_locations":RESOURCE_LOCATIONS.duplicate(true)}
 func list_regions() -> Array:
     return [
