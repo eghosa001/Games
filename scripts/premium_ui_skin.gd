@@ -1,11 +1,9 @@
 extends Control
 
-## RENEW premium presentation skin.
-## Keeps gameplay callbacks/node names intact while unifying all screens into a
-## restrained glass command deck that lets the illustrated world remain visible.
-## The active-screen pass also upgrades every managed detail screen at runtime:
-## desktop dialogs become asymmetric command surfaces with a live executive rail,
-## while phone layouts keep their authored responsive geometry.
+## Unified premium presentation layer for RENEW.
+## It does not own gameplay state. It restyles existing controls and only adds an
+## executive context rail when the active screen is genuinely modal/narrow; wide
+## command-center screens keep their authored canvas so no content is obscured.
 
 const THEME_PATH := "res://Assets/Themes/EmpireTheme.tres"
 const DEEP := Color("071218")
@@ -21,7 +19,6 @@ const ORANGE := Color("ff9d62")
 const PINK := Color("ed7fbd")
 const TEXT := Color("f4faf7")
 const MUTED := Color("91a9ad")
-const SUBTLE := Color("5d767b")
 const PRIMARY_SECTORS := ["LIVE", "BUSINESS", "EMPIRE", "WORLD"]
 const CONTEXT_RAIL_NAME := "PremiumContextRail"
 
@@ -29,8 +26,8 @@ var hud_root: Control
 var _theme: Theme
 var _theme_refresh_queued := false
 var _pulse := 0.0
-var _last_redraw := 0.0
-var _screen_polish_clock := 0.0
+var _redraw_clock := 0.0
+var _screen_clock := 0.0
 var _last_active_screen := ""
 
 func _ready() -> void:
@@ -43,26 +40,26 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
     _pulse += delta
-    _last_redraw += delta
-    _screen_polish_clock += delta
-    if _last_redraw >= 0.20:
-        _last_redraw = 0.0
+    _redraw_clock += delta
+    _screen_clock += delta
+    if _redraw_clock >= 0.20:
+        _redraw_clock = 0.0
         queue_redraw()
-    if _screen_polish_clock >= 0.20:
-        _screen_polish_clock = 0.0
-        _refresh_active_screen_presentation()
+    if _screen_clock >= 0.20:
+        _screen_clock = 0.0
+        _refresh_active_screen()
 
 func _install() -> void:
     var main_hud := get_node_or_null("/root/Renew/UI/MainHUD")
     if main_hud != null:
         hud_root = main_hud.get("root") as Control
-        _align_functional_navigation(main_hud)
+        _align_navigation(main_hud)
     if hud_root == null and get_parent() is Control:
         hud_root = get_parent() as Control
-    _apply_theme_to_all_ui()
+    _apply_theme_to_ui()
     if hud_root != null:
-        _style_existing_controls(hud_root)
-    _refresh_active_screen_presentation()
+        _style_recursive(hud_root)
+    _refresh_active_screen()
     queue_redraw()
 
 func _queue_theme_refresh() -> void:
@@ -75,26 +72,24 @@ func _run_theme_refresh() -> void:
     _theme_refresh_queued = false
     var main_hud := get_node_or_null("/root/Renew/UI/MainHUD")
     if main_hud != null:
-        _align_functional_navigation(main_hud)
-    _apply_theme_to_all_ui()
+        _align_navigation(main_hud)
+    _apply_theme_to_ui()
     if hud_root != null and is_instance_valid(hud_root):
-        _style_existing_controls(hud_root)
-    _refresh_active_screen_presentation()
+        _style_recursive(hud_root)
+    _refresh_active_screen()
 
-func _align_functional_navigation(main_hud: Node) -> void:
+func _align_navigation(main_hud: Node) -> void:
     var left_rail := main_hud.get("left_rail") as Panel
     if left_rail == null or left_rail.get_child_count() == 0:
         return
     var stack := left_rail.get_child(0)
-    if stack == null:
-        return
     var index := 0
     for child in stack.get_children():
         if child is Button and index < PRIMARY_SECTORS.size():
             (child as Button).text = PRIMARY_SECTORS[index]
             index += 1
 
-func _apply_theme_to_all_ui() -> void:
+func _apply_theme_to_ui() -> void:
     if _theme == null:
         return
     var game_root := get_tree().root.get_node_or_null("Renew")
@@ -106,13 +101,13 @@ func _apply_theme_to_all_ui() -> void:
 
 func _apply_theme_recursive(node: Node) -> void:
     if node is Control and node != self:
-        var c := node as Control
-        c.theme = _theme
-        c.add_theme_font_size_override("font_size", _theme.default_font_size)
+        var control := node as Control
+        control.theme = _theme
+        control.add_theme_font_size_override("font_size", _theme.default_font_size)
     for child in node.get_children():
         _apply_theme_recursive(child)
 
-func _style_existing_controls(node: Node) -> void:
+func _style_recursive(node: Node) -> void:
     for child in node.get_children():
         if child == self:
             continue
@@ -131,7 +126,7 @@ func _style_existing_controls(node: Node) -> void:
             if rect.name != "PremiumChromeBackground":
                 rect.color = Color(rect.color.r, rect.color.g, rect.color.b, minf(rect.color.a, 0.13))
         if child is Control:
-            _style_existing_controls(child)
+            _style_recursive(child)
 
 func _sector_accent(label: String) -> Color:
     var t := label.to_upper()
@@ -154,6 +149,8 @@ func _sector_accent(label: String) -> Color:
     return EDGE
 
 func _style_panel(panel: Panel) -> void:
+    if panel.name == CONTEXT_RAIL_NAME:
+        return
     var accent := _sector_accent(panel.name)
     var box := StyleBoxFlat.new()
     box.bg_color = Color(SURFACE.r, SURFACE.g, SURFACE.b, 0.84)
@@ -192,8 +189,6 @@ func _style_button(button: Button) -> void:
     var pressed := normal.duplicate() as StyleBoxFlat
     pressed.bg_color = SURFACE_2.lerp(accent, 0.26)
     pressed.border_color = accent
-    pressed.shadow_color = Color(accent.r, accent.g, accent.b, 0.20)
-    pressed.shadow_size = 5
 
     var disabled := normal.duplicate() as StyleBoxFlat
     disabled.bg_color = Color("09171d", 0.72)
@@ -248,14 +243,12 @@ func _style_line_edit(line: LineEdit) -> void:
     line.add_theme_color_override("font_color", TEXT)
     line.add_theme_color_override("font_placeholder_color", MUTED)
 
-# --- Managed-screen premium composition ------------------------------------
-
-func _refresh_active_screen_presentation() -> void:
+func _refresh_active_screen() -> void:
     var manager := get_node_or_null("/root/RenewUIScreenManager")
     if manager == null or not manager.has_method("get_active_screen_name"):
         return
     var active_name := str(manager.call("get_active_screen_name"))
-    _soften_manager_backdrop(active_name != "")
+    _soften_global_backdrop(active_name != "")
     if active_name == "":
         _last_active_screen = ""
         return
@@ -267,13 +260,12 @@ func _refresh_active_screen_presentation() -> void:
     if active_name != _last_active_screen:
         _last_active_screen = active_name
         _apply_theme_recursive(screen)
-        _style_existing_controls(screen)
-        _soften_scrims_recursive(screen)
+        _style_recursive(screen)
+        _soften_scrims(screen)
         _ensure_context_rail(screen, active_name)
 
-    _soften_scrims_recursive(screen)
-    _layout_context_rail(screen, active_name)
-    _dock_primary_panel(screen, active_name)
+    _soften_scrims(screen)
+    _layout_screen_presentation(screen, active_name)
     _update_context_rail(screen, active_name)
 
 func _find_active_screen(active_name: String) -> Node:
@@ -284,20 +276,19 @@ func _find_active_screen(active_name: String) -> Node:
         screen = get_tree().root.get_node_or_null(active_name)
     return screen
 
-func _soften_manager_backdrop(active: bool) -> void:
+func _soften_global_backdrop(active: bool) -> void:
     var backdrop := get_node_or_null("/root/Renew/UI/FocusedScreenBackdrop/Backdrop") as ColorRect
     if backdrop != null:
-        var alpha := 0.28 if active else 0.0
-        backdrop.color = Color(0.012, 0.028, 0.036, alpha)
+        backdrop.color = Color(0.012, 0.028, 0.036, 0.28 if active else 0.0)
 
-func _soften_scrims_recursive(node: Node) -> void:
+func _soften_scrims(node: Node) -> void:
     for child in node.get_children():
         if child is ColorRect:
             var rect := child as ColorRect
             var n := rect.name.to_lower()
             if n.contains("scrim") or n.contains("dimmer") or n.contains("backdrop"):
                 rect.color = Color(rect.color.r, rect.color.g, rect.color.b, minf(rect.color.a, 0.38))
-        _soften_scrims_recursive(child)
+        _soften_scrims(child)
 
 func _primary_panel(screen: Node) -> Panel:
     var best: Panel = null
@@ -322,23 +313,38 @@ func _first_panel_recursive(node: Node) -> Panel:
             return nested
     return null
 
-func _dock_primary_panel(screen: Node, active_name: String) -> void:
-    var viewport := get_viewport_rect().size
-    if viewport.x < 980.0:
-        return
-    if active_name == "DashboardPanel":
-        return
+func _screen_supports_rail(screen: Node, active_name: String, viewport: Vector2) -> bool:
+    if viewport.x < 980.0 or active_name == "DashboardPanel":
+        return false
     var panel := _primary_panel(screen)
-    if panel == null or panel.size.x <= 1.0 or panel.size.y <= 1.0:
+    if panel == null or panel.size.x <= 1.0:
+        return false
+    # A rail only belongs beside modal/narrow content. If the authored panel
+    # already occupies most of the canvas, overlaying a rail would hide controls.
+    var max_modal_width := minf(760.0, viewport.x * 0.66)
+    return panel.size.x <= max_modal_width
+
+func _layout_screen_presentation(screen: Node, active_name: String) -> void:
+    var viewport := get_viewport_rect().size
+    var rail := screen.get_node_or_null(CONTEXT_RAIL_NAME) as Panel
+    var supports_rail := _screen_supports_rail(screen, active_name, viewport)
+    if rail != null:
+        rail.visible = supports_rail
+    if not supports_rail:
         return
-    # Large authored command centers already use the canvas deliberately. Only
-    # recompose narrow legacy/modal surfaces into a right-hand executive deck.
-    if panel.size.x > minf(760.0, viewport.x * 0.66):
-        return
-    var target_x := viewport.x - panel.size.x - 42.0
-    var minimum_x := viewport.x * 0.43
-    panel.position.x = maxf(minimum_x, target_x)
-    panel.position.y = maxf(54.0, panel.position.y)
+
+    var panel := _primary_panel(screen)
+    if panel != null:
+        var target_x := viewport.x - panel.size.x - 42.0
+        panel.position.x = maxf(viewport.x * 0.43, target_x)
+        panel.position.y = maxf(54.0, panel.position.y)
+
+    if rail != null:
+        var width := minf(360.0, viewport.x * 0.30)
+        var height := minf(520.0, viewport.y - 132.0)
+        rail.position = Vector2(42.0, maxf(72.0, (viewport.y - height) * 0.5))
+        rail.size = Vector2(width, height)
+        _layout_rail_children(rail, width, height)
 
 func _ensure_context_rail(screen: Node, active_name: String) -> void:
     if screen.get_node_or_null(CONTEXT_RAIL_NAME) != null:
@@ -381,7 +387,8 @@ func _ensure_context_rail(screen: Node, active_name: String) -> void:
     pulse_label.add_theme_font_size_override("font_size", 9)
     rail.add_child(pulse_label)
 
-    for spec in [["MomentumBar", "MOMENTUM"], ["ReputationBar", "REPUTATION"], ["ReadinessBar", "READINESS"]]:
+    var specs := [["MomentumBar", "MOMENTUM"], ["ReputationBar", "REPUTATION"], ["ReadinessBar", "READINESS"]]
+    for spec in specs:
         var label := Label.new()
         label.name = str(spec[0]) + "Label"
         label.text = str(spec[1])
@@ -393,7 +400,6 @@ func _ensure_context_rail(screen: Node, active_name: String) -> void:
         bar.show_percentage = false
         bar.min_value = 0.0
         bar.max_value = 100.0
-        bar.value = 0.0
         rail.add_child(bar)
         _style_progress(bar)
 
@@ -413,7 +419,7 @@ func _ensure_context_rail(screen: Node, active_name: String) -> void:
 
 func _context_rail_style(accent: Color) -> StyleBoxFlat:
     var box := StyleBoxFlat.new()
-    box.bg_color = Color(DEEP.r, DEEP.g, DEEP.b, 0.82)
+    box.bg_color = Color(DEEP.r, DEEP.g, DEEP.b, 0.94)
     box.border_color = Color(accent.r, accent.g, accent.b, 0.42)
     box.set_border_width_all(1)
     box.set_border_width(SIDE_LEFT, 3)
@@ -421,26 +427,9 @@ func _context_rail_style(accent: Color) -> StyleBoxFlat:
     box.shadow_color = Color(0, 0, 0, 0.42)
     box.shadow_size = 16
     box.shadow_offset = Vector2(0, 7)
-    box.content_margin_left = 18
-    box.content_margin_right = 18
-    box.content_margin_top = 18
-    box.content_margin_bottom = 18
     return box
 
-func _layout_context_rail(screen: Node, active_name: String) -> void:
-    var rail := screen.get_node_or_null(CONTEXT_RAIL_NAME) as Panel
-    if rail == null:
-        return
-    var viewport := get_viewport_rect().size
-    if viewport.x < 980.0 or active_name == "DashboardPanel":
-        rail.visible = false
-        return
-    rail.visible = true
-    var width := minf(360.0, viewport.x * 0.30)
-    var height := minf(520.0, viewport.y - 132.0)
-    rail.position = Vector2(42.0, maxf(72.0, (viewport.y - height) * 0.5))
-    rail.size = Vector2(width, height)
-
+func _layout_rail_children(rail: Panel, width: float, height: float) -> void:
     var eyebrow := rail.get_node_or_null("Eyebrow") as Label
     var title := rail.get_node_or_null("ContextTitle") as Label
     var subtitle := rail.get_node_or_null("ContextSubtitle") as Label
@@ -482,23 +471,24 @@ func _update_context_rail(screen: Node, active_name: String) -> void:
     var profit := 0
     var readiness := 0.0
     if state != null and state.has_method("get_value"):
-        day = int(state.get_value("player", "day", 1))
-        cash = int(state.get_value("economy", "cash", 0))
-        reputation = int(state.get_value("player", "reputation", 0))
-        profit = int(state.get_value("economy", "total_profit", 0))
-        readiness = float(state.get_value("properties", "condition", 0.0))
-        if readiness <= 0.0 and str(state.get_value("properties", "stage", "")) == "Operational":
+        day = int(state.call("get_value", "player", "day", 1))
+        cash = int(state.call("get_value", "economy", "cash", 0))
+        reputation = int(state.call("get_value", "player", "reputation", 0))
+        profit = int(state.call("get_value", "economy", "total_profit", 0))
+        readiness = float(state.call("get_value", "properties", "condition", 0.0))
+        if readiness <= 0.0 and str(state.call("get_value", "properties", "stage", "")) == "Operational":
             readiness = 100.0
 
     var momentum := clampf(18.0 + float(maxi(0, profit)) / 180.0, 8.0, 100.0)
-    var rep_value := clampf(float(reputation), 0.0, 100.0)
-    var ready_value := clampf(readiness, 0.0, 100.0)
     var momentum_bar := rail.get_node_or_null("MomentumBar") as ProgressBar
     var reputation_bar := rail.get_node_or_null("ReputationBar") as ProgressBar
     var readiness_bar := rail.get_node_or_null("ReadinessBar") as ProgressBar
-    if momentum_bar != null: momentum_bar.value = momentum
-    if reputation_bar != null: reputation_bar.value = rep_value
-    if readiness_bar != null: readiness_bar.value = ready_value
+    if momentum_bar != null:
+        momentum_bar.value = momentum
+    if reputation_bar != null:
+        reputation_bar.value = clampf(float(reputation), 0.0, 100.0)
+    if readiness_bar != null:
+        readiness_bar.value = clampf(readiness, 0.0, 100.0)
 
     var metrics := rail.get_node_or_null("ContextMetrics") as Label
     if metrics != null:
@@ -560,27 +550,22 @@ func _compact_number(value: int) -> String:
     return str(value)
 
 func _draw() -> void:
-    var s := get_viewport_rect().size
-    if s.x <= 0.0 or s.y <= 0.0:
+    var size := get_viewport_rect().size
+    if size.x <= 0.0 or size.y <= 0.0:
         return
-    var mobile := s.x < 760.0
+    var mobile := size.x < 760.0
     var top_h := 84.0 if mobile else 90.0
-
-    # Ambient header glass instead of a solid bar.
     for i in range(6):
         var alpha := 0.62 - float(i) * 0.075
         var band_h := top_h / 6.0
-        draw_rect(Rect2(0, float(i) * band_h, s.x, band_h + 1), Color(DEEP.r, DEEP.g, DEEP.b, maxf(0.10, alpha)), true)
-    draw_rect(Rect2(0, 0, s.x, 2), Color(GOLD.r, GOLD.g, GOLD.b, 0.46), true)
-    draw_line(Vector2(18, top_h - 1), Vector2(s.x - 18, top_h - 1), Color(EDGE.r, EDGE.g, EDGE.b, 0.52), 1.0)
-
+        draw_rect(Rect2(0, float(i) * band_h, size.x, band_h + 1), Color(DEEP.r, DEEP.g, DEEP.b, maxf(0.10, alpha)), true)
+    draw_rect(Rect2(0, 0, size.x, 2), Color(GOLD.r, GOLD.g, GOLD.b, 0.46), true)
+    draw_line(Vector2(18, top_h - 1), Vector2(size.x - 18, top_h - 1), Color(EDGE.r, EDGE.g, EDGE.b, 0.52), 1.0)
     _corner(Vector2(18, top_h + 14), 28.0, GOLD)
-    _corner(Vector2(s.x - 18, top_h + 14), -28.0, CYAN)
-
-    # Soft ambient glints establish depth without creating fake controls.
-    var pulse := 0.22 + 0.08 * sin(_pulse * 0.85)
-    _halo(Vector2(s.x * 0.22, top_h + 54), 90.0, Color(GREEN.r, GREEN.g, GREEN.b, pulse * 0.08))
-    _halo(Vector2(s.x * 0.79, top_h + 38), 108.0, Color(CYAN.r, CYAN.g, CYAN.b, pulse * 0.07))
+    _corner(Vector2(size.x - 18, top_h + 14), -28.0, CYAN)
+    var pulse_strength := 0.22 + 0.08 * sin(_pulse * 0.85)
+    _halo(Vector2(size.x * 0.22, top_h + 54), 90.0, Color(GREEN.r, GREEN.g, GREEN.b, pulse_strength * 0.08))
+    _halo(Vector2(size.x * 0.79, top_h + 38), 108.0, Color(CYAN.r, CYAN.g, CYAN.b, pulse_strength * 0.07))
 
 func _corner(origin: Vector2, direction: float, tint: Color) -> void:
     draw_line(origin, origin + Vector2(direction, 0), Color(tint.r, tint.g, tint.b, 0.60), 2.0)
