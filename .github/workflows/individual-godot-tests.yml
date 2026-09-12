@@ -17,6 +17,7 @@ jobs:
       matrix:
         test:
           - test_new_game_flow.gd
+          - test_player_journey.gd
           - test_employee_system.gd
           - test_company_culture_system.gd
           - test_demand_culture_integration.gd
@@ -31,6 +32,7 @@ jobs:
           - test_expansion_api.gd
           - test_phase22_progression.gd
           - test_mobile_progression_guide.gd
+          - test_headquarters_integration.gd
           - test_v27_infrastructure.gd
           - test_economy_transactions.gd
           - test_edge_cases.gd
