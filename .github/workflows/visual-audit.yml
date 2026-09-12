@@ -1,0 +1,94 @@
+name: RENEW Complete Visual Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tests/capture_visual_audit.gd'
+      - '.github/workflows/visual-audit.yml'
+      - 'scenes/**'
+      - 'scripts/**'
+      - 'Assets/**'
+      - 'project.godot'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renew-complete-visual-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  capture-all-screens:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install rendering dependencies
+        run: sudo apt-get update && sudo apt-get install -y unzip wget xvfb
+
+      - name: Install Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O /tmp/godot.zip
+          unzip -q /tmp/godot.zip
+          chmod +x "Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
+
+      - name: Import project
+        run: timeout 180s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+
+      - name: Capture every RENEW screen
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/visual-audit test_artifacts
+          set +e
+          timeout 1200s xvfb-run -a -s "-screen 0 1280x900x24" \
+            "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" \
+            --path . --script res://tests/capture_visual_audit.gd \
+            2>&1 | tee test_artifacts/complete-visual-audit.log
+          status=${PIPESTATUS[0]}
+          set -e
+          exit "$status"
+
+      - name: Summarize capture
+        if: always()
+        shell: bash
+        run: |
+          count=$(find artifacts/visual-audit -maxdepth 1 -name '*.png' -type f 2>/dev/null | wc -l)
+          echo "# RENEW Complete Visual Audit" >> "$GITHUB_STEP_SUMMARY"
+          echo "Captured **${count} screenshots**." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "The artifact contains every command page and every managed detail screen at phone and desktop sizes." >> "$GITHUB_STEP_SUMMARY"
+          if [ -f artifacts/visual-audit/manifest.txt ]; then
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo '```text' >> "$GITHUB_STEP_SUMMARY"
+            cat artifacts/visual-audit/manifest.txt >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload complete screenshot set
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: RENEW-Complete-Visual-Audit-${{ github.run_number }}
+          path: |
+            artifacts/visual-audit/**
+            test_artifacts/complete-visual-audit.log
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Verify capture did not modify tracked source
+        if: always()
+        run: git diff --exit-code -- .
