@@ -1,0 +1,171 @@
+name: RENEW Resource Leak Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/resource-leak-audit.yml'
+      - 'tests/capture_visual_audit.gd'
+      - 'scenes/**'
+      - 'scripts/**'
+      - 'project.godot'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renew-resource-leak-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2
+  OBJECTDB_BASELINE: 11
+  RESOURCE_BASELINE: 3
+
+jobs:
+  leak-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install rendering dependencies
+        run: sudo apt-get update && sudo apt-get install -y unzip wget xvfb
+
+      - name: Install Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          wget -q --tries=5 --waitretry=3 \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" \
+            -O /tmp/godot.zip
+          unzip -q /tmp/godot.zip
+          chmod +x "Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
+
+      - name: Import project
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 180s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" \
+            --headless --editor --path . --quit
+
+      - name: Run verbose visual lifecycle audit
+        id: lifecycle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p test_artifacts/resource-leak-audit artifacts/resource-leak-audit
+
+          set +e
+          timeout 1200s xvfb-run -a -s "-screen 0 1280x900x24" \
+            "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" \
+            --verbose --path . --script res://tests/capture_visual_audit.gd \
+            2>&1 | tee test_artifacts/resource-leak-audit/verbose.log
+          godot_status=${PIPESTATUS[0]}
+          set -e
+
+          echo "godot_status=${godot_status}" >> "$GITHUB_OUTPUT"
+          if [ "$godot_status" -ne 0 ]; then
+            echo "Godot lifecycle audit exited with status ${godot_status}." >&2
+            exit "$godot_status"
+          fi
+
+      - name: Extract leak evidence
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          log='test_artifacts/resource-leak-audit/verbose.log'
+          summary='artifacts/resource-leak-audit/summary.txt'
+          evidence='artifacts/resource-leak-audit/leak-evidence.txt'
+
+          if [ ! -f "$log" ]; then
+            echo 'verbose log was not produced' > "$summary"
+            exit 0
+          fi
+
+          objectdb=$(grep -Eo '[0-9]+ ObjectDB instances were leaked' "$log" | tail -1 | grep -Eo '^[0-9]+' || true)
+          resources=$(grep -Eo '[0-9]+ resources still in use' "$log" | tail -1 | grep -Eo '^[0-9]+' || true)
+          objectdb=${objectdb:-0}
+          resources=${resources:-0}
+
+          {
+            echo "ObjectDB leaked instances: ${objectdb}"
+            echo "Resources still in use: ${resources}"
+            echo "ObjectDB baseline: ${OBJECTDB_BASELINE}"
+            echo "Resource baseline: ${RESOURCE_BASELINE}"
+          } | tee "$summary"
+
+          grep -Ei \
+            'leak|still in use|orphan|ObjectDB|resource|RID|Node|CanvasItem|RefCounted|WARNING:|ERROR:' \
+            "$log" > "$evidence" || true
+
+          echo "OBJECTDB_COUNT=${objectdb}" >> "$GITHUB_ENV"
+          echo "RESOURCE_COUNT=${resources}" >> "$GITHUB_ENV"
+
+      - name: Publish leak summary
+        if: always()
+        shell: bash
+        run: |
+          echo '# RENEW Resource Leak Audit' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+
+          if [ -f artifacts/resource-leak-audit/summary.txt ]; then
+            echo '```text' >> "$GITHUB_STEP_SUMMARY"
+            cat artifacts/resource-leak-audit/summary.txt >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Leak summary was not generated.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ "${OBJECTDB_COUNT:-0}" -eq 0 ] && [ "${RESOURCE_COUNT:-0}" -eq 0 ]; then
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '✅ No Godot shutdown leaks detected.' >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${OBJECTDB_COUNT:-0}" -le "$OBJECTDB_BASELINE" ] && [ "${RESOURCE_COUNT:-0}" -le "$RESOURCE_BASELINE" ]; then
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '⚠️ Known leaks remain, but there is no regression from the captured baseline.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '' >> "$GITHUB_STEP_SUMMARY"
+            echo '❌ Leak regression detected.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload leak diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: RENEW-Resource-Leak-Audit-${{ github.run_number }}
+          path: |
+            test_artifacts/resource-leak-audit/verbose.log
+            artifacts/resource-leak-audit/**
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce no-regression gate
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          objectdb=${OBJECTDB_COUNT:-999999}
+          resources=${RESOURCE_COUNT:-999999}
+
+          if [ "$objectdb" -gt "$OBJECTDB_BASELINE" ]; then
+            echo "ObjectDB leak regression: ${objectdb} > ${OBJECTDB_BASELINE}" >&2
+            exit 1
+          fi
+
+          if [ "$resources" -gt "$RESOURCE_BASELINE" ]; then
+            echo "Resource leak regression: ${resources} > ${RESOURCE_BASELINE}" >&2
+            exit 1
+          fi
+
+          echo "Leak counts are within baseline: ObjectDB=${objectdb}, resources=${resources}."
+
+      - name: Verify audit did not modify tracked source
+        if: always()
+        run: git diff --exit-code -- .
