@@ -1,9 +1,13 @@
 extends CanvasLayer
 
-## Command dashboard: overview, next objective, live operations, recent
-## events. Reads authoritative systems; actions route through Main.
+## Executive command dashboard. The world remains visible behind a light glass
+## surface while a presentation-only hero visual summarizes company momentum.
+const DashboardHeroArt := preload("res://scripts/dashboard_hero_art.gd")
+
 var dimmer: ColorRect
 var panel: Panel
+var hero: Control
+var content_surface: Panel
 var title_label: Label
 var status_label: Label
 var overview_label: Label
@@ -14,14 +18,15 @@ var primary_button: Button
 var notices_button: Button
 var close_button: Button
 var refresh_clock := 0.0
-var last_signature := ""
 
-const SURFACE := Color("0d2028")
-const BORDER := Color("274852")
-const TEXT := Color("e7f2ef")
-const MUTED := Color("78949a")
-const ACCENT := Color("d5b56e")
-const SCRIM := Color(0.02, 0.08, 0.10, 0.72)
+const SURFACE := Color("0b1c23", 0.93)
+const CONTENT := Color("0a171d", 0.76)
+const BORDER := Color("36575e", 0.68)
+const TEXT := Color("edf6f2")
+const MUTED := Color("89a3a7")
+const ACCENT := Color("e2bb63")
+const MINT := Color("65c69c")
+const SCRIM := Color(0.01, 0.055, 0.07, 0.52)
 
 func _ready() -> void:
     layer = 63
@@ -47,12 +52,15 @@ func _state():
 func _finance():
     return get_node_or_null("/root/RenewFinanceSystem")
 
-func _style(bg: Color, border: Color, radius := 12) -> StyleBoxFlat:
+func _style(bg: Color, border: Color, radius := 16) -> StyleBoxFlat:
     var style := StyleBoxFlat.new()
     style.bg_color = bg
     style.border_color = border
     style.set_border_width_all(1)
     style.set_corner_radius_all(radius)
+    style.shadow_color = Color(0, 0, 0, 0.34)
+    style.shadow_size = 14
+    style.shadow_offset = Vector2(0, 5)
     return style
 
 func _build_ui() -> void:
@@ -64,11 +72,20 @@ func _build_ui() -> void:
 
     panel = Panel.new()
     panel.name = "DashboardPanel"
-    panel.add_theme_stylebox_override("panel", _style(SURFACE, BORDER, 14))
+    panel.add_theme_stylebox_override("panel", _style(SURFACE, BORDER, 20))
     add_child(panel)
 
-    title_label = _label("DASHBOARD", 20, TEXT)
-    status_label = _label("COMMAND OVERVIEW", 10, ACCENT)
+    hero = DashboardHeroArt.new()
+    hero.name = "ExecutiveHero"
+    panel.add_child(hero)
+
+    content_surface = Panel.new()
+    content_surface.name = "ExecutiveBriefSurface"
+    content_surface.add_theme_stylebox_override("panel", _style(CONTENT, Color(BORDER.r, BORDER.g, BORDER.b, 0.48), 16))
+    panel.add_child(content_surface)
+
+    title_label = _label("EXECUTIVE COMMAND", 22, TEXT)
+    status_label = _label("LIVE ENTERPRISE", 10, ACCENT)
     overview_label = _label("", 12, TEXT)
     objective_label = _label("", 12, ACCENT)
     ops_label = _label("", 11, MUTED)
@@ -82,11 +99,11 @@ func _build_ui() -> void:
     close_button.pressed.connect(_close)
     _layout()
 
-func _label(text: String, size: int, color: Color) -> Label:
+func _label(text: String, font_size: int, color: Color) -> Label:
     var label := Label.new()
     label.text = text
     label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    label.add_theme_font_size_override("font_size", size)
+    label.add_theme_font_size_override("font_size", font_size)
     label.add_theme_color_override("font_color", color)
     panel.add_child(label)
     return label
@@ -104,60 +121,102 @@ func _layout() -> void:
     if get_viewport() == null or panel == null:
         return
     var viewport: Vector2 = get_viewport().size
-    var margin := 12.0 if viewport.x < 390.0 else 16.0
-    var width := minf(560.0, maxf(280.0, viewport.x - margin * 2.0))
-    var height := minf(600.0, maxf(420.0, viewport.y - 96.0))
+    var mobile := viewport.x < 720.0
+    var margin := 12.0 if viewport.x < 390.0 else 18.0
+    var width := minf(940.0, maxf(280.0, viewport.x - margin * 2.0))
+    var height := minf(650.0, maxf(430.0, viewport.y - 88.0))
     dimmer.position = Vector2.ZERO
     dimmer.size = viewport
-    panel.position = Vector2((viewport.x - width) / 2.0, maxf(48.0, (viewport.y - height) / 2.0))
+    panel.position = Vector2((viewport.x - width) * 0.5, maxf(42.0, (viewport.y - height) * 0.5))
     panel.size = Vector2(width, minf(height, viewport.y - panel.position.y - 12.0))
 
-    var compact := width < 390.0
-    var side := 14.0
-    title_label.position = Vector2(side, 12)
-    title_label.size = Vector2(width - 140.0, 28)
-    title_label.add_theme_font_size_override("font_size", 18 if compact else 20)
-    status_label.position = Vector2(width - 126.0, 14)
-    status_label.size = Vector2(112.0, 20)
+    var pad := 16.0 if mobile else 22.0
+    title_label.position = Vector2(pad, 15)
+    title_label.size = Vector2(width * 0.58, 30)
+    title_label.add_theme_font_size_override("font_size", 18 if mobile else 22)
+    status_label.position = Vector2(width - 160.0 - pad, 19)
+    status_label.size = Vector2(160.0, 20)
     status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-    status_label.add_theme_font_size_override("font_size", 9 if compact else 10)
+    status_label.add_theme_font_size_override("font_size", 9 if mobile else 10)
 
-    overview_label.position = Vector2(side, 48)
-    overview_label.size = Vector2(width - side * 2.0, 46)
-    overview_label.add_theme_font_size_override("font_size", 11 if compact else 12)
-    objective_label.position = Vector2(side, 100)
-    objective_label.size = Vector2(width - side * 2.0, 42)
-    objective_label.add_theme_font_size_override("font_size", 11 if compact else 12)
-    ops_label.position = Vector2(side, 146)
-    ops_label.size = Vector2(width - side * 2.0, 54)
-    ops_label.add_theme_font_size_override("font_size", 10 if compact else 11)
-    events_label.position = Vector2(side, 208)
-    events_label.add_theme_font_size_override("font_size", 10 if compact else 11)
+    if mobile:
+        _layout_mobile(width, pad)
+    else:
+        _layout_desktop(width, pad)
+
+func _layout_desktop(width: float, pad: float) -> void:
+    var top := 56.0
+    var bottom_actions := 68.0
+    var available_h := panel.size.y - top - bottom_actions - pad
+    var hero_w := width * 0.46
+    hero.position = Vector2(pad, top)
+    hero.size = Vector2(hero_w - pad * 0.5, available_h)
+
+    var right_x := hero_w + pad * 0.55
+    var right_w := width - right_x - pad
+    content_surface.position = Vector2(right_x, top)
+    content_surface.size = Vector2(right_w, available_h)
+
+    var inner := 17.0
+    overview_label.position = Vector2(right_x + inner, top + 18)
+    overview_label.size = Vector2(right_w - inner * 2, 44)
+    objective_label.position = Vector2(right_x + inner, top + 72)
+    objective_label.size = Vector2(right_w - inner * 2, 58)
+    ops_label.position = Vector2(right_x + inner, top + 142)
+    ops_label.size = Vector2(right_w - inner * 2, 56)
+    events_label.position = Vector2(right_x + inner, top + 214)
+    events_label.size = Vector2(right_w - inner * 2, maxf(72.0, available_h - 230.0))
+
+    var gap := 9.0
+    var action_w := (right_w - gap * 2.0) / 3.0
+    var y := panel.size.y - 56.0
+    close_button.position = Vector2(right_x, y)
+    close_button.size = Vector2(action_w, 44)
+    notices_button.position = Vector2(right_x + action_w + gap, y)
+    notices_button.size = Vector2(action_w, 44)
+    primary_button.position = Vector2(right_x + (action_w + gap) * 2.0, y)
+    primary_button.size = Vector2(action_w, 44)
+    for button in [close_button, notices_button, primary_button]:
+        button.add_theme_font_size_override("font_size", 10)
+
+func _layout_mobile(width: float, pad: float) -> void:
+    var top := 54.0
+    var hero_h := clampf(panel.size.y * 0.25, 116.0, 160.0)
+    hero.position = Vector2(pad, top)
+    hero.size = Vector2(width - pad * 2.0, hero_h)
+
+    var content_y := top + hero_h + 9.0
+    var actions_h := 104.0
+    var content_h := maxf(174.0, panel.size.y - content_y - actions_h - 11.0)
+    content_surface.position = Vector2(pad, content_y)
+    content_surface.size = Vector2(width - pad * 2.0, content_h)
+    var inner := 13.0
+    var text_w := width - pad * 2.0 - inner * 2.0
+    overview_label.position = Vector2(pad + inner, content_y + 10)
+    overview_label.size = Vector2(text_w, 34)
+    overview_label.add_theme_font_size_override("font_size", 10)
+    objective_label.position = Vector2(pad + inner, content_y + 49)
+    objective_label.size = Vector2(text_w, 45)
+    objective_label.add_theme_font_size_override("font_size", 10)
+    ops_label.position = Vector2(pad + inner, content_y + 99)
+    ops_label.size = Vector2(text_w, 40)
+    ops_label.add_theme_font_size_override("font_size", 9)
+    events_label.position = Vector2(pad + inner, content_y + 143)
+    events_label.size = Vector2(text_w, maxf(26.0, content_h - 151.0))
+    events_label.add_theme_font_size_override("font_size", 9)
 
     var gap := 7.0
-    if compact:
-        var half := (width - side * 2.0 - gap) / 2.0
-        var row_two_y := panel.size.y - 56.0
-        var row_one_y := row_two_y - 53.0
-        close_button.position = Vector2(side, row_one_y)
-        close_button.size = Vector2(half, 46)
-        notices_button.position = Vector2(side + half + gap, row_one_y)
-        notices_button.size = Vector2(half, 46)
-        primary_button.position = Vector2(side, row_two_y)
-        primary_button.size = Vector2(width - side * 2.0, 46)
-        events_label.size = Vector2(width - side * 2.0, maxf(40.0, row_one_y - 216.0))
-    else:
-        var action_width := (width - side * 2.0 - gap * 2.0) / 3.0
-        var y := panel.size.y - 56.0
-        close_button.position = Vector2(side, y)
-        close_button.size = Vector2(action_width, 46)
-        notices_button.position = Vector2(side + action_width + gap, y)
-        notices_button.size = Vector2(action_width, 46)
-        primary_button.position = Vector2(side + (action_width + gap) * 2.0, y)
-        primary_button.size = Vector2(action_width, 46)
-        events_label.size = Vector2(width - side * 2.0, maxf(52.0, panel.size.y - 394.0))
+    var half := (width - pad * 2.0 - gap) * 0.5
+    var row_one_y := panel.size.y - 101.0
+    var row_two_y := panel.size.y - 52.0
+    close_button.position = Vector2(pad, row_one_y)
+    close_button.size = Vector2(half, 43)
+    notices_button.position = Vector2(pad + half + gap, row_one_y)
+    notices_button.size = Vector2(half, 43)
+    primary_button.position = Vector2(pad, row_two_y)
+    primary_button.size = Vector2(width - pad * 2.0, 43)
     for button in [close_button, notices_button, primary_button]:
-        button.add_theme_font_size_override("font_size", 9 if compact else 11)
+        button.add_theme_font_size_override("font_size", 9)
 
 func _refresh(_force: bool) -> void:
     var state = _state()
@@ -168,22 +227,21 @@ func _refresh(_force: bool) -> void:
     var worth := 0.0
     if finance != null and finance.has_method("valuation"):
         worth = maxf(0.0, float(finance.call("valuation")))
-    overview_label.text = "Day %d  •  Cash $%s  •  Worth $%s  •  Rep %d" % [int(state.get_value("player", "day", 1)), _money(cash), _money(int(worth)), int(state.get_value("player", "reputation", 0))]
+    overview_label.text = "Day %d  •  Cash $%s\nWorth $%s  •  Reputation %d" % [int(state.get_value("player", "day", 1)), _money(cash), _money(int(worth)), int(state.get_value("player", "reputation", 0))]
     var goal := _next_goal(state)
-    objective_label.text = "NEXT OBJECTIVE\n" + goal["text"]
-    primary_button.text = goal["action"]
-    var contracts: int = 0
+    objective_label.text = "NEXT MOVE\n" + str(goal["text"])
+    primary_button.text = str(goal["action"])
+    var contracts := 0
     var world = get_node_or_null("/root/RenewContractSystem")
     if world != null and world.has_method("list_active_contracts"):
         contracts = (world.list_active_contracts() as Array).size()
-    ops_label.text = "LIVE OPERATIONS\nContracts %d  •  Research %d pts  •  Finished goods %d" % [contracts, int(state.get_value("technology", "research_points", 0)), int(state.get_value("production", "finished_goods", 0))]
+    ops_label.text = "OPERATIONS\n%d contracts  •  %d research  •  %d goods" % [contracts, int(state.get_value("technology", "research_points", 0)), int(state.get_value("production", "finished_goods", 0))]
     var logs: Array = state.get_value("company", "log_lines", [])
-    var recent: Array = (logs as Array).slice(maxi(0, logs.size() - 5), logs.size()) if logs is Array else []
-    if recent.is_empty():
-        events_label.text = "RECENT ACTIVITY\nNo recent activity recorded."
-    else:
-        events_label.text = "RECENT ACTIVITY\n" + "\n".join(recent)
-    status_label.text = "COMMAND OVERVIEW"
+    var recent: Array = logs.slice(maxi(0, logs.size() - 4), logs.size())
+    events_label.text = "SIGNALS\n" + ("No recent activity recorded." if recent.is_empty() else "\n".join(recent))
+    status_label.text = "LIVE ENTERPRISE"
+    if hero != null:
+        hero.queue_redraw()
 
 func _next_goal(state: Variant) -> Dictionary:
     if not bool(state.get_value("properties", "owned", false)):
