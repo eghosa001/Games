@@ -142,6 +142,41 @@ func _fail(message: String) -> void:
     failures.append(message)
     push_error("VISUAL AUDIT FAIL: " + message)
 
+func _release_player(player: AudioStreamPlayer) -> void:
+    if player == null or not is_instance_valid(player):
+        return
+    player.stop()
+    player.stream = null
+    player.free()
+
+func _shutdown_procedural_audio() -> void:
+    # AudioStreamGeneratorPlayback is RefCounted independently of its player.
+    # Release both the script-held playback handles and their players before
+    # SceneTree shutdown so ObjectDB diagnostics reflect real ownership leaks.
+    var audio_manager := root.get_node_or_null("RenewAudioManager")
+    if audio_manager != null and is_instance_valid(audio_manager):
+        audio_manager.set_process(false)
+        audio_manager.set("_music_playback", null)
+        var music_player: Variant = audio_manager.get("_music_player")
+        if music_player is AudioStreamPlayer:
+            _release_player(music_player as AudioStreamPlayer)
+        audio_manager.set("_music_player", null)
+        var sfx_players: Variant = audio_manager.get("_sfx_players")
+        if sfx_players is Array:
+            for player: Variant in (sfx_players as Array).duplicate():
+                if player is AudioStreamPlayer:
+                    _release_player(player as AudioStreamPlayer)
+            (sfx_players as Array).clear()
+
+    var ambient := game.get_node_or_null("Systems/RenewAmbientAudio") if game != null and is_instance_valid(game) else null
+    if ambient != null and is_instance_valid(ambient):
+        ambient.set_process(false)
+        ambient.set("_playback", null)
+        var ambient_player: Variant = ambient.get("_player")
+        if ambient_player is AudioStreamPlayer:
+            _release_player(ambient_player as AudioStreamPlayer)
+        ambient.set("_player", null)
+
 func _finish() -> void:
     print("--- COMPLETE VISUAL AUDIT SUMMARY ---")
     print("Screenshots captured: %d" % captures)
@@ -149,12 +184,12 @@ func _finish() -> void:
     for failure in failures:
         print("FAILED: " + failure)
 
-    # Tear the audited scene down deterministically before quitting. Keeping
-    # SceneTree.current_scene pointed at a freed/closing scene can pollute
-    # Godot's shutdown leak report and make the CI gate report false leaks.
     if manager != null and is_instance_valid(manager):
         manager.hide_all_screens()
         await _settle(2)
+
+    _shutdown_procedural_audio()
+    await _settle(2)
 
     if current_scene == game:
         current_scene = null
