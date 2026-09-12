@@ -40,7 +40,7 @@ func toggle_archive() -> void:
     if visible_archive: close_screen()
     else: open_screen()
 func open_screen() -> void:
-    _set_visible(true); _refresh(); close_button.grab_focus()
+    _set_visible(true); _refresh()
 func close_screen() -> void:
     _set_visible(false)
 func _set_visible(value: bool) -> void:
