@@ -78,7 +78,7 @@ func run() -> void:
     check(accelerated_duration < baseline_duration, "HQ research capacity shortens founder R&D")
     check(float(accelerated.get("project", {}).get("hq_speed_multiplier", 1.0)) > 1.0, "Research project records HQ acceleration")
 
-    var project_count_before_block := research.list_projects("founder").size()
+    var project_count_before_block:int = int(research.list_projects("founder").size())
     _set_finance_cash(finance, 100)
     var blocked_cash := int(finance.available_cash())
     var blocked: Dictionary = research.start_research("mega_infrastructure", "founder")
