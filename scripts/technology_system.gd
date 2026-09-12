@@ -27,6 +27,21 @@ func _culture_effect(effect_name: String, fallback: float) -> float:
     if culture != null and culture.has_method("get_effects"):
         return float(culture.get_effects().get(effect_name, fallback))
     return fallback
+func _headquarters():
+    var services = get_node_or_null("/root/RenewServices")
+    if services != null and services.has_method("get_service"):
+        return services.get_service("RenewHeadquartersSystem")
+    return get_node_or_null("/root/RenewHeadquartersSystem")
+func _hq_speed_multiplier() -> float:
+    var hq = _headquarters()
+    if hq != null and hq.has_method("technology_speed_multiplier"):
+        return maxf(1.0, float(hq.technology_speed_multiplier()))
+    return 1.0
+func _hq_points_multiplier() -> float:
+    var hq = _headquarters()
+    if hq != null and hq.has_method("technology_points_multiplier"):
+        return maxf(1.0, float(hq.technology_points_multiplier()))
+    return 1.0
 func get_technologies() -> Array:
     var result:Array=[]
     for id in TECHNOLOGIES.keys():
@@ -84,7 +99,7 @@ func get_research_time_days(id:String)->int:
     var tech:=get_technology(id)
     if tech.is_empty(): return 0
     var base_days:=max(1,int(tech.get("time_days",1)))
-    var multiplier:=max(0.50,_culture_effect("research_multiplier",1.0))
+    var multiplier:=max(0.50,_culture_effect("research_multiplier",1.0)) * _hq_speed_multiplier()
     return max(1,int(ceil(float(base_days) / multiplier)))
 func get_last_research_days()->int:
     return last_research_days
@@ -99,7 +114,7 @@ func research_next() -> bool:
     return false
 func add_daily_research_points(amount:int=3)->void:
     var state=_state(); if state==null:return
-    var credited:=max(0,int(round(float(max(0,amount))*state_adapter.executive_bonus("research")*max(1.0,state_adapter.infra_modifier("technology"))*_world_modifier("research"))))
+    var credited:=max(0,int(round(float(max(0,amount))*state_adapter.executive_bonus("research")*max(1.0,state_adapter.infra_modifier("technology"))*_world_modifier("research")*_hq_points_multiplier())))
     state.set_value("technology","research_points",int(state.get_value("technology","research_points",20))+credited)
 func _world_modifier(key:String)->float:
     var state=_state(); if state==null or not state.has_method("get_world_modifier"):return 1.0
