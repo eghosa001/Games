@@ -1,0 +1,214 @@
+name: RENEW Android AI Playtest
+
+on:
+  workflow_dispatch:
+    inputs:
+      steps:
+        description: Number of exploratory input steps
+        required: false
+        default: '70'
+      seed:
+        description: Deterministic random seed
+        required: false
+        default: '20260912'
+      create_issue:
+        description: Create/update a GitHub issue when high/critical failures are found
+        required: false
+        type: boolean
+        default: true
+  push:
+    branches: [main]
+    paths:
+      - 'scenes/**'
+      - 'scripts/**'
+      - 'Assets/**'
+      - 'data/**'
+      - 'project.godot'
+      - 'export_presets.cfg'
+      - 'tools/ai_playtest.py'
+      - '.github/workflows/android-ai-playtest.yml'
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: renew-ai-playtest-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2
+  PACKAGE_NAME: com.eghosa.renew
+
+jobs:
+  android-ai-playtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install playtest dependencies
+        run: python -m pip install --disable-pip-version-check pillow
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build dependencies
+        run: |
+          sdkmanager --sdk_root="$ANDROID_SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.1" \
+            "emulator" \
+            "system-images;android-35;google_apis;x86_64" \
+            "cmake;3.10.2.4988404" \
+            "ndk;28.1.13356709"
+          yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
+
+      - name: Install Godot 4.7.2
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip
+          unzip -q Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip
+          chmod +x Godot_v${GODOT_VERSION}-stable_linux.x86_64
+
+      - name: Install matching Android export templates
+        run: |
+          templates="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$templates"
+          wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz
+          unzip -q -j Godot_v${GODOT_VERSION}-stable_export_templates.tpz 'templates/*' -d "$templates"
+          printf '%s\n' "${GODOT_VERSION}.stable" > "$templates/version.txt"
+          test -s "$templates/android_debug.apk"
+
+      - name: Import project
+        run: timeout 180s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --editor --path . --quit
+
+      - name: Run release smoke gate first
+        run: timeout 300s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path . --script res://tests/test_release_smoke.gd
+
+      - name: Build x86_64 QA APK for emulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp export_presets.cfg /tmp/export_presets.cfg.original
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('export_presets.cfg')
+          s = p.read_text()
+          s = s.replace('architectures/arm64-v8a=true', 'architectures/arm64-v8a=false', 1)
+          s = s.replace('architectures/x86_64=false', 'architectures/x86_64=true', 1)
+          p.write_text(s)
+          PY
+          mkdir -p build
+          timeout 600s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path . --export-debug "Android" build/RENEW-ai-playtest.apk
+          mv /tmp/export_presets.cfg.original export_presets.cfg
+          test -s build/RENEW-ai-playtest.apk
+          git diff --exit-code -- export_presets.cfg
+
+      - name: Run autonomous APK playtest in emulator
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          cores: 2
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 6G
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: >-
+            python tools/ai_playtest.py
+            --apk build/RENEW-ai-playtest.apk
+            --package ${PACKAGE_NAME}
+            --out build/ai-playtest
+            --steps ${{ github.event.inputs.steps || '70' }}
+            --seed ${{ github.event.inputs.seed || '20260912' }}
+            --issue-threshold high
+
+      - name: Add report to workflow summary
+        if: always()
+        run: |
+          if [ -f build/ai-playtest/report.md ]; then
+            cat build/ai-playtest/report.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '# RENEW Android AI Playtest' >> "$GITHUB_STEP_SUMMARY"
+            echo 'Playtest report was not produced. Inspect job logs.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload playtest evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: RENEW-Android-AI-Playtest-${{ github.run_number }}
+          path: |
+            build/ai-playtest/
+            build/RENEW-ai-playtest.apk
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Create or update automated bug issue
+        if: >-
+          always() &&
+          hashFiles('build/ai-playtest/report.json') != '' &&
+          (github.event_name != 'workflow_dispatch' || github.event.inputs.create_issue != 'false')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' > /tmp/issue.env
+          import json
+          from pathlib import Path
+          r = json.loads(Path('build/ai-playtest/report.json').read_text())
+          print(f"SHOULD_OPEN={'true' if r['should_open_issue'] else 'false'}")
+          print(f"FINGERPRINT={r['fingerprint']}")
+          print(f"COUNT={len(r['findings'])}")
+          PY
+          source /tmp/issue.env
+          if [ "$SHOULD_OPEN" != "true" ]; then
+            echo "No high/critical finding; no issue needed."
+            exit 0
+          fi
+
+          title="[AI Playtest] RENEW Android failures (${FINGERPRINT})"
+          body_file="build/ai-playtest/report.md"
+          marker="<!-- renew-ai-playtest:${FINGERPRINT} -->"
+          tmp_body="/tmp/renew-ai-issue.md"
+          {
+            echo "$marker"
+            echo
+            cat "$body_file"
+            echo
+            echo "Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo
+            echo "Download the workflow artifact for video, screenshots, logcat, gfxinfo and JSON evidence."
+          } > "$tmp_body"
+
+          existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "renew-ai-playtest:${FINGERPRINT} in:body" --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue edit "$existing" --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$tmp_body"
+            echo "Updated existing issue #$existing"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$tmp_body"
+          fi
+
+      - name: Verify tracked source stayed clean
+        if: always()
+        run: git diff --exit-code -- .
