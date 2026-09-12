@@ -101,21 +101,31 @@ func _apply_territory(treaty: Dictionary, state: Dictionary) -> void:
 
 func _apply_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
     if bool(state.get("materialized", false)):
-        _settle_joint_venture(treaty, state)
+        if not bool(state.get("funded", false)):
+            _fund_joint_venture(treaty, state)
+        if bool(state.get("funded", false)):
+            _settle_joint_venture(treaty, state)
         return
     var ownership = _ownership()
-    if ownership == null: return
+    var finance = _finance()
+    if ownership == null or finance == null: return
+    var ownership_before: Dictionary = ownership.capture_state() if ownership.has_method("capture_state") else {}
+    var finance_before: Dictionary = finance.capture_state() if finance.has_method("capture_state") else {}
+    var scene = _scene()
+    var rivals_before: Array = []
+    if scene != null and scene.get("rivals") != null:
+        rivals_before = scene.get("rivals").rivals.duplicate(true)
     var terms: Dictionary = treaty.get("terms", {})
     var venture_name: Variant = str(terms.get("venture_name", "JV %s" % treaty.get("id", "")))
     var venture_id: Variant = "jv:%s" % treaty.get("id", "")
     if not ownership.has_entity(venture_id):
         var created: Variant = ownership.register_entity(venture_id, ownership.ENTITY_JV, 1000000, 1.0)
-        if bool(created.get("ok", false)):
-            var a: Variant = str(treaty.get("party_a", "")); var b := str(treaty.get("party_b", ""))
-            var a_pct: Variant = clampf(float(terms.get("party_a_percent", 50.0)), 0.0, 100.0)
-            var b_pct: Variant = clampf(float(terms.get("party_b_percent", 100.0 - a_pct)), 0.0, 100.0)
-            if not a.is_empty() and a_pct > 0.0: ownership.issue_shares(venture_id, a, int(round(a_pct * 10000.0)), ownership.VOTE_ORDINARY, "joint venture formation")
-            if not b.is_empty() and b_pct > 0.0: ownership.issue_shares(venture_id, b, int(round(b_pct * 10000.0)), ownership.VOTE_ORDINARY, "joint venture formation")
+        if not bool(created.get("ok", false)): return
+        var a: Variant = str(treaty.get("party_a", "")); var b := str(treaty.get("party_b", ""))
+        var a_pct: Variant = clampf(float(terms.get("party_a_percent", 50.0)), 0.0, 100.0)
+        var b_pct: Variant = clampf(float(terms.get("party_b_percent", 100.0 - a_pct)), 0.0, 100.0)
+        if not a.is_empty() and a_pct > 0.0: ownership.issue_shares(venture_id, a, int(round(a_pct * 10000.0)), ownership.VOTE_ORDINARY, "joint venture formation")
+        if not b.is_empty() and b_pct > 0.0: ownership.issue_shares(venture_id, b, int(round(b_pct * 10000.0)), ownership.VOTE_ORDINARY, "joint venture formation")
     var asset_value: Variant = max(0.0, float(terms.get("asset_value", terms.get("initial_capital", terms.get("joint_capital", 0.0)))))
     var asset_id: Variant = "jv_asset:%s" % treaty.get("id", "")
     if asset_value > 0.0 and not ownership.has_entity(asset_id):
@@ -125,8 +135,16 @@ func _apply_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
     state["funded"] = bool(state.get("funded", false))
     if not state["funded"]:
         _fund_joint_venture(treaty, state)
-    else:
-        _settle_joint_venture(treaty, state)
+    if not bool(state.get("funded", false)):
+        if not ownership_before.is_empty() and ownership.has_method("restore_state"):
+            ownership.restore_state(ownership_before)
+        if not finance_before.is_empty() and finance.has_method("restore_state"):
+            finance.restore_state(finance_before)
+        if scene != null and scene.get("rivals") != null and not rivals_before.is_empty():
+            scene.get("rivals").rivals = rivals_before
+        state["materialized"] = false
+        state["venture_id"] = venture_id
+        return
     state["venture_id"] = venture_id
     state["venture_name"] = venture_name
     state["asset_id"] = asset_id
@@ -144,16 +162,35 @@ func _fund_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
     if total <= 0: return
     var player_pct := _party_percent(treaty, "player")
     var player_amount := int(round(float(total) * player_pct / 100.0))
+    var partner_amount := max(0, total - player_amount)
+    var scene = _scene()
+    var partner = null
+    if scene != null and scene.get("rivals") != null:
+        var partner_id := str(treaty.get("party_b", "")) if str(treaty.get("party_a", "")) == "player" else str(treaty.get("party_a", ""))
+        for rival in scene.get("rivals").rivals:
+            if rival is Dictionary and str(rival.get("id", "")) == partner_id:
+                partner = rival
+                break
+    if partner != null and int(partner.get("cash", 0)) < partner_amount:
+        state["funding_blocked"] = true
+        state["funding_reason"] = "partner_cash"
+        return
+    var finance_before: Dictionary = finance.capture_state() if finance.has_method("capture_state") else {}
     var paid: Dictionary = finance.spend(player_amount, "joint venture capital:%s" % treaty.get("id", ""))
     if not bool(paid.get("ok", false)):
         state["funding_blocked"] = true
+        state["funding_reason"] = "player_cash"
         return
+    if partner != null:
+        partner["cash"] = int(partner.get("cash", 0)) - partner_amount
+        if int(partner.get("cash", 0)) < 0:
+            if not finance_before.is_empty() and finance.has_method("restore_state"):
+                finance.restore_state(finance_before)
+            state["funding_blocked"] = true
+            state["funding_reason"] = "partner_cash"
+            return
     state["funding_blocked"] = false
-    var scene = _scene()
-    if scene != null and scene.get("rivals") != null:
-        for rival in scene.get("rivals").rivals:
-            if rival is Dictionary and str(rival.get("id", "")) != "player" and (str(rival.get("id", "")) == str(treaty.get("party_a", "")) or str(rival.get("id", "")) == str(treaty.get("party_b", ""))):
-                rival["cash"] = max(0, int(rival.get("cash", 0)) - max(0, total - player_amount))
+    state.erase("funding_reason")
     state["funded"] = true
     state["funded_capital"] = total
     state["last_payout_day"] = -1
@@ -174,7 +211,7 @@ func _settle_joint_venture(treaty: Dictionary, state: Dictionary) -> void:
     if scene != null and scene.get("rivals") != null:
         for rival in scene.get("rivals").rivals:
             if rival is Dictionary and (str(rival.get("id", "")) == str(treaty.get("party_a", "")) or str(rival.get("id", "")) == str(treaty.get("party_b", ""))) and str(rival.get("id", "")) != "player":
-                rival["cash"] = max(0, int(rival.get("cash", 0)) + max(0, profit - player_share))
+                rival["cash"] = int(rival.get("cash", 0)) + max(0, profit - player_share)
     state["last_payout_day"] = day
     state["total_paid_out"] = int(state.get("total_paid_out", 0)) + profit
 
