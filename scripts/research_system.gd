@@ -42,6 +42,9 @@ func _headquarters():
         return services.get_service("RenewHeadquartersSystem")
     return get_node_or_null("/root/RenewHeadquartersSystem")
 
+func _finance():
+    return get_node_or_null("/root/RenewFinanceSystem")
+
 func _hq_research_speed(sponsor_id: String) -> float:
     if sponsor_id not in ["founder", "player"]:
         return 1.0
@@ -50,22 +53,38 @@ func _hq_research_speed(sponsor_id: String) -> float:
         return maxf(1.0, float(hq.research_speed_multiplier()))
     return 1.0
 
+func _uses_player_finance(sponsor_id: String) -> bool:
+    return sponsor_id in ["founder", "player"]
+
 func start_research(project_type: String, sponsor_id: String, research_type: String = TYPE_COMPANY, skills: Array = [], duration: int = 0, cost: float = -1.0, facility_id: String = "", partners: Array = []) -> Dictionary:
     if not project_catalog.has(project_type): return {"ok":false,"error":"unknown_research_project"}
     var spec: Dictionary = project_catalog[project_type]
-    var project_id: Variant = "research:%d" % next_project_id
-    next_project_id += 1
     var required_skills: Array = spec["skills"].duplicate()
     var provided: Array = skills.duplicate()
     var skill_match: Variant = _skill_match(required_skills, provided)
-    var actual_cost: Variant = spec["cost"] if cost < 0.0 else cost
+    var actual_cost: float = float(spec["cost"] if cost < 0.0 else cost)
     var actual_duration: Variant = spec["duration"] if duration <= 0 else duration
     if facility_id != "" and facilities.has(facility_id):
         var facility: Dictionary = facilities[facility_id]
         actual_duration = max(1, int(ceil(float(actual_duration) / (1.0 + 0.15 * max(0, int(facility["level"]) - 1)))))
     var hq_speed := _hq_research_speed(sponsor_id)
     actual_duration = max(1, int(ceil(float(actual_duration) / hq_speed)))
-    projects[project_id] = {"id":project_id,"type":project_type,"name":spec["name"],"sponsor_id":sponsor_id,"research_type":research_type,"status":STATUS_ACTIVE,"start_day":_day(),"end_day":_day()+actual_duration,"duration":actual_duration,"cost":actual_cost,"spent":0.0,"required_skills":required_skills,"provided_skills":provided,"skill_match":skill_match,"uncertainty":float(spec["uncertainty"]),"discovery":spec["discovery"],"facility_id":facility_id,"partners":partners.duplicate(),"progress":0.0,"outcome":"pending","discoveries":[],"hq_speed_multiplier":hq_speed}
+
+    # Company/founder R&D is funded up front through the authoritative ledger.
+    # Do this before allocating IDs or facility capacity so failed payment leaves no ghost project.
+    var funding_source := "external"
+    if _uses_player_finance(sponsor_id) and actual_cost > 0.0:
+        var finance = _finance()
+        if finance == null or not finance.has_method("spend"):
+            return {"ok":false,"error":"finance_unavailable","message":"Research finance is unavailable."}
+        var payment: Dictionary = finance.spend(int(round(actual_cost)), "research project: %s" % str(spec["name"]))
+        if not bool(payment.get("ok", false)):
+            return {"ok":false,"error":"insufficient_funds","cost":int(round(actual_cost)),"message":str(payment.get("message","Insufficient cash for research."))}
+        funding_source = "player_finance"
+
+    var project_id: Variant = "research:%d" % next_project_id
+    next_project_id += 1
+    projects[project_id] = {"id":project_id,"type":project_type,"name":spec["name"],"sponsor_id":sponsor_id,"research_type":research_type,"status":STATUS_ACTIVE,"start_day":_day(),"end_day":_day()+actual_duration,"duration":actual_duration,"cost":actual_cost,"spent":0.0,"funded_cost":actual_cost,"funding_source":funding_source,"required_skills":required_skills,"provided_skills":provided,"skill_match":skill_match,"uncertainty":float(spec["uncertainty"]),"discovery":spec["discovery"],"facility_id":facility_id,"partners":partners.duplicate(),"progress":0.0,"outcome":"pending","discoveries":[],"hq_speed_multiplier":hq_speed}
     if facility_id != "" and facilities.has(facility_id): facilities[facility_id]["utilization"] = int(facilities[facility_id]["utilization"]) + 1
     for partner in partners:
         if university_partners.has(str(partner)): university_partners[str(partner)]["projects"] = int(university_partners[str(partner)]["projects"]) + 1
