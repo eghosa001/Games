@@ -51,6 +51,7 @@ func run() -> void:
         game.cash = 100000
         game.select_rival(0)
         var services = root.get_node_or_null("RenewServices")
+        var finance = root.get_node_or_null("RenewFinanceSystem")
         var live_diplomacy = services.get_service("RenewDiplomacySystem") if services != null else null
         check(live_diplomacy != null, "Live diplomacy service resolves")
         if live_diplomacy != null:
@@ -60,6 +61,29 @@ func run() -> void:
             check(int(game.command_system.relationship_system.rivals.rivals[0].get("relationship", 0)) > rel_before, "Envoy gift improves relations")
             check(float(live_diplomacy.get_trust("player", "apex_materials")) > trust_before, "Envoy gift builds treaty trust")
             check(int(game.cash) < 100000, "Envoy gift spends treasury cash")
+
+            var fee_terms := {"penalties":{"cancellation_fee":1000,"trust_damage":5.0}}
+            var fee_proposal: Dictionary = live_diplomacy.propose_treaty("player", "apex_materials", "trade", fee_terms, 10)
+            check(bool(fee_proposal.get("ok", false)), "Fee-backed treaty proposes")
+            var fee_id := str(fee_proposal.get("treaty", {}).get("id", ""))
+            check(bool(live_diplomacy.accept_treaty(fee_id, "apex_materials").get("ok", false)), "Fee-backed treaty activates")
+
+            game.cash = 500
+            var blocked_cash := int(game.cash)
+            var trust_before_block := float(live_diplomacy.get_trust("player", "apex_materials"))
+            var blocked_cancel: Dictionary = live_diplomacy.cancel_treaty(fee_id, "player", "cannot afford exit")
+            check(not bool(blocked_cancel.get("ok", false)), "Unaffordable early cancellation is rejected")
+            check(str(live_diplomacy.get_treaty(fee_id).get("status", "")) == "active", "Rejected cancellation leaves treaty active")
+            check(int(game.cash) == blocked_cash, "Rejected cancellation leaves cash unchanged")
+            check(abs(float(live_diplomacy.get_trust("player", "apex_materials")) - trust_before_block) < 0.01, "Rejected cancellation leaves trust unchanged")
+
+            game.cash = 5000
+            var before_fee := int(game.cash)
+            var paid_cancel: Dictionary = live_diplomacy.cancel_treaty(fee_id, "player", "strategic exit")
+            check(bool(paid_cancel.get("ok", false)), "Affordable early cancellation succeeds")
+            check(str(live_diplomacy.get_treaty(fee_id).get("status", "")) == "cancelled", "Paid cancellation closes treaty")
+            check(int(game.cash) == before_fee - 1000, "Cancellation fee debits authoritative finance exactly once")
+            check(finance != null and bool(finance.validate_invariants().get("ok", false)), "Cancellation fee keeps finance invariants valid")
         game.free()
         await process_frame
     diplomacy.queue_free()
