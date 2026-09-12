@@ -36,6 +36,20 @@ func register_university(partner_id: String, name: String, skill_bonus: Dictiona
     university_partners[partner_id] = {"id":partner_id,"name":name,"skill_bonus":skill_bonus,"trust":50.0,"projects":0}
     return university_partners[partner_id].duplicate(true)
 
+func _headquarters():
+    var services = get_node_or_null("/root/RenewServices")
+    if services != null and services.has_method("get_service"):
+        return services.get_service("RenewHeadquartersSystem")
+    return get_node_or_null("/root/RenewHeadquartersSystem")
+
+func _hq_research_speed(sponsor_id: String) -> float:
+    if sponsor_id not in ["founder", "player"]:
+        return 1.0
+    var hq = _headquarters()
+    if hq != null and hq.has_method("research_speed_multiplier"):
+        return maxf(1.0, float(hq.research_speed_multiplier()))
+    return 1.0
+
 func start_research(project_type: String, sponsor_id: String, research_type: String = TYPE_COMPANY, skills: Array = [], duration: int = 0, cost: float = -1.0, facility_id: String = "", partners: Array = []) -> Dictionary:
     if not project_catalog.has(project_type): return {"ok":false,"error":"unknown_research_project"}
     var spec: Dictionary = project_catalog[project_type]
@@ -49,7 +63,9 @@ func start_research(project_type: String, sponsor_id: String, research_type: Str
     if facility_id != "" and facilities.has(facility_id):
         var facility: Dictionary = facilities[facility_id]
         actual_duration = max(1, int(ceil(float(actual_duration) / (1.0 + 0.15 * max(0, int(facility["level"]) - 1)))))
-    projects[project_id] = {"id":project_id,"type":project_type,"name":spec["name"],"sponsor_id":sponsor_id,"research_type":research_type,"status":STATUS_ACTIVE,"start_day":_day(),"end_day":_day()+actual_duration,"duration":actual_duration,"cost":actual_cost,"spent":0.0,"required_skills":required_skills,"provided_skills":provided,"skill_match":skill_match,"uncertainty":float(spec["uncertainty"]),"discovery":spec["discovery"],"facility_id":facility_id,"partners":partners.duplicate(),"progress":0.0,"outcome":"pending","discoveries":[]}
+    var hq_speed := _hq_research_speed(sponsor_id)
+    actual_duration = max(1, int(ceil(float(actual_duration) / hq_speed)))
+    projects[project_id] = {"id":project_id,"type":project_type,"name":spec["name"],"sponsor_id":sponsor_id,"research_type":research_type,"status":STATUS_ACTIVE,"start_day":_day(),"end_day":_day()+actual_duration,"duration":actual_duration,"cost":actual_cost,"spent":0.0,"required_skills":required_skills,"provided_skills":provided,"skill_match":skill_match,"uncertainty":float(spec["uncertainty"]),"discovery":spec["discovery"],"facility_id":facility_id,"partners":partners.duplicate(),"progress":0.0,"outcome":"pending","discoveries":[],"hq_speed_multiplier":hq_speed}
     if facility_id != "" and facilities.has(facility_id): facilities[facility_id]["utilization"] = int(facilities[facility_id]["utilization"]) + 1
     for partner in partners:
         if university_partners.has(str(partner)): university_partners[str(partner)]["projects"] = int(university_partners[str(partner)]["projects"]) + 1
