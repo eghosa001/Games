@@ -114,3 +114,30 @@ func get_service(service_name: String) -> Node:
 
     systems = _systems_root(true)
     return _create_service(service_name, systems)
+
+## Save all registered service-owned state that explicitly supports rollback/persistence.
+## This closes the gap where advanced systems worked during a session but were not
+## represented in the canonical GameState payload written by SaveSystem.
+func capture_persistent_state() -> Dictionary:
+    var result: Dictionary = {}
+    for service_name in SERVICE_PATHS.keys():
+        var node := get_service(service_name)
+        if node == null or not node.has_method("capture_state"):
+            continue
+        var snapshot = node.capture_state()
+        if snapshot is Dictionary:
+            result[service_name] = snapshot.duplicate(true)
+    return result
+
+func restore_persistent_state(state: Dictionary) -> void:
+    for service_name in state.keys():
+        var name := str(service_name)
+        if not SERVICE_PATHS.has(name):
+            continue
+        var snapshot = state[service_name]
+        if not snapshot is Dictionary:
+            continue
+        var node := get_service(name)
+        if node != null and node.has_method("restore_state"):
+            node.restore_state(snapshot)
+    _wire_service_dependencies()
