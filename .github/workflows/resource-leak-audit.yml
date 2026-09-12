@@ -16,8 +16,8 @@ concurrency:
 
 env:
   GODOT_VERSION: 4.7.2
-  OBJECTDB_BASELINE: 11
-  RESOURCE_BASELINE: 3
+  OBJECTDB_BASELINE: 0
+  RESOURCE_BASELINE: 0
 
 jobs:
   leak-audit:
