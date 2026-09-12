@@ -11,7 +11,7 @@ var progress_label: Label
 var hint_label: Label
 var continue_button: Button
 var collapsed_button: Button
-var dismissed: Variant = false
+var dismissed: Variant = true
 var last_step: Variant = -1
 var _coordinator_active := false
 
@@ -95,6 +95,15 @@ func _layout_responsive() -> void:
     if w <= 1.0 or h <= 1.0:
         return
     var narrow: bool = w < 700.0
+    if dismissed:
+        panel.hide()
+        collapsed_button.size = Vector2(112.0, 36.0)
+        if narrow:
+            collapsed_button.position = Vector2(maxf(8.0, w - 120.0), maxf(96.0, h - 118.0))
+        else:
+            collapsed_button.position = Vector2(maxf(8.0, w - 126.0), maxf(64.0, h - 48.0))
+        collapsed_button.show()
+        return
     if narrow:
         panel.position = Vector2(8.0, maxf(108.0, (maxf(114.0, h - clampf(h * 0.40, 218.0, 250.0) - 8.0) - 8.0) - 86.0))
         panel.size = Vector2(w - 16.0, 86.0)
@@ -120,7 +129,8 @@ func _layout_responsive() -> void:
         continue_button.position = Vector2(panel.size.x - 110.0, 62)
         continue_button.size = Vector2(92, 28)
     else:
-        collapsed_button.position = Vector2(8.0, maxf(108.0, h - 46.0))
+        panel.hide()
+        collapsed_button.position = Vector2(maxf(8.0, w - 126.0), maxf(64.0, h - 48.0))
         collapsed_button.size = Vector2(118.0, 38.0)
         collapsed_button.show()
         return
@@ -167,7 +177,7 @@ func _dismiss_current() -> void:
 func _hide_overlay() -> void:
     dismissed = true
     panel.hide()
-    collapsed_button.show()
+    _layout_responsive()
 
 func _collapse() -> void:
     _hide_overlay()
