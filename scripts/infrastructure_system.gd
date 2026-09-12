@@ -53,12 +53,15 @@ func build(type: String, region: int, owner_id: String, cash: int, day: int, con
     var spec: Dictionary = base_specs[type]
     var cost: Variant = int(spec["cost"])
     if cash < cost: return {"ok":false,"message":"%s construction requires $%s." % [spec["name"],_money(cost)]}
+    var spend: Dictionary = state_adapter.spend(int(cost), "infrastructure construction: %s" % spec["name"])
+    if not bool(spend.get("ok", false)):
+        return {"ok":false,"message":str(spend.get("message", "%s construction could not be funded." % spec["name"]))}
     var id: Variant = "infra_%d" % next_id
     next_id += 1
     var duration: Variant = int(spec["build_days"]) if construction_days < 0 else max(1, construction_days)
     assets[id] = {"id":id,"type":type,"name":spec["name"],"region":region,"owner_id":owner_id,"status":CONSTRUCTING,"level":1,"capacity":float(spec["capacity"]),"utilization":0.0,"maintenance":cost_to_maintenance(cost),"construction_cost":cost,"upgrade_count":0,"built_day":day,"completion_day":day+duration,"disruption_until":0,"disruption_reason":"","location":region,"created_day":day}
     _register_ownership(id, owner_id)
-    _event(day, "%s started construction in region %d." % [spec["name"],region])
+    _event(day, "%s started construction in region %d for $%s." % [spec["name"],region,_money(cost)])
     return {"ok":true,"id":id,"cost":cost,"message":"%s construction started." % spec["name"]}
 
 func upgrade(asset_id: String, owner_id: String, cash: int, day: int) -> Dictionary:
@@ -69,13 +72,16 @@ func upgrade(asset_id: String, owner_id: String, cash: int, day: int) -> Diction
     var type: Variant = str(asset.get("type")); var spec: Dictionary = base_specs[type]
     var level: Variant = int(asset.get("level",1)); var cost: int = int(spec["upgrade_cost"]) * int(level)
     if cash < cost: return {"ok":false,"message":"Upgrade requires $%s." % _money(cost)}
+    var spend: Dictionary = state_adapter.spend(cost, "infrastructure upgrade: %s" % str(asset.get("name", type)))
+    if not bool(spend.get("ok", false)):
+        return {"ok":false,"message":str(spend.get("message", "Infrastructure upgrade could not be funded."))}
     asset["level"] = level + 1
     asset["capacity"] = float(asset.get("capacity",spec["capacity"])) + float(spec["upgrade_capacity"])
     asset["maintenance"] = int(round(float(asset.get("maintenance",cost_to_maintenance(int(spec["cost"])))) * 1.18))
     asset["upgrade_count"] = int(asset.get("upgrade_count",0)) + 1
     asset["last_upgrade_day"] = day
     assets[asset_id] = asset
-    _event(day, "%s upgraded to level %d." % [asset["name"],asset["level"]])
+    _event(day, "%s upgraded to level %d for $%s." % [asset["name"],asset["level"],_money(cost)])
     return {"ok":true,"cost":cost,"message":"%s upgraded to level %d." % [asset["name"],asset["level"]]}
 
 func disrupt(asset_id: String, duration: int, reason: String, day: int) -> Dictionary:
@@ -93,8 +99,12 @@ func repair(asset_id: String, owner_id: String, cash: int, day: int) -> Dictiona
     if str(asset.get("status")) != DISRUPTED: return {"ok":false,"message":"Asset is not disrupted."}
     var cost: Variant = max(500, int(round(float(asset.get("maintenance",500)) * 2.5)))
     if cash < cost: return {"ok":false,"message":"Repair requires $%s." % _money(cost)}
+    var spend: Dictionary = state_adapter.spend(int(cost), "infrastructure repair: %s" % str(asset.get("name", asset_id)))
+    if not bool(spend.get("ok", false)):
+        return {"ok":false,"message":str(spend.get("message", "Infrastructure repair could not be funded."))}
     asset["status"] = ACTIVE; asset["disruption_until"] = 0; asset["disruption_reason"] = ""; asset["last_repair_day"] = day
     assets[asset_id] = asset
+    _event(day, "%s repaired for $%s." % [asset["name"], _money(cost)])
     return {"ok":true,"cost":cost,"message":"%s repaired and operational." % asset["name"]}
 
 func process_day(day: int) -> Dictionary:
