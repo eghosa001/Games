@@ -43,7 +43,6 @@ func run() -> void:
     state.set_value("technology", "research_points", 100)
     var start_day := int(game.day)
     var expected_days := int(technology.get_research_time_days("efficient_production"))
-    var start_cash := int(finance.available_cash())
 
     game.research_technology("efficient_production")
     await process_frame
@@ -51,7 +50,14 @@ func run() -> void:
 
     check(technology.is_unlocked("efficient_production"), "Main facade unlocks the selected technology")
     check(int(game.day) == start_day + expected_days, "Main facade simulates the full research duration")
-    check(int(finance.available_cash()) <= start_cash - 2500, "Main facade charges technology research")
+    var research_spend := 0
+    for entry in finance.history:
+        if not (entry is Dictionary):
+            continue
+        var record: Dictionary = entry
+        if str(record.get("kind", "")) == "spend" and str(record.get("reason", "")).find("technology research") >= 0:
+            research_spend += int(record.get("amount", 0))
+    check(research_spend >= 2500, "Main facade charges technology research")
     check(bool(finance.validate_invariants().get("ok", false)), "Research facade keeps finance invariants valid")
 
     print("MAIN RESEARCH FACADE RESULT: %d passed, %d failed" % [passed, failed])

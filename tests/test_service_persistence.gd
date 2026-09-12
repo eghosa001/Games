@@ -59,8 +59,8 @@ func run() -> void:
     check(bool(accepted.get("ok", false)), "Diplomacy treaty activates before save")
 
     var expected_hq_stage := int(hq.get_stage_index())
-    var expected_project_count := research.list_projects("founder").size()
-    var expected_treaty_count := diplomacy.list_treaties("").size()
+    var expected_project_count: int = int(research.list_projects("founder").size())
+    var expected_treaty_count: int = int(diplomacy.list_treaties("").size())
     game.save_game()
 
     hq.restore_state({})
@@ -78,7 +78,7 @@ func run() -> void:
     check(research.list_projects("founder").size() == expected_project_count, "Research project list survives save/load")
     check(not research.get_project(project_id).is_empty(), "Specific active research project survives save/load")
     check(diplomacy.list_treaties("").size() == expected_treaty_count, "Diplomacy treaties survive save/load")
-    var restored_treaty := diplomacy.get_treaty(treaty_id) if diplomacy.has_method("get_treaty") else {}
+    var restored_treaty: Dictionary = diplomacy.get_treaty(treaty_id) if diplomacy.has_method("get_treaty") else {}
     check(not restored_treaty.is_empty(), "Specific treaty survives save/load")
     check(bool(finance.validate_invariants().get("ok", false)), "Service persistence keeps finance valid")
 

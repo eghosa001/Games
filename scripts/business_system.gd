@@ -151,7 +151,12 @@ func produce_goods() -> Dictionary:
 func _produce_goods_impl() -> Dictionary:
     if not bool(state_adapter.get_value("businesses", "business_open", false)): return _production_failure("Create the business first.")
     if production == null: return _production_failure("ProductionSystem is unavailable.")
-    var industry_id: String = str(state_adapter.get_value("businesses", "industry_id", "furniture")); var config: Dictionary = _industry_production_config(industry_id); if config.is_empty(): return _production_failure("Unknown V1 industry: %s." % industry_id)
+    var industry_id: String = str(state_adapter.get_value("businesses", "industry_id", "furniture"))
+    if industry_id.is_empty():
+        industry_id = "furniture"
+    var config: Dictionary = _industry_production_config(industry_id)
+    if config.is_empty():
+        return _production_failure("Unknown V1 industry: %s." % industry_id)
     var employee_count: int = 3; var employee_factor: float = 1.0; var morale_multiplier: float = 1.0
     if employee_system != null: employee_count = employee_system.get_active_employee_count(); employee_factor = employee_system.get_productivity_multiplier("factory_001"); morale_multiplier = employee_system.get_morale_multiplier()
     var capacity: int = int(state_adapter.get_value("businesses", "capacity_level", 1)); var business_efficiency: float = clamp(0.85 + float(capacity) * 0.10, 0.85, 1.50); var base_output: int = max(1, employee_count + capacity - 1); var output_factor: float = employee_factor * business_efficiency * _technology_multiplier() * _property_condition_multiplier() * morale_multiplier * state_adapter.executive_bonus("production") * state_adapter.infra_modifier("production") * _world_modifier("production"); var cycles: int = max(1, int(floor(float(base_output) * output_factor))); var inputs: Dictionary = config.get("inputs", {}).duplicate(true); var cash: int = int(state_adapter.get_value("economy", "cash", 25000)); var orders: Array = []
