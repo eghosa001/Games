@@ -8,12 +8,12 @@ var expansion = Expansion.new()
 var districts = Districts.new()
 
 func _ready() -> void:
-    # These helpers are Nodes, so make this controller their explicit owner.
-    # Unparented Node.new() instances survive parent teardown and pollute
-    # Godot's shutdown leak report.
-    add_child(state_adapter)
-    add_child(expansion)
-    add_child(districts)
+    # Node helpers must have an owner so they are released with this controller.
+    # Districts is intentionally RefCounted and must not be added to the tree.
+    if state_adapter is Node and (state_adapter as Node).get_parent() == null:
+        add_child(state_adapter)
+    if expansion is Node and (expansion as Node).get_parent() == null:
+        add_child(expansion)
 
 func initialize() -> void:
     var reputation: Variant = int(state_adapter.get_value("player", "reputation", 0))
