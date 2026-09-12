@@ -17,6 +17,7 @@ RenewAudioManager="*res://scripts/audio_manager.gd"
 RenewServices="*res://scripts/renew_services.gd"
 RenewUIScreenManager="*res://scripts/ui_screen_manager.gd"
 RenewMobileProgressionGuide="*res://scripts/mobile_progression_guide.gd"
+RenewVisualStyleGuard="*res://scripts/visual_style_guard.gd"
 
 [display]
 window/size/viewport_width=1280
@@ -25,6 +26,9 @@ window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="disabled"
 window/stretch/aspect="expand"
+
+[gui]
+theme/custom="res://Assets/Themes/EmpireTheme.tres"
 
 [debug]
 gdscript/warnings/enable=true
