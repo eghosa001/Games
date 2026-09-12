@@ -35,6 +35,22 @@ func _ready() -> void:
     call_deferred("_hook_ui")
     get_tree().node_added.connect(_on_node_added)
 
+func _exit_tree() -> void:
+    set_process(false)
+    var tree := get_tree()
+    if tree != null and tree.node_added.is_connected(_on_node_added):
+        tree.node_added.disconnect(_on_node_added)
+    _music_playback = null
+    if is_instance_valid(_music_player):
+        _music_player.stop()
+        _music_player.stream = null
+    for player: AudioStreamPlayer in _sfx_players:
+        if is_instance_valid(player):
+            player.stop()
+            player.stream = null
+    _sfx_players.clear()
+    _music_player = null
+
 func _setup_music() -> void:
     _music_player = AudioStreamPlayer.new()
     _music_player.name = "RenewAdaptiveMusic"
@@ -54,6 +70,8 @@ func _process(delta: float) -> void:
     _watch_game_state()
 
 func _feed_music(delta: float) -> void:
+    if _music_player == null:
+        return
     if _music_playback == null or not _music_player.is_playing():
         _music_player.play()
         if not _music_player.is_playing():
@@ -137,7 +155,10 @@ func _is_failure(text: String) -> bool:
 
 func _on_node_added(node: Node) -> void:
     # Guard against tree teardown — nodes may be mid-destruction.
-    var root := get_tree().root
+    var tree := get_tree()
+    if tree == null:
+        return
+    var root := tree.root
     if root == null or not root.is_inside_tree(): return
     if node is BaseButton:
         _hook_button(node as BaseButton)
@@ -166,6 +187,8 @@ func _sfx_stream(duration: float) -> AudioStreamGenerator:
     return stream
 
 func _begin_sfx(duration: float) -> AudioStreamGeneratorPlayback:
+    if _sfx_players.is_empty():
+        return null
     var player: AudioStreamPlayer = _sfx_players[_sfx_cursor]
     _sfx_cursor = (_sfx_cursor + 1) % _sfx_players.size()
     player.stream = _sfx_stream(duration)
