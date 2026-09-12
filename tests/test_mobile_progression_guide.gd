@@ -35,6 +35,19 @@ func _add_button(box: Node, text: String) -> Button:
     return b
 
 func run() -> void:
+    # RenewServices intentionally mounts domain services under the active scene's
+    # Systems node. Exercise the same runtime architecture used by the game.
+    var packed := load("res://scenes/Main.tscn") as PackedScene
+    check(packed != null, "Main scene loads for mobile progression guide")
+    if packed == null:
+        quit(1)
+        return
+    var game = packed.instantiate()
+    root.add_child(game)
+    current_scene = game
+    await process_frame
+    await process_frame
+
     var guide = root.get_node_or_null("RenewMobileProgressionGuide")
     var services = root.get_node_or_null("RenewServices")
     var state = root.get_node_or_null("RenewGameState")
@@ -42,6 +55,7 @@ func run() -> void:
     check(guide != null, "Mobile progression guide autoload resolves")
     check(state != null and progression != null, "Progression stack resolves")
     if guide == null or state == null or progression == null:
+        game.free()
         quit(1)
         return
 
@@ -108,5 +122,10 @@ func run() -> void:
     guide._inject_entries(fake, injected, progression, guide.WORLD_INJECTIONS)
     check(_button(injected, "LEGACY & COLLECTIONS") != null, "Level 9 exposes legacy and collections")
 
+    box.free()
+    fake.free()
+    injected.free()
+    game.free()
+    await process_frame
     print("MOBILE PROGRESSION GUIDE RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
