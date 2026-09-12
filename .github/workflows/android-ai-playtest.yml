@@ -156,7 +156,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
-            set -euo pipefail
+            set -eu
             python tools/ci_android_install.py \
               --apk build/RENEW-ai-playtest.apk \
               --package ${PACKAGE_NAME} \
