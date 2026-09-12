@@ -73,7 +73,7 @@ func cancel_treaty(treaty_id: String, party_id: String, reason: String = "cancel
     if treaty.get("status") not in [STATUS_PROPOSED, STATUS_ACTIVE]:
         return {"ok": false, "message": "Treaty cannot be cancelled in its current state."}
 
-    var early := treaty.get("start_day", -1) >= 0 and _day() < int(treaty.get("end_day", -1))
+    var early: bool = int(treaty.get("start_day", -1)) >= 0 and _day() < int(treaty.get("end_day", -1))
     if early:
         var settlement: Dictionary = _settle_cancellation_fee(treaty, party_id)
         if not bool(settlement.get("ok", false)):
@@ -196,7 +196,8 @@ func _trust_key(a: String, b: String) -> String: return _mirror_key(a, b)
 func _other_party(treaty: Dictionary, party: String) -> String:
     return str(treaty["party_b"]) if party == treaty["party_a"] else str(treaty["party_a"])
 func _adjust_trust(a: String, b: String, delta: float) -> void:
-    set_trust(a, b, get_trust(a, b) + delta)
+    set_trust(a, b, get_trust(a, b) + delta
+)
     set_trust(b, a, get_trust(b, a) + delta)
 func _event(kind: String, message: String, data: Dictionary = {}) -> void:
     events.append({"day": _day(), "type": kind, "message": message, "data": data})
