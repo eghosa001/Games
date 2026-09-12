@@ -1,4 +1,4 @@
-extends Node
+extends RefCounted
 class_name RenewDemandModel
 const CustomerSegmentSystem=preload("res://scripts/customer_segment_system.gd")
 var customer_segments=CustomerSegmentSystem.new()
@@ -7,8 +7,11 @@ func get_product_config(product:String="consumer_goods")->Dictionary:return PROD
 func product_ids()->Array:return PRODUCT_CONFIG.keys()
 func get_customer_segments()->Dictionary:return customer_segments.get_segments()
 
+func _tree()->SceneTree:
+    return Engine.get_main_loop() as SceneTree
+
 func _service(service_name:String)->Node:
-    var tree:=get_tree() if is_inside_tree() else (Engine.get_main_loop() as SceneTree)
+    var tree:=_tree()
     if tree==null:return null
     var direct:=tree.root.get_node_or_null(service_name)
     if direct!=null:return direct
@@ -20,7 +23,7 @@ func _service(service_name:String)->Node:
 func calculate(product:String,player_price:float,competitor_price:float,reputation:int,quality:int,marketing_level:int,contract_bonus:int,employee_productivity:float,district_multiplier:float,district_pressure:float,alliance_sales:float,deal_sales:float)->Dictionary:
     var resolved_product:String=product
     if resolved_product=="consumer_goods":resolved_product="furniture"
-    var tree=get_tree() if is_inside_tree() else (Engine.get_main_loop() as SceneTree)
+    var tree:=_tree()
     var tech_root=tree.root if tree!=null else null
     var culture:Node=_service("RenewCompanyCultureSystem")
     var culture_quality:float=1.0
