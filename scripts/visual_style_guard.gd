@@ -8,6 +8,7 @@ const PREMIUM_THEME_PATH := "res://Assets/Themes/EmpireTheme.tres"
 const LEGACY_WORLD_PATH := "/root/Renew/World/WorldView"
 const PREMIUM_INDUSTRIAL_PATH := "/root/Renew/World/PremiumIndustrialScene"
 const PREMIUM_RESTORATION_PATH := "/root/Renew/World/PremiumRestorationScene"
+const BANKRUPTCY_PATH := "/root/Renew/Systems/BankruptcySystem"
 
 var _premium_theme: Theme
 var _refresh_queued := false
@@ -19,6 +20,9 @@ func _ready() -> void:
     if not get_tree().tree_changed.is_connected(_queue_refresh):
         get_tree().tree_changed.connect(_queue_refresh)
     call_deferred("_enforce_premium_presentation")
+
+func _process(_delta: float) -> void:
+    _sync_distress_overlay()
 
 func _on_node_added(node: Node) -> void:
     if node is Control and _premium_theme != null:
@@ -38,6 +42,7 @@ func _run_refresh() -> void:
 func _enforce_premium_presentation() -> void:
     _disable_legacy_world_renderer()
     _enable_premium_art()
+    _sync_distress_overlay()
     _theme_active_ui()
 
 func _disable_legacy_world_renderer() -> void:
@@ -58,6 +63,16 @@ func _enable_premium_art() -> void:
     if restoration != null:
         restoration.visible = true
         restoration.z_index = -27
+
+func _sync_distress_overlay() -> void:
+    var bankruptcy := get_node_or_null(BANKRUPTCY_PATH)
+    if bankruptcy == null:
+        return
+    var controls := bankruptcy.get_node_or_null("BankruptcyControls") as CanvasLayer
+    if controls == null:
+        return
+    var distress_state := str(bankruptcy.get("state"))
+    controls.visible = distress_state != "stable"
 
 func _theme_active_ui() -> void:
     if _premium_theme == null:
