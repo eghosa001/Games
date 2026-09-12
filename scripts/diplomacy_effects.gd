@@ -63,9 +63,23 @@ func _apply(treaty: Dictionary, day: int) -> void:
                 _mark(id, "reputation_day", day)
         "investment":
             if finance != null:
-                var capital: float = float(obligations.get("capital_commitment", 5000.0))
+                var capital: int = max(0, int(round(float(obligations.get("capital_commitment", 5000.0)))))
+                var investment_state: Dictionary = applied.get(id, {})
+                if not bool(investment_state.get("funded", false)):
+                    var payment: Dictionary = finance.spend(capital, "treaty investment capital:%s" % id)
+                    if not bool(payment.get("ok", false)):
+                        _mark(id, "funding_blocked", true)
+                        return
+                    _mark(id, "funded", true)
+                    _mark(id, "funding_blocked", false)
+                    _mark(id, "funded_capital", capital)
+                    _mark(id, "funding_day", day)
+                    investment_state = applied.get(id, {})
+                if int(investment_state.get("return_day", -1)) == day:
+                    return
                 var rate: float = float(benefits.get("investment_return", 0.08))
-                finance.receive(max(1, int(round(capital * rate / 30.0))), "treaty investment:%s" % id)
+                finance.receive(max(1, int(round(float(capital) * rate / 30.0))), "treaty investment:%s" % id)
+                _mark(id, "return_day", day)
         "infrastructure":
             if production != null and not bool(applied.get(id, {}).get("infrastructure", false)):
                 for machine_id in ["processor", "factory", "fleet"]:
