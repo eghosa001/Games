@@ -21,6 +21,14 @@ func current() -> Dictionary:
         return {"title":"FIRST BUSINESS COMPLETE","text":"You restored an abandoned asset, opened a business and completed a trading day. Now improve it and expand when the company is ready.","action":"COMPLETE"}
     return steps[step]
 
+func _has_inputs(game) -> bool:
+    if game == null or game.command_system == null or game.command_system.supply_system == null:
+        return false
+    var chain = game.command_system.supply_system.chain
+    if chain == null or not chain.has_method("stock"):
+        return false
+    return float(chain.stock("timber")) > 0.0 or float(chain.stock("iron")) > 0.0 or float(chain.stock("energy")) > 0.0
+
 func _advance(action:String, game)->bool:
     if completed: return false
     var expected:String = String(current().get("action",""))
@@ -30,7 +38,7 @@ func _advance(action:String, game)->bool:
         "ACQUIRE": valid = bool(game.owned)
         "RESTORE": valid = str(game.stage) == "Operational" or int(game.restoration) >= 100
         "OPEN BUSINESS": valid = bool(game.business_open)
-        "BUY INPUTS": valid = int(game.raw_materials) > 0
+        "BUY INPUTS": valid = _has_inputs(game)
         "PRODUCE": valid = int(game.finished_goods) > 0
         "END DAY": valid = int(game.day) > 1
     if valid:
