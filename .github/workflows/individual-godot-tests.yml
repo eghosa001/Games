@@ -29,6 +29,8 @@ jobs:
           - test_finance_authority_paths.gd
           - test_production_finance_authority.gd
           - test_expansion_api.gd
+          - test_phase22_progression.gd
+          - test_v27_infrastructure.gd
           - test_economy_transactions.gd
           - test_edge_cases.gd
           - test_release_smoke.gd
