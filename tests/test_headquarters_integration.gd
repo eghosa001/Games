@@ -50,8 +50,10 @@ func run() -> void:
 
     _set_finance_cash(finance, 500000)
     var baseline_cash := int(finance.available_cash())
+    var before_baseline_research := int(finance.available_cash())
     var baseline_research: Dictionary = research.start_research("process_automation", "founder")
     check(bool(baseline_research.get("ok", false)), "Baseline founder research starts")
+    check(int(finance.available_cash()) == before_baseline_research - 12000, "Company research charges authoritative finance up front")
     var baseline_duration := int(baseline_research.get("project", {}).get("duration", -1))
     var baseline_tech_days := int(technology.get_research_time_days("smart_factory"))
     check(baseline_duration == 4, "Research baseline is unchanged before HQ facilities")
@@ -68,10 +70,23 @@ func run() -> void:
     check(int(finance.available_cash()) == before_research_area - int(research_area.get("cost", 0)), "Research area charges finance exactly once")
     var research_area_upgrade: Dictionary = hq.build_area_with_finance(finance, "research")
     check(bool(research_area_upgrade.get("ok", false)) and hq.research_capacity() == 4, "Research area upgrade raises capacity")
+    var before_accelerated_research := int(finance.available_cash())
     var accelerated: Dictionary = research.start_research("process_automation", "founder")
+    check(bool(accelerated.get("ok", false)), "Accelerated founder research starts")
+    check(int(finance.available_cash()) == before_accelerated_research - 12000, "Accelerated research is charged exactly once")
     var accelerated_duration := int(accelerated.get("project", {}).get("duration", -1))
     check(accelerated_duration < baseline_duration, "HQ research capacity shortens founder R&D")
     check(float(accelerated.get("project", {}).get("hq_speed_multiplier", 1.0)) > 1.0, "Research project records HQ acceleration")
+
+    var project_count_before_block := research.list_projects("founder").size()
+    _set_finance_cash(finance, 100)
+    var blocked_cash := int(finance.available_cash())
+    var blocked: Dictionary = research.start_research("mega_infrastructure", "founder")
+    check(not bool(blocked.get("ok", false)), "Unaffordable research is rejected")
+    check(str(blocked.get("error", "")) == "insufficient_funds", "Unaffordable research reports funding failure")
+    check(research.list_projects("founder").size() == project_count_before_block, "Rejected research leaves no ghost project")
+    check(int(finance.available_cash()) == blocked_cash, "Rejected research leaves cash unchanged")
+    _set_finance_cash(finance, 500000)
 
     var stage2: Dictionary = hq.upgrade_with_finance(finance, int(game.day))
     check(bool(stage2.get("ok", false)) and hq.get_stage_index() == 2, "HQ reaches Corporate Center")
@@ -104,7 +119,7 @@ func run() -> void:
         check(has_hq, "HQ expansion creates permanent legacy artifacts")
         check(has_museum, "Museum opening creates a permanent legacy artifact")
 
-    check(int(finance.available_cash()) < baseline_cash, "Strategic HQ growth has a real capital cost")
+    check(int(finance.available_cash()) < baseline_cash, "Strategic HQ growth and R&D have real capital costs")
     check(bool(finance.validate_invariants().get("ok", false)), "HQ strategic investment keeps finance balanced")
 
     print("HEADQUARTERS INTEGRATION RESULT: %d passed, %d failed" % [passed, failed])
