@@ -29,9 +29,10 @@ func run() -> void:
     if DemandModel == null or Segments == null or Production == null or Economy == null:
         quit(1)
         return
+
+    # DemandModel, customer segments, and Economy are RefCounted helpers. They
+    # must not be attached to the SceneTree or queue_free()'d like Nodes.
     var demand = DemandModel.new()
-    root.add_child(demand)
-    await process_frame
     var segments = Segments.new()
     var production = Production.new()
     root.add_child(production)
@@ -77,7 +78,10 @@ func run() -> void:
         check(int(entry.get("base_price", 0)) > 0, "%s balance entry has a base price" % industry_id)
 
     print("V15 INDUSTRIES RESULT: %d passed, %d failed" % [passed, failed])
-    demand.queue_free()
+    demand = null
+    segments = null
+    economy = null
     production.queue_free()
     await process_frame
+    production = null
     quit(1 if failed > 0 else 0)
