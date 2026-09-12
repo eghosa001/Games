@@ -1,9 +1,23 @@
 extends Node
 
-## Phase 22: company progression is earned from meaningful gameplay outcomes.
+## Company progression earned from meaningful gameplay outcomes.
 ## XP and level live in GameState.progression; this node owns progression rules.
+## Semantic unlock IDs provide a stable, player-facing progression contract so UI
+## and systems can expose complexity in the intended order without breaking old saves.
 const LEVEL_THRESHOLDS := [0, 100, 250, 500, 900, 1400, 2000, 2800, 3800, 5000]
 const XP_REWARDS := {"restoration_step":10,"property_operational":50,"profit_per_100":1,"contract_signed":25,"contract_completed":40,"employee_hired":15,"production_run":12,"expansion_purchased":35,"expansion_upgraded":20}
+const FEATURE_UNLOCKS := {
+    1: ["restoration", "core_operations"],
+    2: ["employees", "contracts", "finance"],
+    3: ["regions", "branches", "supply_chain"],
+    4: ["competitors", "ownership", "alliances"],
+    5: ["diplomacy", "joint_ventures", "trade"],
+    6: ["infrastructure", "technology", "research"],
+    7: ["acquisitions", "mergers", "corporate_strategy"],
+    8: ["rankings", "world_power", "headquarters"],
+    9: ["museum", "collections", "legacy"],
+    10: ["prestige", "endgame"]
+}
 var state_adapter = null
 var _tracking_ready: Variant = false
 var _last_restoration: Variant = 0
@@ -28,6 +42,7 @@ func _ensure_state() -> void:
     if state.get_value("progression","level",null)==null:state.set_value("progression","level",1)
     if state.get_value("progression","milestones",null)==null:state.set_value("progression","milestones",[])
     if state.get_value("progression","unlocks",null)==null:state.set_value("progression","unlocks",[])
+    _backfill_semantic_unlocks()
 func sync_tracking() -> void:
     var state=_state(); if state==null:return
     _last_restoration=int(state.get_value("properties","restoration",0)); _last_profit=int(state.get_value("economy","total_profit",0)); var roster=state.get_value("employees","roster",[]); _last_employees=roster.size() if roster is Array else 0; _last_goods=int(state.get_value("production","finished_goods",0)); _last_contract_days=int(state.get_value("contracts","contract_days",0)); var expansion=state.get_value("branches","expansion",{}); _last_expansion_count=expansion.size() if expansion is Dictionary else 0; _last_expansion_signature=str(expansion); _last_operational=str(state.get_value("properties","stage",""))=="Operational"; _tracking_ready=true
@@ -54,7 +69,7 @@ func get_next_level_xp()->int:
     var level:=get_level(); return LEVEL_THRESHOLDS[level] if level<LEVEL_THRESHOLDS.size() else -1
 func get_progress()->Dictionary:
     var level:=get_level(); var current_threshold:int=LEVEL_THRESHOLDS[level-1] if level>0 and level-1<LEVEL_THRESHOLDS.size() else 0; var next_threshold:int=LEVEL_THRESHOLDS[level] if level<LEVEL_THRESHOLDS.size() else -1
-    return {"xp":get_xp(),"level":level,"current_threshold":current_threshold,"next_threshold":next_threshold,"max_level":LEVEL_THRESHOLDS.size()}
+    return {"xp":get_xp(),"level":level,"current_threshold":current_threshold,"next_threshold":next_threshold,"max_level":LEVEL_THRESHOLDS.size(),"unlocks":get_unlocked_features()}
 func award_xp(amount:int,reason:String)->Dictionary:
     if amount<=0:return {"ok":false,"xp":get_xp(),"level":get_level()}
     var state=_state();if state==null:return {"ok":false,"reason":"game_state_unavailable"}
@@ -67,8 +82,8 @@ func award_xp(amount:int,reason:String)->Dictionary:
             logs.append("PROGRESSION: Company reached Level %d (+%d XP from %s)." % [new_level, amount, reason])
             if logs.size() > 100: logs.pop_front()
             state.set_value("company", "log_lines", logs)
-        state.set_value("company", "message", "Company Level %d reached. Your empire is growing." % new_level)
-    return {"ok":true,"xp":xp,"level":new_level,"level_up":new_level>before_level,"reason":reason}
+        state.set_value("company", "message", "Company Level %d reached. New strategic systems are available." % new_level)
+    return {"ok":true,"xp":xp,"level":new_level,"level_up":new_level>before_level,"reason":reason,"unlocks":get_unlocked_features()}
 func award_action(action:String,multiplier:float=1.0)->Dictionary: return award_xp(int(round(float(XP_REWARDS.get(action,0))*max(0.0,multiplier))),action)
 func award_profit(profit:int)->Dictionary:
     if profit<=0:return {"ok":false,"xp":get_xp(),"level":get_level()}
@@ -76,15 +91,36 @@ func award_profit(profit:int)->Dictionary:
 func has_unlock(unlock_id:String)->bool:
     var state=_state();if state==null:return false
     var unlocks=state.get_value("progression","unlocks",[]);return unlocks is Array and unlock_id in unlocks
+func get_unlocked_features()->Array:
+    var state=_state();if state==null:return []
+    var unlocks=state.get_value("progression","unlocks",[])
+    return unlocks.duplicate(true) if unlocks is Array else []
+func get_features_for_level(level:int)->Array:
+    var features = FEATURE_UNLOCKS.get(level, [])
+    return features.duplicate(true) if features is Array else []
 func _level_for_xp(xp:int)->int:
     var result:=1
     for index in LEVEL_THRESHOLDS.size():
         if xp>=LEVEL_THRESHOLDS[index]:result=index+1
     return min(result,LEVEL_THRESHOLDS.size())
+func _backfill_semantic_unlocks()->void:
+    var state=_state();if state==null:return
+    var unlocks=state.get_value("progression","unlocks",[]);if not unlocks is Array:unlocks=[]
+    unlocks=unlocks.duplicate(true)
+    var level:=max(1,get_level())
+    for reached_level in range(1,level+1):
+        var generic_id:String="company_level_%d"%reached_level
+        if reached_level>1 and generic_id not in unlocks:unlocks.append(generic_id)
+        for feature in get_features_for_level(reached_level):
+            if feature not in unlocks:unlocks.append(feature)
+    state.set_value("progression","unlocks",unlocks)
 func _record_unlocks(old_level:int,new_level:int)->void:
     var state=_state();if state==null:return
-    var unlocks=state.get_value("progression","unlocks",[]);if not unlocks is Array:unlocks=[];unlocks=unlocks.duplicate(true)
-    for level in range(old_level+1,new_level+1):
+    var unlocks=state.get_value("progression","unlocks",[]);if not unlocks is Array:unlocks=[]
+    unlocks=unlocks.duplicate(true)
+    for level in range(max(1,old_level+1),new_level+1):
         var unlock_id:String="company_level_%d"%level
         if unlock_id not in unlocks:unlocks.append(unlock_id)
+        for feature in get_features_for_level(level):
+            if feature not in unlocks:unlocks.append(feature)
     state.set_value("progression","unlocks",unlocks)
