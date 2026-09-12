@@ -98,6 +98,8 @@ func _build_ui() -> void:
     transaction_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
     panel.add_child(transaction_scroll)
     tx_label.reparent(transaction_scroll)
+    tx_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    tx_label.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 
 func _label(text: String, size: int, color: Color) -> Label:
     var label := Label.new()
@@ -152,10 +154,12 @@ func _layout() -> void:
     feedback_label.size = Vector2(width - 28.0, 32)
 
     var tx_top := 190.0
+    var tx_width := maxf(120.0, width - 28.0)
     transaction_scroll.position = Vector2(14, tx_top)
-    transaction_scroll.size = Vector2(width - 28.0, maxf(72.0, panel.size.y - (388.0 if phone else 330.0)))
+    transaction_scroll.size = Vector2(tx_width, maxf(72.0, panel.size.y - (388.0 if phone else 330.0)))
     tx_label.position = Vector2.ZERO
-    tx_label.size = Vector2(width - 28.0, maxf(90.0, tx_label.get_combined_minimum_size().y))
+    tx_label.custom_minimum_size = Vector2(maxf(120.0, tx_width - 18.0), 90.0)
+    tx_label.size = Vector2(maxf(120.0, tx_width - 18.0), maxf(90.0, tx_label.get_combined_minimum_size().y))
     tx_label.add_theme_font_size_override("font_size", 9 if phone else 11)
 
     var gap := 6.0
