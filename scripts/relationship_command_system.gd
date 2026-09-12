@@ -64,10 +64,14 @@ func _holdings() -> Array:
 func acquire_rival_asset() -> void:
     var selected := _selected_index()
     if selected < 0: state_adapter.message("No rival asset is currently available."); return
+    var rival_before: Dictionary = rivals.capture_state()
     var cash: int = int(state_adapter.get_value("economy", "cash", 25000)); var reputation: int = int(state_adapter.get_value("player", "reputation", 0)); var result = rivals.negotiate_acquisition(selected, cash, reputation, _holdings())
     if not bool(result.get("ok", false)): state_adapter.message(result.get("message", "The acquisition could not be completed.")); return
     var cost:=int(result.get("cost",0)); var spend: Dictionary = state_adapter.spend(cost,"rival asset acquisition")
-    if not bool(spend.get("ok",false)): state_adapter.message(str(spend.get("message","Insufficient cash."))); return
+    if not bool(spend.get("ok",false)):
+        rivals.restore_state(rival_before)
+        state_adapter.message(str(spend.get("message","Insufficient cash.")))
+        return
     state_adapter.set_value("ownership", "acquisition_count", int(state_adapter.get_value("ownership", "acquisition_count", 0)) + 1); state_adapter.set_value("player", "reputation", reputation + 8); state_adapter.message(result.get("message", "Acquisition completed.")); state_adapter.log_message("ACQUISITION: strategic foothold purchased for $%s." % state_adapter.money(cost))
     var retaliation := rivals.retaliation_after_acquisition(selected); state_adapter.log_message("RIVALRY: " + str(retaliation.get("message", "The rival is regrouping.")))
 func negotiate_selected_acquisition() -> void: acquire_rival_asset()
@@ -100,6 +104,7 @@ func sell_rival_shares() -> void:
     if selected < 0: state_adapter.message("No rival position is selected."); return
     var rival_id := str(rivals.rivals[selected].get("id", ""))
     var lots := _holdings()
+    var lots_before := lots.duplicate(true)
     var index := -1
     for i in range(lots.size()):
         if lots[i] is Dictionary and str(lots[i].get("rival_id", "")) == rival_id:
@@ -113,7 +118,10 @@ func sell_rival_shares() -> void:
     lots.remove_at(index)
     state_adapter.game_state().set_value("ownership", "holdings", lots)
     var receipt: Dictionary = state_adapter.receive(proceeds, "rival share sale")
-    if not bool(receipt.get("ok", false)): state_adapter.message("Share sale could not be recorded."); return
+    if not bool(receipt.get("ok", false)):
+        state_adapter.game_state().set_value("ownership", "holdings", lots_before)
+        state_adapter.message("Share sale could not be recorded.")
+        return
     state_adapter.log_message("SHARES: sold %d %s shares for $%s (%s$%s)." % [shares, rivals.rivals[selected].get("name", "rival"), state_adapter.money(proceeds), "+" if gain >= 0 else "-", state_adapter.money(absi(gain))])
     state_adapter.message("Position closed for $%s." % state_adapter.money(proceeds))
 func start_acquisition_battle() -> void:
@@ -125,11 +133,12 @@ func start_acquisition_battle() -> void:
 func raise_acquisition_bid() -> void:
     var selected := _selected_index()
     if selected < 0: state_adapter.message("No bidding battle is available to raise."); return
+    var rival_before: Dictionary = rivals.capture_state()
     var cash: int = int(state_adapter.get_value("economy", "cash", 25000)); var result = rivals.raise_acquisition_bid(selected, cash)
     if not bool(result.get("ok", false)) and not bool(result.get("won", false)):
         state_adapter.message(str(result.get("message", "The bid could not be raised."))); return
     if bool(result.get("won", false)):
-        _complete_battle_win(selected, result)
+        _complete_battle_win(selected, result, rival_before)
     else:
         state_adapter.message(str(result.get("message", "Bid raised."))); state_adapter.log_message("BIDDING WAR: " + str(result.get("message", "Bid raised.")))
 func walk_away_acquisition() -> void:
@@ -137,10 +146,14 @@ func walk_away_acquisition() -> void:
     if selected < 0: state_adapter.message("No bidding battle is available to leave."); return
     var result = rivals.walk_away_acquisition(selected); state_adapter.message(str(result.get("message", "You stepped back.")))
     if bool(result.get("ok", false)): state_adapter.log_message("BIDDING WAR: walked away from %s." % rivals.rivals[selected].get("name", "rival"))
-func _complete_battle_win(index: int, result: Dictionary) -> void:
+func _complete_battle_win(index: int, result: Dictionary, rival_before: Dictionary = {}) -> void:
     var cost := int(result.get("cost", 0))
     var spend: Dictionary = state_adapter.spend(cost, "acquisition battle victory")
-    if not bool(spend.get("ok", false)): state_adapter.message(str(spend.get("message", "Insufficient cash to close the battle victory."))); return
+    if not bool(spend.get("ok", false)):
+        if not rival_before.is_empty():
+            rivals.restore_state(rival_before)
+        state_adapter.message(str(spend.get("message", "Insufficient cash to close the battle victory.")))
+        return
     var reputation: int = int(state_adapter.get_value("player", "reputation", 0))
     state_adapter.set_value("ownership", "acquisition_count", int(state_adapter.get_value("ownership", "acquisition_count", 0)) + 1); state_adapter.set_value("player", "reputation", reputation + 8); state_adapter.message(str(result.get("message", "Acquisition battle won."))); state_adapter.log_message("ACQUISITION: bidding war won for $%s." % state_adapter.money(cost))
     var retaliation := rivals.retaliation_after_acquisition(index); state_adapter.log_message("RIVALRY: " + str(retaliation.get("message", "The rival is regrouping.")))
