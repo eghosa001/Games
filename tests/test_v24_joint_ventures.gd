@@ -78,6 +78,35 @@ func run() -> void:
     await process_frame
     await process_frame
     check(int(bridge.get_materialized_state(treaty_id).get("total_paid_out", 0)) == paid_at_cancel, "Cancelled venture stops paying")
+
+    # Regression: an accepted JV must not create ownership before both-side funding succeeds.
+    var blocked_terms := {"joint_capital": 2000, "party_a_percent": 50.0, "party_b_percent": 50.0}
+    var blocked_proposal: Dictionary = diplomacy.propose_treaty("player", "northstar_logistics", "joint_venture", blocked_terms, 30)
+    check(bool(blocked_proposal.get("ok", false)), "Second venture proposes for funding regression")
+    var blocked_id := str(blocked_proposal.get("treaty", {}).get("id", ""))
+    check(bool(diplomacy.accept_treaty(blocked_id, "northstar_logistics").get("ok", false)), "Second venture is accepted")
+    game.cash = 100
+    var cash_before_block := int(finance.cash)
+    game.advance_day()
+    await process_frame
+    await process_frame
+    var blocked_venture_id := "jv:%s" % blocked_id
+    var blocked_state: Dictionary = bridge.get_materialized_state(blocked_id)
+    check(not bool(blocked_state.get("funded", false)), "Underfunded player blocks venture funding")
+    check(not bool(blocked_state.get("materialized", false)), "Underfunded venture does not materialize ownership")
+    check(not ownership.has_entity(blocked_venture_id), "Underfunded venture leaves no ghost ownership entity")
+    check(int(finance.cash) == cash_before_block, "Failed venture funding does not consume player cash")
+
+    game.cash = 100000
+    game.advance_day()
+    await process_frame
+    await process_frame
+    blocked_state = bridge.get_materialized_state(blocked_id)
+    check(bool(blocked_state.get("funded", false)), "Blocked venture retries funding on a later day")
+    check(bool(blocked_state.get("materialized", false)), "Funded retry materializes the venture")
+    check(ownership.has_entity(blocked_venture_id), "Funded retry creates venture ownership exactly when capital lands")
+    check(bool(finance.validate_invariants().get("ok", false)), "Retry keeps finance invariants valid")
+
     print("V24 JOINT VENTURES RESULT: %d passed, %d failed" % [passed, failed])
     game.free()
     await process_frame
