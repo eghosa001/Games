@@ -104,8 +104,21 @@ func training_capacity() -> int: return area_level("training") * 4
 func archive_capacity() -> int: return area_level("archives") * 100
 func museum_available() -> bool: return has_area("museum")
 func technology_capacity() -> int: return area_level("technology_center") * 3
+
+## Strategic effects intentionally stay bounded so HQ investment matters without
+## making employee development or research mandatory/irrelevant before HQ unlocks.
+func management_capacity_bonus() -> int:
+    return executive_capacity()
+func training_skill_bonus() -> int:
+    return mini(6, int(floor(float(training_capacity()) / 2.0)))
+func research_speed_multiplier() -> float:
+    return minf(1.60, 1.0 + float(research_capacity()) * 0.10)
+func technology_speed_multiplier() -> float:
+    return minf(1.60, 1.0 + float(technology_capacity()) * 0.08)
+func technology_points_multiplier() -> float:
+    return minf(1.75, 1.0 + float(technology_capacity()) * 0.10)
 func daily_modifier() -> Dictionary:
-    return {"executive_capacity": executive_capacity(), "research_capacity": research_capacity(), "training_capacity": training_capacity(), "archive_capacity": archive_capacity(), "technology_capacity": technology_capacity(), "board_governance": board_governance_available(), "museum": museum_available()}
+    return {"executive_capacity": executive_capacity(), "research_capacity": research_capacity(), "training_capacity": training_capacity(), "archive_capacity": archive_capacity(), "technology_capacity": technology_capacity(), "board_governance": board_governance_available(), "museum": museum_available(), "management_capacity_bonus": management_capacity_bonus(), "training_skill_bonus": training_skill_bonus(), "research_speed_multiplier": research_speed_multiplier(), "technology_speed_multiplier": technology_speed_multiplier(), "technology_points_multiplier": technology_points_multiplier()}
 func capture_state() -> Dictionary:
     return {"stage_index": stage_index, "stage_progress": stage_progress, "owned_areas": owned_areas.duplicate(true), "area_levels": area_levels.duplicate(true), "headquarters_name": headquarters_name, "headquarters_region": headquarters_region, "headquarters_value": headquarters_value, "expansion_history": expansion_history.duplicate(true), "last_upgrade_day": last_upgrade_day}
 func restore_state(state: Dictionary) -> void:
