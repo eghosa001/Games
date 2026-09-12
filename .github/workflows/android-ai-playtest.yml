@@ -26,6 +26,7 @@ on:
       - 'project.godot'
       - 'export_presets.cfg'
       - 'tools/ai_playtest.py'
+      - 'tools/ci_android_install.py'
       - '.github/workflows/android-ai-playtest.yml'
 
 permissions:
@@ -65,13 +66,26 @@ jobs:
       - name: Install playtest dependencies
         run: python -m pip install --disable-pip-version-check pillow
 
-      - name: Validate playtest agent
+      - name: Validate playtest agents
         run: |
-          python -m py_compile tools/ai_playtest.py
+          python -m py_compile tools/ai_playtest.py tools/ci_android_install.py
           python tools/ai_playtest.py --help >/dev/null
+          python tools/ci_android_install.py --help >/dev/null
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: Enable KVM acceleration when available
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+            echo 'KVM device available:'
+            ls -l /dev/kvm
+          else
+            echo 'No /dev/kvm device on this runner; emulator will use software acceleration.'
+          fi
 
       - name: Install Android build dependencies
         run: |
@@ -141,15 +155,34 @@ jobs:
           disk-size: 6G
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: >-
-            python tools/ai_playtest.py
-            --apk build/RENEW-ai-playtest.apk
-            --package ${PACKAGE_NAME}
-            --out build/ai-playtest
-            --steps ${{ github.event.inputs.steps || '90' }}
-            --seed ${{ github.event.inputs.seed || '20260912' }}
-            --capture-every 3
-            --issue-threshold high
+          script: |
+            set -euo pipefail
+            python tools/ci_android_install.py \
+              --apk build/RENEW-ai-playtest.apk \
+              --package ${PACKAGE_NAME} \
+              --out build/ai-playtest
+
+            # The CI installer above already installed and verified the package. Run a
+            # temporary copy of the agent with its redundant install command disabled.
+            # The tracked source stays untouched and the final cleanliness gate remains useful.
+            python - <<'PY'
+            from pathlib import Path
+            source = Path('tools/ai_playtest.py').read_text(encoding='utf-8')
+            needle = '    adb("install", "-r", args.apk, timeout=240)\n'
+            if needle not in source:
+                raise SystemExit('Could not locate playtester install command to disable for CI')
+            patched = source.replace(needle, '    # APK already installed and verified by ci_android_install.py.\n', 1)
+            Path('/tmp/renew_ai_playtest.py').write_text(patched, encoding='utf-8')
+            PY
+
+            python /tmp/renew_ai_playtest.py \
+              --apk build/RENEW-ai-playtest.apk \
+              --package ${PACKAGE_NAME} \
+              --out build/ai-playtest \
+              --steps ${{ github.event.inputs.steps || '90' }} \
+              --seed ${{ github.event.inputs.seed || '20260912' }} \
+              --capture-every 3 \
+              --issue-threshold high
 
       - name: Validate generated report schema
         if: always()
@@ -171,6 +204,8 @@ jobs:
               raise SystemExit('findings/timeline must be lists')
           print('Vision playtest report schema OK')
           print(json.dumps(report['coverage'], indent=2))
+          if report.get('infrastructure_failure'):
+              print('Report records an infrastructure failure; see adb-install.txt for the exact Android installer output.')
           PY
 
       - name: Add report to workflow summary
@@ -229,7 +264,7 @@ jobs:
             echo
             echo "Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
             echo
-            echo "Download the workflow artifact for video, screenshots, UI dumps, logcat, gfxinfo and JSON evidence."
+            echo "Download the workflow artifact for video, screenshots, UI dumps, logcat, gfxinfo, installer diagnostics and JSON evidence."
           } > "$tmp_body"
 
           existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "renew-ai-playtest:${FINGERPRINT} in:body" --json number --jq '.[0].number // empty')
