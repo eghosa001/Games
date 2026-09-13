@@ -10,6 +10,7 @@ const TEMP_PATH := "user://renew_save.tmp.json"
 const BACKUP_TEMP_PATH := "user://renew_save.backup.tmp.json"
 const CURRENT_VERSION := 8
 const REQUIRED_DOMAINS := ["player", "company", "properties", "economy", "businesses", "branches", "employees", "resources", "production", "supply_chain", "contracts", "competitors", "finance", "alliances", "diplomacy", "regions", "infrastructure", "technology", "events", "progression", "history", "news", "analytics", "acquisition", "ownership", "bankruptcy"]
+const NONFINITE_TAG := "__renew_nonfinite_float__"
 
 static func save_game(_state: Dictionary) -> bool:
     var game_state = _game_state()
@@ -109,7 +110,11 @@ static func load_game() -> Dictionary:
                 _restore_runtime_ownership(data)
                 _restore_runtime_services(data)
                 _restore_runtime_corporate(data)
-                return game_state.capture()
+                # Return the committed payload, not a post-restore recapture.
+                # Runtime restore hooks must never be allowed to redefine the
+                # authoritative saved cash/day/state before the caller's final
+                # GameState restore.
+                return data.duplicate(true)
         _restore_runtime_ownership(data)
         _restore_runtime_services(data)
         _restore_runtime_corporate(data)
@@ -314,7 +319,11 @@ static func _corporate_node():
 
 static func _sanitize_json_value(value):
     if value is float:
-        return value if is_finite(value) else 0.0
+        if is_finite(value):
+            return value
+        if is_nan(value):
+            return {NONFINITE_TAG: "nan"}
+        return {NONFINITE_TAG: "-inf" if value < 0.0 else "inf"}
     if value is Dictionary:
         var result: Dictionary = {}
         for key in value.keys():
@@ -327,6 +336,27 @@ static func _sanitize_json_value(value):
         return result
     return value
 
+static func _restore_json_value(value):
+    if value is Dictionary:
+        if value.size() == 1 and value.has(NONFINITE_TAG):
+            var kind := str(value[NONFINITE_TAG])
+            if kind == "inf":
+                return INF
+            if kind == "-inf":
+                return -INF
+            if kind == "nan":
+                return NAN
+        var result: Dictionary = {}
+        for key in value.keys():
+            result[key] = _restore_json_value(value[key])
+        return result
+    if value is Array:
+        var result: Array = []
+        for item in value:
+            result.append(_restore_json_value(item))
+        return result
+    return value
+
 static func _read_dictionary(path: String) -> Dictionary:
     if not FileAccess.file_exists(path):
         return {}
@@ -334,7 +364,10 @@ static func _read_dictionary(path: String) -> Dictionary:
     if file == null:
         return {}
     var parsed = JSON.parse_string(file.get_as_text())
-    return parsed if parsed is Dictionary else {}
+    if not parsed is Dictionary:
+        return {}
+    var restored = _restore_json_value(parsed)
+    return restored if restored is Dictionary else {}
 
 static func _game_state():
     var tree = Engine.get_main_loop()
