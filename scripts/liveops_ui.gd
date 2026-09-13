@@ -24,7 +24,7 @@ func _ready() -> void:
     layer = 62
     _build_ui()
     _layout()
-    _refresh(true)
+    close_screen()
     if not get_viewport().size_changed.is_connected(_layout): get_viewport().size_changed.connect(_layout)
 
 func _build_ui() -> void:
@@ -46,12 +46,8 @@ func _process(delta: float) -> void:
         _refresh(false)
 
 func _unhandled_input(event: InputEvent) -> void:
-    if event is InputEventKey and event.pressed and not event.echo:
-        if event.keycode == KEY_L:
-            panel.visible = not panel.visible
-            if panel.visible: _refresh(true)
-        elif event.keycode == KEY_ESCAPE and panel.visible:
-            _close()
+    if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and panel != null and panel.visible:
+        _close()
 
 func open_screen() -> void:
     if panel != null: panel.visible = true
