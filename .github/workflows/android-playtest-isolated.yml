@@ -83,7 +83,7 @@ jobs:
             "cmake;3.10.2.4988404" \
             "ndk;28.1.13356709"
           yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
-          emulator -version
+          "$ANDROID_SDK_ROOT/emulator/emulator" -version
 
       - name: Install Godot and Android templates
         run: |
