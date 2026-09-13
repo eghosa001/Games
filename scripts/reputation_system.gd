@@ -50,7 +50,24 @@ func _headline() -> int:
     return int(state.get_value("player", "reputation", 0)) if state != null else 0
 
 func capture_state() -> Dictionary:
-    return {}
+    return {
+        "headline": _headline(),
+        "dimensions": dimensions().duplicate(true),
+    }
 
-func restore_state(_state_data: Dictionary) -> void:
-    pass
+func restore_state(state_data: Dictionary) -> void:
+    if state_data.is_empty():
+        return
+    var state: Variant = _state()
+    if state == null:
+        return
+    var headline := maxi(0, int(state_data.get("headline", _headline())))
+    var raw_dims: Variant = state_data.get("dimensions", {})
+    var restored_dims: Dictionary = {}
+    for dim in DIMS:
+        var fallback := headline
+        if raw_dims is Dictionary:
+            fallback = int((raw_dims as Dictionary).get(dim, headline))
+        restored_dims[dim] = clampi(fallback, 0, 100)
+    state.set_value("player", "reputation", headline)
+    state.set_value("company", "reputation", restored_dims)
