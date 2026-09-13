@@ -209,9 +209,9 @@ func _action_hint(action: String) -> String:
 func _layout_responsive() -> void:
     if panel == null or get_viewport() == null:
         return
-    var size := get_viewport().size
-    var phone := size.x < 430.0
-    var mobile := size.x < 760.0
+    var size: Vector2 = Vector2(get_viewport().size)
+    var phone: bool = size.x < 430.0
+    var mobile: bool = size.x < 760.0
     var margin := 8.0 if phone else 12.0
     var panel_w := minf(760.0, maxf(280.0, size.x - margin * 2.0))
     var panel_h := minf(650.0, maxf(420.0, size.y - 82.0))
