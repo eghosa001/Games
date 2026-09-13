@@ -149,6 +149,47 @@ def wait_for_game_frame(package: str, timeout: float = 12.0) -> bool:
     return False
 
 
+def wait_for_back_settle(package: str, timeout: float = 8.0) -> bool:
+    """Return True if Back actually leaves RENEW after Android has settled.
+
+    On the API-34 software-rendered emulator a root activity can remain reported as
+    focused for several seconds after KEYCODE_BACK before ActivityTaskManager finally
+    exposes Launcher. Do not declare an in-app Back safe after one early focus check.
+    Observe a full settling interval, while still allowing genuine in-app Back
+    navigation to remain in RENEW.
+    """
+    started = time.monotonic()
+    deadline = started + timeout
+    game_stable_since: float | None = None
+
+    while time.monotonic() < deadline:
+        now = time.monotonic()
+        foreground = top_package()
+        if foreground and foreground != package:
+            return True
+
+        if foreground == package:
+            if game_stable_since is None:
+                game_stable_since = now
+        else:
+            game_stable_since = None
+
+        # The previous 2.5-second window was shorter than observed root-finish
+        # latency on swangle. Require at least four seconds of observation plus a
+        # continuously stable game foreground before accepting this as in-app Back.
+        if (
+            now - started >= 4.0
+            and game_stable_since is not None
+            and now - game_stable_since >= 1.25
+        ):
+            return False
+        time.sleep(0.15)
+
+    # At timeout, recover only if the package is demonstrably no longer foreground.
+    foreground = top_package()
+    return bool(foreground and foreground != package)
+
+
 def install_synchronous_back_recovery(package: str) -> None:
     """Keep intentional root-Back exploration inside the game test boundary.
 
@@ -190,20 +231,10 @@ def install_synchronous_back_recovery(package: str) -> None:
         if not is_back:
             return result
 
-        # Finishing a root Android activity is asynchronous. A single early check can
-        # still report RENEW for several hundred milliseconds and then switch to Home.
-        # Observe a stabilization window and recover as soon as the package truly
-        # leaves foreground, before ai_playtest.py can capture or perform another action.
-        deadline = time.monotonic() + 2.5
-        left_game = False
-        while time.monotonic() < deadline:
-            foreground = top_package()
-            if foreground and foreground != package:
-                left_game = True
-                break
-            time.sleep(0.15)
-
-        if left_game:
+        # Finishing a root Android activity is asynchronous, especially under
+        # software ANGLE. Wait through the observed activity-settling interval rather
+        # than returning while RENEW is only temporarily still reported as focused.
+        if wait_for_back_settle(package):
             relaunch(package)
             wait_for_game_frame(package, timeout=20.0)
         return result
