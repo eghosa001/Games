@@ -1,0 +1,195 @@
+name: RENEW Isolated Android Playtests
+
+on:
+  push:
+    branches: [android-playtest-isolation]
+    paths:
+      - 'scenes/**'
+      - 'scripts/**'
+      - 'Assets/**'
+      - 'data/**'
+      - 'project.godot'
+      - 'export_presets.cfg'
+      - 'tools/ai_playtest.py'
+      - 'tools/chaos_playtest.py'
+      - 'tools/sanitize_android_playtest.py'
+      - 'tools/ci_android_install.py'
+      - '.github/workflows/android-playtest-isolated.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GODOT_VERSION: 4.7.2
+  PACKAGE_NAME: com.eghosa.renew
+
+jobs:
+  playtest:
+    name: ${{ matrix.mode }}-playtest
+    runs-on: ubuntu-latest
+    timeout-minutes: 65
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [ai, chaos]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: python -m pip install --disable-pip-version-check pillow
+
+      - name: Validate playtest tooling
+        run: |
+          python -m py_compile tools/ai_playtest.py tools/chaos_playtest.py tools/sanitize_android_playtest.py tools/ci_android_install.py
+          python tools/ai_playtest.py --help >/dev/null
+          python tools/chaos_playtest.py --help >/dev/null
+          python tools/sanitize_android_playtest.py --help >/dev/null
+          python tools/ci_android_install.py --help >/dev/null
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Enable KVM acceleration when available
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+            ls -l /dev/kvm
+          fi
+
+      - name: Install Android dependencies
+        run: |
+          sdkmanager --sdk_root="$ANDROID_SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.1" \
+            "emulator" \
+            "system-images;android-34;google_apis;x86_64" \
+            "cmake;3.10.2.4988404" \
+            "ndk;28.1.13356709"
+          yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
+          emulator -version
+
+      - name: Install Godot and Android templates
+        run: |
+          wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip
+          unzip -q Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip
+          chmod +x Godot_v${GODOT_VERSION}-stable_linux.x86_64
+          templates="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$templates"
+          wget -q https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz
+          unzip -q -j Godot_v${GODOT_VERSION}-stable_export_templates.tpz 'templates/*' -d "$templates"
+          printf '%s\n' "${GODOT_VERSION}.stable" > "$templates/version.txt"
+          test -s "$templates/android_debug.apk"
+
+      - name: Import project
+        run: timeout 180s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --editor --path . --quit
+
+      - name: Run release smoke gate
+        run: timeout 300s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path . --script res://tests/test_release_smoke.gd
+
+      - name: Build x86_64 QA APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp export_presets.cfg /tmp/export_presets.cfg.original
+          restore_preset() { mv -f /tmp/export_presets.cfg.original export_presets.cfg 2>/dev/null || true; }
+          trap restore_preset EXIT
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('export_presets.cfg')
+          s = p.read_text()
+          s = s.replace('architectures/arm64-v8a=true', 'architectures/arm64-v8a=false', 1)
+          s = s.replace('architectures/x86_64=false', 'architectures/x86_64=true', 1)
+          p.write_text(s)
+          PY
+          mkdir -p build
+          timeout 600s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path . --export-debug "Android" build/RENEW-${{ matrix.mode }}.apk
+          restore_preset
+          trap - EXIT
+          test -s build/RENEW-${{ matrix.mode }}.apk
+          git diff --exit-code -- export_presets.cfg
+
+      - name: Run isolated Android playtest
+        uses: ReactiveCircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          cores: 2
+          ram-size: 4096M
+          heap-size: 512M
+          disk-size: 6G
+          disable-animations: true
+          emulator-options: -no-snapshot -no-window -gpu software -noaudio -no-boot-anim -camera-back none -no-metrics
+          script: |
+            set -euo pipefail
+            adb shell getprop ro.hardware.egl || true
+            adb shell getprop ro.hardware.vulkan || true
+            if [ "${{ matrix.mode }}" = "ai" ]; then
+              python tools/ci_android_install.py --apk build/RENEW-ai.apk --package ${PACKAGE_NAME} --out build/ai-playtest
+              python tools/ai_playtest.py --apk build/RENEW-ai.apk --package ${PACKAGE_NAME} --out build/ai-playtest --steps 90 --seed 20260912 --capture-every 3 --issue-threshold high || true
+              python tools/sanitize_android_playtest.py --mode ai --out build/ai-playtest --threshold high
+            else
+              python tools/ci_android_install.py --apk build/RENEW-chaos.apk --package ${PACKAGE_NAME} --out build/chaos-playtest
+              python tools/chaos_playtest.py --apk build/RENEW-chaos.apk --package ${PACKAGE_NAME} --out build/chaos-playtest --steps 500 --seed 20260912 --checkpoint-every 25 || true
+              python tools/sanitize_android_playtest.py --mode chaos --out build/chaos-playtest --threshold high
+            fi
+
+      - name: Validate report schema
+        if: always()
+        shell: bash
+        run: |
+          MODE='${{ matrix.mode }}'
+          OUT="build/${MODE}-playtest"
+          test -f "$OUT/report.json"
+          python - "$OUT/report.json" <<'PY'
+          import json, sys
+          from pathlib import Path
+          report = json.loads(Path(sys.argv[1]).read_text())
+          required = {'package','findings','timeline','fingerprint','should_open_issue','sanitized_attribution'}
+          missing = sorted(required - report.keys())
+          if missing:
+              raise SystemExit(f'Missing report keys: {missing}')
+          if not report.get('sanitized_attribution'):
+              raise SystemExit('Report was not attribution-sanitized')
+          print(json.dumps({'findings': len(report['findings']), 'fingerprint': report['fingerprint']}, indent=2))
+          PY
+
+      - name: Add report to workflow summary
+        if: always()
+        shell: bash
+        run: |
+          report="build/${{ matrix.mode }}-playtest/report.md"
+          if [ -f "$report" ]; then cat "$report" >> "$GITHUB_STEP_SUMMARY"; fi
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: RENEW-Isolated-${{ matrix.mode }}-${{ github.run_number }}
+          path: |
+            build/${{ matrix.mode }}-playtest/
+            build/RENEW-${{ matrix.mode }}.apk
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Verify tracked source stayed clean
+        if: always()
+        run: git diff --exit-code -- .
