@@ -11,6 +11,7 @@ on:
       - 'project.godot'
       - 'export_presets.cfg'
       - 'tools/ai_playtest.py'
+      - 'tools/ai_playtest_ci.py'
       - 'tools/chaos_playtest.py'
       - 'tools/sanitize_android_playtest.py'
       - 'tools/ci_android_install.py'
@@ -54,8 +55,9 @@ jobs:
 
       - name: Validate playtest tooling
         run: |
-          python -m py_compile tools/ai_playtest.py tools/chaos_playtest.py tools/sanitize_android_playtest.py tools/ci_android_install.py
+          python -m py_compile tools/ai_playtest.py tools/ai_playtest_ci.py tools/chaos_playtest.py tools/sanitize_android_playtest.py tools/ci_android_install.py
           python tools/ai_playtest.py --help >/dev/null
+          python tools/ai_playtest_ci.py --help >/dev/null
           python tools/chaos_playtest.py --help >/dev/null
           python tools/sanitize_android_playtest.py --help >/dev/null
           python tools/ci_android_install.py --help >/dev/null
@@ -153,13 +155,13 @@ jobs:
           heap-size: 512M
           disk-size: 6G
           disable-animations: true
-          emulator-options: -no-snapshot -no-window -gpu software -noaudio -no-boot-anim -camera-back none -no-metrics
+          emulator-options: -no-snapshot -no-window -gpu software -feature VulkanNativeSwapchain -noaudio -no-boot-anim -camera-back none -no-metrics
           script: |
             adb shell getprop ro.hardware.egl || true
             adb shell getprop ro.hardware.vulkan || true
             adb shell dumpsys SurfaceFlinger | grep -i 'GLES' | head -5 || true
             [ "${{ matrix.mode }}" != "ai" ] || python tools/ci_android_install.py --apk build/RENEW-ai.apk --package ${PACKAGE_NAME} --out build/ai-playtest
-            [ "${{ matrix.mode }}" != "ai" ] || python tools/ai_playtest.py --apk build/RENEW-ai.apk --package ${PACKAGE_NAME} --out build/ai-playtest --steps 90 --seed 20260912 --capture-every 3 --issue-threshold high || true
+            [ "${{ matrix.mode }}" != "ai" ] || python tools/ai_playtest_ci.py --apk build/RENEW-ai.apk --package ${PACKAGE_NAME} --out build/ai-playtest --steps 90 --seed 20260912 --capture-every 3 --issue-threshold high || true
             [ "${{ matrix.mode }}" != "ai" ] || python tools/sanitize_android_playtest.py --mode ai --out build/ai-playtest --threshold high
             [ "${{ matrix.mode }}" != "chaos" ] || python tools/ci_android_install.py --apk build/RENEW-chaos.apk --package ${PACKAGE_NAME} --out build/chaos-playtest
             [ "${{ matrix.mode }}" != "chaos" ] || python tools/chaos_playtest.py --apk build/RENEW-chaos.apk --package ${PACKAGE_NAME} --out build/chaos-playtest --steps 500 --seed 20260912 --checkpoint-every 25 || true
