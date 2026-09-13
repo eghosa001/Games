@@ -32,6 +32,21 @@ def rendered_display_size() -> tuple[int, int]:
         return image.size
 
 
+def robust_text_run(cmd, check=True, capture=True, timeout=120):
+    """Run text-producing commands without crashing on malformed logcat bytes."""
+    kwargs = {
+        "text": True,
+        "encoding": "utf-8",
+        "errors": "replace",
+        "timeout": timeout,
+        "check": check,
+    }
+    if capture:
+        kwargs.update(stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    proc = subprocess.run(cmd, **kwargs)
+    return proc.stdout.strip() if capture else ""
+
+
 def main() -> None:
     # A fresh emulator otherwise puts a system-owned "Viewing full screen"
     # education dialog over the game and the vision agent tests that dialog.
@@ -45,6 +60,11 @@ def main() -> None:
     # Use the currently rendered orientation for all generated input coordinates.
     # The underlying playtester still performs every visual/runtime gate unchanged.
     agent.display_size = rendered_display_size
+
+    # Some Android/emulator logcat records contain malformed UTF-8. Preserve every
+    # byte as replacement text instead of aborting the entire test harness while
+    # leaving all AI detection logic and thresholds unchanged.
+    agent.run = robust_text_run
     agent.main()
 
 
