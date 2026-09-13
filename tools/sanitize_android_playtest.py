@@ -93,16 +93,28 @@ def sanitize(mode: str, report: dict, logcat: str) -> list[dict]:
 
 def recompute_memory(report: dict) -> None:
     samples = report.get("memory_samples", [])
-    if not samples or not any(sample.get("pid") for sample in samples):
+    timeline = report.get("timeline", [])
+    if not samples:
         return
+
+    pid_by_step = {
+        int(item.get("step", -1)): str(item.get("pid", "")).strip()
+        for item in timeline
+        if str(item.get("pid", "")).strip().isdigit()
+    }
 
     groups = []
     active_pid = None
     values = []
+    enriched = []
     for sample in samples:
-        pid = str(sample.get("pid", ""))
+        step = int(sample.get("step", -1))
+        pid = str(sample.get("pid", "")).strip() or pid_by_step.get(step, "")
         value = int(sample.get("total_pss_kb", -1))
-        if value < 0:
+        item = dict(sample)
+        item["pid"] = pid
+        enriched.append(item)
+        if value < 0 or not pid:
             continue
         if pid != active_pid:
             if values:
@@ -113,6 +125,7 @@ def recompute_memory(report: dict) -> None:
     if values:
         groups.append(values)
 
+    report["memory_samples"] = enriched
     report["memory_growth_kb"] = max(
         (max(0, values[-1] - values[0]) for values in groups if len(values) >= 2),
         default=0,
