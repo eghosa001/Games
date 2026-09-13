@@ -9,11 +9,9 @@ var _panel_names: Array[String] = ["StrategyHUD", "TutorialOverlay"]
 var _last_screen: String = ""
 
 func _ready() -> void:
-    # Apply the initial closed state after the main UI tree has entered the scene.
     call_deferred("_resolve")
 
 func _exit_tree() -> void:
-    # Clear registries before any native cleanup runs.
     _panel_names.clear()
     _last_screen = ""
 
@@ -24,7 +22,6 @@ func _notification(what: int) -> void:
 
 func set_active_screen(screen_name: String) -> void:
     _last_screen = screen_name
-    # Skip entirely if the tree is tearing down.
     var tree := get_tree()
     if tree == null:
         return
@@ -35,7 +32,6 @@ func set_active_screen(screen_name: String) -> void:
     for name in _panel_names:
         if name.is_empty():
             continue
-        # Look up by absolute path to avoid ambiguity.
         var n := root.get_node_or_null("Renew/UI/" + name)
         if n == null:
             n = root.get_node_or_null("UI/" + name)
@@ -45,9 +41,31 @@ func set_active_screen(screen_name: String) -> void:
             continue
         if n.has_method("_on_screen_changed"):
             n.call("_on_screen_changed", open)
+    _sync_distress_panel(open)
 
-## Backward-compatible refresh hook for ui_screen_manager callers.
-## Re-applies the last known screen state instead of silently doing nothing.
+func _sync_distress_panel(primary_screen_open: bool) -> void:
+    var tree := get_tree()
+    if tree == null:
+        return
+    var root := tree.root
+    if root == null:
+        return
+    var bankruptcy := root.get_node_or_null("Renew/Systems/BankruptcySystem")
+    if bankruptcy == null or not is_instance_valid(bankruptcy):
+        return
+    var distress = bankruptcy.get("distress_panel")
+    if not distress is Control:
+        return
+    var distress_panel := distress as Control
+    if primary_screen_open:
+        distress_panel.hide()
+        return
+    var distress_state := str(bankruptcy.get("state"))
+    if distress_state == "stable":
+        distress_panel.hide()
+    else:
+        distress_panel.show()
+
 func _resolve() -> void:
     set_active_screen(_last_screen)
 
