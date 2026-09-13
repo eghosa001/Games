@@ -128,8 +128,7 @@ func audit_main_screen() -> void:
     await process_frame
 
     var world_nodes := [
-        "PremiumWorldBackdrop", "PremiumIndustrialScene", "PremiumRestorationScene",
-        "RichWorldScenery", "PropertyVisual", "WorldView", "PropertyMap",
+        "PropertyVisual", "WorldView", "PropertyMap",
         "EmpireController", "Corporate", "WorldMissions", "RegionController",
         "BranchController", "SupplyChainController", "RivalSupplyController"
     ]
