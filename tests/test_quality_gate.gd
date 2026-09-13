@@ -2,12 +2,11 @@ extends SceneTree
 
 ## RENEW strict release-quality gate.
 ## This is deliberately stricter than feature smoke tests: it verifies the real
-## Main scene, visible world composition, presentation assets, UI surface,
-## gameplay command surface, and a rendered-frame checkpoint. Any failure exits
-## non-zero so CI cannot silently accept a broken release.
+## Main scene, functional 2D world/map composition, UI surface, gameplay command
+## surface, and a rendered-frame checkpoint. Any failure exits non-zero so CI
+## cannot silently accept a broken release.
 
 const VIEWPORT := Vector2i(1280, 720)
-const MIN_VISIBLE_WORLD_SPRITES := 2
 const MIN_WORLD_CHILDREN := 8
 const MIN_NONZERO_SAMPLE_PIXELS := 80
 const MIN_PIXEL_VARIANCE := 0.0005
@@ -79,46 +78,29 @@ func test_main_scene_contract() -> void:
 
 func test_world_visual_contract() -> void:
     var world := game.get_node_or_null("World")
-    check(world != null, "World visual root exists")
+    check(world != null, "World 2D root exists")
     if world == null:
         return
-    check(world.get_child_count() >= MIN_WORLD_CHILDREN, "World contains a substantive visual/system composition")
+    check(world.get_child_count() >= MIN_WORLD_CHILDREN, "World contains a substantive functional 2D composition")
 
     var required_nodes := [
-        "PremiumWorldBackdrop",
-        "PremiumIndustrialScene",
-        "PremiumRestorationScene",
-        "RichWorldScenery",
         "PropertyVisual",
         "WorldView",
         "PropertyMap"
     ]
     for node_name in required_nodes:
-        check(world.get_node_or_null(node_name) != null, "World component exists: " + node_name)
+        check(world.get_node_or_null(node_name) != null, "2D world component exists: " + node_name)
 
-    var visible_sprites := 0
-    for child in world.get_children():
-        if child is Sprite2D:
-            var sprite := child as Sprite2D
-            if sprite.visible and sprite.texture != null and sprite.texture.get_width() > 0 and sprite.texture.get_height() > 0:
-                visible_sprites += 1
-    check(visible_sprites >= MIN_VISIBLE_WORLD_SPRITES, "At least two final world sprite assets are visibly rendered")
-
-    var scenery := world.get_node_or_null("RichWorldScenery")
-    check(scenery != null and scenery.visible, "RichWorldScenery is enabled in the playable world")
-    if scenery != null:
-        check(scenery is CanvasItem and (scenery as CanvasItem).modulate.a > 0.0, "RichWorldScenery is not transparently disabled")
-
-    var industrial := world.get_node_or_null("PremiumIndustrialScene") as Sprite2D
-    check(industrial != null and industrial.visible and industrial.texture != null, "Industrial district artwork is visible and textured")
-    var restoration := world.get_node_or_null("PremiumRestorationScene") as Sprite2D
-    check(restoration != null and restoration.visible and restoration.texture != null, "Restoration artwork is visible and textured")
-
-    for asset_path in [
-        "res://Assets/Art/premium_industrial_district.svg",
-        "res://Assets/Art/premium_restoration_site.svg"
+    # RENEW deliberately has no decorative pseudo-3D/animated scenery layer.
+    # The playable management experience is rendered by the functional 2D map,
+    # property visual and UI surfaces above it.
+    for removed_name in [
+        "PremiumWorldBackdrop",
+        "PremiumIndustrialScene",
+        "PremiumRestorationScene",
+        "RichWorldScenery"
     ]:
-        check(FileAccess.file_exists(asset_path), "Visual asset exists: " + asset_path)
+        check(world.get_node_or_null(removed_name) == null, "Animated scenery remains removed: " + removed_name)
 
 func test_ui_contract() -> void:
     var hud := game.get_node_or_null("UI/MainHUD")
@@ -247,24 +229,8 @@ func test_render_checkpoint() -> void:
             sample_count += 1
     var mean := sum / maxf(float(sample_count), 1.0)
     var variance := maxf(sum_sq / maxf(float(sample_count), 1.0) - mean * mean, 0.0)
-    check(nonzero >= MIN_NONZERO_SAMPLE_PIXELS, "Rendered frame contains substantial visible content")
+    check(nonzero >= MIN_NONZERO_SAMPLE_PIXELS, "Rendered frame contains substantial visible 2D content")
     check(variance >= MIN_PIXEL_VARIANCE, "Rendered frame has meaningful visual variation")
-    # Verify the PremiumWorldBackdrop actually paints its signature teal sky
-    # rather than leaving the canvas as clear-color black. This catches cases
-    # where the node is present and `visible == true` but `_draw()` produces
-    # nothing (null viewport, early-return bugs, transform issues).
-    var teal_count := 0
-    step_x = maxi(1, image.get_width() / 16)
-    step_y = maxi(1, image.get_height() / 9)
-    for y in range(0, image.get_height(), step_y):
-        for x in range(0, image.get_width(), step_x):
-            var c := image.get_pixel(x, y)
-            # Backdrop teal bands: G > R, B >= G, luminance in 0.04–0.30 range.
-            if c.g > c.r and c.b >= c.g and c.r > 0.02 and (c.r + c.g + c.b) / 3.0 < 0.35:
-                teal_count += 1
-    var total_samples := 1
-    if sample_count > 0: total_samples = sample_count
-    check(teal_count >= total_samples / 16, "PremiumWorldBackdrop paints teal sky (not empty clear color)")
 
     DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SCREENSHOT_DIR))
     var screenshot_path := SCREENSHOT_DIR + "/quality_gate_main.png"
