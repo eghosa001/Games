@@ -31,9 +31,12 @@ func run() -> void:
     var tech = root.get_node_or_null("RenewTechnologySystem")
     if tech == null:
         tech = game.get_node_or_null("Systems/TechnologySystem")
+    var gameplay = game.get_node_or_null("GameplayCommandSystem")
+    var business = gameplay.get("business_system") if gameplay != null else null
     check(state != null, "GameState resolves")
     check(tech != null, "TechnologySystem resolves")
-    if state == null or tech == null:
+    check(business != null, "Live BusinessSystem resolves")
+    if state == null or tech == null or business == null:
         game.free()
         quit(1)
         return
@@ -46,6 +49,8 @@ func run() -> void:
     check(not tech.is_unlocked("better_logistics"), "Legacy unresearched dictionary stays locked")
     check(tech.production_multiplier() > 1.0, "Legacy researched technology contributes effects")
     check(is_equal_approx(tech.transport_capacity_multiplier(), 1.0), "Legacy unresearched technology contributes no effect")
+    var legacy_business_multiplier := float(business._technology_multiplier())
+    check(is_equal_approx(legacy_business_multiplier, 1.025), "Business multiplier counts only researched legacy technology")
 
     state.set_value("technology", "technology", {
         "efficient_production": true,
@@ -53,6 +58,7 @@ func run() -> void:
     })
     check(tech.is_unlocked("efficient_production"), "Boolean researched state remains supported")
     check(not tech.is_unlocked("better_logistics"), "Boolean locked state remains supported")
+    check(is_equal_approx(float(business._technology_multiplier()), legacy_business_multiplier), "Business multiplier matches between legacy and boolean technology state")
 
     game.free()
     await process_frame
