@@ -85,8 +85,10 @@ It checks the five target viewport sizes, 44×44 touch-target minimums, control 
 
 ### Empire controls
 
+Use the **Empire Expansion** screen to acquire or upgrade expansion properties. Once an expansion business is owned, its operational shortcuts are handled by the empire controller:
+
 - **7 / 8 / 9** — select Retail / Factory / Warehouse expansion slots
-- **Z** — produce selected expansion business
+- **Z** — produce selected owned expansion business
 - **Y** — sell selected expansion inventory
 - **G** — hire at selected expansion business
 - **, / .** — lower/raise expansion business price
@@ -103,6 +105,8 @@ It checks the five target viewport sizes, 44×44 touch-target minimums, control 
 - **L** — improve relationship with selected rival
 - **C** — propose alliance
 - **X** — acquire a rival asset when unlocked
+
+Research shortcuts use **SHIFT+1..9** and **SHIFT+0**, so they do not overlap the plain expansion keys above.
 
 ### World and branch controls
 
