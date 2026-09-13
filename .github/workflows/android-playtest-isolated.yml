@@ -154,7 +154,7 @@ jobs:
           heap-size: 512M
           disk-size: 6G
           disable-animations: true
-          emulator-options: -no-snapshot -no-window -gpu software -feature VulkanNativeSwapchain -noaudio -no-boot-anim -camera-back none -no-metrics
+          emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-metrics
           script: |
             adb shell getprop ro.hardware.egl || true
             adb shell getprop ro.hardware.vulkan || true
