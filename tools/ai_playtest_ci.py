@@ -57,9 +57,6 @@ def requested_package() -> str:
 
 def top_package() -> str:
     """Resolve the actually focused/resumed package across Android dump formats."""
-    # Android 14's window record is the most reliable source on the API-34
-    # emulator. Example:
-    # mCurrentFocus=Window{... u0 com.google.android.apps.nexuslauncher/...}
     out = robust_text_run(
         ["adb", "shell", "dumpsys", "window", "windows"],
         check=False,
@@ -123,9 +120,6 @@ def captured_frame_ready(package: str) -> bool:
         )
         with Image.open(io.BytesIO(proc.stdout)) as image:
             rgb = image.convert("RGB")
-            # RENEW is landscape. Android briefly rotates through portrait while a
-            # killed root activity is recreated, and gfxstream can emit a pure-black
-            # transition frame during that rotation. Neither is a playable frame.
             if rgb.width <= rgb.height:
                 return False
             sample = rgb.resize((32, 18))
@@ -141,8 +135,6 @@ def wait_for_game_frame(package: str, timeout: float = 12.0) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if captured_frame_ready(package):
-            # One extra compositor beat prevents sampling the first just-created
-            # buffer while orientation settles on the headless emulator.
             time.sleep(0.35)
             return True
         time.sleep(0.25)
@@ -152,40 +144,26 @@ def wait_for_game_frame(package: str, timeout: float = 12.0) -> bool:
 def wait_for_back_settle(package: str, timeout: float = 8.0) -> bool:
     """Return True if Back actually leaves RENEW after Android has settled.
 
-    On the API-34 software-rendered emulator a root activity can remain reported as
-    focused for several seconds after KEYCODE_BACK before ActivityTaskManager finally
-    exposes Launcher. Do not declare an in-app Back safe after one early focus check.
-    Observe a full settling interval, while still allowing genuine in-app Back
-    navigation to remain in RENEW.
+    Root-activity completion on the API-34 swangle emulator can be delayed well
+    after KEYCODE_BACK while RENEW still appears focused. Observe the entire settle
+    window before deciding that Back stayed in-game; returning early reintroduces
+    the exact Launcher/black-frame race this adapter is meant to exclude.
     """
-    started = time.monotonic()
-    deadline = started + timeout
-    game_stable_since: float | None = None
+    deadline = time.monotonic() + timeout
+    saw_other_foreground = False
 
     while time.monotonic() < deadline:
-        now = time.monotonic()
         foreground = top_package()
         if foreground and foreground != package:
-            return True
-
-        if foreground == package:
-            if game_stable_since is None:
-                game_stable_since = now
-        else:
-            game_stable_since = None
-
-        # The previous 2.5-second window was shorter than observed root-finish
-        # latency on swangle. Require at least four seconds of observation plus a
-        # continuously stable game foreground before accepting this as in-app Back.
-        if (
-            now - started >= 4.0
-            and game_stable_since is not None
-            and now - game_stable_since >= 1.25
-        ):
-            return False
+            saw_other_foreground = True
+            break
         time.sleep(0.15)
 
-    # At timeout, recover only if the package is demonstrably no longer foreground.
+    if saw_other_foreground:
+        return True
+
+    # Only classify this as an in-game Back after the full settling interval and a
+    # final API-34 foreground check. Unknown focus is not treated as a safe state.
     foreground = top_package()
     return bool(foreground and foreground != package)
 
@@ -231,9 +209,6 @@ def install_synchronous_back_recovery(package: str) -> None:
         if not is_back:
             return result
 
-        # Finishing a root Android activity is asynchronous, especially under
-        # software ANGLE. Wait through the observed activity-settling interval rather
-        # than returning while RENEW is only temporarily still reported as focused.
         if wait_for_back_settle(package):
             relaunch(package)
             wait_for_game_frame(package, timeout=20.0)
@@ -243,8 +218,6 @@ def install_synchronous_back_recovery(package: str) -> None:
 
 
 def main() -> None:
-    # A fresh emulator otherwise puts a system-owned "Viewing full screen"
-    # education dialog over the game and the vision agent tests that dialog.
     agent.wait_for_device()
     agent.adb(
         "shell", "settings", "put", "secure",
@@ -253,23 +226,10 @@ def main() -> None:
     )
 
     package = requested_package()
-
-    # Use the currently rendered orientation for generated input coordinates.
     agent.display_size = rendered_display_size
-
-    # Use the API-34-aware detector for report evidence.
     agent.foreground_package = top_package
-
-    # Some Android/emulator logcat records contain malformed UTF-8. Preserve every
-    # byte as replacement text instead of aborting the entire test harness while
-    # leaving all AI detection logic and thresholds unchanged.
     agent.run = robust_text_run
-
-    # Root Back is an intentional exploration action. Recover synchronously only
-    # when that Back truly exits the root activity, so screenshots are never taken
-    # from Pixel Launcher or from the compositor's relaunch transition.
     install_synchronous_back_recovery(package)
-
     agent.main()
 
 
