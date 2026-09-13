@@ -97,7 +97,7 @@ func _button(text: String, callback: Callable, height := 44) -> Button:
 
 func _layout() -> void:
     if panel == null: return
-    var size := get_viewport().size
+    var size: Vector2 = Vector2(get_viewport().size)
     var w := maxf(size.x, 320.0)
     var h := maxf(size.y, 480.0)
     var narrow := w < 720.0
