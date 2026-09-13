@@ -26,8 +26,10 @@ func run() -> void:
     await process_frame
     await process_frame
 
-    var research = root.get_node_or_null("RenewResearchSystem")
+    var services = root.get_node_or_null("RenewServices")
+    var research = services.get_service("RenewResearchSystem") if services != null else null
     var finance = root.get_node_or_null("RenewFinanceSystem")
+    check(services != null, "Service registry resolves")
     check(research != null, "ResearchSystem resolves")
     check(finance != null, "FinanceSystem resolves")
     if research == null or finance == null:
