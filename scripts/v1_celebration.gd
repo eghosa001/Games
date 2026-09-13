@@ -39,13 +39,20 @@ func _ready() -> void:
     _seed()
 
 func _process(delta: float) -> void:
-    if game == null: return
+    if game == null:
+        game = get_tree().root.get_node_or_null("Renew")
+        if game == null:
+            return
+        _seed()
     _check()
     if timer > 0.0:
         timer -= delta
         if timer <= 0.0: _hide_banner()
 
 func _seed() -> void:
+    if game == null:
+        seen = {}
+        return
     seen = {
         "opened": bool(game.business_open),
         "expansion": _expansion_count() > 0,
@@ -55,6 +62,8 @@ func _seed() -> void:
     }
 
 func _check() -> void:
+    if game == null:
+        return
     var states: Variant = {
         "opened": bool(game.business_open),
         "expansion": _expansion_count() > 0,
@@ -84,8 +93,11 @@ func _expansion_count() -> int:
     return count
 
 func _takeover_wins() -> int:
-    var corporate = game.get_node_or_null("Corporate")
-    if corporate == null: return 0
+    if game == null:
+        return 0
+    var corporate = game.get_node_or_null("World/Corporate")
+    if corporate == null:
+        return 0
     return int(corporate.takeover_wins)
 
 func _show_banner(title: String, body: String) -> void:
