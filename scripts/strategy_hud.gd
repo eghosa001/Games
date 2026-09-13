@@ -41,8 +41,7 @@ func _layout_responsive() -> void:
     if root == null or panel == null or label == null:
         return
     var w: float = maxf(root.size.x, 320.0)
-    var h: float = maxf(root.size.y, 480.0)
-    if w < 1000.0:
+    if w < 1600.0:
         panel.hide()
         return
     panel.position = Vector2(w - 425.0, 116.0)
@@ -53,7 +52,7 @@ func _layout_responsive() -> void:
 
 func _should_show() -> bool:
     if root == null: return false
-    return maxf(root.size.x, 320.0) >= 1000.0
+    return maxf(root.size.x, 320.0) >= 1600.0
 
 func _get_rect() -> Rect2:
     if panel == null: return Rect2()
@@ -63,8 +62,6 @@ func _set_coordinator_active(value: bool) -> void:
     _coordinator_active = value
 
 func _on_screen_changed(open: bool) -> void:
-    # When a primary screen opens, hide the floating strategy summary.
-    # When it closes, let the next _process tick re-evaluate layout.
     if open:
         panel.hide()
     elif not _coordinator_active:
