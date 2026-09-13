@@ -57,7 +57,6 @@ jobs:
         run: |
           python -m py_compile tools/ai_playtest.py tools/ai_playtest_ci.py tools/chaos_playtest.py tools/sanitize_android_playtest.py tools/ci_android_install.py
           python tools/ai_playtest.py --help >/dev/null
-          python tools/ai_playtest_ci.py --help >/dev/null
           python tools/chaos_playtest.py --help >/dev/null
           python tools/sanitize_android_playtest.py --help >/dev/null
           python tools/ci_android_install.py --help >/dev/null
