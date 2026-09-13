@@ -11,19 +11,6 @@ on:
         description: Deterministic random seed
         required: false
         default: '20260912'
-  push:
-    branches: [main]
-    paths:
-      - 'scenes/**'
-      - 'scripts/**'
-      - 'Assets/**'
-      - 'data/**'
-      - 'project.godot'
-      - 'export_presets.cfg'
-      - 'tools/chaos_playtest.py'
-      - 'tools/sanitize_android_playtest.py'
-      - 'tools/ci_android_install.py'
-      - '.github/workflows/android-chaos-playtest.yml'
 
 permissions:
   contents: read
