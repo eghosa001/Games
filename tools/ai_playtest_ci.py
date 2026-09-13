@@ -13,7 +13,6 @@ import io
 import re
 import subprocess
 import sys
-import threading
 import time
 
 from PIL import Image
@@ -99,14 +98,6 @@ def top_package() -> str:
     return match.group(1) if match else ""
 
 
-def package_pid(package: str) -> str:
-    return robust_text_run(
-        ["adb", "shell", "pidof", package],
-        check=False,
-        timeout=10,
-    ).strip()
-
-
 def relaunch(package: str) -> None:
     robust_text_run(
         [
@@ -118,31 +109,79 @@ def relaunch(package: str) -> None:
     )
 
 
-def foreground_watchdog(package: str, stop: threading.Event) -> None:
-    """Recover only after exploratory navigation actually leaves RENEW.
+def captured_frame_ready(package: str) -> bool:
+    """Require RENEW to be focused with a nonblank landscape frame."""
+    if top_package() != package:
+        return False
+    try:
+        proc = subprocess.run(
+            ["adb", "exec-out", "screencap", "-p"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            timeout=30,
+        )
+        with Image.open(io.BytesIO(proc.stdout)) as image:
+            rgb = image.convert("RGB")
+            # RENEW is landscape. Android briefly rotates through portrait while a
+            # killed root activity is recreated, and gfxstream can emit a pure-black
+            # transition frame during that rotation. Neither is a playable frame.
+            if rgb.width <= rgb.height:
+                return False
+            sample = rgb.resize((32, 18))
+            extrema = sample.getextrema()
+            dynamic_range = max(high for _, high in extrema) - min(low for low, _ in extrema)
+            brightness = sum(sum(channel) for channel in sample.getdata()) / (32 * 18 * 3)
+            return brightness >= 3.0 and dynamic_range > 2
+    except Exception:
+        return False
 
-    Back navigation inside RENEW is still exercised normally. Once RENEW has been
-    observed running, a different focused package means subsequent actions would
-    test Android rather than the game, so RENEW is relaunched. We intentionally do
-    not require RENEW's process to remain alive: Android may tear down the activity
-    after a root-level Back. Fatal/crash evidence is still collected by the core
-    playtester from logcat, so this recovery cannot hide a crash gate.
+
+def wait_for_game_frame(package: str, timeout: float = 12.0) -> bool:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if captured_frame_ready(package):
+            # One extra compositor beat prevents sampling the first just-created
+            # buffer while orientation settles on the headless emulator.
+            time.sleep(0.35)
+            return True
+        time.sleep(0.25)
+    return False
+
+
+def install_synchronous_back_recovery(package: str) -> None:
+    """Keep intentional root-Back exploration inside the game test boundary.
+
+    Android normally finishes a root activity when Back is pressed. That is not a
+    RENEW crash, but an asynchronous watchdog lets the next screenshot catch Pixel
+    Launcher or gfxstream's black/portrait transition while the activity is being
+    recreated. Intercept only the AI's explicit Back keyevent: if it actually leaves
+    RENEW, relaunch and wait for a real rendered frame before the core tester samples
+    feedback. Back actions that remain inside RENEW are untouched. Taps/swipes that
+    unexpectedly leave the game still hit the existing foreground-loss gate.
     """
-    seen_running = False
-    while not stop.wait(0.20):
-        try:
-            if package_pid(package):
-                seen_running = True
-            if not seen_running:
-                continue
-            foreground = top_package()
-            if foreground and foreground != package:
-                relaunch(package)
-                time.sleep(0.8)
-        except Exception:
-            # The core playtester remains authoritative. A transient watchdog
-            # query must never abort or mask its own runtime/error collection.
-            time.sleep(0.3)
+    original_adb = agent.adb
+
+    def ci_adb(*args, **kwargs):
+        result = original_adb(*args, **kwargs)
+        is_back = (
+            len(args) >= 4
+            and args[0] == "shell"
+            and args[1] == "input"
+            and args[2] == "keyevent"
+            and str(args[3]) in {"4", "KEYCODE_BACK"}
+        )
+        if not is_back:
+            return result
+
+        time.sleep(0.30)
+        foreground = top_package()
+        if foreground and foreground != package:
+            relaunch(package)
+            wait_for_game_frame(package)
+        return result
+
+    agent.adb = ci_adb
 
 
 def main() -> None:
@@ -155,10 +194,12 @@ def main() -> None:
         check=False,
     )
 
+    package = requested_package()
+
     # Use the currently rendered orientation for generated input coordinates.
     agent.display_size = rendered_display_size
 
-    # Use the API-34-aware detector both for report evidence and the watchdog.
+    # Use the API-34-aware detector for report evidence.
     agent.foreground_package = top_package
 
     # Some Android/emulator logcat records contain malformed UTF-8. Preserve every
@@ -166,18 +207,12 @@ def main() -> None:
     # leaving all AI detection logic and thresholds unchanged.
     agent.run = robust_text_run
 
-    stop = threading.Event()
-    watcher = threading.Thread(
-        target=foreground_watchdog,
-        args=(requested_package(), stop),
-        daemon=True,
-    )
-    watcher.start()
-    try:
-        agent.main()
-    finally:
-        stop.set()
-        watcher.join(timeout=2)
+    # Root Back is an intentional exploration action. Recover synchronously only
+    # when that Back truly exits the root activity, so screenshots are never taken
+    # from Pixel Launcher or from the compositor's relaunch transition.
+    install_synchronous_back_recovery(package)
+
+    agent.main()
 
 
 if __name__ == "__main__":
