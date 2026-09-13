@@ -172,7 +172,14 @@ func _announce(text: String) -> void:
         state.set_value("company", "log_lines", lines)
 
 func capture_state() -> Dictionary:
-    return {}
+    return {"claimed_goals": claimed().duplicate(true)}
 
-func restore_state(_state_data: Dictionary) -> void:
-    pass
+func restore_state(state_data: Dictionary) -> void:
+    if state_data.is_empty():
+        return
+    var state: Variant = _state()
+    if state == null:
+        return
+    var raw: Variant = state_data.get("claimed_goals", {})
+    if raw is Dictionary:
+        state.set_value("progression", "claimed_goals", (raw as Dictionary).duplicate(true))
