@@ -46,7 +46,7 @@ func run() -> void:
     economy.clear_market_modifiers()
     game.cash = 100
     var cash_before := int(game.cash)
-    var before := economy.market_multipliers.duplicate(true)
+    var before: Dictionary = economy.market_multipliers.duplicate(true)
     market.active_event = "INPUT SHORTAGE"
     market.event_text = "Test shortage"
     market.event_expiry = int(game.day) + 2
