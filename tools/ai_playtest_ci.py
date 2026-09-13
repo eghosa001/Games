@@ -131,41 +131,70 @@ def captured_frame_ready(package: str) -> bool:
         return False
 
 
-def wait_for_game_frame(package: str, timeout: float = 12.0) -> bool:
+def wait_for_game_frame(package: str, timeout: float = 12.0, stable_for: float = 0.75) -> bool:
+    """Wait until RENEW has continuously rendered usable frames for ``stable_for``."""
     deadline = time.monotonic() + timeout
+    stable_since = None
     while time.monotonic() < deadline:
+        now = time.monotonic()
         if captured_frame_ready(package):
-            time.sleep(0.35)
-            return True
+            if stable_since is None:
+                stable_since = now
+            elif now - stable_since >= stable_for:
+                return True
+        else:
+            stable_since = None
         time.sleep(0.25)
     return False
 
 
-def wait_for_back_settle(package: str, timeout: float = 8.0) -> bool:
-    """Return True if Back actually leaves RENEW after Android has settled.
+def settle_after_back(
+    package: str,
+    timeout: float = 24.0,
+    minimum_observe: float = 12.0,
+    stable_for: float = 2.0,
+) -> bool:
+    """Recover a root Back and return only after the game surface is truly stable.
 
-    Root-activity completion on the API-34 swangle emulator can be delayed well
-    after KEYCODE_BACK while RENEW still appears focused. Observe the entire settle
-    window before deciding that Back stayed in-game; returning early reintroduces
-    the exact Launcher/black-frame race this adapter is meant to exclude.
+    On the API-34 swangle runner Android can continue reporting the Godot activity as
+    focused for several seconds after KEYCODE_BACK, then tear down its process/surface.
+    A foreground-only check therefore races the compositor: the core AI can capture a
+    black ColorBuffer transition even though the game neither crashed nor rendered a
+    black game state. Observe the full delayed-finish window, relaunch whenever another
+    package really becomes foreground, and require continuously usable RENEW frames
+    before letting the core tester sample feedback.
+
+    This does not suppress a persistent in-game black screen: if RENEW remains focused
+    but fails to render usable frames, this function times out and the unchanged core
+    blank-screen gate sees that frame normally.
     """
-    deadline = time.monotonic() + timeout
-    saw_other_foreground = False
+    started = time.monotonic()
+    deadline = started + timeout
+    stable_since = None
 
     while time.monotonic() < deadline:
+        now = time.monotonic()
         foreground = top_package()
+
         if foreground and foreground != package:
-            saw_other_foreground = True
-            break
-        time.sleep(0.15)
+            relaunch(package)
+            stable_since = None
+            time.sleep(0.4)
+            continue
 
-    if saw_other_foreground:
-        return True
+        if captured_frame_ready(package):
+            if now - started < minimum_observe:
+                stable_since = None
+            elif stable_since is None:
+                stable_since = now
+            elif now - stable_since >= stable_for:
+                return True
+        else:
+            stable_since = None
 
-    # Only classify this as an in-game Back after the full settling interval and a
-    # final API-34 foreground check. Unknown focus is not treated as a safe state.
-    foreground = top_package()
-    return bool(foreground and foreground != package)
+        time.sleep(0.25)
+
+    return False
 
 
 def install_synchronous_back_recovery(package: str) -> None:
@@ -173,11 +202,11 @@ def install_synchronous_back_recovery(package: str) -> None:
 
     Android normally finishes a root activity when Back is pressed. That is not a
     RENEW crash, but an asynchronous watchdog lets the next screenshot catch Pixel
-    Launcher or gfxstream's black/portrait transition while the activity is being
-    recreated. Intercept only the AI's explicit Back keyevent: if it actually leaves
-    RENEW, relaunch and wait for a real rendered frame before the core tester samples
-    feedback. Back actions that remain inside RENEW are untouched. Taps/swipes that
-    unexpectedly leave the game still hit the existing foreground-loss gate.
+    Launcher or swangle's black compositor transition while the activity is being
+    recreated. Intercept only the AI's explicit Back keyevent and settle that Android
+    lifecycle transition before the core tester captures feedback. Back actions that
+    remain inside RENEW still execute normally, while a persistent post-Back black
+    screen still reaches the existing blank-screen gate after the bounded wait.
 
     Also wait for the first real frame after the harness launches the APK. The API-34
     software renderer can take longer than the core tester's fixed launch sleep on a
@@ -196,7 +225,7 @@ def install_synchronous_back_recovery(package: str) -> None:
             and package in args
         )
         if is_launch:
-            wait_for_game_frame(package, timeout=20.0)
+            wait_for_game_frame(package, timeout=20.0, stable_for=1.0)
             return result
 
         is_back = (
@@ -209,9 +238,7 @@ def install_synchronous_back_recovery(package: str) -> None:
         if not is_back:
             return result
 
-        if wait_for_back_settle(package):
-            relaunch(package)
-            wait_for_game_frame(package, timeout=20.0)
+        settle_after_back(package)
         return result
 
     agent.adb = ci_adb
