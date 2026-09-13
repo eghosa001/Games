@@ -89,13 +89,22 @@ func stock_selected()->void:
         message="Branch region is invalid."
         return
     var cost:=int(round(region_controller.regions.logistics_cost(amount*45.0,origin,destination)))
+    var finance=get_tree().root.get_node_or_null("RenewFinanceSystem")
+    var finance_before:Dictionary = finance.capture_state() if finance != null and finance.has_method("capture_state") else {}
+    var goods_before:=int(parent.finished_goods)
     var spend=state_adapter.spend(cost,"branch stock shipment")
     if not bool(spend.get("ok",false)): message=str(spend.get("message","Shipment requires sufficient cash.")); return
     parent.finished_goods-=amount
     var stocked=branches.stock(branches.selected,amount)
     if not bool(stocked.get("ok",false)):
-        parent.finished_goods+=amount
-        state_adapter.receive(cost,"branch stock shipment refund")
+        parent.finished_goods=goods_before
+        if finance != null and not finance_before.is_empty() and finance.has_method("restore_state"):
+            finance.restore_state(finance_before)
+        else:
+            var refund=state_adapter.receive(cost,"branch stock shipment rollback")
+            if not bool(refund.get("ok",false)):
+                message="Branch stocking failed and the freight rollback could not be completed safely."
+                return
         message=str(stocked.get("message","Branch stocking failed."))
         return
     parent._log("BRANCH SUPPLY: %d goods delivered to %s for $%s."%[amount,b["name"],_money(cost)])
