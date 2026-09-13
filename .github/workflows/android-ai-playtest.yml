@@ -16,19 +16,6 @@ on:
         required: false
         type: boolean
         default: true
-  push:
-    branches: [main]
-    paths:
-      - 'scenes/**'
-      - 'scripts/**'
-      - 'Assets/**'
-      - 'data/**'
-      - 'project.godot'
-      - 'export_presets.cfg'
-      - 'tools/ai_playtest.py'
-      - 'tools/sanitize_android_playtest.py'
-      - 'tools/ci_android_install.py'
-      - '.github/workflows/android-ai-playtest.yml'
 
 permissions:
   contents: read
@@ -208,7 +195,7 @@ jobs:
         if: >-
           always() &&
           hashFiles('build/ai-playtest/report.json') != '' &&
-          (github.event_name != 'workflow_dispatch' || github.event.inputs.create_issue != 'false')
+          github.event.inputs.create_issue != 'false'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -245,7 +232,6 @@ jobs:
           existing=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "renew-ai-playtest:${FINGERPRINT} in:body" --json number --jq '.[0].number // empty')
           if [ -n "$existing" ]; then
             gh issue edit "$existing" --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$tmp_body"
-            echo "Updated existing issue #$existing"
           else
             gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body-file "$tmp_body"
           fi
