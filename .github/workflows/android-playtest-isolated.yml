@@ -35,7 +35,7 @@ jobs:
       matrix:
         include:
           - mode: ai
-            gpu: swiftshader
+            gpu: swangle
           - mode: chaos
             gpu: swiftshader
 
