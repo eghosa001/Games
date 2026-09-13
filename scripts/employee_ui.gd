@@ -209,7 +209,7 @@ func _action_hint(action: String) -> String:
 func _layout_responsive() -> void:
     if panel == null or get_viewport() == null:
         return
-    var size := get_viewport().get_visible_rect().size
+    var size := get_viewport().size
     var phone := size.x < 430.0
     var mobile := size.x < 760.0
     var margin := 8.0 if phone else 12.0
