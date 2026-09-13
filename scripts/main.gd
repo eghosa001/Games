@@ -358,4 +358,3 @@ func _input(event: InputEvent) -> void:
         KEY_F9: load_game()
         KEY_TAB: buy_inputs()
         KEY_X: buy_international()
-        KEY_Z: buy_expansion()
