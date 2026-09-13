@@ -97,7 +97,7 @@ func _button(text: String, callback: Callable, height := 44) -> Button:
 
 func _layout() -> void:
     if panel == null: return
-    var size := get_viewport().get_visible_rect().size
+    var size := get_viewport().size
     var w := maxf(size.x, 320.0)
     var h := maxf(size.y, 480.0)
     var narrow := w < 720.0
@@ -133,6 +133,7 @@ func _process(_delta: float) -> void:
 
 func open_screen() -> void:
     opened = true; visible = true
+    _layout()
     if missions == null and game != null: missions = game.get_node_or_null("World/WorldMissions")
     _refresh()
 
