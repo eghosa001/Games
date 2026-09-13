@@ -156,6 +156,8 @@ func _action(text: String, callback: Callable) -> void:
     if action_grid == null or action_grid.get_child_count() == 0: return
     var button := action_grid.get_child(action_grid.get_child_count() - 1) as Button
     if button == null: return
+    # Deterministic node names keep automation/selectors stable across refreshes.
+    button.name = "Action_" + text.to_snake_case()
     button.tooltip_text = _action_hint(text)
     button.add_theme_font_size_override("font_size", 10 if narrow else 11)
 
