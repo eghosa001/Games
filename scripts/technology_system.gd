@@ -22,6 +22,8 @@ func _ready() -> void:
     add_child(state_adapter)
 func _state() -> Node:
     return get_node_or_null("/root/RenewGameState")
+func _finance() -> Node:
+    return get_node_or_null("/root/RenewFinanceSystem")
 func _culture_effect(effect_name: String, fallback: float) -> float:
     var culture := get_node_or_null("/root/RenewCompanyCultureSystem")
     if culture != null and culture.has_method("get_effects"):
@@ -60,7 +62,10 @@ func can_research(id:String)->Dictionary:
     for prerequisite in tech.get("prerequisites",[]):
         if not is_unlocked(str(prerequisite)):return {"ok":false,"reason":"prerequisite","technology":str(prerequisite)}
     var state=_state(); if state==null:return {"ok":false,"reason":"state_unavailable"}
-    var cash:=int(state.get_value("economy","cash",25000)); var points:=int(state.get_value("technology","research_points",20))
+    var finance := _finance()
+    if finance == null or not finance.has_method("available_cash") or not finance.has_method("spend"):
+        return {"ok":false,"reason":"finance_unavailable"}
+    var cash:=int(finance.available_cash()); var points:=int(state.get_value("technology","research_points",20))
     if cash<int(tech["cost_money"]):return {"ok":false,"reason":"money","required":int(tech["cost_money"]),"available":cash}
     if points<int(tech["cost_points"]):return {"ok":false,"reason":"research_points","required":int(tech["cost_points"]),"available":points}
     return {"ok":true}
@@ -70,18 +75,15 @@ func research(id:String)->bool:
     if not bool(check.get("ok",false)):
         state.set_value("company","message",_research_error(id,check)); return false
     var tech:=get_technology(id); var points:=int(state.get_value("technology","research_points",20))
-    var spent: bool = false
-    var finance := get_node_or_null("/root/RenewFinanceSystem")
-    if finance != null and finance.has_method("spend"):
-        var spend_result: Dictionary = finance.spend(int(tech["cost_money"]),"technology research: %s" % str(tech["name"]))
-        spent = bool(spend_result.get("ok", false))
-        if spent:
-            state_adapter._sync_finance_mirrors(finance)
-    elif int(state.get_value("economy","cash",0)) >= int(tech["cost_money"]):
-        state.set_value("economy","cash",int(state.get_value("economy","cash",0))-int(tech["cost_money"]))
-        spent = true
-    if not spent:
-        state.set_value("company","message","Technology research requires sufficient cash."); return false
+    var finance := _finance()
+    if finance == null or not finance.has_method("spend"):
+        state.set_value("company","message","Financial system is unavailable; research was not started.")
+        return false
+    var spend_result: Dictionary = finance.spend(int(tech["cost_money"]),"technology research: %s" % str(tech["name"]))
+    if not bool(spend_result.get("ok", false)):
+        state.set_value("company","message",str(spend_result.get("message","Technology research requires sufficient cash.")))
+        return false
+    state_adapter._sync_finance_mirrors(finance)
     state.set_value("technology","research_points",points-int(tech["cost_points"]))
     var unlocked:Dictionary=state.get_value("technology","technology",{}); unlocked=unlocked.duplicate(true); unlocked[id]=true; state.set_value("technology","technology",unlocked)
     last_research_days = get_research_time_days(id)
@@ -141,4 +143,5 @@ func _research_error(id:String,check:Dictionary)->String:
         "research_points":return "Research %s needs %d research points." % [tech.get("name",id),int(check.get("required",0))]
         "prerequisite":return "%s requires %s first." % [tech.get("name",id),get_technology(str(check.get("technology",""))).get("name",check.get("technology",""))]
         "already_researched":return "%s is already researched." % tech.get("name",id)
+        "finance_unavailable":return "Financial system is unavailable; research cannot start."
     return "Technology research unavailable."
