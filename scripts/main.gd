@@ -1,5 +1,5 @@
 # ===============================================
-# File: scripts/main.gd (Final – with Setters)
+# File: scripts/main.gd
 # ===============================================
 extends Node2D
 
@@ -98,8 +98,6 @@ var business_open: bool:
 var employees: int:
     get:
         return command_system.employee_system.get_active_employee_count() if command_system else 0
-    set(_value):
-        pass
 var capacity_level: int:
     get:
         return _read("businesses", "capacity_level", 1)
@@ -197,9 +195,7 @@ var log_lines: Array:
     set(value):
         _write("company", "log_lines", value)
 func _ready():
-    command_system = GameplayCommandSystem.new(); command_system.name = "GameplayCommandSystem"; add_child(command_system); command_system.initialize(); refresh_ui()
-func _process(_delta: float) -> void: pass
-func refresh_ui(): pass
+    command_system = GameplayCommandSystem.new(); command_system.name = "GameplayCommandSystem"; add_child(command_system); command_system.initialize()
 func inspect_property() -> void: command_system.inspect_property()
 func acquire_property() -> void: command_system.acquire_property()
 func restore_property() -> void: command_system.restore_property()
