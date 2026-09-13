@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """CI adapter for the RENEW Android AI playtester.
 
-The Android emulator reports its physical display as portrait even when the Godot
-activity is locked to landscape. The core playtester historically used that
-physical size for input coordinates, which can put taps outside the rendered
-2400x1080 surface. CI also shows Android's one-time immersive-mode education
-overlay on a fresh emulator. This adapter removes emulator-only sources of noise
-without weakening any AI findings or thresholds.
+The Android emulator can report physical dimensions and foreground activity state
+in forms that differ from the rendered Godot surface and from older Android API
+levels. This adapter removes emulator-only sources of noise without weakening any
+AI findings or thresholds.
 """
 
 from __future__ import annotations
@@ -59,7 +57,24 @@ def requested_package() -> str:
 
 
 def top_package() -> str:
-    """Resolve the actually resumed Android package across API-level dump formats."""
+    """Resolve the actually focused/resumed package across Android dump formats."""
+    # Android 14's window record is the most reliable source on the API-34
+    # emulator. Example:
+    # mCurrentFocus=Window{... u0 com.google.android.apps.nexuslauncher/...}
+    out = robust_text_run(
+        ["adb", "shell", "dumpsys", "window", "windows"],
+        check=False,
+        timeout=20,
+    )
+    patterns = (
+        r"mCurrentFocus=Window\{[^}]*?\s(?:u\d+\s+)?([\w.]+)/",
+        r"mFocusedApp=.*?\s(?:u\d+\s+)?([\w.]+)/",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, out)
+        if match:
+            return match.group(1)
+
     out = robust_text_run(
         ["adb", "shell", "dumpsys", "activity", "activities"],
         check=False,
@@ -104,20 +119,21 @@ def relaunch(package: str) -> None:
 
 
 def foreground_watchdog(package: str, stop: threading.Event) -> None:
-    """Recover when exploratory Back leaves the game for Android's launcher.
+    """Recover only after exploratory navigation actually leaves RENEW.
 
-    Back navigation inside RENEW is still exercised normally. Only after Android
-    has actually resumed another package do we relaunch RENEW, so subsequent AI
-    actions continue testing the game instead of Pixel Launcher. This does not
-    suppress crashes/ANRs or change any finding threshold.
+    Back navigation inside RENEW is still exercised normally. Once RENEW has been
+    observed running, a different focused package means subsequent actions would
+    test Android rather than the game, so RENEW is relaunched. We intentionally do
+    not require RENEW's process to remain alive: Android may tear down the activity
+    after a root-level Back. Fatal/crash evidence is still collected by the core
+    playtester from logcat, so this recovery cannot hide a crash gate.
     """
     seen_running = False
-    while not stop.wait(0.30):
+    while not stop.wait(0.20):
         try:
-            running = bool(package_pid(package))
-            if running:
+            if package_pid(package):
                 seen_running = True
-            if not seen_running or not running:
+            if not seen_running:
                 continue
             foreground = top_package()
             if foreground and foreground != package:
@@ -139,9 +155,11 @@ def main() -> None:
         check=False,
     )
 
-    # Use the currently rendered orientation for all generated input coordinates.
-    # The underlying playtester still performs every visual/runtime gate unchanged.
+    # Use the currently rendered orientation for generated input coordinates.
     agent.display_size = rendered_display_size
+
+    # Use the API-34-aware detector both for report evidence and the watchdog.
+    agent.foreground_package = top_package
 
     # Some Android/emulator logcat records contain malformed UTF-8. Preserve every
     # byte as replacement text instead of aborting the entire test harness while
