@@ -17,6 +17,7 @@ static func save_game(_state: Dictionary) -> bool:
     payload["schema_version"] = CURRENT_VERSION
     _capture_runtime_ownership(payload)
     _capture_runtime_services(payload)
+    _capture_runtime_corporate(payload)
     if payload.has("domains") and not validate_save(payload):
         return false
 
@@ -107,9 +108,11 @@ static func load_game() -> Dictionary:
                     continue
                 _restore_runtime_ownership(data)
                 _restore_runtime_services(data)
+                _restore_runtime_corporate(data)
                 return game_state.capture()
         _restore_runtime_ownership(data)
         _restore_runtime_services(data)
+        _restore_runtime_corporate(data)
         return data
     return {}
 
@@ -216,6 +219,43 @@ static func _restore_runtime_services(data: Dictionary) -> void:
     if registry != null and registry.has_method("restore_persistent_state"):
         registry.restore_persistent_state(snapshot)
 
+## Corporate owns late-game controller counters/cooldowns that are not part of
+## the OwnershipSystem ledger. Keep them in the canonical company domain so
+## F5/F9 and autosave restore the complete strategic state without a second file.
+static func _capture_runtime_corporate(data: Dictionary) -> void:
+    if not data.has("domains") or not (data["domains"] is Dictionary):
+        return
+    var corporate = _corporate_node()
+    if corporate == null or not corporate.has_method("save_state"):
+        return
+    var snapshot = corporate.save_state()
+    if not snapshot is Dictionary:
+        return
+    var safe_snapshot: Dictionary = (snapshot as Dictionary).duplicate(true)
+    # Ownership is already captured authoritatively in domains/ownership/ledger.
+    safe_snapshot.erase("ownership_state")
+    var domains: Dictionary = data["domains"]
+    var company_domain = domains.get("company", {})
+    if not company_domain is Dictionary:
+        company_domain = {}
+    company_domain["corporate_controller"] = safe_snapshot
+    domains["company"] = company_domain
+    data["domains"] = domains
+
+static func _restore_runtime_corporate(data: Dictionary) -> void:
+    if not data.has("domains") or not (data["domains"] is Dictionary):
+        return
+    var domains: Dictionary = data["domains"]
+    var company_domain = domains.get("company", {})
+    if not company_domain is Dictionary:
+        return
+    var snapshot = company_domain.get("corporate_controller", {})
+    if not snapshot is Dictionary or snapshot.is_empty():
+        return
+    var corporate = _corporate_node()
+    if corporate != null and corporate.has_method("load_state"):
+        corporate.load_state((snapshot as Dictionary).duplicate(true))
+
 static func _service_registry():
     var tree = Engine.get_main_loop()
     if not tree:
@@ -251,6 +291,24 @@ static func _ownership_node():
         node = scene.get_node_or_null("Systems/OwnershipSystem")
         if node == null:
             node = scene.get_node_or_null("OwnershipSystem")
+        return node
+    return null
+
+static func _corporate_node():
+    var tree = Engine.get_main_loop()
+    if not tree:
+        return null
+    var root = tree.get_root()
+    if not root:
+        return null
+    var node = root.get_node_or_null("Renew/World/Corporate")
+    if node != null:
+        return node
+    var scene = tree.get_current_scene()
+    if scene != null:
+        node = scene.get_node_or_null("World/Corporate")
+        if node == null:
+            node = scene.get_node_or_null("Corporate")
         return node
     return null
 
