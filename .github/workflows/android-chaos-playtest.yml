@@ -132,19 +132,7 @@ jobs:
           disk-size: 6G
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: |
-            set -eu
-            python tools/ci_android_install.py \
-              --apk build/RENEW-chaos.apk \
-              --package ${PACKAGE_NAME} \
-              --out build/chaos-playtest
-            python tools/chaos_playtest.py \
-              --apk build/RENEW-chaos.apk \
-              --package ${PACKAGE_NAME} \
-              --out build/chaos-playtest \
-              --steps ${{ github.event.inputs.steps || '500' }} \
-              --seed ${{ github.event.inputs.seed || '20260912' }} \
-              --checkpoint-every 25
+          script: python tools/ci_android_install.py --apk build/RENEW-chaos.apk --package ${PACKAGE_NAME} --out build/chaos-playtest && python tools/chaos_playtest.py --apk build/RENEW-chaos.apk --package ${PACKAGE_NAME} --out build/chaos-playtest --steps ${{ github.event.inputs.steps || '500' }} --seed ${{ github.event.inputs.seed || '20260912' }} --checkpoint-every 25
 
       - name: Add chaos report to summary
         if: always()
