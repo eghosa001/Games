@@ -119,6 +119,9 @@ func complete_challenge(challenge_id: String, progress: int = 1) -> Dictionary:
     return {"ok":true,"challenge":c.duplicate(true)}
 
 func get_state() -> Dictionary:
+    # Keep reads authoritative too: the UI polls this method independently of the
+    # day timer, so prune anything that has expired before exposing cached state.
+    _expire_content(_day())
     return {"season":current_season,"season_start_day":season_start_day,"offers":offers.duplicate(true),"challenges":challenges.duplicate(true),"community_goal":community_goal.duplicate(true)}
 
 func capture_state() -> Dictionary: return get_state().merged({"last_day":last_day})
