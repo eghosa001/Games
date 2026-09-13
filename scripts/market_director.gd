@@ -107,7 +107,9 @@ func _apply_event_pressure(event_type: String, expiry: int) -> void:
         "contract":
             economy.set_market_modifier("timber", 1.05)
         "asset":
-            pass
+            # Distressed-asset events are strategic opportunities, not input-market shocks.
+            effect_name = ""
+            effect_expiry = 0
 
 func _clear_effect() -> void:
     var economy = _economy()
@@ -142,11 +144,15 @@ func _respond(style: String) -> void:
         if String(event["name"]) == active_event:
             event_type = String(event["type"])
             break
+    if String(event_type).is_empty():
+        game.message = "The active market event is invalid and cannot be resolved safely."
+        return
     var reward: Variant = 0
     var rep: Variant = 0
     var outcome: Variant = ""
     var spend_amount := 0
     var spend_reason := ""
+    var response_modifier: Array[float] = []
     match event_type:
         "shortage":
             if style == "aggressive":
@@ -154,17 +160,17 @@ func _respond(style: String) -> void:
                 spend_reason = "market shortage inventory response"
                 reward = 1750
                 rep = 2
-                _set_response_modifier(0.92, 0.92, 0.95)
+                response_modifier = [0.92, 0.92, 0.95]
                 outcome = "You secured scarce inventory early."
             elif style == "balanced":
                 reward = 1200
                 rep = 1
-                _set_response_modifier(1.08, 1.06, 1.10)
+                response_modifier = [1.08, 1.06, 1.10]
                 outcome = "You rationed supplies and protected cash flow."
             else:
                 reward = 500
                 rep = -1
-                _set_response_modifier(1.18, 1.15, 1.20)
+                response_modifier = [1.18, 1.15, 1.20]
                 outcome = "You conserved cash but surrendered some market share."
         "boom":
             if style == "aggressive":
@@ -172,16 +178,16 @@ func _respond(style: String) -> void:
                 spend_reason = "market boom capacity campaign"
                 reward = 6500
                 rep = 2
-                _set_response_modifier(0.88, 0.90, 0.92)
+                response_modifier = [0.88, 0.90, 0.92]
                 outcome = "You spent to capture the demand spike."
             elif style == "balanced":
                 reward = 3800
                 rep = 2
-                _set_response_modifier(0.94, 0.95, 0.96)
+                response_modifier = [0.94, 0.95, 0.96]
                 outcome = "You captured the most profitable part of the boom."
             else:
                 reward = 1400
-                _set_response_modifier(0.98, 0.99, 1.00)
+                response_modifier = [0.98, 0.99, 1.00]
                 outcome = "You played safely and kept your cash reserves."
         "war":
             if style == "aggressive":
@@ -189,31 +195,31 @@ func _respond(style: String) -> void:
                 spend_reason = "price war defensive campaign"
                 reward = 4200
                 rep = 1
-                _set_response_modifier(1.05, 1.04, 1.00)
+                response_modifier = [1.05, 1.04, 1.00]
                 outcome = "You answered the price war with a targeted campaign."
             elif style == "balanced":
                 reward = 1800
                 rep = 1
-                _set_response_modifier(1.03, 1.02, 1.00)
+                response_modifier = [1.03, 1.02, 1.00]
                 outcome = "You protected margins while keeping customers."
             else:
                 rep = -1
-                _set_response_modifier(1.08, 1.05, 1.00)
+                response_modifier = [1.08, 1.05, 1.00]
                 outcome = "You refused to chase the rival downward."
         "contract":
             if style == "aggressive":
                 reward = 5000
                 rep = 3
-                _set_response_modifier(1.04, 1.03, 1.02)
+                response_modifier = [1.04, 1.03, 1.02]
                 outcome = "You committed capacity and won the regional buyer."
             elif style == "balanced":
                 reward = 3000
                 rep = 2
-                _set_response_modifier(1.02, 1.02, 1.01)
+                response_modifier = [1.02, 1.02, 1.01]
                 outcome = "You accepted a manageable regional order."
             else:
                 reward = 800
-                _set_response_modifier(1.00, 1.00, 1.00)
+                response_modifier = [1.00, 1.00, 1.00]
                 outcome = "You declined the risk and preserved flexibility."
         "asset":
             if style == "aggressive":
@@ -227,6 +233,19 @@ func _respond(style: String) -> void:
             else:
                 reward = 500
                 outcome = "You kept liquidity instead of buying another asset."
+        _:
+            game.message = "The active market event is unsupported and cannot be resolved safely."
+            return
+
+    # Financial mutations are committed before market/reputation state so a rejected
+    # response cannot leave behind free modifiers or partial strategic effects.
+    var finance = _finance()
+    var finance_before: Dictionary = {}
+    if finance != null and finance.has_method("capture_state"):
+        var captured = finance.capture_state()
+        if captured is Dictionary:
+            finance_before = captured.duplicate(true)
+
     if spend_amount > 0:
         var spend_result := _spend(spend_amount, spend_reason)
         if not bool(spend_result.get("ok", false)):
@@ -235,8 +254,13 @@ func _respond(style: String) -> void:
     if int(reward) > 0:
         var receive_result := _receive(int(reward), "market response: %s" % style)
         if not bool(receive_result.get("ok", false)):
+            if finance != null and not finance_before.is_empty() and finance.has_method("restore_state"):
+                finance.restore_state(finance_before)
             game.message = String(receive_result.get("message", "Market reward could not be posted."))
             return
+
+    if response_modifier.size() == 3:
+        _set_response_modifier(response_modifier[0], response_modifier[1], response_modifier[2])
     _sync_legacy_cash()
     game.reputation = max(0, int(game.reputation) + int(rep))
     game._log("MARKET RESPONSE: %s — +$%s, +%d rep. %s" % [style, game._money(reward), rep, outcome])
