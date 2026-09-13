@@ -159,11 +159,27 @@ def install_synchronous_back_recovery(package: str) -> None:
     RENEW, relaunch and wait for a real rendered frame before the core tester samples
     feedback. Back actions that remain inside RENEW are untouched. Taps/swipes that
     unexpectedly leave the game still hit the existing foreground-loss gate.
+
+    Also wait for the first real frame after the harness launches the APK. The API-34
+    software renderer can take longer than the core tester's fixed launch sleep on a
+    cold emulator. A timeout still falls through to the unchanged blank-screen gate.
     """
     original_adb = agent.adb
 
     def ci_adb(*args, **kwargs):
         result = original_adb(*args, **kwargs)
+
+        is_launch = (
+            len(args) >= 2
+            and args[0] == "shell"
+            and args[1] == "monkey"
+            and "-p" in args
+            and package in args
+        )
+        if is_launch:
+            wait_for_game_frame(package, timeout=20.0)
+            return result
+
         is_back = (
             len(args) >= 4
             and args[0] == "shell"
@@ -174,11 +190,22 @@ def install_synchronous_back_recovery(package: str) -> None:
         if not is_back:
             return result
 
-        time.sleep(0.30)
-        foreground = top_package()
-        if foreground and foreground != package:
+        # Finishing a root Android activity is asynchronous. A single early check can
+        # still report RENEW for several hundred milliseconds and then switch to Home.
+        # Observe a stabilization window and recover as soon as the package truly
+        # leaves foreground, before ai_playtest.py can capture or perform another action.
+        deadline = time.monotonic() + 2.5
+        left_game = False
+        while time.monotonic() < deadline:
+            foreground = top_package()
+            if foreground and foreground != package:
+                left_game = True
+                break
+            time.sleep(0.15)
+
+        if left_game:
             relaunch(package)
-            wait_for_game_frame(package)
+            wait_for_game_frame(package, timeout=20.0)
         return result
 
     agent.adb = ci_adb
