@@ -133,7 +133,11 @@ jobs:
           old = 'renderer/rendering_method.mobile="gl_compatibility"'
           if old not in p:
               raise SystemExit('Expected Android renderer setting not found')
-          project.write_text(p.replace(old, 'renderer/rendering_method.mobile="mobile"', 1))
+          mode = '${{ matrix.mode }}'
+          if mode == 'chaos':
+              project.write_text(p.replace(old, 'renderer/rendering_method.mobile="mobile"', 1))
+          elif mode != 'ai':
+              raise SystemExit(f'Unexpected playtest mode: {mode}')
           PY
           mkdir -p build
           timeout 600s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path . --export-debug "Android" build/RENEW-${{ matrix.mode }}.apk
