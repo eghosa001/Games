@@ -198,20 +198,7 @@ def settle_after_back(
 
 
 def install_synchronous_back_recovery(package: str) -> None:
-    """Keep intentional root-Back exploration inside the game test boundary.
-
-    Android normally finishes a root activity when Back is pressed. That is not a
-    RENEW crash, but an asynchronous watchdog lets the next screenshot catch Pixel
-    Launcher or swangle's black compositor transition while the activity is being
-    recreated. Intercept only the AI's explicit Back keyevent and settle that Android
-    lifecycle transition before the core tester captures feedback. Back actions that
-    remain inside RENEW still execute normally, while a persistent post-Back black
-    screen still reaches the existing blank-screen gate after the bounded wait.
-
-    Also wait for the first real frame after the harness launches the APK. The API-34
-    software renderer can take longer than the core tester's fixed launch sleep on a
-    cold emulator. A timeout still falls through to the unchanged blank-screen gate.
-    """
+    """Keep intentional root-Back exploration inside the game test boundary."""
     original_adb = agent.adb
 
     def ci_adb(*args, **kwargs):
@@ -244,6 +231,64 @@ def install_synchronous_back_recovery(package: str) -> None:
     agent.adb = ci_adb
 
 
+def prominent_cta_targets(path, width: int, height: int):
+    """Find broad, bright action surfaces that the coarse vision grid can miss.
+
+    Godot's custom-drawn controls are mostly invisible to Android UIAutomator. A
+    prominent full-width CTA can therefore be visually obvious to a player while the
+    generic 6x10 saliency grid repeatedly samples decorative cells. Detect only broad
+    bright horizontal regions and target their center; this strengthens exploration
+    without suppressing or reclassifying any finding.
+    """
+    try:
+        with Image.open(path) as image:
+            gray = image.convert("L").resize((240, 108))
+            pixels = gray.load()
+            qualifying_rows = []
+            for y in range(4, 104):
+                bright = sum(1 for x in range(240) if pixels[x, y] >= 145)
+                if bright >= 72:  # at least 30% of the screen width
+                    qualifying_rows.append(y)
+
+            groups = []
+            for y in qualifying_rows:
+                if not groups or y > groups[-1][-1] + 1:
+                    groups.append([y])
+                else:
+                    groups[-1].append(y)
+
+            targets = []
+            for rows in groups:
+                if len(rows) < 5:
+                    continue
+                y1, y2 = rows[0], rows[-1]
+                xs = [
+                    x
+                    for x in range(240)
+                    if sum(1 for y in rows if pixels[x, y] >= 145) >= max(3, len(rows) // 2)
+                ]
+                if not xs or xs[-1] - xs[0] < 60:
+                    continue
+                cx = int(((xs[0] + xs[-1]) / 2.0) * width / 240.0)
+                cy = int(((y1 + y2) / 2.0) * height / 108.0)
+                targets.append(agent.Target(cx, cy, 50.0, "vision-cta"))
+            return targets
+    except Exception:
+        return []
+
+
+def install_prominent_cta_targeting() -> None:
+    """Augment, rather than replace, the existing screenshot-guided explorer."""
+    original_visual_targets = agent.visual_targets
+
+    def ci_visual_targets(path, width, height, *args, **kwargs):
+        base = original_visual_targets(path, width, height, *args, **kwargs)
+        ctas = prominent_cta_targets(path, width, height)
+        return ctas + base
+
+    agent.visual_targets = ci_visual_targets
+
+
 def main() -> None:
     agent.wait_for_device()
     agent.adb(
@@ -257,6 +302,7 @@ def main() -> None:
     agent.foreground_package = top_package
     agent.run = robust_text_run
     install_synchronous_back_recovery(package)
+    install_prominent_cta_targeting()
     agent.main()
 
 
