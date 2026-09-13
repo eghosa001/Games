@@ -144,7 +144,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu software -noaudio -no-boot-anim -camera-back none -no-metrics
           script: |
-            set -euo pipefail
+            set -eu
             adb shell getprop ro.hardware.egl || true
             adb shell getprop ro.hardware.vulkan || true
             if [ "${{ matrix.mode }}" = "ai" ]; then
