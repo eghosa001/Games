@@ -37,6 +37,8 @@ def run(cmd, check=True, timeout=120):
     proc = subprocess.run(
         cmd,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         timeout=timeout,
