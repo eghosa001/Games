@@ -13,6 +13,7 @@ func _service(service_name:String):
         var node=registry.get_service(service_name)
         if node!=null:return node
     return get_node_or_null("/root/"+service_name)
+func _finance(): return _service("RenewFinanceSystem")
 func _culture(): return _service("RenewCompanyCultureSystem")
 func _culture_effect(name:String, default_value:float=1.0)->float:
     var culture = _culture()
@@ -45,6 +46,9 @@ func hire_employee()->Dictionary:
     if cash<preview_cost:
         state_adapter.message("Hiring requires $%s."%state_adapter.money(preview_cost))
         return {"ok":false,"message":"Hiring requires $%s."%state_adapter.money(preview_cost),"cost":preview_cost}
+    var employee_snapshot: Dictionary = employee_system.capture_state() if employee_system.has_method("capture_state") else {}
+    var finance = _finance()
+    var finance_snapshot: Dictionary = finance.capture_state() if finance != null and finance.has_method("capture_state") else {}
     var result=employee_system.hire_candidate(str(candidate.get("id","")),day)
     if not bool(result.get("ok",false)):
         state_adapter.message(str(result.get("message","Unable to hire employee.")))
@@ -52,7 +56,12 @@ func hire_employee()->Dictionary:
     var actual_cost:=preview_cost
     var spend: Dictionary = state_adapter.spend(actual_cost,"employee hiring")
     if not bool(spend.get("ok",false)):
-        employee_system.fire_employee(str(result["employee"]["id"]),day); state_adapter.message("Hiring cost changed and available cash is insufficient."); sync_roster()
+        if not employee_snapshot.is_empty() and employee_system.has_method("restore_state"):
+            employee_system.restore_state(employee_snapshot)
+        if finance != null and not finance_snapshot.is_empty() and finance.has_method("restore_state"):
+            finance.restore_state(finance_snapshot)
+        sync_roster()
+        state_adapter.message("Hiring cost changed and available cash is insufficient.")
         return {"ok":false,"message":"Hiring cost changed and available cash is insufficient."}
     sync_roster(); state_adapter.set_value("player","reputation",int(state_adapter.get_value("player","reputation",0))+1); state_adapter.log_message("HIRING: employee %d joined (-$%s)."%[employee_system.get_active_employee_count(),state_adapter.money(actual_cost)]); state_adapter.message("Employee hired. More capacity, higher daily wages.")
     var reputation=_service("RenewReputationSystem")
@@ -81,10 +90,23 @@ func train_employee(employee_id:String)->void:
     var day:=int(state_adapter.get_value("player","day",1)); var cost:=900
     var cash:=int(state_adapter.get_value("economy","cash",25000))
     if cash<cost: state_adapter.message("Training requires $%s."%state_adapter.money(cost)); return
+    var finance = _finance()
+    var finance_snapshot: Dictionary = finance.capture_state() if finance != null and finance.has_method("capture_state") else {}
+    var employee_snapshot: Dictionary = employee_system.capture_state() if employee_system.has_method("capture_state") else {}
     var spend: Dictionary = state_adapter.spend(cost,"employee training")
     if not bool(spend.get("ok",false)): state_adapter.message(str(spend.get("message","Training requires sufficient cash."))); return
     var result=employee_system.train_employee(employee_id,day,cost)
-    if not bool(result.get("ok",false)): state_adapter.receive(cost,"employee training refund"); state_adapter.message(str(result.get("message","Training failed."))); return
+    if not bool(result.get("ok",false)):
+        if finance != null and not finance_snapshot.is_empty() and finance.has_method("restore_state"):
+            finance.restore_state(finance_snapshot)
+        elif bool(state_adapter.receive(cost,"employee training rollback").get("ok",false)) == false:
+            state_adapter.message("Training failed and the payment rollback could not be completed safely.")
+            return
+        if not employee_snapshot.is_empty() and employee_system.has_method("restore_state"):
+            employee_system.restore_state(employee_snapshot)
+        sync_roster()
+        state_adapter.message(str(result.get("message","Training failed.")))
+        return
     sync_roster(); state_adapter.message("Employee training completed.")
 func promote_employee(employee_id:String)->void:
     var result=employee_system.promote_employee(employee_id,int(state_adapter.get_value("player","day",1)))
