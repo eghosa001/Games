@@ -28,13 +28,15 @@ jobs:
           fetch-depth: 0
 
       - name: Install Godot dependencies
-        run: sudo apt-get update && sudo apt-get install -y unzip wget xvfb
+        run: sudo apt-get update && sudo apt-get install -y unzip curl xvfb
 
       - name: Install Godot
         shell: bash
         run: |
           set -euo pipefail
-          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O /tmp/godot.zip
+          godot_url="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          curl --fail --location --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 30 --max-time 300 "$godot_url" -o /tmp/godot.zip
+          unzip -tq /tmp/godot.zip >/dev/null
           unzip -q /tmp/godot.zip
           chmod +x "Godot_v${GODOT_VERSION}-stable_linux.x86_64"
           "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
@@ -147,15 +149,18 @@ jobs:
           fetch-depth: 0
 
       - name: Install Godot dependencies
-        run: sudo apt-get update && sudo apt-get install -y unzip wget
+        run: sudo apt-get update && sudo apt-get install -y unzip curl
 
       - name: Install Godot
         shell: bash
         run: |
           set -euo pipefail
-          wget -q --tries=5 --waitretry=3 "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -O /tmp/godot.zip
+          godot_url="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          curl --fail --location --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 30 --max-time 300 "$godot_url" -o /tmp/godot.zip
+          unzip -tq /tmp/godot.zip >/dev/null
           unzip -q /tmp/godot.zip
           chmod +x "Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
 
       - name: Import project
         run: timeout 180s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
