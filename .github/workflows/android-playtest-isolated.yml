@@ -113,22 +113,33 @@ jobs:
         run: |
           set -euo pipefail
           cp export_presets.cfg /tmp/export_presets.cfg.original
-          restore_preset() { mv -f /tmp/export_presets.cfg.original export_presets.cfg 2>/dev/null || true; }
-          trap restore_preset EXIT
+          cp project.godot /tmp/project.godot.original
+          restore_sources() {
+            mv -f /tmp/export_presets.cfg.original export_presets.cfg 2>/dev/null || true
+            mv -f /tmp/project.godot.original project.godot 2>/dev/null || true
+          }
+          trap restore_sources EXIT
           python - <<'PY'
           from pathlib import Path
-          p = Path('export_presets.cfg')
-          s = p.read_text()
+          preset = Path('export_presets.cfg')
+          s = preset.read_text()
           s = s.replace('architectures/arm64-v8a=true', 'architectures/arm64-v8a=false', 1)
           s = s.replace('architectures/x86_64=false', 'architectures/x86_64=true', 1)
-          p.write_text(s)
+          preset.write_text(s)
+
+          project = Path('project.godot')
+          p = project.read_text()
+          old = 'renderer/rendering_method.mobile="gl_compatibility"'
+          if old not in p:
+              raise SystemExit('Expected Android renderer setting not found')
+          project.write_text(p.replace(old, 'renderer/rendering_method.mobile="mobile"', 1))
           PY
           mkdir -p build
           timeout 600s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path . --export-debug "Android" build/RENEW-${{ matrix.mode }}.apk
-          restore_preset
+          restore_sources
           trap - EXIT
           test -s build/RENEW-${{ matrix.mode }}.apk
-          git diff --exit-code -- export_presets.cfg
+          git diff --exit-code -- export_presets.cfg project.godot
 
       - name: Run isolated Android playtest
         uses: ReactiveCircus/android-emulator-runner@v2
@@ -142,7 +153,7 @@ jobs:
           heap-size: 512M
           disk-size: 6G
           disable-animations: true
-          emulator-options: -no-snapshot -no-window -gpu host -noaudio -no-boot-anim -camera-back none -no-metrics
+          emulator-options: -no-snapshot -no-window -gpu software -noaudio -no-boot-anim -camera-back none -no-metrics
           script: |
             adb shell getprop ro.hardware.egl || true
             adb shell getprop ro.hardware.vulkan || true
