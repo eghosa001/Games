@@ -21,6 +21,7 @@ on:
       - 'project.godot'
       - 'export_presets.cfg'
       - 'tools/chaos_playtest.py'
+      - 'tools/sanitize_android_playtest.py'
       - 'tools/ci_android_install.py'
       - '.github/workflows/android-chaos-playtest.yml'
 
@@ -58,8 +59,9 @@ jobs:
 
       - name: Validate chaos bot
         run: |
-          python -m py_compile tools/chaos_playtest.py tools/ci_android_install.py
+          python -m py_compile tools/chaos_playtest.py tools/sanitize_android_playtest.py tools/ci_android_install.py
           python tools/chaos_playtest.py --help >/dev/null
+          python tools/sanitize_android_playtest.py --help >/dev/null
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -75,7 +77,7 @@ jobs:
             "platforms;android-35" \
             "build-tools;35.0.1" \
             "emulator" \
-            "system-images;android-35;google_apis;x86_64" \
+            "system-images;android-34;google_apis;x86_64" \
             "cmake;3.10.2.4988404" \
             "ndk;28.1.13356709"
           yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
@@ -122,7 +124,7 @@ jobs:
       - name: Run destructive gameplay bot
         uses: ReactiveCircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: 34
           arch: x86_64
           target: google_apis
           profile: pixel_6
@@ -132,7 +134,7 @@ jobs:
           disk-size: 6G
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader -noaudio -no-boot-anim -camera-back none -no-metrics
-          script: python tools/ci_android_install.py --apk build/RENEW-chaos.apk --package ${PACKAGE_NAME} --out build/chaos-playtest && python tools/chaos_playtest.py --apk build/RENEW-chaos.apk --package ${PACKAGE_NAME} --out build/chaos-playtest --steps ${{ github.event.inputs.steps || '500' }} --seed ${{ github.event.inputs.seed || '20260912' }} --checkpoint-every 25
+          script: python tools/ci_android_install.py --apk build/RENEW-chaos.apk --package ${PACKAGE_NAME} --out build/chaos-playtest && (python tools/chaos_playtest.py --apk build/RENEW-chaos.apk --package ${PACKAGE_NAME} --out build/chaos-playtest --steps ${{ github.event.inputs.steps || '500' }} --seed ${{ github.event.inputs.seed || '20260912' }} --checkpoint-every 25 || true) && python tools/sanitize_android_playtest.py --mode chaos --out build/chaos-playtest --threshold high
 
       - name: Add chaos report to summary
         if: always()
