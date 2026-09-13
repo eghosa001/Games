@@ -63,6 +63,11 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install emulator runtime libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libpulse0 libgl1 libx11-6 libxcb1
+
       - name: Enable KVM acceleration when available
         shell: bash
         run: |
