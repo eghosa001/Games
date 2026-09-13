@@ -50,10 +50,16 @@ func get_technologies() -> Array:
         var tech:Dictionary=TECHNOLOGIES[id].duplicate(true); tech["id"]=id; result.append(tech)
     return result
 func get_technology(id:String)->Dictionary: return TECHNOLOGIES.get(id,{}).duplicate(true)
+func _entry_researched(entry: Variant) -> bool:
+    if entry is bool:
+        return bool(entry)
+    if entry is Dictionary:
+        return bool((entry as Dictionary).get("researched", false))
+    return false
 func is_unlocked(id:String)->bool:
     var state=_state(); if state==null:return false
     var unlocked=state.get_value("technology","technology",{})
-    return unlocked is Dictionary and bool(unlocked.get(id,false))
+    return unlocked is Dictionary and _entry_researched((unlocked as Dictionary).get(id, false))
 func get_unlocked(id:String)->bool: return is_unlocked(id)
 func can_research(id:String)->Dictionary:
     var tech:=get_technology(id)
@@ -125,8 +131,9 @@ func _world_modifier(key:String)->float:
 func effect(name:String,default_value:float=0.0)->float:
     var total:=default_value; var state=_state(); if state==null:return total
     var unlocked=state.get_value("technology","technology",{}); if not unlocked is Dictionary:return total
-    for id in unlocked.keys():
-        if bool(unlocked[id]):total+=float(TECHNOLOGIES.get(str(id),{}).get("effects",{}).get(name,0.0))
+    for id in (unlocked as Dictionary).keys():
+        if _entry_researched((unlocked as Dictionary)[id]):
+            total+=float(TECHNOLOGIES.get(str(id),{}).get("effects",{}).get(name,0.0))
     return total
 func production_multiplier()->float:return max(1.0,1.0+effect("production_multiplier"))
 func worker_reduction()->int:return max(0,int(effect("worker_reduction")))
