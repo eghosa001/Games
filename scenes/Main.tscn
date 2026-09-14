@@ -1,4 +1,4 @@
-[gd_scene load_steps=49 format=3]
+[gd_scene load_steps=50 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -30,14 +30,14 @@
 [ext_resource path="res://scripts/collection_ui.gd" type="Script" id="30"]
 [ext_resource path="res://scripts/liveops_ui.gd" type="Script" id="31"]
 [ext_resource path="res://scripts/customer_segments_ui.gd" type="Script" id="32"]
-[ext_resource path="res://scripts/diplomacy_ui.gd" type="Script" id="46"]
-[ext_resource path="res://scripts/infrastructure_ui.gd" type="Script" id="47"]
 [ext_resource path="res://scripts/contracts_ui.gd" type="Script" id="33"]
 [ext_resource path="res://scripts/property_visual.gd" type="Script" id="34"]
 [ext_resource path="res://scripts/technology_ui.gd" type="Script" id="35"]
 [ext_resource path="res://scripts/employee_ui.gd" type="Script" id="36"]
 [ext_resource path="res://scripts/mobile_ui_mobile_scale_fix.gd" type="Script" id="41"]
 [ext_resource path="res://scripts/premium_ui_skin.gd" type="Script" id="45"]
+[ext_resource path="res://scripts/diplomacy_ui.gd" type="Script" id="46"]
+[ext_resource path="res://scripts/infrastructure_ui.gd" type="Script" id="47"]
 [ext_resource path="res://scripts/dashboard_ui.gd" type="Script" id="48"]
 [ext_resource path="res://scripts/finance_ui.gd" type="Script" id="49"]
 [ext_resource path="res://scripts/portfolio_ui.gd" type="Script" id="50"]
@@ -51,6 +51,7 @@
 [ext_resource path="res://scripts/expansion_ui.gd" type="Script" id="58"]
 [ext_resource path="res://scripts/empire_intelligence_ui.gd" type="Script" id="59"]
 [ext_resource path="res://scripts/save_load_ui.gd" type="Script" id="60"]
+[ext_resource path="res://scripts/restora_branding.gd" type="Script" id="61"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -194,3 +195,6 @@ script=ExtResource("59")
 [node name="SaveLoadPanel" type="CanvasLayer" parent="UI"]
 layer=91
 script=ExtResource("60")
+[node name="RestoraBranding" type="CanvasLayer" parent="UI"]
+layer=95
+script=ExtResource("61")
