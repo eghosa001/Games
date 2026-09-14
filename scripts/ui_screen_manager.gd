@@ -1,8 +1,7 @@
 extends Node
-## Central presentation guard for RENEW's primary screens.
-## Guarantees one active screen, a visible close affordance, Escape/Android-back
-## dismissal, safe cleanup when panels close themselves, and focused presentation
-## of secondary screens over the persistent management HUD.
+## Central presentation guard for RESTORA's primary screens.
+## Guarantees one active screen, premium close affordance, Escape/Android-back
+## dismissal, tap-outside dismissal, safe cleanup and focused presentation.
 
 const SCREEN_NAMES := ["ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel", "InfrastructurePanel", "DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel", "RegionsPanel", "WorldOpportunitiesPanel", "BusinessOperationsPanel", "ProductionControlPanel", "SupplyChainPanel", "EmpireExpansionPanel", "EmpireIntelligencePanel", "EmpireProgressionPanel", "EmpireIdentityPanel", "NotificationsCenterPanel", "SaveLoadPanel"]
 const ROOT_SCREEN_NAMES := ["RenewDiplomacyUI", "CustomerSegmentsUI"]
@@ -10,6 +9,7 @@ const SCREEN_ALIASES := {"MarketPanel": "CustomerSegmentsUI"}
 const CLOSE_BUTTON_NAME := "UniversalCloseButton"
 const MODAL_LAYER_NAME := "FocusedScreenBackdrop"
 const MODAL_LAYER := 50
+const SCREEN_SCAN_INTERVAL := 0.10
 
 var _previous_visible: Dictionary = {}
 var _active_screen: Node = null
@@ -20,6 +20,7 @@ var _modal_layer: CanvasLayer
 var _modal_backdrop: ColorRect
 var _screen_tween: Tween
 var _backdrop_tween: Tween
+var _scan_clock := 0.0
 
 func _ready() -> void:
     call_deferred("_try_initialize")
@@ -63,11 +64,16 @@ func _screen_nodes() -> Array[Node]:
     result.append_array(_root_screen_nodes())
     return result
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
     if _initializing:
         _try_initialize()
         return
-    _enforce_single_screen()
+    # Recursive visibility inspection is unnecessary at render-frame cadence.
+    # Ten checks per second keeps self-closing panels responsive without wasting CPU.
+    _scan_clock += delta
+    if _scan_clock >= SCREEN_SCAN_INTERVAL:
+        _scan_clock = 0.0
+        _enforce_single_screen()
 
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE and _active_screen != null:
@@ -152,7 +158,18 @@ func _ensure_modal_backdrop() -> void:
     _modal_backdrop.color = Color(0.015, 0.035, 0.045, 0.72)
     _modal_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
     _modal_backdrop.visible = false
+    _modal_backdrop.gui_input.connect(_on_backdrop_input)
     _modal_layer.add_child(_modal_backdrop)
+
+func _on_backdrop_input(event: InputEvent) -> void:
+    if _active_screen == null:
+        return
+    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+        hide_all_screens()
+        get_viewport().set_input_as_handled()
+    elif event is InputEventScreenTouch and event.pressed:
+        hide_all_screens()
+        get_viewport().set_input_as_handled()
 
 func _set_modal_backdrop(value: bool) -> void:
     _ensure_modal_backdrop()
@@ -239,7 +256,7 @@ func _enforce_single_screen() -> void:
         active_coordinator.set_active_screen(_active_screen_name)
         if active_coordinator.has_method("_resolve"): active_coordinator._resolve()
 
-func show_screen(screen_name: String) -> void:
+func show_screen(screen_name: String) -> bool:
     if _initializing: _try_initialize()
     var canonical_name := _canonical_screen_name(screen_name)
     var target: Node = null
@@ -248,8 +265,8 @@ func show_screen(screen_name: String) -> void:
     if target == null: target = get_tree().root.get_node_or_null("Renew/" + canonical_name)
     if target == null: target = get_tree().root.get_node_or_null(canonical_name)
     if target == null or not (SCREEN_NAMES.has(canonical_name) or ROOT_SCREEN_NAMES.has(canonical_name)):
-        push_warning("Unknown primary RENEW screen: %s" % screen_name)
-        return
+        push_warning("Unknown primary RESTORA screen: %s" % screen_name)
+        return false
     _active_screen = target
     _active_screen_name = canonical_name
     for node in _screen_nodes():
@@ -263,6 +280,7 @@ func show_screen(screen_name: String) -> void:
     if coordinator != null:
         coordinator.set_active_screen(canonical_name)
         if coordinator.has_method("_resolve"): coordinator._resolve()
+    return true
 
 func get_active_screen_name() -> String:
     if _active_screen != null and is_instance_valid(_active_screen):
@@ -274,6 +292,35 @@ func is_screen_open(screen_name: String) -> bool:
     for node in _screen_nodes():
         if node.name == canonical_name: return _is_node_visible(node)
     return false
+
+func _premium_close_style(bg: Color, border: Color) -> StyleBoxFlat:
+    var style := StyleBoxFlat.new()
+    style.bg_color = bg
+    style.border_color = border
+    style.set_border_width_all(1)
+    style.set_corner_radius_all(12)
+    style.content_margin_left = 14
+    style.content_margin_right = 14
+    style.content_margin_top = 9
+    style.content_margin_bottom = 9
+    style.shadow_color = Color(0, 0, 0, 0.28)
+    style.shadow_size = 4
+    style.shadow_offset = Vector2(0, 2)
+    return style
+
+func _style_close_button(button: Button) -> void:
+    if button == null: return
+    var surface := Color("10241f")
+    var border := Color("37564f")
+    var accent := Color("e5b95f")
+    var text := Color("eef9f5")
+    button.add_theme_stylebox_override("normal", _premium_close_style(surface, border))
+    button.add_theme_stylebox_override("hover", _premium_close_style(Color("19332c"), accent))
+    button.add_theme_stylebox_override("pressed", _premium_close_style(Color("0b1816"), accent))
+    button.add_theme_color_override("font_color", text)
+    button.add_theme_color_override("font_hover_color", accent)
+    button.add_theme_color_override("font_pressed_color", accent)
+    button.add_theme_font_size_override("font_size", 12)
 
 func _ensure_close_button(screen: Node) -> void:
     if screen == null or not is_instance_valid(screen): return
@@ -297,9 +344,10 @@ func _ensure_close_button(screen: Node) -> void:
         existing.mouse_filter = Control.MOUSE_FILTER_STOP
         existing.z_index = 4096
         existing.custom_minimum_size = Vector2(
-            maxf(existing.custom_minimum_size.x, 44.0),
-            maxf(existing.custom_minimum_size.y, 44.0)
+            maxf(existing.custom_minimum_size.x, 48.0),
+            maxf(existing.custom_minimum_size.y, 48.0)
         )
+        _style_close_button(existing)
         if not existing.pressed.is_connected(_on_close_pressed):
             existing.pressed.connect(_on_close_pressed)
         return
@@ -311,12 +359,13 @@ func _ensure_close_button(screen: Node) -> void:
     button.focus_mode = Control.FOCUS_NONE
     button.mouse_filter = Control.MOUSE_FILTER_STOP
     button.z_index = 4096
-    button.custom_minimum_size = Vector2(96, 46)
+    button.custom_minimum_size = Vector2(96, 48)
     button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
     button.offset_left = -112.0
     button.offset_top = 14.0
     button.offset_right = -16.0
-    button.offset_bottom = 60.0
+    button.offset_bottom = 62.0
+    _style_close_button(button)
     button.pressed.connect(_on_close_pressed)
     host.add_child(button)
 
