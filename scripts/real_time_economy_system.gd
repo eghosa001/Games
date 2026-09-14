@@ -7,6 +7,9 @@ extends Node
 const SETTLEMENT_INTERVAL_SECONDS := 300.0
 const MAX_OFFLINE_CATCHUP_SECONDS := 86400.0
 const SECONDS_PER_REAL_DAY := 86400.0
+const STATE_DOMAIN := "analytics"
+const STATE_KEY := "simulation_system"
+const CLOCK_KEY := "real_time_economy"
 
 var _poll_accumulator := 0.0
 
@@ -42,22 +45,48 @@ func _expansion():
         return null
     return controller.get("expansion")
 
-func _get_time_value(key: String, default_value):
+func _clock_state() -> Dictionary:
     var state = _state()
-    return default_value if state == null else state.get_value("real_time", key, default_value)
+    if state == null:
+        return {}
+    var analytics = state.get_value(STATE_DOMAIN, STATE_KEY, {})
+    if not (analytics is Dictionary):
+        analytics = {}
+    var clock = analytics.get(CLOCK_KEY, {})
+    return clock.duplicate(true) if clock is Dictionary else {}
+
+func _save_clock(clock: Dictionary) -> void:
+    var state = _state()
+    if state == null:
+        return
+    var analytics = state.get_value(STATE_DOMAIN, STATE_KEY, {})
+    if not (analytics is Dictionary):
+        analytics = {}
+    analytics = analytics.duplicate(true)
+    analytics[CLOCK_KEY] = clock.duplicate(true)
+    state.set_value(STATE_DOMAIN, STATE_KEY, analytics)
+
+func _get_time_value(key: String, default_value):
+    return _clock_state().get(key, default_value)
 
 func _set_time_value(key: String, value) -> void:
-    var state = _state()
-    if state != null:
-        state.set_value("real_time", key, value)
+    var clock := _clock_state()
+    clock[key] = value
+    _save_clock(clock)
 
 func _ensure_clock_initialized() -> void:
     var now := Time.get_unix_time_from_system()
-    var last := float(_get_time_value("last_passive_settlement_unix", 0.0))
+    var clock := _clock_state()
+    var changed := false
+    var last := float(clock.get("last_passive_settlement_unix", 0.0))
     if last <= 0.0 or last > now:
-        _set_time_value("last_passive_settlement_unix", now)
-    if float(_get_time_value("passive_fractional_carry", -1.0)) < 0.0:
-        _set_time_value("passive_fractional_carry", 0.0)
+        clock["last_passive_settlement_unix"] = now
+        changed = true
+    if not clock.has("passive_fractional_carry"):
+        clock["passive_fractional_carry"] = 0.0
+        changed = true
+    if changed:
+        _save_clock(clock)
 
 func passive_daily_run_rate() -> Dictionary:
     var expansion = _expansion()
@@ -136,11 +165,13 @@ func reconcile_passive_income(force: bool = false) -> Dictionary:
         if not bool(result.get("ok", false)):
             return {"ok": false, "settled": 0, "elapsed": elapsed, "message": str(result.get("message", "Passive settlement failed."))}
 
-    _set_time_value("passive_fractional_carry", new_carry)
-    _set_time_value("last_passive_settlement_unix", now)
-    _set_time_value("last_passive_amount", settled)
-    _set_time_value("last_passive_elapsed_seconds", billable_seconds)
-    _set_time_value("passive_daily_net", daily_net)
+    var clock := _clock_state()
+    clock["passive_fractional_carry"] = new_carry
+    clock["last_passive_settlement_unix"] = now
+    clock["last_passive_amount"] = settled
+    clock["last_passive_elapsed_seconds"] = billable_seconds
+    clock["passive_daily_net"] = daily_net
+    _save_clock(clock)
 
     return {
         "ok": true,
