@@ -1,9 +1,8 @@
 extends CanvasLayer
 
-# RENEW management command deck.
-# Presentation only: gameplay commands and simulation state remain on Renew/Main.
-# The shell keeps high-value information persistent and exposes every major system
-# through a small number of context-aware management surfaces.
+# RESTORA layered management shell.
+# The simulation stays in domain systems; this HUD exposes only the player's
+# current decision layer and routes deeper management into focused screens.
 
 var parent: Node
 var active_tab := 0
@@ -20,6 +19,10 @@ var hero_caption: Label
 var hero_meta: Label
 var hero_goal: Label
 var hero_action: Button
+var hero_art: TextureRect
+var alerts_button: Button
+var hero_progress: ProgressBar
+var hero_progress_label: Label
 var stat_grid: GridContainer
 var stat_cards: Array[PanelContainer] = []
 var stat_names: Array[Label] = []
@@ -28,31 +31,38 @@ var section_title: Label
 var section_caption: Label
 var action_scroll: ScrollContainer
 var action_list: VBoxContainer
+var action_dock: PanelContainer
+var action_grid: GridContainer
+var actions: GridContainer
 var bottom_nav: HBoxContainer
+var mode_rail: HBoxContainer
 var mode_buttons: Array[Button] = []
 var status_label: Label
 var feedback_label: Label
 var feedback_timer := 0.0
 var light_theme := false
+var _refresh_accumulator := 0.0
+var _transition_serial := 0
 
-const LIGHT_BG := Color("f4f6f4")
+const LIGHT_BG := Color("f3f6f4")
 const LIGHT_SURFACE := Color("ffffff")
-const LIGHT_CARD := Color("e5f0ed")
-const LIGHT_CARD_2 := Color("fafbfa")
-const LIGHT_TEXT := Color("13201d")
-const LIGHT_MUTED := Color("687773")
-const LIGHT_BORDER := Color("dbe3e0")
+const LIGHT_CARD := Color("edf3f0")
+const LIGHT_CARD_2 := Color("f8faf9")
+const LIGHT_TEXT := Color("14201d")
+const LIGHT_MUTED := Color("65756f")
+const LIGHT_BORDER := Color("d8e3de")
 const LIGHT_ACCENT := Color("0f766e")
-const LIGHT_WARN := Color("b45309")
-const DARK_BG := Color("07100f")
-const DARK_SURFACE := Color("0d1917")
-const DARK_CARD := Color("10251f")
-const DARK_CARD_2 := Color("0d1c1a")
-const DARK_TEXT := Color("effbf7")
-const DARK_MUTED := Color("8fa7a1")
-const DARK_BORDER := Color("1e3934")
+const LIGHT_GOLD := Color("a36d18")
+const DARK_BG := Color("06100f")
+const DARK_SURFACE := Color("0b1816")
+const DARK_CARD := Color("10241f")
+const DARK_CARD_2 := Color("0d1b19")
+const DARK_TEXT := Color("eef9f5")
+const DARK_MUTED := Color("91a69f")
+const DARK_BORDER := Color("1f3934")
 const DARK_ACCENT := Color("5eead4")
-const DARK_WARN := Color("fbbf24")
+const DARK_GOLD := Color("e5b95f")
+const WARN := Color("f0b24a")
 
 func _ready() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
@@ -67,27 +77,33 @@ func _initialize() -> void:
     if not get_viewport().size_changed.is_connected(_layout_responsive):
         get_viewport().size_changed.connect(_layout_responsive)
     _layout_responsive()
+    _animate_entry()
 
 func _build_ui() -> void:
     root = Control.new()
+    root.name = "RestoraLayeredShell"
     root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    root.mouse_filter = Control.MOUSE_FILTER_PASS
     add_child(root)
 
     background = ColorRect.new()
+    background.name = "Backdrop"
     background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     background.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(background)
 
     shell = MarginContainer.new()
+    shell.name = "SafeArea"
     shell.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     root.add_child(shell)
 
     page = VBoxContainer.new()
-    page.add_theme_constant_override("separation", 12)
+    page.name = "LayerStack"
+    page.add_theme_constant_override("separation", 10)
     shell.add_child(page)
 
     var header := HBoxContainer.new()
+    header.name = "Header"
     header.add_theme_constant_override("separation", 12)
     page.add_child(header)
 
@@ -95,75 +111,111 @@ func _build_ui() -> void:
     title_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     title_stack.add_theme_constant_override("separation", 0)
     header.add_child(title_stack)
-    brand = _label("RENEW", 27)
-    location_label = _label("RESTORATION COMMAND", 11)
+    brand = _label("RESTORA", 26)
+    location_label = _label("ACQUIRE • RESTORE • OPERATE • EXPAND", 10)
     title_stack.add_child(brand)
     title_stack.add_child(location_label)
+
+    alerts_button = Button.new()
+    alerts_button.name = "DecisionCenter"
+    alerts_button.text = "DECISIONS"
+    alerts_button.custom_minimum_size = Vector2(92, 44)
+    alerts_button.focus_mode = Control.FOCUS_NONE
+    alerts_button.pressed.connect(_open_decision_center)
+    header.add_child(alerts_button)
 
     theme_button = Button.new()
     theme_button.name = "ThemeToggle"
     theme_button.text = "LIGHT"
-    theme_button.custom_minimum_size = Vector2(84, 44)
+    theme_button.custom_minimum_size = Vector2(78, 44)
     theme_button.focus_mode = Control.FOCUS_NONE
     theme_button.pressed.connect(_toggle_theme)
     header.add_child(theme_button)
 
+    # Home pulse: one strong hero instead of many competing modules.
     hero_card = PanelContainer.new()
-    hero_card.custom_minimum_size = Vector2(0, 152)
+    hero_card.name = "CompanyPulse"
+    hero_card.custom_minimum_size = Vector2(0, 174)
     page.add_child(hero_card)
+    hero_art = TextureRect.new()
+    hero_art.name = "PropertyProjectArt"
+    hero_art.texture = load("res://Assets/Art/premium_restoration_site.svg")
+    hero_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    hero_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    hero_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    hero_art.modulate = Color(1, 1, 1, 0.22)
+    hero_card.add_child(hero_art)
     var hero_margin := MarginContainer.new()
-    hero_margin.add_theme_constant_override("margin_left", 22)
-    hero_margin.add_theme_constant_override("margin_right", 22)
-    hero_margin.add_theme_constant_override("margin_top", 18)
-    hero_margin.add_theme_constant_override("margin_bottom", 18)
+    for key in ["left", "right"]:
+        hero_margin.add_theme_constant_override("margin_" + key, 20)
+    hero_margin.add_theme_constant_override("margin_top", 16)
+    hero_margin.add_theme_constant_override("margin_bottom", 14)
     hero_card.add_child(hero_margin)
-
-    var hero_row := HBoxContainer.new()
-    hero_row.add_theme_constant_override("separation", 18)
-    hero_margin.add_child(hero_row)
-
     var hero_stack := VBoxContainer.new()
-    hero_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    hero_stack.add_theme_constant_override("separation", 2)
-    hero_row.add_child(hero_stack)
-    hero_caption = _label("AVAILABLE CASH", 11)
-    hero_value = _label("$0", 34)
-    hero_meta = _label("DAY 1  •  REP 0", 12)
-    hero_goal = _label("Build your restoration empire.", 13)
+    hero_stack.add_theme_constant_override("separation", 6)
+    hero_margin.add_child(hero_stack)
+
+    var hero_top := HBoxContainer.new()
+    hero_top.add_theme_constant_override("separation", 14)
+    hero_stack.add_child(hero_top)
+    var hero_copy := VBoxContainer.new()
+    hero_copy.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    hero_copy.add_theme_constant_override("separation", 1)
+    hero_top.add_child(hero_copy)
+    hero_caption = _label("COMPANY CASH", 10)
+    hero_value = _label("$0", 32)
+    hero_meta = _label("DAY 1 • STARTING OUT", 11)
+    hero_goal = _label("Turn a neglected property into your first profitable company.", 13)
     hero_goal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    hero_stack.add_child(hero_caption)
-    hero_stack.add_child(hero_value)
-    hero_stack.add_child(hero_meta)
-    hero_stack.add_child(hero_goal)
+    hero_copy.add_child(hero_caption)
+    hero_copy.add_child(hero_value)
+    hero_copy.add_child(hero_meta)
+    hero_copy.add_child(hero_goal)
 
     hero_action = Button.new()
     hero_action.name = "PrimaryNextMove"
     hero_action.text = "NEXT MOVE"
-    hero_action.custom_minimum_size = Vector2(168, 54)
+    hero_action.custom_minimum_size = Vector2(160, 54)
     hero_action.size_flags_vertical = Control.SIZE_SHRINK_CENTER
     hero_action.focus_mode = Control.FOCUS_NONE
-    hero_row.add_child(hero_action)
+    hero_top.add_child(hero_action)
 
+    var progress_row := HBoxContainer.new()
+    progress_row.add_theme_constant_override("separation", 10)
+    hero_stack.add_child(progress_row)
+    hero_progress = ProgressBar.new()
+    hero_progress.name = "RestorationProgress"
+    hero_progress.min_value = 0
+    hero_progress.max_value = 100
+    hero_progress.show_percentage = false
+    hero_progress.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    hero_progress.custom_minimum_size.y = 8
+    progress_row.add_child(hero_progress)
+    hero_progress_label = _label("0% restored", 10)
+    progress_row.add_child(hero_progress_label)
+
+    # Four summary signals only. Detailed ledgers live one layer deeper.
     stat_grid = GridContainer.new()
+    stat_grid.name = "CompanyPulseMetrics"
     stat_grid.columns = 4
-    stat_grid.add_theme_constant_override("h_separation", 9)
-    stat_grid.add_theme_constant_override("v_separation", 9)
+    stat_grid.add_theme_constant_override("h_separation", 8)
+    stat_grid.add_theme_constant_override("v_separation", 8)
     page.add_child(stat_grid)
     for i in range(4):
         var card := PanelContainer.new()
         card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-        card.custom_minimum_size = Vector2(0, 82)
+        card.custom_minimum_size = Vector2(0, 68)
         var margin := MarginContainer.new()
-        margin.add_theme_constant_override("margin_left", 14)
-        margin.add_theme_constant_override("margin_right", 14)
-        margin.add_theme_constant_override("margin_top", 11)
-        margin.add_theme_constant_override("margin_bottom", 10)
+        margin.add_theme_constant_override("margin_left", 12)
+        margin.add_theme_constant_override("margin_right", 12)
+        margin.add_theme_constant_override("margin_top", 8)
+        margin.add_theme_constant_override("margin_bottom", 8)
         card.add_child(margin)
         var box := VBoxContainer.new()
-        box.add_theme_constant_override("separation", 2)
+        box.add_theme_constant_override("separation", 1)
         margin.add_child(box)
-        var name := _label("METRIC", 10)
-        var value := _label("—", 17)
+        var name := _label("METRIC", 9)
+        var value := _label("—", 16)
         box.add_child(name)
         box.add_child(value)
         stat_grid.add_child(card)
@@ -172,29 +224,48 @@ func _build_ui() -> void:
         stat_values.append(value)
 
     var section_row := HBoxContainer.new()
-    section_row.add_theme_constant_override("separation", 10)
     page.add_child(section_row)
     var section_stack := VBoxContainer.new()
     section_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     section_stack.add_theme_constant_override("separation", 0)
     section_row.add_child(section_stack)
-    section_title = _label("Live", 22)
-    section_caption = _label("Property, progress and essential actions", 11)
+    section_title = _label("Home", 20)
+    section_caption = _label("Current objective and the few decisions that matter now.", 11)
     section_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     section_stack.add_child(section_title)
     section_stack.add_child(section_caption)
 
     action_scroll = ScrollContainer.new()
+    action_scroll.name = "DepthScroll"
     action_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
     action_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     action_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
     page.add_child(action_scroll)
+
+    action_dock = PanelContainer.new()
+    action_dock.name = "ActionDock"
+    action_dock.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    action_scroll.add_child(action_dock)
+    var action_margin := MarginContainer.new()
+    action_margin.add_theme_constant_override("margin_left", 10)
+    action_margin.add_theme_constant_override("margin_right", 10)
+    action_margin.add_theme_constant_override("margin_top", 10)
+    action_margin.add_theme_constant_override("margin_bottom", 10)
+    action_dock.add_child(action_margin)
     action_list = VBoxContainer.new()
+    action_list.name = "DepthContent"
     action_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     action_list.add_theme_constant_override("separation", 8)
-    action_scroll.add_child(action_list)
+    action_margin.add_child(action_list)
+    action_grid = GridContainer.new()
+    actions = action_grid
+    action_grid.name = "ActionGrid"
+    action_grid.columns = 2
+    action_grid.add_theme_constant_override("h_separation", 8)
+    action_grid.add_theme_constant_override("v_separation", 8)
+    action_list.add_child(action_grid)
 
-    status_label = _label("", 11)
+    status_label = _label("", 10)
     status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     page.add_child(status_label)
     feedback_label = _label("", 11)
@@ -203,14 +274,17 @@ func _build_ui() -> void:
     page.add_child(feedback_label)
 
     bottom_nav = HBoxContainer.new()
-    bottom_nav.add_theme_constant_override("separation", 7)
+    bottom_nav.name = "PrimaryNavigation"
+    bottom_nav.add_theme_constant_override("separation", 6)
     page.add_child(bottom_nav)
-    var names := ["LIVE", "BUSINESS", "EMPIRE", "WORLD"]
+    mode_rail = bottom_nav
+    var names := ["HOME", "BUSINESS", "EMPIRE", "WORLD"]
+    var legacy_names := ["LIVE", "BUSINESS", "EMPIRE", "WORLD"]
     for i in range(names.size()):
         var button := Button.new()
-        button.name = "Nav_" + names[i]
+        button.name = "Nav_" + legacy_names[i]
         button.text = names[i]
-        button.custom_minimum_size = Vector2(100, 50)
+        button.custom_minimum_size = Vector2(100, 48)
         button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         button.focus_mode = Control.FOCUS_NONE
         button.pressed.connect(_set_tab.bind(i))
@@ -227,23 +301,23 @@ func _label(text: String, size: int) -> Label:
 func _transparent(color: Color, alpha: float) -> Color:
     return Color(color.r, color.g, color.b, alpha)
 
-func _card_style(bg: Color, border: Color, radius := 18, width := 1) -> StyleBoxFlat:
+func _card_style(bg: Color, border: Color, radius := 16, width := 1) -> StyleBoxFlat:
     var style := StyleBoxFlat.new()
     style.bg_color = bg
     style.border_color = border
     style.set_border_width_all(width)
     style.set_corner_radius_all(radius)
-    style.shadow_color = Color(0, 0, 0, 0.08 if light_theme else 0.30)
+    style.shadow_color = Color(0, 0, 0, 0.07 if light_theme else 0.24)
     style.shadow_size = 5
     style.shadow_offset = Vector2(0, 3)
     return style
 
-func _button_style(bg: Color, border: Color, radius := 15) -> StyleBoxFlat:
+func _button_style(bg: Color, border: Color, radius := 13) -> StyleBoxFlat:
     var style := _card_style(bg, border, radius, 1)
-    style.content_margin_left = 16
-    style.content_margin_right = 16
-    style.content_margin_top = 11
-    style.content_margin_bottom = 11
+    style.content_margin_left = 14
+    style.content_margin_right = 14
+    style.content_margin_top = 10
+    style.content_margin_bottom = 10
     return style
 
 func _apply_theme() -> void:
@@ -256,50 +330,51 @@ func _apply_theme() -> void:
     var muted := LIGHT_MUTED if light_theme else DARK_MUTED
     var border := LIGHT_BORDER if light_theme else DARK_BORDER
     var accent := LIGHT_ACCENT if light_theme else DARK_ACCENT
-
+    var gold := LIGHT_GOLD if light_theme else DARK_GOLD
     background.color = bg
-    for label in [brand, hero_value, section_title]:
-        if label != null: label.add_theme_color_override("font_color", text)
-    for label in [location_label, hero_caption, hero_meta, hero_goal, section_caption, status_label, feedback_label]:
-        if label != null: label.add_theme_color_override("font_color", muted)
-    for value in stat_values:
-        value.add_theme_color_override("font_color", text)
-    for name in stat_names:
-        name.add_theme_color_override("font_color", muted)
-
-    hero_card.add_theme_stylebox_override("panel", _card_style(card, _transparent(accent, 0.34), 22, 1))
-    for stat_card in stat_cards:
-        stat_card.add_theme_stylebox_override("panel", _card_style(card2, border, 16, 1))
-
-    theme_button.add_theme_stylebox_override("normal", _button_style(surface, border, 14))
-    theme_button.add_theme_stylebox_override("hover", _button_style(_transparent(accent, 0.12), accent, 14))
+    for label in [brand, hero_value, section_title]: label.add_theme_color_override("font_color", text)
+    brand.add_theme_color_override("font_color", gold)
+    for label in [location_label, hero_caption, hero_meta, hero_goal, section_caption, status_label, feedback_label, hero_progress_label]:
+        label.add_theme_color_override("font_color", muted)
+    for value in stat_values: value.add_theme_color_override("font_color", text)
+    for name in stat_names: name.add_theme_color_override("font_color", muted)
+    hero_card.add_theme_stylebox_override("panel", _card_style(card, _transparent(gold, 0.48), 20, 1))
+    action_dock.add_theme_stylebox_override("panel", _card_style(card2, border, 16, 1))
+    for stat_card in stat_cards: stat_card.add_theme_stylebox_override("panel", _card_style(card2, border, 13, 1))
+    var progress_bg := StyleBoxFlat.new(); progress_bg.bg_color = _transparent(muted, 0.18); progress_bg.set_corner_radius_all(6)
+    var progress_fill := StyleBoxFlat.new(); progress_fill.bg_color = accent; progress_fill.set_corner_radius_all(6)
+    hero_progress.add_theme_stylebox_override("background", progress_bg)
+    hero_progress.add_theme_stylebox_override("fill", progress_fill)
+    alerts_button.add_theme_stylebox_override("normal", _button_style(_transparent(gold, 0.10), gold, 12))
+    alerts_button.add_theme_stylebox_override("hover", _button_style(_transparent(gold, 0.18), gold, 12))
+    alerts_button.add_theme_color_override("font_color", gold)
+    theme_button.add_theme_stylebox_override("normal", _button_style(surface, border, 12))
+    theme_button.add_theme_stylebox_override("hover", _button_style(_transparent(accent, 0.12), accent, 12))
     theme_button.add_theme_color_override("font_color", text)
     theme_button.text = "DARK" if light_theme else "LIGHT"
-
-    hero_action.add_theme_stylebox_override("normal", _button_style(accent, accent, 15))
-    hero_action.add_theme_stylebox_override("hover", _button_style(accent.lightened(0.08), accent, 15))
-    hero_action.add_theme_stylebox_override("pressed", _button_style(accent.darkened(0.08), accent, 15))
+    hero_action.add_theme_stylebox_override("normal", _button_style(gold, gold, 13))
+    hero_action.add_theme_stylebox_override("hover", _button_style(gold.lightened(0.08), gold, 13))
+    hero_action.add_theme_stylebox_override("pressed", _button_style(gold.darkened(0.08), gold, 13))
     hero_action.add_theme_color_override("font_color", bg)
     hero_action.add_theme_color_override("font_hover_color", bg)
-
     _style_active_tab()
     _restyle_actions()
 
 func _style_active_tab() -> void:
     if mode_buttons.is_empty(): return
-    var card := LIGHT_CARD_2 if light_theme else DARK_CARD_2
+    var surface := LIGHT_SURFACE if light_theme else DARK_CARD_2
     var text := LIGHT_TEXT if light_theme else DARK_TEXT
     var muted := LIGHT_MUTED if light_theme else DARK_MUTED
     var border := LIGHT_BORDER if light_theme else DARK_BORDER
-    var accent := LIGHT_ACCENT if light_theme else DARK_ACCENT
+    var gold := LIGHT_GOLD if light_theme else DARK_GOLD
     for i in range(mode_buttons.size()):
         var button := mode_buttons[i]
         button.add_theme_color_override("font_hover_color", text)
         if i == active_tab:
-            button.add_theme_stylebox_override("normal", _button_style(_transparent(accent, 0.15), accent, 14))
-            button.add_theme_color_override("font_color", accent)
+            button.add_theme_stylebox_override("normal", _button_style(_transparent(gold, 0.13), gold, 12))
+            button.add_theme_color_override("font_color", gold)
         else:
-            button.add_theme_stylebox_override("normal", _button_style(card, border, 14))
+            button.add_theme_stylebox_override("normal", _button_style(surface, border, 12))
             button.add_theme_color_override("font_color", muted)
 
 func _toggle_theme() -> void:
@@ -309,45 +384,70 @@ func _toggle_theme() -> void:
 
 func _layout_responsive() -> void:
     if shell == null: return
-    var width := get_viewport().get_visible_rect().size.x
-    var mobile := width < 700.0
-    var compact := width < 980.0
-    shell.add_theme_constant_override("margin_left", 12 if mobile else 24)
-    shell.add_theme_constant_override("margin_right", 12 if mobile else 24)
-    shell.add_theme_constant_override("margin_top", 12 if mobile else 18)
-    shell.add_theme_constant_override("margin_bottom", 10 if mobile else 16)
-    brand.add_theme_font_size_override("font_size", 22 if mobile else 27)
-    hero_value.add_theme_font_size_override("font_size", 28 if mobile else 34)
-    section_title.add_theme_font_size_override("font_size", 20 if mobile else 22)
+    var size := root.size if root != null and root.size.x > 0.0 else get_viewport().get_visible_rect().size
+    var mobile := size.x < 700.0
+    var compact := size.x < 980.0
+    shell.add_theme_constant_override("margin_left", 10 if mobile else 24)
+    shell.add_theme_constant_override("margin_right", 10 if mobile else 24)
+    shell.add_theme_constant_override("margin_top", 10 if mobile else 16)
+    shell.add_theme_constant_override("margin_bottom", 8 if mobile else 12)
+    page.add_theme_constant_override("separation", 7 if mobile else 10)
+    brand.add_theme_font_size_override("font_size", 21 if mobile else 26)
+    hero_value.add_theme_font_size_override("font_size", 27 if mobile else 32)
+    hero_card.custom_minimum_size.y = 132 if size.x < 340.0 else (158 if mobile else 174)
+    hero_action.custom_minimum_size = Vector2(112 if mobile else 160, 50)
+    hero_action.add_theme_font_size_override("font_size", 10 if mobile else 12)
     stat_grid.columns = 2 if compact else 4
-    hero_action.custom_minimum_size = Vector2(126 if mobile else 168, 52)
-    hero_action.add_theme_font_size_override("font_size", 11 if mobile else 13)
+    stat_grid.visible = size.y >= 620.0
+    action_grid.columns = 2
+    hero_goal.visible = size.x >= 340.0 and size.y >= 600.0
+    hero_art.visible = size.x >= 360.0
+    location_label.visible = size.x >= 340.0
+    theme_button.visible = size.x >= 420.0
+    alerts_button.text = "ALERTS" if size.x < 420.0 else "DECISIONS"
+    alerts_button.custom_minimum_size.x = 72 if size.x < 420.0 else 92
+    section_caption.visible = size.y >= 640.0
+    status_label.visible = not mobile and size.y >= 720.0
+    for child in action_grid.get_children():
+        if child is Button:
+            child.custom_minimum_size = Vector2(118 if size.x < 340.0 else 148, 52 if size.y < 600.0 else 62)
     for button in mode_buttons:
-        button.add_theme_font_size_override("font_size", 10 if mobile else 12)
+        button.custom_minimum_size = Vector2(0, 46 if mobile else 48)
+        button.add_theme_font_size_override("font_size", 9 if mobile else 11)
     _restyle_actions()
 
 func _set_tab(index: int) -> void:
-    active_tab = clampi(index, 0, 3)
+    var next := clampi(index, 0, 3)
+    if next == active_tab:
+        return
+    active_tab = next
+    _transition_serial += 1
     _refresh()
     _style_active_tab()
+    _animate_layer_change(_transition_serial)
 
 func _clear_actions() -> void:
-    for child in action_list.get_children(): child.queue_free()
+    if action_grid == null: return
+    for child in action_grid.get_children(): child.queue_free()
+    # Legacy/final overlays may add group captions directly to action_list.
+    for child in action_list.get_children():
+        if child != action_grid: child.queue_free()
 
 func _group(title: String, caption := "") -> void:
+    # Group labels are deliberately subtle: depth comes from screens, not more cards.
     var box := VBoxContainer.new()
     box.add_theme_constant_override("separation", 0)
-    box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    var title_label := _label(title.to_upper(), 10)
+    var title_label := _label(title.to_upper(), 9)
     var muted := LIGHT_MUTED if light_theme else DARK_MUTED
     title_label.add_theme_color_override("font_color", muted)
     box.add_child(title_label)
     if caption != "":
-        var caption_label := _label(caption, 11)
+        var caption_label := _label(caption, 10)
         caption_label.add_theme_color_override("font_color", muted)
         caption_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         box.add_child(caption_label)
     action_list.add_child(box)
+    action_list.move_child(box, max(0, action_list.get_child_count() - 2))
 
 func _action(text: String, callback: Callable, subtitle := "", emphasis := false) -> void:
     if not callback.is_valid(): return
@@ -355,12 +455,14 @@ func _action(text: String, callback: Callable, subtitle := "", emphasis := false
     button.name = "Action_" + text.to_snake_case()
     button.text = text + ("\n" + subtitle if subtitle != "" else "")
     button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-    button.custom_minimum_size = Vector2(0, 64)
+    button.custom_minimum_size = Vector2(148, 62)
     button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     button.focus_mode = Control.FOCUS_NONE
+    button.clip_text = true
+    button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
     button.set_meta("renew_emphasis", emphasis)
     button.pressed.connect(_run_action.bind(callback))
-    action_list.add_child(button)
+    action_grid.add_child(button)
     _style_action_button(button)
 
 func _style_action_button(button: Button) -> void:
@@ -368,19 +470,19 @@ func _style_action_button(button: Button) -> void:
     var text := LIGHT_TEXT if light_theme else DARK_TEXT
     var border := LIGHT_BORDER if light_theme else DARK_BORDER
     var accent := LIGHT_ACCENT if light_theme else DARK_ACCENT
+    var gold := LIGHT_GOLD if light_theme else DARK_GOLD
     var emphasis := bool(button.get_meta("renew_emphasis", false))
-    var normal_bg := _transparent(accent, 0.11) if emphasis else surface
-    var normal_border := accent if emphasis else border
-    button.add_theme_stylebox_override("normal", _button_style(normal_bg, normal_border, 15))
-    button.add_theme_stylebox_override("hover", _button_style(_transparent(accent, 0.16), accent, 15))
-    button.add_theme_stylebox_override("pressed", _button_style(_transparent(accent, 0.23), accent, 15))
-    button.add_theme_color_override("font_color", accent if emphasis else text)
+    var tint := gold if emphasis else accent
+    button.add_theme_stylebox_override("normal", _button_style(_transparent(tint, 0.10) if emphasis else surface, tint if emphasis else border, 13))
+    button.add_theme_stylebox_override("hover", _button_style(_transparent(tint, 0.15), tint, 13))
+    button.add_theme_stylebox_override("pressed", _button_style(_transparent(tint, 0.24), tint, 13))
+    button.add_theme_color_override("font_color", gold if emphasis else text)
     button.add_theme_color_override("font_hover_color", text)
-    button.add_theme_font_size_override("font_size", 14)
+    button.add_theme_font_size_override("font_size", 12)
 
 func _restyle_actions() -> void:
-    if action_list == null: return
-    for child in action_list.get_children():
+    if action_grid == null: return
+    for child in action_grid.get_children():
         if child is Button: _style_action_button(child)
 
 func _run_action(callback: Callable) -> void:
@@ -389,15 +491,25 @@ func _run_action(callback: Callable) -> void:
     if result is Dictionary and result.has("message"): parent.message = str(result["message"])
     if str(parent.message) != "": show_feedback(str(parent.message))
     _refresh()
+    _pulse_primary()
 
 func show_feedback(text: String) -> void:
     feedback_label.text = text
     feedback_label.visible = true
-    feedback_timer = 6.0
+    feedback_timer = 4.5
+    feedback_label.modulate.a = 0.0
+    var tween := create_tween()
+    tween.tween_property(feedback_label, "modulate:a", 1.0, 0.18)
+
+func _open_decision_center() -> void:
+    var desk := get_node_or_null("/root/RenewManagementPolicyUI")
+    if desk != null and desk.has_method("_toggle"):
+        desk._toggle()
 
 func _open_screen(screen_name: String) -> void:
     var manager := get_node_or_null("/root/RenewUIScreenManager")
-    if manager != null and manager.has_method("show_screen"): manager.show_screen(screen_name)
+    if manager != null and manager.has_method("show_screen"):
+        manager.show_screen(screen_name)
 
 func _screen(text: String, screen_name: String, subtitle := "", emphasis := false) -> void:
     _action(text, Callable(self, "_open_screen").bind(screen_name), subtitle, emphasis)
@@ -408,22 +520,22 @@ func _next_rival() -> void:
 
 func _goal_text() -> String:
     if parent == null: return "Build your restoration empire."
-    if not bool(parent.inspected): return "Survey the abandoned property and uncover its potential."
-    if not bool(parent.owned): return "Secure the property before another buyer moves in."
-    if str(parent.stage) != "Operational": return "Restore the site, stage by stage, until it can operate."
-    if not bool(parent.business_open): return "Choose a purpose and launch the restored business."
-    if int(parent.finished_goods) <= 0: return "Build inventory, then convert it into cash through demand and contracts."
-    if int(parent.debt) > int(parent.cash): return "Protect liquidity: monitor debt while keeping production moving."
-    return "Scale the company: improve margins, secure supply and expand into stronger markets."
+    if not bool(parent.inspected): return "Inspect the abandoned property and reveal its commercial potential."
+    if not bool(parent.owned): return "Acquire the property before committing restoration capital."
+    if str(parent.stage) != "Operational": return "Complete the next restoration milestone and increase asset value."
+    if not bool(parent.business_open): return "Choose what the restored property becomes, then launch the company."
+    if int(parent.finished_goods) <= 0: return "Build inventory and establish reliable supply before chasing growth."
+    if int(parent.debt) > int(parent.cash): return "Protect liquidity while keeping the operating engine moving."
+    return "Grow deliberately: improve margins, people, supply and market reach."
 
 func _primary_move() -> Dictionary:
     if parent == null: return {"label": "NEXT MOVE", "call": Callable()}
     if not bool(parent.inspected): return {"label": "INSPECT", "call": parent.inspect_property}
     if not bool(parent.owned): return {"label": "ACQUIRE", "call": parent.acquire_property}
     if str(parent.stage) != "Operational": return {"label": "RESTORE", "call": parent.restore_property}
-    if not bool(parent.business_open): return {"label": "OPEN BUSINESS", "call": parent.open_business}
+    if not bool(parent.business_open): return {"label": "CHOOSE BUSINESS", "call": Callable(self, "_open_business_choices")}
     if int(parent.finished_goods) <= 0: return {"label": "PRODUCE", "call": parent.produce_goods}
-    return {"label": "END DAY", "call": parent.advance_day}
+    return {"label": "BUSINESS", "call": Callable(self, "_set_tab").bind(1)}
 
 func _bind_primary_move() -> void:
     for connection in hero_action.pressed.get_connections():
@@ -433,6 +545,18 @@ func _bind_primary_move() -> void:
     hero_action.text = str(move.get("label", "NEXT MOVE"))
     var callable: Callable = move.get("call", Callable())
     if callable.is_valid(): hero_action.pressed.connect(_run_action.bind(callable))
+
+func _open_business_choices() -> void:
+    active_tab = 1
+    _refresh()
+    _style_active_tab()
+    _animate_layer_change(_transition_serial + 1)
+
+func _choose_business(index: int) -> void:
+    if parent != null and parent.has_method("choose_business_purpose"):
+        parent.choose_business_purpose(index)
+        show_feedback(str(parent.message))
+        _refresh()
 
 func _set_metric(index: int, title: String, value: String) -> void:
     if index < 0 or index >= stat_values.size(): return
@@ -447,10 +571,10 @@ func _refresh_metrics() -> void:
     if parent == null: return
     match active_tab:
         0:
-            _set_metric(0, "RESTORATION", "%d%%" % int(parent.restoration))
-            _set_metric(1, "SITE", str(parent.stage).to_upper())
-            _set_metric(2, "LAST PROFIT", _money(int(parent.last_profit)))
-            _set_metric(3, "REPUTATION", str(int(parent.reputation)))
+            _set_metric(0, "RESTORED", "%d%%" % int(parent.restoration))
+            _set_metric(1, "LAST PROFIT", _money(int(parent.last_profit)))
+            _set_metric(2, "REPUTATION", str(int(parent.reputation)))
+            _set_metric(3, "BUSINESS", "OPEN" if bool(parent.business_open) else str(parent.stage).to_upper())
         1:
             _set_metric(0, "INVENTORY", str(int(parent.finished_goods)))
             _set_metric(1, "STAFF", str(int(parent.employees)))
@@ -458,97 +582,115 @@ func _refresh_metrics() -> void:
             _set_metric(3, "DEBT", _money(int(parent.debt)))
         2:
             _set_metric(0, "ACQUISITIONS", str(int(parent.acquisition_count)))
-            _set_metric(1, "TRANSPORT", "LV %d" % int(parent.transport_level))
-            _set_metric(2, "CAPACITY", str(int(parent.transport_capacity)))
-            _set_metric(3, "TOTAL PROFIT", _money(int(parent.total_profit)))
+            _set_metric(1, "TOTAL PROFIT", _money(int(parent.total_profit)))
+            _set_metric(2, "TRANSPORT", "LV %d" % int(parent.transport_level))
+            _set_metric(3, "CAPACITY", str(int(parent.transport_capacity)))
         3:
             _set_metric(0, "DISTRICT", str(int(parent.selected_district) + 1))
-            _set_metric(1, "TRANSPORT", "LV %d" % int(parent.transport_level))
-            _set_metric(2, "CONTRACT", "%dd" % int(parent.contract_days))
+            _set_metric(1, "CONTRACT", "%dd" % int(parent.contract_days))
+            _set_metric(2, "TRANSPORT", "LV %d" % int(parent.transport_level))
             _set_metric(3, "REPUTATION", str(int(parent.reputation)))
 
 func _refresh() -> void:
-    if parent == null or action_list == null: return
+    if parent == null or action_grid == null: return
     _clear_actions()
     hero_value.text = _money(int(parent.cash))
-    hero_meta.text = "DAY %d  •  REP %d  •  %s" % [int(parent.day), int(parent.reputation), "OPEN" if bool(parent.business_open) else "CLOSED"]
     hero_goal.text = _goal_text()
-    var command_message := str(parent.message)
-    status_label.text = command_message if command_message != "" else "%s • inventory %d • staff %d" % [str(parent.stage), int(parent.finished_goods), int(parent.employees)]
+    hero_progress.value = clampi(int(parent.restoration), 0, 100)
+    hero_progress_label.text = "%d%% restored" % int(parent.restoration)
+    hero_meta.text = "DAY %d  •  %s" % [int(parent.day), "OPERATING" if bool(parent.business_open) else str(parent.stage).to_upper()]
     _bind_primary_move()
     _refresh_metrics()
 
-    section_title.text = ["Live Command", "Business Operations", "Empire Control", "World Network"][active_tab]
+    section_title.text = ["Home", "Business", "Empire", "World"][active_tab]
     section_caption.text = [
-        "Restore assets, read the company pulse and move the day forward.",
-        "Coordinate production, people, customers, contracts and capital.",
-        "Build a portfolio, compete with corporations and invest in scale.",
-        "Connect regions, logistics, infrastructure, opportunities and market news."
+        "Current objective, company pulse and the next meaningful move.",
+        "Operate the active company. Open a layer only when you need its detail.",
+        "Manage assets, strategy and competition at portfolio scale.",
+        "Read regions, logistics and external signals before expanding."
     ][active_tab]
+    status_label.text = str(parent.message)
 
     match active_tab:
         0:
-            _group("Command center", "The shortest path from abandoned asset to operating company.")
-            _screen("Company dashboard", "DashboardPanel", "KPIs, alerts and company health", true)
-            if not bool(parent.inspected):
-                _action("Inspect property", parent.inspect_property, "Reveal condition, risk and restoration needs", true)
-            elif not bool(parent.owned):
-                _action("Acquire property", parent.acquire_property, "Secure the asset and begin the turnaround", true)
-            elif str(parent.stage) != "Operational":
-                _action("Restore next stage", parent.restore_property, "Invest in the next visible restoration milestone", true)
-            elif not bool(parent.business_open):
-                _action("Open business", parent.open_business, "Convert the restored asset into an operating company", true)
+            _screen("Company overview", "DashboardPanel", "Health, alerts and performance", true)
+            _screen("Properties", "PortfolioPanel", "See owned sites and restoration projects")
+            if bool(parent.business_open):
+                _screen("Active company", "ProductionControlPanel", "Open the operating company workspace")
             else:
-                _action("End day", parent.advance_day, "Resolve demand, costs, rivals and the wider economy", true)
-            _group("Control")
-            _screen("Portfolio", "PortfolioPanel", "Owned assets, leases and property decisions")
-            _screen("Save / load", "SaveLoadPanel", "Protect or restore the current company state")
+                _action(hero_action.text, _primary_move().get("call", Callable()), "Continue the current objective", true)
+            _screen("Save & settings", "SaveLoadPanel", "Save, load and company controls")
         1:
-            _group("Operations", "Turn supply and labor into profitable output.")
-            _screen("Production control", "ProductionControlPanel", "Inventory, throughput and production decisions", true)
-            _action("Buy inputs", parent.buy_inputs, "Replenish production materials")
-            _action("Produce goods", parent.produce_goods, "Convert inputs into saleable inventory")
-            _action("Change price", parent.change_price, "Respond to demand and competitive pressure")
-            _action("Upgrade business", parent.upgrade_business, "Increase capacity and operating efficiency")
-            _group("Demand and people")
-            _screen("Customers & market", "CustomerSegmentsUI", "Segments, demand and pricing intelligence")
-            _screen("Contracts", "ContractPanel", "Customer commitments, haggling and special deals")
-            _screen("Employees", "EmployeePanel", "Hiring, assignments, development and leadership")
-            _action("Marketing campaign", parent.marketing_campaign, "Build visibility and stimulate demand")
-            _group("Capital")
-            _screen("Finance", "FinancePanel", "Cash flow, debt, investment and financial health")
+            if str(parent.stage) == "Operational" and not bool(parent.business_open):
+                _group("Choose the company", "One restored site can support different business models. Pick deliberately.")
+                var choices: Array = parent.get_business_purposes() if parent.has_method("get_business_purposes") else []
+                for i in range(choices.size()):
+                    var choice: Dictionary = choices[i]
+                    var name := str(choice.get("name", "Business"))
+                    var industry_id := str(choice.get("industry_id", ""))
+                    var detail := "Tap to launch this business model"
+                    if parent.command_system != null and parent.command_system.business_system != null:
+                        var industry: Dictionary = parent.command_system.business_system.get_industry(industry_id)
+                        if not industry.is_empty():
+                            detail = "%d staff • cap %d • cost %s • demand %d" % [int(industry.get("workers", 0)), int(industry.get("capacity", 0)), _money(int(industry.get("operating_cost", 0))), int(industry.get("market_demand", 0))]
+                    _action(name, Callable(self, "_choose_business").bind(i), detail, i == 0)
+                _screen("Market intelligence", "CustomerSegmentsUI", "Compare demand before you commit")
+            else:
+                _screen("Operations", "ProductionControlPanel", "Production, inventory and throughput", true)
+                _screen("People & demand", "EmployeePanel", "Staffing, assignments and development")
+                _screen("Market & customers", "CustomerSegmentsUI", "Demand, segments, pricing and marketing")
+                _screen("Finance & contracts", "FinancePanel", "Cash flow, debt and commercial commitments")
         2:
-            _group("Portfolio and scale", "Expansion should create new operational choices, not just bigger numbers.")
-            _screen("Empire expansion", "EmpireExpansionPanel", "Acquire and upgrade expansion businesses", true)
-            _screen("Portfolio", "PortfolioPanel", "Property ownership, leases and asset allocation")
-            _screen("Headquarters", "HeadquartersPanel", "Management capacity and empire-wide capabilities")
-            _screen("Technology", "TechnologyPanel", "Research efficiency, logistics and strategic advantages")
-            _group("Competition and alliances")
-            _screen("Corporations", "CorporationsPanel", "Rivals, ownership moves and corporate intelligence")
-            _action("Next rival", _next_rival, "Cycle the active competing corporation")
-            _action("Alliance offer", parent.make_alliance_offer, "Open a strategic route instead of a price war")
-            _screen("Alliance network", "AlliancePanel", "Relationships, members and alliance competitions")
-            _group("Infrastructure")
-            _screen("Supply chain", "SupplyChainPanel", "Internal logistics, suppliers and transport pressure")
-            _action("Upgrade transport", parent.upgrade_transport, "Raise network capacity and expansion resilience")
+            _screen("Portfolio & projects", "PortfolioPanel", "Properties, projects and asset allocation", true)
+            _screen("Expansion", "EmpireExpansionPanel", "Acquire and build the next operating asset")
+            _screen("HQ & technology", "HeadquartersPanel", "Management capacity, research and automation")
+            _screen("Competition", "CorporationsPanel", "Rivals, ownership moves and alliances")
         3:
-            _group("Regional strategy", "Expansion works best when market access, supply and infrastructure move together.")
-            _screen("Regions", "RegionsPanel", "Presence, branches and regional economics", true)
-            _screen("World opportunities", "WorldOpportunitiesPanel", "Missions and expansion opportunities")
-            _screen("Infrastructure", "InfrastructurePanel", "Build and repair strategic infrastructure")
-            _group("Flows and intelligence")
-            _screen("Supply chain", "SupplyChainPanel", "Transport, suppliers and network bottlenecks")
-            _action("Upgrade transport", parent.upgrade_transport, "Increase resilience across the wider network")
-            _screen("Live events", "LiveOpsPanel", "Seasonal shocks and market-wide modifiers")
-            _screen("News", "NewsPanel", "Read economic and competitive signals before acting")
-
+            _screen("Regions", "RegionsPanel", "Districts, reputation and expansion conditions", true)
+            _screen("Supply network", "SupplyChainPanel", "Suppliers, transport and bottlenecks")
+            _screen("Opportunities", "WorldOpportunitiesPanel", "Time-sensitive projects and market openings")
+            _screen("Intelligence", "EmpireIntelligencePanel", "Events, rivals and external signals")
     _style_active_tab()
     _restyle_actions()
+    _layout_responsive()
+
+func _animate_entry() -> void:
+    page.modulate.a = 0.0
+    page.position.y += 12.0
+    var tween := create_tween().set_parallel(true)
+    tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+    tween.tween_property(page, "modulate:a", 1.0, 0.28)
+    tween.tween_property(page, "position:y", page.position.y - 12.0, 0.28)
+
+func _animate_layer_change(serial: int) -> void:
+    if action_dock == null: return
+    action_dock.modulate.a = 0.0
+    action_dock.position.x = 14.0
+    var tween := create_tween().set_parallel(true)
+    tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+    tween.tween_property(action_dock, "modulate:a", 1.0, 0.20)
+    tween.tween_property(action_dock, "position:x", 0.0, 0.20)
+
+func _pulse_primary() -> void:
+    if hero_action == null: return
+    hero_action.scale = Vector2.ONE
+    hero_action.pivot_offset = hero_action.size * 0.5
+    var tween := create_tween()
+    tween.tween_property(hero_action, "scale", Vector2(1.035, 1.035), 0.08)
+    tween.tween_property(hero_action, "scale", Vector2.ONE, 0.13)
 
 func _process(delta: float) -> void:
     if feedback_timer > 0.0:
         feedback_timer = maxf(0.0, feedback_timer - delta)
-        if feedback_timer <= 0.0: feedback_label.visible = false
-    if parent != null:
+        if feedback_timer <= 0.0:
+            var tween := create_tween()
+            tween.tween_property(feedback_label, "modulate:a", 0.0, 0.15)
+            tween.tween_callback(func(): feedback_label.visible = false)
+    _refresh_accumulator += delta
+    if hero_art != null and hero_art.visible:
+        hero_art.modulate.a = 0.20 + 0.025 * sin(Time.get_ticks_msec() / 1100.0)
+    if _refresh_accumulator >= 0.5 and parent != null:
+        _refresh_accumulator = 0.0
         hero_value.text = _money(int(parent.cash))
-        hero_meta.text = "DAY %d  •  REP %d  •  %s" % [int(parent.day), int(parent.reputation), "OPEN" if bool(parent.business_open) else "CLOSED"]
+        hero_progress.value = clampi(int(parent.restoration), 0, 100)
+        hero_progress_label.text = "%d%% restored" % int(parent.restoration)
