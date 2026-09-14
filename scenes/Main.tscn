@@ -1,4 +1,4 @@
-[gd_scene load_steps=49 format=3]
+[gd_scene load_steps=50 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -51,6 +51,7 @@
 [ext_resource path="res://scripts/expansion_ui.gd" type="Script" id="58"]
 [ext_resource path="res://scripts/empire_intelligence_ui.gd" type="Script" id="59"]
 [ext_resource path="res://scripts/save_load_ui.gd" type="Script" id="60"]
+[ext_resource path="res://scripts/progression_system.gd" type="Script" id="61"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -87,6 +88,8 @@ script=ExtResource("12")
 script=ExtResource("15")
 [node name="Progression" type="Node" parent="Systems"]
 script=ExtResource("14")
+[node name="StrategicProgression" type="Node" parent="Systems"]
+script=ExtResource("61")
 [node name="MarketDirector" type="Node" parent="Systems"]
 script=ExtResource("16")
 [node name="EmpireGoals" type="Node" parent="Systems"]
