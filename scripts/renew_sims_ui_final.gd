@@ -1,7 +1,8 @@
 extends "res://scripts/renew_sims_ui.gd"
 
-# Production entry point for the layered RESTORA shell. Adds live-economy context
-# without flattening secondary systems back onto the home screen.
+# Production entry point for the layered RESTORA shell. Adds live-economy context,
+# progression-driven discovery and premium mobile composition without flattening
+# secondary systems back onto the home screen.
 
 var tabs: HBoxContainer
 
@@ -19,8 +20,6 @@ func _layout_responsive() -> void:
     var mobile := size.x < 700.0
     var narrow_phone := size.x < 420.0
 
-    # Keep the persistent world edge visible on wide screens while retaining a
-    # full-width management surface on mobile.
     shell.add_theme_constant_override("margin_left", 10 if mobile else 86)
 
     # Premium mobile readability: never solve density by shrinking text until it
@@ -70,7 +69,7 @@ func _open_decision_center() -> void:
 func _open_screen(screen_name: String) -> void:
     var manager := get_node_or_null("/root/RenewUIScreenManager")
     if manager != null and manager.has_method("show_screen"):
-        var opened := manager.show_screen(screen_name)
+        var opened = manager.show_screen(screen_name)
         if opened == false:
             show_feedback("That management screen is not available yet.")
         return
@@ -86,6 +85,72 @@ func _management_policy():
 
 func _real_time_economy():
     return get_node_or_null("/root/RenewRealTimeEconomySystem")
+
+func _strategic_progression():
+    return get_node_or_null("/root/Renew/Systems/StrategicProgression")
+
+func _feature_available(feature_id: String) -> bool:
+    var progression = _strategic_progression()
+    if progression == null or not progression.has_method("has_unlock"):
+        # Compatibility fallback for unusual test harnesses that instantiate the
+        # HUD without the complete Main scene.
+        return true
+    return bool(progression.has_unlock(feature_id))
+
+func _progression_level() -> int:
+    var progression = _strategic_progression()
+    if progression != null and progression.has_method("get_level"):
+        return int(progression.get_level())
+    return 1
+
+func _set_action_visible(label_text: String, visible: bool) -> void:
+    var wanted := label_text.to_lower()
+    for child in action_grid.get_children():
+        if child is Button:
+            var button := child as Button
+            var primary_text := button.text.split("\n")[0].strip_edges().to_lower()
+            if primary_text == wanted:
+                button.visible = visible
+                button.process_mode = Node.PROCESS_MODE_INHERIT if visible else Node.PROCESS_MODE_DISABLED
+
+func _apply_progression_discovery() -> void:
+    # Base HUD remains save-compatible. This layer controls what a player discovers
+    # naturally, while direct system APIs remain available to tests and old saves.
+    match active_tab:
+        1:
+            _set_action_visible("People & demand", _feature_available("employees"))
+            _set_action_visible("Finance & contracts", _feature_available("finance"))
+            if _feature_available("contracts") and bool(parent.business_open):
+                _screen("Contracts", "ContractPanel", "Obligations, delivery and commercial commitments")
+        2:
+            _set_action_visible("Expansion", _feature_available("regions"))
+            _set_action_visible("Competition", _feature_available("competitors"))
+            # The old combined entry opened HQ even before HQ was unlocked. Replace
+            # it with explicit progression-correct destinations.
+            _set_action_visible("HQ & technology", false)
+            if _feature_available("alliances"):
+                _screen("Alliances", "AlliancePanel", "Partnerships, leverage and strategic cooperation")
+            if _feature_available("diplomacy"):
+                _screen("Diplomacy", "RenewDiplomacyUI", "Treaties, relations and joint strategic moves")
+            if _feature_available("infrastructure"):
+                _screen("Infrastructure", "InfrastructurePanel", "Build logistics, energy and operating capacity")
+            if _feature_available("technology"):
+                _screen("Technology & research", "TechnologyPanel", "Research capabilities and operating advantages")
+            if _feature_available("acquisitions"):
+                _screen("Acquisitions & mergers", "CorporationsPanel", "Due diligence, ownership and corporate expansion", true)
+            if _feature_available("headquarters"):
+                _screen("Headquarters", "HeadquartersPanel", "Strategic capacity, leadership and world-scale growth", true)
+        3:
+            _set_action_visible("Regions", _feature_available("regions"))
+            _set_action_visible("Supply network", _feature_available("supply_chain"))
+            _set_action_visible("Intelligence", _feature_available("competitors"))
+            if _feature_available("regions"):
+                _screen("Market news", "NewsPanel", "Verified company and world signals")
+            if _feature_available("legacy"):
+                _screen("History & legacy", "HistoryPanel", "Milestones, company history and long-term impact", true)
+                _screen("Collections", "CollectionPanel", "Preserve major achievements and legacy items")
+    _restyle_actions()
+    _layout_responsive()
 
 func _sell_goods_now() -> Dictionary:
     var economy = _real_time_economy()
@@ -128,23 +193,25 @@ func _refresh() -> void:
     super._refresh()
     if parent == null:
         return
+    _apply_progression_discovery()
     var clock := Time.get_datetime_dict_from_system()
     var hh := "%02d" % int(clock.get("hour", 0))
     var mm := "%02d" % int(clock.get("minute", 0))
+    var level := _progression_level()
     var economy = _real_time_economy()
     if economy != null and economy.has_method("status"):
         var rt: Dictionary = economy.status()
         var hourly := int(round(float(rt.get("hourly_net", 0.0))))
         var demand_left := int(rt.get("consumer_demand_remaining", 0))
-        hero_meta.text = "%s:%s • %s • %s$%s/hr • demand %d" % [
-            hh, mm,
+        hero_meta.text = "%s:%s • LV %d • %s • %s$%s/hr • demand %d" % [
+            hh, mm, level,
             "OPERATING" if bool(parent.business_open) else str(parent.stage).to_upper(),
             "+" if hourly >= 0 else "-",
             String.num_int64(abs(hourly)),
             demand_left
         ]
     else:
-        hero_meta.text = "%s:%s • %s" % [hh, mm, "OPERATING" if bool(parent.business_open) else str(parent.stage).to_upper()]
+        hero_meta.text = "%s:%s • LV %d • %s" % [hh, mm, level, "OPERATING" if bool(parent.business_open) else str(parent.stage).to_upper()]
 
 func _process(delta: float) -> void:
     super._process(delta)
