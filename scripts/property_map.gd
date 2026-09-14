@@ -33,11 +33,11 @@ func _signature() -> String:
 	if state == null:
 		return "none"
 	var catalog = state.get_value("properties", "catalog", [])
-	var parts: Array = [str(state.get_value("player", "day", 1)), str(state.get_value("properties", "selected_property", 0)), str(state.get_value("properties", "owned", false))]
+	var parts: Array = [str(state.get_value("player", "day", 1)), str(state.get_value("properties", "selected_property", 0))]
 	if catalog is Array:
 		for entry in catalog:
 			if entry is Dictionary:
-				parts.append("%s:%d:%d:%d:%d:%s:%d" % [str(entry.get("id", "")), int(entry.get("cleaning", 0)), int(entry.get("repair", 0)), int(entry.get("painting", 0)), int(entry.get("furnishing", 0)), str(entry.get("condition", 0)), int(entry.get("lease_until", 0))])
+				parts.append("%s:%s:%s:%d:%d:%d:%d:%s:%d" % [str(entry.get("id", "")), str(entry.get("owned", false)), str(entry.get("inspected", false)), int(entry.get("cleaning", 0)), int(entry.get("repair", 0)), int(entry.get("painting", 0)), int(entry.get("furnishing", 0)), str(entry.get("condition", 0)), int(entry.get("lease_until", 0))])
 	return "|".join(parts)
 
 func stage_of(property: Dictionary, owned: bool) -> int:
@@ -133,9 +133,9 @@ func _draw() -> void:
 	var catalog = state.get_value("properties", "catalog", [])
 	if not catalog is Array or catalog.is_empty():
 		return
-	var owned := bool(state.get_value("properties", "owned", false))
 	var selected := int(state.get_value("properties", "selected_property", 0))
 	var business_open := bool(state.get_value("businesses", "business_open", false))
+	var origin_property_id := str(state.get_value("businesses", "origin_property_id", ""))
 	var day := int(state.get_value("player", "day", 1))
 	var font: Font = ThemeDB.fallback_font
 	var index := 0
@@ -144,16 +144,20 @@ func _draw() -> void:
 		if entry.is_empty():
 			continue
 		var rect: Rect2 = slot["rect"]
-		var stage := stage_of(entry, owned and index == selected)
+		var entry_owned := bool(entry.get("owned", false))
+		var stage := stage_of(entry, entry_owned)
 		_draw_building(rect, str(entry.get("type", "Warehouse")), stage, int(entry.get("condition", 0)))
-		if owned and index == selected:
+		if entry_owned:
 			draw_rect(rect.grow(4.0), OWNED_RING, false, 2.0)
 		if index == selected:
 			draw_rect(rect.grow(8.0), SELECT_RING, false, 1.5)
 		if int(entry.get("lease_until", 0)) > day:
 			draw_string(font, rect.position + Vector2(4, -6), "LEASED", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, TRIM)
 		draw_string(font, rect.position + Vector2(0, rect.size.y + 14), str(entry.get("name", "?")), HORIZONTAL_ALIGNMENT_LEFT, rect.size.x, 10, TEXT)
-		var caption := _stage_caption(stage, business_open and owned and index == selected)
+		var operating := business_open and entry_owned and str(entry.get("id", "")) == origin_property_id
+		var caption := _stage_caption(stage, operating)
+		if not entry_owned and bool(entry.get("inspected", false)):
+			caption = "SURVEYED"
 		draw_string(font, rect.position + Vector2(0, rect.size.y + 27), caption, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x, 9, MUTED)
 		index += 1
 
