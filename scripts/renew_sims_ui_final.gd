@@ -62,9 +62,9 @@ func _refresh() -> void:
     var economy = _real_time_economy()
     if economy != null and economy.has_method("status"):
         var rt: Dictionary = economy.status()
-        var hourly := float(rt.get("hourly_net", 0.0))
+        var hourly := int(round(float(rt.get("hourly_net", 0.0))))
         var passive_assets := int(rt.get("businesses", 0)) + int(rt.get("resource_sites", 0))
-        hero_meta.text = "%s:%s  •  LIVE  •  REP %d  •  PASSIVE %s$/HR" % [hh, mm, int(parent.reputation), "+" if hourly >= 0.0 else "-"] + String.num_int64(abs(int(round(hourly))))
+        hero_meta.text = "%s:%s  •  LIVE  •  REP %d  •  PASSIVE %s$%s/HR" % [hh, mm, int(parent.reputation), "+" if hourly >= 0 else "-", String.num_int64(abs(hourly))]
         if passive_assets > 0 and status_label.text.is_empty():
             status_label.text = "%d passive asset%s operating • active business remains player-controlled" % [passive_assets, "" if passive_assets == 1 else "s"]
     else:
