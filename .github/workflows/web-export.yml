@@ -71,6 +71,14 @@ jobs:
           chmod +x "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
           "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
 
+      - name: Upload Godot runtime
+        uses: actions/upload-artifact@v4
+        with:
+          name: Godot-4.7.2-linux
+          path: /home/runner/godot/Godot_v4.7.2-stable_linux.x86_64
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Import project
         shell: bash
         run: |
