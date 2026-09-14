@@ -89,10 +89,10 @@ jobs:
       - name: Export installable Android debug APK
         run: |
           mkdir -p build
-          timeout 600s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path . --export-debug "Android" build/RENEW-debug.apk
-          test -s build/RENEW-debug.apk
-          file build/RENEW-debug.apk
-          ls -lh build/RENEW-debug.apk
+          timeout 600s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --path . --export-debug "Android" build/Restora-debug.apk
+          test -s build/Restora-debug.apk
+          file build/Restora-debug.apk
+          ls -lh build/Restora-debug.apk
 
       - name: Verify export kept source clean
         shell: bash
@@ -107,7 +107,7 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: RENEW-Android-debug
-          path: build/RENEW-debug.apk
+          name: Restora-Android-debug
+          path: build/Restora-debug.apk
           if-no-files-found: error
           retention-days: 14
