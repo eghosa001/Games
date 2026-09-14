@@ -25,8 +25,17 @@ func _refresh_metrics() -> void:
         stat_names[3].text = "PORTFOLIO"
         stat_values[3].text = "%d / %d" % [int(status.get("restored", 0)), int(status.get("total", 0))]
 
-func _open_business_operations() -> void:
-    _set_tab(1)
+func _sell_goods_now() -> Dictionary:
+    var economy = _real_time_economy()
+    if economy == null or not economy.has_method("sell_goods"):
+        return {"ok": false, "message": "Active market is unavailable."}
+    return economy.sell_goods()
+
+func _deliver_contract_now() -> Dictionary:
+    var economy = _real_time_economy()
+    if economy == null or not economy.has_method("deliver_contract"):
+        return {"ok": false, "message": "Contract delivery is unavailable."}
+    return economy.deliver_contract()
 
 func _primary_move() -> Dictionary:
     if parent == null:
@@ -41,20 +50,20 @@ func _primary_move() -> Dictionary:
         return {"label": "OPEN BUSINESS", "call": parent.open_business}
     if int(parent.finished_goods) <= 0:
         return {"label": "PRODUCE", "call": parent.produce_goods}
-    return {"label": "MANAGE BUSINESS", "call": Callable(self, "_open_business_operations")}
+    return {"label": "SELL GOODS", "call": Callable(self, "_sell_goods_now")}
 
 func _refresh() -> void:
     super._refresh()
-
-    # Day advancement is no longer presented as a player action. The world uses
-    # real time while the player remains free to make as many active decisions
-    # as desired during the current calendar day.
     var end_day_button = action_list.get_node_or_null("Action_end_day") if action_list != null else null
     if end_day_button != null:
         end_day_button.visible = false
-
     if active_tab == 0:
         section_caption.text = "Restore assets, operate freely and watch the live economy move in real-world time."
+    if active_tab == 1 and bool(parent.business_open):
+        _group("Active trading", "You control production and selling. Consumer demand is finite each real-world day.")
+        _action("Sell goods now", Callable(self, "_sell_goods_now"), "Sell available inventory into today's remaining customer demand", true)
+        if int(parent.contract_days) > 0:
+            _action("Deliver contract", Callable(self, "_deliver_contract_now"), "Settle today's contract delivery before the calendar rolls over", true)
 
     var clock := Time.get_datetime_dict_from_system()
     var hh := "%02d" % int(clock.get("hour", 0))
@@ -64,7 +73,8 @@ func _refresh() -> void:
         var rt: Dictionary = economy.status()
         var hourly := int(round(float(rt.get("hourly_net", 0.0))))
         var passive_assets := int(rt.get("businesses", 0)) + int(rt.get("resource_sites", 0))
-        hero_meta.text = "%s:%s  •  LIVE  •  REP %d  •  PASSIVE %s$%s/HR" % [hh, mm, int(parent.reputation), "+" if hourly >= 0 else "-", String.num_int64(abs(hourly))]
+        var demand_left := int(rt.get("consumer_demand_remaining", 0))
+        hero_meta.text = "%s:%s  •  LIVE  •  REP %d  •  PASSIVE %s$%s/HR  •  DEMAND %d" % [hh, mm, int(parent.reputation), "+" if hourly >= 0 else "-", String.num_int64(abs(hourly)), demand_left]
         if passive_assets > 0 and status_label.text.is_empty():
             status_label.text = "%d passive asset%s operating • active business remains player-controlled" % [passive_assets, "" if passive_assets == 1 else "s"]
     else:
@@ -75,7 +85,6 @@ func _process(delta: float) -> void:
     var policies = _management_policy()
     if location_label == null:
         return
-
     var economy = _real_time_economy()
     var passive_text := ""
     if economy != null and economy.has_method("status"):
@@ -84,15 +93,13 @@ func _process(delta: float) -> void:
         var assets := int(rt.get("businesses", 0)) + int(rt.get("resource_sites", 0))
         if assets > 0:
             passive_text = "  •  PASSIVE %s$%s/HR" % ["+" if hourly >= 0 else "-", String.num_int64(abs(hourly))]
-
     if policies == null:
         location_label.text = "RESTORATION COMMAND" + passive_text
         return
     var alerts = policies.get_alerts()
     var critical := 0
     for alert in alerts:
-        if alert is Dictionary and str(alert.get("severity", "")) == "critical":
-            critical += 1
+        if alert is Dictionary and str(alert.get("severity", "")) == "critical": critical += 1
     if critical > 0:
         location_label.text = "RESTORATION COMMAND  •  %d CRITICAL%s" % [critical, passive_text]
     elif alerts.size() > 0:
