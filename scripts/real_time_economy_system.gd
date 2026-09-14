@@ -32,6 +32,12 @@ func _process(delta: float) -> void:
 
 func _state(): return get_node_or_null("/root/RenewGameState")
 func _finance(): return get_node_or_null("/root/RenewFinanceSystem")
+func _sync_finance() -> void:
+    var state = _state(); var finance = _finance()
+    if state == null or finance == null: return
+    state.set_value("economy", "cash", int(finance.cash))
+    state.set_value("finance", "debt", int(finance.debt))
+    state.set_value("finance", "loan_payment", int(finance.loan_payment))
 func _commands():
     var scene := get_tree().current_scene if get_tree() != null else null
     if scene == null: return null
@@ -105,7 +111,9 @@ func reconcile_passive_income(force: bool = false) -> Dictionary:
             # Advance the clock even when an operating deficit cannot be paid so
             # the same elapsed period cannot be charged repeatedly every frame.
             var failed_clock := _clock_state(); failed_clock["last_passive_settlement_unix"] = now; failed_clock["last_passive_amount"] = 0; failed_clock["last_passive_elapsed_seconds"] = billable_seconds; failed_clock["passive_daily_net"] = daily_net; _save_clock(failed_clock)
+            _sync_finance()
             return {"ok": false, "settled": 0, "elapsed": billable_seconds, "message": str(result.get("message", "Passive operating deficit could not be paid."))}
+        _sync_finance()
     var clock := _clock_state(); clock["passive_fractional_carry"] = new_carry; clock["last_passive_settlement_unix"] = now; clock["last_passive_amount"] = settled; clock["last_passive_elapsed_seconds"] = billable_seconds; clock["passive_daily_net"] = daily_net; _save_clock(clock)
     return {"ok": true, "settled": settled, "elapsed": billable_seconds, "daily_net": daily_net, "hourly_net": daily_net / 24.0, "businesses": int(rate.get("businesses", 0)), "resource_sites": int(rate.get("resource_sites", 0))}
 
