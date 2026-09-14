@@ -76,17 +76,17 @@ func get_policy(policy: String) -> String:
 
 func cycle_policy(policy: String) -> Dictionary:
     if not policies.has(policy): return {"ok":false, "message":"Unknown policy."}
-    var current := MODES.find(get_policy(policy))
-    var next := MODES[(maxi(0, current) + 1) % MODES.size()]
-    if next == "auto":
+    var current: int = MODES.find(get_policy(policy))
+    var next_mode: String = str(MODES[(maxi(0, current) + 1) % MODES.size()])
+    if next_mode == "auto":
         var access := can_auto(policy)
         if not bool(access.get("ok", false)):
             policies[policy] = "manual"
             _save_policies(); evaluate()
             return {"ok":false, "message":str(access.get("reason", "Automation locked."))}
-    policies[policy] = next
+    policies[policy] = next_mode
     _save_policies(); evaluate()
-    return {"ok":true, "message":"%s policy: %s." % [policy.capitalize(), next.to_upper()]}
+    return {"ok":true, "message":"%s policy: %s." % [policy.capitalize(), next_mode.to_upper()]}
 
 func set_cash_reserve(value:int) -> void:
     cash_reserve=clampi(value,0,250000); _save_policies(); evaluate()
@@ -135,12 +135,12 @@ func _auto_price() -> void:
     var price := int(state.get_value("businesses", "player_price", 110))
     var profit := int(state.get_value("economy", "last_profit", 0))
     var stock := int(state.get_value("production", "finished_goods", 0))
-    var next := price
-    if profit < 0 and stock >= 4: next = maxi(80, price - 10)
-    elif profit > 0 and stock <= 2: next = mini(160, price + 10)
-    if next != price:
-        state.set_value("businesses", "player_price", next)
-        last_actions.append("price $%d→$%d" % [price, next])
+    var next_price: int = price
+    if profit < 0 and stock >= 4: next_price = maxi(80, price - 10)
+    elif profit > 0 and stock <= 2: next_price = mini(160, price + 10)
+    if next_price != price:
+        state.set_value("businesses", "player_price", next_price)
+        last_actions.append("price $%d→$%d" % [price, next_price])
 
 func _auto_maintain() -> void:
     var production = _production(); var finance = _finance()
