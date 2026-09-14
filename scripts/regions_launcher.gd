@@ -25,54 +25,29 @@ func _ready() -> void:
     call_deferred("_build")
 
 func _build() -> void:
+    # RESTORA now uses the layered MainHUD. Keep the dynamically-created depth
+    # screens, but do not render the old persistent launcher strip.
     if hud == null: return
-    button=_make_button("REGIONS"); operations_button=_make_button("OPS"); production_button=_make_button("PROD"); supply_button=_make_button("SUPPLY"); expansion_button=_make_button("EMPIRE"); intelligence_button=_make_button("INTEL"); progression_button=_make_button("PROG"); identity_button=_make_button("IDENT"); notifications_button=_make_button("NOTICES"); headquarters_button=_make_button("HQ"); system_button=_make_button("SYSTEM")
-    button.name="RegionsLauncherButton"; operations_button.name="BusinessOperationsLauncherButton"; production_button.name="ProductionControlLauncherButton"; supply_button.name="SupplyChainLauncherButton"; expansion_button.name="EmpireExpansionLauncherButton"; intelligence_button.name="EmpireIntelligenceLauncherButton"; progression_button.name="EmpireProgressionLauncherButton"; identity_button.name="EmpireIdentityLauncherButton"; notifications_button.name="NotificationsCenterLauncherButton"; headquarters_button.name="HeadquartersLauncherButton"; system_button.name="CompanyControlLauncherButton"
-    hud.add_child(button); hud.add_child(operations_button); hud.add_child(production_button); hud.add_child(supply_button); hud.add_child(expansion_button); hud.add_child(intelligence_button); hud.add_child(progression_button); hud.add_child(identity_button); hud.add_child(notifications_button); hud.add_child(headquarters_button); hud.add_child(system_button)
-    button.pressed.connect(_open_regions); operations_button.pressed.connect(_open_operations); production_button.pressed.connect(_open_production); supply_button.pressed.connect(_open_supply); expansion_button.pressed.connect(_open_expansion); intelligence_button.pressed.connect(_open_intelligence); progression_button.pressed.connect(_open_progression); identity_button.pressed.connect(_open_identity); notifications_button.pressed.connect(_open_notifications); headquarters_button.pressed.connect(_open_headquarters); system_button.pressed.connect(_open_system)
-    var ui_root:=hud.get_parent()
-    if ui_root!=null and ui_root.get_node_or_null("BusinessOperationsPanel")==null: var p:=BUSINESS_UI.new(); p.name="BusinessOperationsPanel"; ui_root.add_child(p)
-    if ui_root!=null and ui_root.get_node_or_null("EmpireExpansionPanel")==null: var e:=EXPANSION_UI.new(); e.name="EmpireExpansionPanel"; ui_root.add_child(e)
-    if ui_root!=null and ui_root.get_node_or_null("EmpireIntelligencePanel")==null: var i:=INTELLIGENCE_UI.new(); i.name="EmpireIntelligencePanel"; ui_root.add_child(i)
-    if ui_root!=null and ui_root.get_node_or_null("EmpireProgressionPanel")==null: var p2:=PROGRESSION_UI.new(); p2.name="EmpireProgressionPanel"; ui_root.add_child(p2)
-    if ui_root!=null and ui_root.get_node_or_null("EmpireIdentityPanel")==null: var idp:=IDENTITY_UI.new(); idp.name="EmpireIdentityPanel"; ui_root.add_child(idp)
-    if ui_root!=null and ui_root.get_node_or_null("NotificationsCenterPanel")==null: var n:=NOTIFICATIONS_UI.new(); n.name="NotificationsCenterPanel"; ui_root.add_child(n)
-    _layout()
-    if not get_viewport().size_changed.is_connected(_layout): get_viewport().size_changed.connect(_layout)
+    var ui_root := hud.get_parent()
+    if ui_root == null: return
+    if ui_root.get_node_or_null("BusinessOperationsPanel") == null:
+        var p := BUSINESS_UI.new(); p.name = "BusinessOperationsPanel"; ui_root.add_child(p)
+    if ui_root.get_node_or_null("EmpireExpansionPanel") == null:
+        var e := EXPANSION_UI.new(); e.name = "EmpireExpansionPanel"; ui_root.add_child(e)
+    if ui_root.get_node_or_null("EmpireIntelligencePanel") == null:
+        var i := INTELLIGENCE_UI.new(); i.name = "EmpireIntelligencePanel"; ui_root.add_child(i)
+    if ui_root.get_node_or_null("EmpireProgressionPanel") == null:
+        var p2 := PROGRESSION_UI.new(); p2.name = "EmpireProgressionPanel"; ui_root.add_child(p2)
+    if ui_root.get_node_or_null("EmpireIdentityPanel") == null:
+        var idp := IDENTITY_UI.new(); idp.name = "EmpireIdentityPanel"; ui_root.add_child(idp)
+    if ui_root.get_node_or_null("NotificationsCenterPanel") == null:
+        var n := NOTIFICATIONS_UI.new(); n.name = "NotificationsCenterPanel"; ui_root.add_child(n)
 
 func _make_button(label:String)->Button:
     var b:=Button.new(); b.text=label; b.custom_minimum_size=Vector2(76,44); b.focus_mode=Control.FOCUS_NONE; b.add_theme_font_size_override("font_size",9); b.add_theme_color_override("font_color",Color("edf6f3")); b.add_theme_stylebox_override("normal",_style(Color("102a31"),Color("31565d"),9)); b.add_theme_stylebox_override("hover",_style(Color("1b3b40"),Color("d8b76d"),9)); b.add_theme_stylebox_override("pressed",_style(Color("18363a"),Color("d8b76d"),9)); return b
 
 func _layout()->void:
-    if button==null or operations_button==null or production_button==null or supply_button==null or expansion_button==null or intelligence_button==null or progression_button==null or identity_button==null or notifications_button==null or headquarters_button==null or system_button==null:return
-    var size:=get_viewport().get_visible_rect().size
-    var buttons:Array[Button]=[button,operations_button,production_button,supply_button,expansion_button,intelligence_button,progression_button,identity_button,notifications_button,headquarters_button]
-    var labels:Array[String]=["REGIONS","OPS","PROD","SUPPLY","EMPIRE","INTEL","PROG","IDENT","NOTICES","HQ"]
-    var narrow:=size.x<700.0
-    # On phone layouts the command deck already exposes these destinations through
-    # its four sectors. Hiding the duplicate launcher prevents it from covering
-    # the hero card and keeps touch targets inside the viewport.
-    if narrow:
-        for b in buttons: b.visible=false
-        system_button.visible=false
-        return
-    var x:=10.0
-    var y:=82.0
-    var width:=86.0
-    var height:=42.0
-    var gap:=4.0
-    for i in range(buttons.size()):
-        var b:=buttons[i]
-        b.visible=true
-        b.text=labels[i]
-        b.size=Vector2(width,height)
-        b.position=Vector2(x,y+float(i)*(height+gap))
-        b.add_theme_font_size_override("font_size",8)
-    system_button.visible=true
-    system_button.text="SYSTEM"
-    system_button.size=Vector2(width,40.0)
-    system_button.position=Vector2(x,y+float(buttons.size())*(height+gap))
-    system_button.add_theme_font_size_override("font_size",8)
+    return
 
 func _open_regions(): _show("RegionsPanel")
 func _open_operations(): _show("BusinessOperationsPanel")
