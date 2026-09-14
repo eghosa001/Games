@@ -4,6 +4,55 @@ extends "res://scripts/renew_sims_ui.gd"
 # Adds portfolio-scale restoration context, exception visibility and the
 # real-world economy clock without duplicating gameplay state.
 
+# Compatibility alias for the primary sector tabs. The base deck calls this
+# bottom_nav; exposing it explicitly keeps automated responsive QA aligned with
+# the actual navigation control rather than a stale/nonexistent field.
+var tabs: HBoxContainer
+
+func _build_ui() -> void:
+    super._build_ui()
+    background.name = "MainHUDBackground"
+    brand.text = "RESTORA"
+    location_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    hero_meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    tabs = bottom_nav
+
+func _layout_responsive() -> void:
+    super._layout_responsive()
+    var width := get_viewport().get_visible_rect().size.x
+    var mobile := width < 700.0
+    var micro := width < 340.0
+    shell.add_theme_constant_override("margin_left", 12 if mobile else 108)
+    page.add_theme_constant_override("separation", 7 if mobile else 12)
+    hero_card.custom_minimum_size.y = 132.0 if mobile else 152.0
+    stat_grid.visible = not micro
+    for card in stat_cards:
+        card.custom_minimum_size.y = 68.0 if mobile else 82.0
+    section_caption.visible = not mobile
+    status_label.visible = not mobile
+    hero_action.custom_minimum_size = Vector2(112.0 if mobile else 168.0, 52.0)
+    for nav_button in mode_buttons:
+        nav_button.custom_minimum_size = Vector2(0.0 if mobile else 100.0, 44.0 if mobile else 50.0)
+        nav_button.add_theme_font_size_override("font_size", 9 if mobile else 12)
+    if action_list != null:
+        for child in action_list.get_children():
+            if child is Button:
+                var action_button := child as Button
+                action_button.clip_text = true
+                action_button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+                action_button.custom_minimum_size.x = 0.0
+
+func _action(text: String, callback: Callable, subtitle := "", emphasis := false) -> void:
+    super._action(text, callback, subtitle, emphasis)
+    if action_list == null or action_list.get_child_count() == 0:
+        return
+    var child := action_list.get_child(action_list.get_child_count() - 1)
+    if child is Button:
+        var action_button := child as Button
+        action_button.clip_text = true
+        action_button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+        action_button.custom_minimum_size.x = 0.0
+
 func _property_system():
     if parent == null or parent.get("command_system") == null:
         return null
@@ -82,6 +131,8 @@ func _refresh() -> void:
 
 func _process(delta: float) -> void:
     super._process(delta)
+    if background != null and background.color.a < 0.99:
+        background.color = Color(background.color.r, background.color.g, background.color.b, 1.0)
     var policies = _management_policy()
     if location_label == null:
         return
