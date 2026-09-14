@@ -160,6 +160,7 @@ func _process(delta:float) -> void:
 func _layout() -> void:
     if root==null:return
     var size:=get_viewport().get_visible_rect().size
+    var mobile:=size.x<700.0
     launcher.visible=false
     scrim.position=Vector2.ZERO; scrim.size=size
     var width:=minf(520.0,size.x-24.0); var height:=minf(620.0,size.y-36.0)
