@@ -2,8 +2,7 @@ extends RefCounted
 class_name RenewTutorial
 
 # The opening tutorial teaches the economic loop one decision at a time.
-# Advanced strategy is deliberately excluded until the player has completed a
-# full operating day and understands why those systems matter.
+# The live economy uses real-world time; players actively create and sell goods.
 var step: Variant = 0
 var completed: Variant = false
 var steps: Variant = [
@@ -13,12 +12,12 @@ var steps: Variant = [
     {"title":"OPEN RENEW GOODS","text":"The building is ready. Open your first business and begin operating.","action":"OPEN BUSINESS"},
     {"title":"BUY PRODUCTION INPUTS","text":"A business needs materials before it can make goods. Buy your first inputs.","action":"BUY INPUTS"},
     {"title":"PRODUCE YOUR FIRST GOODS","text":"Turn those inputs into finished inventory that can generate revenue.","action":"PRODUCE"},
-    {"title":"FINISH YOUR FIRST DAY","text":"End the day to make sales, see the result, and learn whether the business made money.","action":"END DAY"}
+    {"title":"MAKE YOUR FIRST SALE","text":"Sell finished goods into today's customer demand. You can keep managing the business throughout the real-world day.","action":"SELL GOODS"}
 ]
 
 func current() -> Dictionary:
     if completed or step >= steps.size():
-        return {"title":"FIRST BUSINESS COMPLETE","text":"You restored an abandoned asset, opened a business and completed a trading day. Now improve it and expand when the company is ready.","action":"COMPLETE"}
+        return {"title":"FIRST BUSINESS COMPLETE","text":"You restored an abandoned asset, opened a business, produced inventory and made a live sale. Keep operating, then expand when the company is ready.","action":"COMPLETE"}
     return steps[step]
 
 func _has_inputs(game) -> bool:
@@ -40,7 +39,7 @@ func _advance(action:String, game)->bool:
         "OPEN BUSINESS": valid = bool(game.business_open)
         "BUY INPUTS": valid = _has_inputs(game)
         "PRODUCE": valid = int(game.finished_goods) > 0
-        "END DAY": valid = int(game.day) > 1
+        "SELL GOODS": valid = int(game.last_sales) > 0
     if valid:
         step += 1
         if step >= steps.size(): completed = true
