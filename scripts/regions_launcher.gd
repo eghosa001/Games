@@ -45,23 +45,34 @@ func _make_button(label:String)->Button:
 
 func _layout()->void:
     if button==null or operations_button==null or production_button==null or supply_button==null or expansion_button==null or intelligence_button==null or progression_button==null or identity_button==null or notifications_button==null or headquarters_button==null or system_button==null:return
-    var size:=get_viewport().get_visible_rect().size; var narrow:=size.x<700.0
+    var size:=get_viewport().get_visible_rect().size
     var buttons:Array[Button]=[button,operations_button,production_button,supply_button,expansion_button,intelligence_button,progression_button,identity_button,notifications_button,headquarters_button]
-    var full:Array[String]=["REGIONS","OPS","PROD","SUPPLY","EMPIRE","INTEL","PROG","IDENT","NOTICES","HQ"]
-    var compact:Array[String]=["REG","OPS","PRD","SUP","EMP","INT","PROG","ID","NOT","HQ"]
+    var labels:Array[String]=["REGIONS","OPS","PROD","SUPPLY","EMPIRE","INTEL","PROG","IDENT","NOTICES","HQ"]
+    var narrow:=size.x<700.0
+    # On phone layouts the command deck already exposes these destinations through
+    # its four sectors. Hiding the duplicate launcher prevents it from covering
+    # the hero card and keeps touch targets inside the viewport.
     if narrow:
-        var gap_x:=4.0; var gap_y:=4.0; var width:=maxf(48.0,(size.x-12.0-gap_x*4.0)/5.0); var y:=64.0
-        for i in range(buttons.size()):
-            var row:=i / 5; var col:=i % 5
-            buttons[i].text=compact[i]; buttons[i].size=Vector2(width,44); buttons[i].position=Vector2(6.0+col*(width+gap_x), y+row*(44.0+gap_y)); buttons[i].add_theme_font_size_override("font_size",8)
-        system_button.text="SYSTEM"; system_button.size=Vector2(minf(118.0,maxf(92.0,size.x-12.0)),40); system_button.position=Vector2(6.0,160.0); system_button.add_theme_font_size_override("font_size",8)
-    else:
-        var gap:=4.0; var widths:Array[float]=[70,60,68,74,78,68,62,66,76,48]; var total:=0.0
-        for w in widths: total+=w
-        total+=gap*9.0; var start:=maxf(8.0,size.x-total-8.0); var x:=start
-        for i in range(buttons.size()):
-            buttons[i].text=full[i]; buttons[i].size=Vector2(widths[i],42); buttons[i].position=Vector2(x,66.0); buttons[i].add_theme_font_size_override("font_size",9); x+=widths[i]+gap
-        system_button.text="SYSTEM"; system_button.size=Vector2(82,40); system_button.position=Vector2(start,112.0); system_button.add_theme_font_size_override("font_size",9)
+        for b in buttons: b.visible=false
+        system_button.visible=false
+        return
+    var x:=10.0
+    var y:=82.0
+    var width:=86.0
+    var height:=42.0
+    var gap:=4.0
+    for i in range(buttons.size()):
+        var b:=buttons[i]
+        b.visible=true
+        b.text=labels[i]
+        b.size=Vector2(width,height)
+        b.position=Vector2(x,y+float(i)*(height+gap))
+        b.add_theme_font_size_override("font_size",8)
+    system_button.visible=true
+    system_button.text="SYSTEM"
+    system_button.size=Vector2(width,40.0)
+    system_button.position=Vector2(x,y+float(buttons.size())*(height+gap))
+    system_button.add_theme_font_size_override("font_size",8)
 
 func _open_regions(): _show("RegionsPanel")
 func _open_operations(): _show("BusinessOperationsPanel")
