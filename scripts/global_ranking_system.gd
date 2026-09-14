@@ -178,7 +178,7 @@ func _discover_companies() -> void:
                 update_company(id, _derive_metrics(rival))
     var player_id: Variant = "founder"
     var selected_region: String = str(main.get("selected_region")) if main.get("selected_region") != null else "global"
-    register_company(player_id, "RENEW", selected_region)
+    register_company(player_id, "RESTORA", selected_region)
     update_company(player_id, _derive_player_metrics(main))
 
 func _derive_player_metrics(main) -> Dictionary:
