@@ -36,7 +36,7 @@ jobs:
 
       - name: Install Android build dependencies
         run: |
-          sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "platforms;android-35" "build-tools;35.0.1" "cmake;3.10.2.4988404" "ndk;28.1.13356709"
+          sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "platform-tools" "platforms;android-36" "build-tools;36.0.0" "cmdline-tools;latest"
           yes | sdkmanager --sdk_root="$ANDROID_SDK_ROOT" --licenses >/dev/null || true
 
       - name: Install Godot 4.7.2
@@ -54,6 +54,7 @@ jobs:
           printf '%s\n' "${GODOT_VERSION}.stable" > "$templates/version.txt"
           test -s "$templates/android_source.zip"
           test -s "$templates/android_debug.apk"
+          test -s "$templates/android_release.apk"
 
       - name: Import project
         run: timeout 180s ./Godot_v${GODOT_VERSION}-stable_linux.x86_64 --headless --editor --path . --quit
