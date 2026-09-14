@@ -1,0 +1,10 @@
+{
+  "enabled": false,
+  "rewarded_ads_enabled": false,
+  "subscriptions_enabled": false,
+  "admob_android_app_id": "",
+  "rewarded_ad_unit_id": "",
+  "premium_subscription_product_id": "",
+  "privacy_policy_url": "",
+  "support_email": ""
+}
