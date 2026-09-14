@@ -473,7 +473,8 @@ func _refresh() -> void:
     hero_value.text = _money(int(parent.cash))
     hero_meta.text = "DAY %d  •  REP %d  •  %s" % [int(parent.day), int(parent.reputation), "OPEN" if bool(parent.business_open) else "CLOSED"]
     hero_goal.text = _goal_text()
-    status_label.text = str(parent.status)
+    var command_message := str(parent.message)
+    status_label.text = command_message if command_message != "" else "%s • inventory %d • staff %d" % [str(parent.stage), int(parent.finished_goods), int(parent.employees)]
     _bind_primary_move()
     _refresh_metrics()
 
