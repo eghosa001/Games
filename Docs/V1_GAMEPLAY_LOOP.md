@@ -6,11 +6,12 @@ Start with an abandoned property, restore it, turn it into a profitable business
 ## Core loop
 1. **Restore** — inspect, acquire and choose a restoration strategy.
 2. **Open** — complete restoration and open the first business.
-3. **Operate** — buy inputs, produce, set price, market and sell.
-4. **Earn** — end the day, read profit/loss feedback and build reputation.
-5. **Expand** — acquire properties, resource sites and better transport.
-6. **Compete** — manage rivals, supply contracts, regional markets and alliances.
-7. **Scale** — raise capital, acquire competitors and pursue corporate control.
+3. **Operate** — buy inputs, produce, set price, market and sell whenever you choose.
+4. **Earn** — sell into finite daily customer demand while passive assets accrue net operating income in real time.
+5. **Settle** — real-world calendar rollover handles wages, overhead, debt, contract deadlines, rivals, events, wear and research progress.
+6. **Expand** — acquire properties, resource sites and better transport.
+7. **Compete** — manage rivals, supply contracts, regional markets and alliances.
+8. **Scale** — raise capital, acquire competitors and pursue corporate control.
 
 ## V1 implementation priorities
 ### 1. First-business experience
@@ -18,16 +19,16 @@ Start with an abandoned property, restore it, turn it into a profitable business
 - Show a clear before/after state for the restored property.
 - Explain the first profitable action rather than dumping the player into menus.
 
-### 2. Daily operating feedback
-Every meaningful operating day should communicate:
-- cash before/after
-- revenue
-- operating costs
-- profit/loss
-- reputation change
-- important resource/supplier effects
+### 2. Live operating feedback
+Every meaningful operating period should communicate:
+- current cash
+- active sales revenue
+- passive revenue and operating costs
+- net passive run rate
+- today's remaining customer demand
+- reputation and important resource/supplier effects
 
-Avoid requiring the player to infer whether an action was good from raw numbers alone.
+The player should never need to press an End Day button to make the economy move.
 
 ### 3. Strategic choices
 The player should repeatedly choose between trade-offs such as:
@@ -42,7 +43,9 @@ The player should repeatedly choose between trade-offs such as:
 Important milestones should produce a clear reward/feedback moment:
 - first property restored
 - first business opened
-- first profitable day
+- first live sale
+- first profitable operating day
+- first passive asset
 - first expansion
 - first resource site
 - first alliance/deal
@@ -57,10 +60,10 @@ Use short contextual feedback and visible next-step goals rather than long tutor
 
 ## Definition of done for this phase
 - Existing regression, extended and edge tests remain green.
-- The first 5–10 minutes have a clear restore → open → operate → earn progression.
-- Daily results are understandable without inspecting debug information.
+- The first 5–10 minutes have a clear restore → open → operate → sell progression.
+- Active sales, passive run rate and calendar costs are understandable without debug information.
+- Save/load preserves passive timestamps, daily demand usage and calendar anchors.
 - Major progression events are visibly acknowledged.
 - No new system should block the existing economy/expansion/corporate systems.
 
-## Next coding target
-Implement the first-business milestone and daily operating feedback in the mobile HUD, then add/adjust automated tests around those player-facing outcomes.
+See `Docs/REAL_TIME_ECONOMY.md` for the authoritative timing and income rules.
