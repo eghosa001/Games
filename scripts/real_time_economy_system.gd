@@ -10,7 +10,7 @@ const SETTLEMENT_INTERVAL_SECONDS := 300.0
 const MAX_OFFLINE_CATCHUP_SECONDS := 86400.0
 const SECONDS_PER_REAL_DAY := 86400.0
 const STATE_DOMAIN := "analytics"
-const STATE_KEY := "simulation_system"
+const STATE_KEY := "real_time"
 const CLOCK_KEY := "real_time_economy"
 
 var _poll_accumulator := 0.0
