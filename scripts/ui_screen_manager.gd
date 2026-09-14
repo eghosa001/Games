@@ -18,6 +18,8 @@ var _initializing := true
 var _suppress_hooks := false
 var _modal_layer: CanvasLayer
 var _modal_backdrop: ColorRect
+var _screen_tween: Tween
+var _backdrop_tween: Tween
 
 func _ready() -> void:
     call_deferred("_try_initialize")
@@ -108,22 +110,11 @@ func _set_direct_canvas_children_visible(node: Node, value: bool) -> void:
 func _set_node_visible(node: Node, value: bool) -> void:
     if node == null or not is_instance_valid(node): return
 
-    # A screen's lifecycle hook is authoritative for its internal visibility.
-    # Never recurse through every descendant and force it visible: many screens
-    # intentionally keep confirmation panels, empty states, scrims, tabs or
-    # conditional controls hidden while the screen itself is open.
     if node.has_method("open_screen") or node.has_method("close_screen"):
         node.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
         if _suppress_hooks:
-            # Initialization/hard reset cannot call hooks because some legacy
-            # close handlers delegate to this manager. Hide/show only the screen's
-            # direct canvas roots and preserve all nested conditional visibility.
             _set_direct_canvas_children_visible(node, value)
         else:
-            # Startup hiding disables direct canvas roots. Re-enable their
-            # processing before invoking lifecycle hooks. If an older screen hook
-            # only toggles the CanvasLayer and leaves its direct panel/scrim hidden,
-            # recover those direct roots without touching nested conditional UI.
             for child in node.get_children():
                 if child is CanvasItem or child is CanvasLayer:
                     child.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
@@ -165,10 +156,43 @@ func _ensure_modal_backdrop() -> void:
 
 func _set_modal_backdrop(value: bool) -> void:
     _ensure_modal_backdrop()
-    if _modal_backdrop != null:
-        _modal_backdrop.visible = value
-        _modal_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP if value else Control.MOUSE_FILTER_IGNORE
-        _modal_backdrop.process_mode = Node.PROCESS_MODE_WHEN_PAUSED if value else Node.PROCESS_MODE_DISABLED
+    if _modal_backdrop == null: return
+    if _backdrop_tween != null and _backdrop_tween.is_valid(): _backdrop_tween.kill()
+    if value:
+        _modal_backdrop.visible = true
+        _modal_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
+        _modal_backdrop.process_mode = Node.PROCESS_MODE_WHEN_PAUSED
+        _modal_backdrop.modulate.a = 0.0
+        _backdrop_tween = create_tween()
+        _backdrop_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+        _backdrop_tween.tween_property(_modal_backdrop, "modulate:a", 1.0, 0.18)
+    else:
+        _modal_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        _modal_backdrop.process_mode = Node.PROCESS_MODE_DISABLED
+        _modal_backdrop.visible = false
+        _modal_backdrop.modulate.a = 1.0
+
+func _screen_control(node: Node) -> Control:
+    if node is Control: return node
+    if node is CanvasLayer:
+        for child in node.get_children():
+            if child is Control and child.visible: return child
+    return _first_control_child(node)
+
+func _animate_screen_in(node: Node) -> void:
+    var control := _screen_control(node)
+    if control == null: return
+    if _screen_tween != null and _screen_tween.is_valid(): _screen_tween.kill()
+    control.pivot_offset = control.size * 0.5
+    control.modulate.a = 0.0
+    control.scale = Vector2(0.985, 0.985)
+    control.position.y += 12.0
+    var target_y := control.position.y - 12.0
+    _screen_tween = create_tween().set_parallel(true)
+    _screen_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+    _screen_tween.tween_property(control, "modulate:a", 1.0, 0.20)
+    _screen_tween.tween_property(control, "scale", Vector2.ONE, 0.20)
+    _screen_tween.tween_property(control, "position:y", target_y, 0.20)
 
 func hide_all_screens() -> void:
     _suppress_hooks = true
@@ -234,6 +258,7 @@ func show_screen(screen_name: String) -> void:
         _previous_visible[node.name] = should_show
     _ensure_close_button(target)
     _set_modal_backdrop(true)
+    _animate_screen_in(target)
     var coordinator := _coordinator()
     if coordinator != null:
         coordinator.set_active_screen(canonical_name)
@@ -266,10 +291,6 @@ func _ensure_close_button(screen: Node) -> void:
 
     var existing := _find_close_button(screen)
     if existing != null:
-        # Preserve screen-owned layout for native close controls. Re-anchoring an
-        # existing button here breaks Container layouts and can push the control
-        # outside narrow phone viewports after a resize. The manager only enforces
-        # a touch-safe minimum and the shared close behavior.
         existing.name = CLOSE_BUTTON_NAME
         existing.tooltip_text = "Close"
         existing.focus_mode = Control.FOCUS_NONE
