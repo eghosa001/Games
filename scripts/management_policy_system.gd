@@ -9,6 +9,7 @@ var alerts: Array = []
 var last_actions: Array = []
 
 func _ready() -> void:
+    _load_policies()
     set_process(true)
     call_deferred("evaluate")
 
@@ -31,6 +32,20 @@ func _game():
 func _commands():
     var game = _game()
     return game.get("command_system") if game != null else null
+
+func _load_policies() -> void:
+    var state = _state()
+    if state == null: return
+    for key in policies.keys():
+        var mode := str(state.get_value("management", key + "_policy", policies[key]))
+        if mode in MODES: policies[key] = mode
+    cash_reserve = clampi(int(state.get_value("management", "cash_reserve", cash_reserve)), 0, 250000)
+
+func _save_policies() -> void:
+    var state = _state()
+    if state == null: return
+    for key in policies.keys(): state.set_value("management", key + "_policy", policies[key])
+    state.set_value("management", "cash_reserve", cash_reserve)
 
 func _executives() -> Dictionary:
     var commands = _commands()
@@ -67,11 +82,14 @@ func cycle_policy(policy: String) -> Dictionary:
         var access := can_auto(policy)
         if not bool(access.get("ok", false)):
             policies[policy] = "manual"
-            evaluate()
+            _save_policies(); evaluate()
             return {"ok":false, "message":str(access.get("reason", "Automation locked."))}
     policies[policy] = next
-    evaluate()
+    _save_policies(); evaluate()
     return {"ok":true, "message":"%s policy: %s." % [policy.capitalize(), next.to_upper()]}
+
+func set_cash_reserve(value:int) -> void:
+    cash_reserve=clampi(value,0,250000); _save_policies(); evaluate()
 
 func run_daily() -> void:
     last_actions.clear()
@@ -207,3 +225,4 @@ func restore_state(snapshot:Dictionary) -> void:
     last_day=int(snapshot.get("last_day",last_day))
     last_actions=snapshot.get("last_actions",[]).duplicate() if snapshot.get("last_actions",[]) is Array else []
     alerts=snapshot.get("alerts",[]).duplicate(true) if snapshot.get("alerts",[]) is Array else []
+    _save_policies()
