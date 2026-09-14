@@ -10,16 +10,17 @@ From the repository root with Godot 4.x installed:
 godot --headless --path . --script res://tests/mobile_qa_test.gd
 ```
 
-The test exercises:
+The test should exercise:
 
 - 320×480, 360×640, 480×800, 720×1280 and 1024×768 responsive layouts
 - every generated tab button and action button has a 44×44 minimum touch target
 - controls stay inside the viewport at each target size
-- RESTORE, BUSINESS and WORLD tab navigation
-- the touch signal path for Inspect → Acquire → Restore → Open Business → Hire → Buy Inputs → Produce → Price → End Day
-- authoritative GameState survival through the touch flow
-- GameState capture/restore under 1 second
-- disk save/load under 1 second
+- RESTORE, BUSINESS, EMPIRE and WORLD navigation
+- touch flow: Inspect → Acquire → Restore → Open Business → Hire → Buy Inputs → Produce → Price → Sell Goods
+- finite customer demand for the current real-world trading day
+- passive run-rate display and five-minute settlement
+- authoritative GameState capture/restore of `analytics.real_time`
+- disk save/load without resetting passive timestamps, demand usage or calendar anchor
 - a short runtime FPS and memory-growth sample
 
 ## Physical Android release gate
@@ -39,15 +40,22 @@ The following must still be checked on real hardware and manually marked complet
 - [ ] Buy Inputs using touch only
 - [ ] Produce using touch only
 - [ ] Price using touch only
-- [ ] End Day using touch only
-- [ ] Profit/loss report readable after ending a day
+- [ ] Sell Goods using touch only
+- [ ] Remaining daily demand decreases correctly after a sale
+- [ ] Repeated Sell cannot exceed the day's demand budget
+- [ ] Contract delivery can be settled only once for the current day
+- [ ] Passive revenue and operating costs accrue together
+- [ ] Resource sites include risk-adjusted operating costs
+- [ ] Offline passive catch-up never exceeds 24 hours
+- [ ] Real date rollover applies wages, overhead, debt, rivals, wear, events and research progress
+- [ ] Real date rollover does not automatically produce or sell core-business goods
 - [ ] All visible interactive targets are at least 44×44 px
 - [ ] Vertical action scrolling works with a finger and does not steal taps
 - [ ] WORLD tab is reachable, scrollable and actionable with touch
 - [ ] Sustained gameplay holds ≥30 FPS on the target low-end Android device
 - [ ] 10–15 minute session shows no material memory growth, stutter, or UI degradation
 - [ ] Save/load completes in <1 second on the target device
-- [ ] App pause/resume preserves state and does not duplicate actions
+- [ ] App pause/resume preserves state and does not duplicate actions or passive settlement
 - [ ] Back/gesture navigation does not corrupt or unexpectedly exit an active run
 
 ## Evidence to record
