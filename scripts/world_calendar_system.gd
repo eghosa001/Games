@@ -26,7 +26,7 @@ func _commands():
 func _analytics() -> Dictionary:
     var state = _state()
     if state == null: return {}
-    var root = state.get_value("analytics", "simulation_system", {})
+    var root = state.get_value("analytics", "real_time", {})
     return root.duplicate(true) if root is Dictionary else {}
 func _calendar_state() -> Dictionary:
     var root = _analytics(); var value = root.get("world_calendar", {})
@@ -34,7 +34,7 @@ func _calendar_state() -> Dictionary:
 func _save_calendar(value: Dictionary) -> void:
     var state = _state()
     if state == null: return
-    var root = _analytics(); root["world_calendar"] = value.duplicate(true); state.set_value("analytics", "simulation_system", root)
+    var root = _analytics(); root["world_calendar"] = value.duplicate(true); state.set_value("analytics", "real_time", root)
 func _date_key() -> String:
     var d = Time.get_date_dict_from_system()
     return "%04d-%02d-%02d" % [int(d.get("year", 1970)), int(d.get("month", 1)), int(d.get("day", 1))]
