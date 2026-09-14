@@ -136,7 +136,7 @@ func _apply_progression_discovery() -> void:
             if _feature_available("regions"):
                 _screen("Market news", "NewsPanel", "Company and world signals")
             if _feature_available("world_power"):
-                _action("World power", Callable(self, "_run_parent_method").bind("world_power"), "Ranking, influence and global competitive position", true)
+                _screen("World power", "EmpireIntelligencePanel", "Rankings, influence and global competitive position", true)
             if _feature_available("legacy"):
                 _screen("History & legacy", "HistoryPanel", "Milestones, company history and long-term impact", true)
                 _screen("Collections", "CollectionPanel", "Preserve major achievements and legacy items")
