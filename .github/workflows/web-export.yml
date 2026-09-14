@@ -26,6 +26,21 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Retain source snapshot
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/source
+          git archive --format=zip --output=build/source/restora-source.zip HEAD
+
+      - name: Upload source snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: Restora-source
+          path: build/source/restora-source.zip
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Install Godot export templates
         shell: bash
         run: |
@@ -111,6 +126,14 @@ jobs:
             Cross-Origin-Embedder-Policy: require-corp
             Cross-Origin-Resource-Policy: cross-origin
           EOF
+
+      - name: Upload Web build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Restora-web
+          path: build/web
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Verify export did not alter tracked source
         shell: bash
