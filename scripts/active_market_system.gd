@@ -31,7 +31,7 @@ func _day() -> int:
 func _analytics() -> Dictionary:
     var state = _state()
     if state == null: return {}
-    var root = state.get_value("analytics", "simulation_system", {})
+    var root = state.get_value("analytics", "real_time", {})
     if not (root is Dictionary): root = {}
     return root.duplicate(true)
 func _market_state() -> Dictionary:
@@ -40,7 +40,7 @@ func _market_state() -> Dictionary:
 func _save_market(value: Dictionary) -> void:
     var state = _state()
     if state == null: return
-    var root = _analytics(); root["active_market"] = value.duplicate(true); state.set_value("analytics", "simulation_system", root)
+    var root = _analytics(); root["active_market"] = value.duplicate(true); state.set_value("analytics", "real_time", root)
 func _log(text: String) -> void:
     var state = _state()
     if state == null or text.is_empty(): return
