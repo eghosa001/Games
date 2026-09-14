@@ -44,6 +44,7 @@ func _build() -> void:
     launcher.tooltip_text = "Executive policies and operating exceptions"
     launcher.pressed.connect(_toggle)
     root.add_child(launcher)
+    launcher.visible = false
 
     scrim = ColorRect.new()
     scrim.color = Color(0.01,0.03,0.03,0.72)
@@ -123,7 +124,7 @@ func _label(text:String,size:int,color:Color) -> Label:
 func _toggle() -> void:
     open = not open
     panel.visible=open; scrim.visible=open
-    launcher.visible=not open
+    launcher.visible=false
     _refresh()
 
 func _cycle(kind:String) -> void:
@@ -159,9 +160,7 @@ func _process(delta:float) -> void:
 func _layout() -> void:
     if root==null:return
     var size:=get_viewport().get_visible_rect().size
-    var mobile:=size.x<700.0
-    launcher.position=Vector2(size.x-(84 if mobile else 98),14)
-    launcher.size=Vector2(70 if mobile else 82,44)
+    launcher.visible=false
     scrim.position=Vector2.ZERO; scrim.size=size
     var width:=minf(520.0,size.x-24.0); var height:=minf(620.0,size.y-36.0)
     panel.position=Vector2((size.x-width)/2.0,(size.y-height)/2.0)
