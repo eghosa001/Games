@@ -50,6 +50,7 @@ func _build() -> void:
     scrim.color = Color(0.01,0.03,0.03,0.72)
     scrim.mouse_filter = Control.MOUSE_FILTER_STOP
     scrim.visible = false
+    scrim.gui_input.connect(_on_scrim_input)
     root.add_child(scrim)
 
     panel = PanelContainer.new()
@@ -62,26 +63,35 @@ func _build() -> void:
     margin.add_theme_constant_override("margin_top",14)
     margin.add_theme_constant_override("margin_bottom",14)
     panel.add_child(margin)
+
+    var scroll := ScrollContainer.new()
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+    scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    margin.add_child(scroll)
+
     var box := VBoxContainer.new()
-    box.add_theme_constant_override("separation",9)
-    margin.add_child(box)
+    box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    box.add_theme_constant_override("separation",10)
+    scroll.add_child(box)
 
     var header := HBoxContainer.new()
     box.add_child(header)
-    var title := _label("EXECUTIVE DESK",20,TEXT)
+    var title := _label("EXECUTIVE DESK",22,TEXT)
     title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     header.add_child(title)
     close_button = _button("CLOSE")
-    close_button.custom_minimum_size = Vector2(82,44)
+    close_button.custom_minimum_size = Vector2(88,48)
     close_button.pressed.connect(_toggle)
     header.add_child(close_button)
-    box.add_child(_label("DELEGATION & EXCEPTIONS",10,ACCENT))
-    summary = _label("",11,MUTED)
+    box.add_child(_label("DELEGATION & EXCEPTIONS",12,ACCENT))
+    summary = _label("",13,MUTED)
     box.add_child(summary)
 
     var grid := GridContainer.new()
     grid.columns = 1
-    grid.add_theme_constant_override("v_separation",7)
+    grid.add_theme_constant_override("v_separation",8)
     box.add_child(grid)
     procurement = _button("PROCUREMENT")
     pricing = _button("PRICING")
@@ -96,24 +106,28 @@ func _build() -> void:
     grid.add_child(maintenance)
     grid.add_child(reserve)
 
-    box.add_child(_label("OPERATING EXCEPTIONS",10,WARN))
-    alert_text = _label("",11,TEXT)
+    box.add_child(_label("OPERATING EXCEPTIONS",12,WARN))
+    alert_text = _label("",13,TEXT)
     alert_text.size_flags_vertical = Control.SIZE_EXPAND_FILL
     box.add_child(alert_text)
 
 func _style(bg:Color,border:Color,radius:int=12) -> StyleBoxFlat:
     var s:=StyleBoxFlat.new()
     s.bg_color=bg; s.border_color=border; s.set_border_width_all(1); s.set_corner_radius_all(radius)
-    s.content_margin_left=12; s.content_margin_right=12; s.content_margin_top=9; s.content_margin_bottom=9
+    s.content_margin_left=12; s.content_margin_right=12; s.content_margin_top=10; s.content_margin_bottom=10
+    s.shadow_color = Color(0,0,0,0.20)
+    s.shadow_size = 4
+    s.shadow_offset = Vector2(0,2)
     return s
 
 func _button(text:String) -> Button:
     var b:=Button.new()
-    b.text=text; b.focus_mode=Control.FOCUS_NONE; b.custom_minimum_size=Vector2(0,48)
+    b.text=text; b.focus_mode=Control.FOCUS_NONE; b.custom_minimum_size=Vector2(0,50)
     b.add_theme_stylebox_override("normal",_style(CARD,BORDER,12))
     b.add_theme_stylebox_override("hover",_style(Color("16342d"),ACCENT,12))
     b.add_theme_stylebox_override("pressed",_style(Color("183b32"),ACCENT,12))
     b.add_theme_color_override("font_color",TEXT); b.add_theme_color_override("font_hover_color",TEXT)
+    b.add_theme_font_size_override("font_size",13)
     return b
 
 func _label(text:String,size:int,color:Color) -> Label:
@@ -126,6 +140,16 @@ func _toggle() -> void:
     panel.visible=open; scrim.visible=open
     launcher.visible=false
     _refresh()
+
+func _on_scrim_input(event: InputEvent) -> void:
+    if not open:
+        return
+    if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+        _toggle()
+        get_viewport().set_input_as_handled()
+    elif event is InputEventScreenTouch and event.pressed:
+        _toggle()
+        get_viewport().set_input_as_handled()
 
 func _cycle(kind:String) -> void:
     var policy=_policy()
@@ -160,10 +184,9 @@ func _process(delta:float) -> void:
 func _layout() -> void:
     if root==null:return
     var size:=get_viewport().get_visible_rect().size
-    var mobile:=size.x<700.0
     launcher.visible=false
     scrim.position=Vector2.ZERO; scrim.size=size
-    var width:=minf(520.0,size.x-24.0); var height:=minf(620.0,size.y-36.0)
+    var width:=minf(560.0,size.x-20.0); var height:=minf(650.0,size.y-24.0)
     panel.position=Vector2((size.x-width)/2.0,(size.y-height)/2.0)
     panel.size=Vector2(width,height)
 
