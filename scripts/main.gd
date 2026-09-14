@@ -20,6 +20,7 @@ var districts:
         return command_system.expansion_system.districts if command_system else null
 func _game_state(): return get_node_or_null("/root/RenewGameState")
 func _finance(): return get_node_or_null("/root/RenewFinanceSystem")
+func _realtime(): return get_node_or_null("/root/RenewRealTimeEconomySystem")
 func _read(domain: String, key: String, default_value = null):
     var state = _game_state(); return state.get_value(domain, key, default_value) if state else default_value
 func _write(domain: String, key: String, value) -> void:
@@ -207,6 +208,12 @@ func create_business() -> void: command_system.create_business()
 func get_business_purposes() -> Array: return command_system.business_system.get_business_purposes()
 func buy_inputs() -> void: command_system.buy_inputs()
 func produce_goods() -> void: command_system.produce_goods()
+func sell_goods() -> Dictionary:
+    var realtime = _realtime()
+    return realtime.sell_goods() if realtime != null and realtime.has_method("sell_goods") else {"ok": false, "message": "Active market unavailable."}
+func deliver_contract() -> Dictionary:
+    var realtime = _realtime()
+    return realtime.deliver_contract() if realtime != null and realtime.has_method("deliver_contract") else {"ok": false, "message": "Contract delivery unavailable."}
 func hire_employee() -> Dictionary: return command_system.hire_employee()
 func train_employee(employee_id: String) -> void: command_system.train_employee(employee_id)
 func promote_employee(employee_id: String) -> void: command_system.promote_employee(employee_id)
@@ -299,6 +306,7 @@ func infra_repair() -> void:
     if panel != null and panel.has_method("repair_damaged"): panel.repair_damaged()
 func upgrade_expansion() -> void: command_system.upgrade_expansion()
 func acquire_rival_asset() -> void: command_system.acquire_rival_asset()
+# Kept for legacy automated simulations only. Player controls no longer call this.
 func advance_day() -> void: command_system.advance_day()
 func save_game() -> void:
     _set_runtime_save_state(); command_system.save_game()
@@ -353,7 +361,7 @@ func _input(event: InputEvent) -> void:
         KEY_K: sign_contract()
         KEY_J: take_loan()
         KEY_V: repay_loan()
-        KEY_N: advance_day()
+        KEY_N: sell_goods()
         KEY_F5: save_game()
         KEY_F9: load_game()
         KEY_TAB: buy_inputs()
