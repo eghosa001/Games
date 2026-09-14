@@ -72,10 +72,18 @@ func passive_daily_run_rate() -> Dictionary:
         if item is Dictionary and bool(item.get("owned", false)) and bool(item.get("active", true)):
             businesses += 1
             var base_income := float(item.get("income", 0)); var level := maxf(1.0, float(item.get("level", 1)))
-            revenue += base_income * level; expense += base_income / 4.0
+            var property_revenue := base_income * level
+            revenue += property_revenue
+            expense += property_revenue * 0.25
     for item in expansion.resource_sites:
         if item is Dictionary and bool(item.get("owned", false)):
-            sites += 1; revenue += float(item.get("output", 0)) * maxf(1.0, float(item.get("level", 1))) * 100.0
+            sites += 1
+            var site_revenue := float(item.get("output", 0)) * maxf(1.0, float(item.get("level", 1))) * 100.0
+            var risk := clampf(float(item.get("risk", 0)), 0.0, 100.0)
+            # Extraction/logistics costs start at 25% and rise with site risk.
+            var site_cost_ratio := clampf(0.25 + risk * 0.005, 0.25, 0.75)
+            revenue += site_revenue
+            expense += site_revenue * site_cost_ratio
     expense += float(expansion.management_level) * 350.0
     return {"revenue": revenue, "expense": expense, "net": revenue - expense, "businesses": businesses, "resource_sites": sites}
 
@@ -93,7 +101,11 @@ func reconcile_passive_income(force: bool = false) -> Dictionary:
     var finance = _finance()
     if settled != 0 and finance != null:
         var result: Dictionary = finance.receive(settled, "real-time passive operations") if settled > 0 else finance.spend(-settled, "real-time passive operations")
-        if not bool(result.get("ok", false)): return {"ok": false, "settled": 0, "elapsed": elapsed, "message": str(result.get("message", "Passive settlement failed."))}
+        if not bool(result.get("ok", false)):
+            # Advance the clock even when an operating deficit cannot be paid so
+            # the same elapsed period cannot be charged repeatedly every frame.
+            var failed_clock := _clock_state(); failed_clock["last_passive_settlement_unix"] = now; failed_clock["last_passive_amount"] = 0; failed_clock["last_passive_elapsed_seconds"] = billable_seconds; failed_clock["passive_daily_net"] = daily_net; _save_clock(failed_clock)
+            return {"ok": false, "settled": 0, "elapsed": billable_seconds, "message": str(result.get("message", "Passive operating deficit could not be paid."))}
     var clock := _clock_state(); clock["passive_fractional_carry"] = new_carry; clock["last_passive_settlement_unix"] = now; clock["last_passive_amount"] = settled; clock["last_passive_elapsed_seconds"] = billable_seconds; clock["passive_daily_net"] = daily_net; _save_clock(clock)
     return {"ok": true, "settled": settled, "elapsed": billable_seconds, "daily_net": daily_net, "hourly_net": daily_net / 24.0, "businesses": int(rate.get("businesses", 0)), "resource_sites": int(rate.get("resource_sites", 0))}
 
