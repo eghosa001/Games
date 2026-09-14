@@ -1,11 +1,11 @@
 extends Node
 
-## RENEW Bankruptcy & Restructuring System.
+## RESTORA Bankruptcy & Restructuring System.
 ## Models a playable corporate distress lifecycle rather than a single bankruptcy flag:
 ## stable -> cash crisis -> covenant pressure -> restructuring -> recovery
 ## or insolvency -> administration -> liquidation/acquisition.
 
-const SYSTEM_VERSION := 2
+const SYSTEM_VERSION := 3
 const STABLE := "stable"
 const CASH_CRISIS := "cash_crisis"
 const COVENANT_PRESSURE := "covenant_pressure"
@@ -43,22 +43,29 @@ var covenant_days: Variant = 0
 var restructuring_days: Variant = 0
 var next_plan_id: Variant = 1
 var last_game_day: Variant = -1
-var distress_panel: Panel
+var distress_layer: CanvasLayer
+var distress_panel: PanelContainer
 var distress_status_label: Label
+var distress_action_grid: GridContainer
+var distress_refresh_clock := 0.0
 
 func _ready() -> void:
     last_game_day = _game_day()
     _build_distress_ui()
     _refresh_distress_ui()
+    if not get_viewport().size_changed.is_connected(_layout_distress_ui):
+        get_viewport().size_changed.connect(_layout_distress_ui)
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
     var day: Variant = _game_day()
     if day != last_game_day:
         last_game_day = day
         evaluate_runtime()
-    _refresh_distress_ui()
+    distress_refresh_clock += delta
+    if distress_refresh_clock >= 0.25:
+        distress_refresh_clock = 0.0
+        _refresh_distress_ui()
 
-## Evaluates financial health and advances the distress state machine.
 func evaluate(finance: Node, daily_cash_burn: float = 0.0) -> Dictionary:
     if finance == null:
         return {"ok": false, "message": "Finance system is required."}
@@ -79,38 +86,23 @@ func evaluate(finance: Node, daily_cash_burn: float = 0.0) -> Dictionary:
     daily_cash_burn = max(0.0, daily_cash_burn)
     cash_runway = INF if daily_cash_burn <= 0.0 else cash / daily_cash_burn
     covenant_breaches.clear()
-    if debt > 0.0 and cash < service:
-        covenant_breaches.append("debt_service")
-    if leverage > 5.0:
-        covenant_breaches.append("leverage")
-    if coverage < 1.0:
-        covenant_breaches.append("interest_coverage")
-    if equity < 0.0:
-        covenant_breaches.append("negative_equity")
-    if cash < 0.0:
-        covenant_breaches.append("negative_cash")
-    if assets > 0.0 and liabilities / assets > 0.90:
-        covenant_breaches.append("high_liability_ratio")
+    if debt > 0.0 and cash < service: covenant_breaches.append("debt_service")
+    if leverage > 5.0: covenant_breaches.append("leverage")
+    if coverage < 1.0: covenant_breaches.append("interest_coverage")
+    if equity < 0.0: covenant_breaches.append("negative_equity")
+    if cash < 0.0: covenant_breaches.append("negative_cash")
+    if assets > 0.0 and liabilities / assets > 0.90: covenant_breaches.append("high_liability_ratio")
 
     distress_score = 0.0
-    if cash < max(5000.0, service * 3.0):
-        distress_score += 25.0
-    if cash_runway < 14.0:
-        distress_score += 20.0
-    if coverage < 1.0:
-        distress_score += 25.0
-    elif coverage < 2.0:
-        distress_score += 10.0
-    if leverage > 5.0:
-        distress_score += 20.0
-    elif leverage > 3.0:
-        distress_score += 10.0
-    if equity < 0.0:
-        distress_score += 35.0
-    if assets > 0.0 and liabilities > assets:
-        distress_score += 20.0
+    if cash < max(5000.0, service * 3.0): distress_score += 25.0
+    if cash_runway < 14.0: distress_score += 20.0
+    if coverage < 1.0: distress_score += 25.0
+    elif coverage < 2.0: distress_score += 10.0
+    if leverage > 5.0: distress_score += 20.0
+    elif leverage > 3.0: distress_score += 10.0
+    if equity < 0.0: distress_score += 35.0
+    if assets > 0.0 and liabilities > assets: distress_score += 20.0
 
-    # Hard insolvency takes precedence over every recovery path.
     if equity < 0.0 or cash < 0.0:
         crisis_days = 0
         covenant_days = 0
@@ -143,8 +135,7 @@ func evaluate(finance: Node, daily_cash_burn: float = 0.0) -> Dictionary:
     if distress_score >= COVENANT_SCORE or covenant_breaches.size() >= 2:
         covenant_days += 1
         crisis_days = 0
-        if state == STABLE:
-            _transition(CASH_CRISIS, "liquidity stress detected")
+        if state == STABLE: _transition(CASH_CRISIS, "liquidity stress detected")
         if covenant_days >= DAYS_TO_AUTO_RESTRUCTURE and state == COVENANT_PRESSURE:
             _transition(RESTRUCTURING, "persistent covenant pressure triggered formal restructuring")
             _start_plan("automatic covenant restructuring")
@@ -156,46 +147,37 @@ func evaluate(finance: Node, daily_cash_burn: float = 0.0) -> Dictionary:
     if distress_score >= CASH_CRISIS_SCORE:
         crisis_days += 1
         recovery_days = 0
-        if state == STABLE:
-            _transition(CASH_CRISIS, "cash liquidity has entered crisis territory")
-        elif state == RECOVERY:
-            _transition(CASH_CRISIS, "recovery deteriorated")
+        if state == STABLE: _transition(CASH_CRISIS, "cash liquidity has entered crisis territory")
+        elif state == RECOVERY: _transition(CASH_CRISIS, "recovery deteriorated")
         if crisis_days >= DAYS_TO_COVENANT:
             _transition(COVENANT_PRESSURE, "cash crisis persisted into covenant pressure")
         return status()
 
     crisis_days = 0
     recovery_days = 0
-    if state == COVENANT_PRESSURE:
-        _transition(STABLE, "covenant pressure cleared before restructuring")
-    elif state == CASH_CRISIS:
-        _transition(STABLE, "cash crisis cleared")
+    if state == COVENANT_PRESSURE: _transition(STABLE, "covenant pressure cleared before restructuring")
+    elif state == CASH_CRISIS: _transition(STABLE, "cash crisis cleared")
     return status()
 
-## Evaluates the live game economy after every completed day.
-## FinanceSystem remains the accounting ledger; legacy main values are mirrored only
-## from FinanceSystem and are never imported back into the ledger.
 func evaluate_runtime() -> Dictionary:
     var game: Variant = _game()
     var finance: Variant = _finance()
     if game == null or finance == null:
         return {"ok": false, "message": "Runtime finance dependencies are unavailable."}
-
     var daily_burn: Variant = _estimate_daily_burn(game, finance)
     var result: Variant = evaluate(finance, daily_burn)
-    if game != null:
-        if state == INSOLVENT:
-            game.message = "INSOLVENCY: enter administration, liquidate assets, or accept a distressed acquisition."
-        elif state == ADMINISTRATION:
-            game.message = "ADMINISTRATION: creditors control the turnaround. Liquidation or acquisition is available."
-        elif state == COVENANT_PRESSURE:
-            game.message = "COVENANT PRESSURE: restructure, refinance, sell assets, downsize, or raise rescue capital."
-        elif state == CASH_CRISIS:
-            game.message = "CASH CRISIS: liquidity is tightening. Protect cash before covenants fail."
-        elif state == RESTRUCTURING:
-            game.message = "RESTRUCTURING: execute asset sales, investment, downsizing and refinancing to recover."
-        elif state == RECOVERY:
-            game.message = "RECOVERY: keep positive cash flow for %d more healthy day(s)." % max(0, DAYS_TO_STABLE - recovery_days)
+    if state == INSOLVENT:
+        game.message = "INSOLVENCY: enter administration, liquidate assets, or accept a distressed acquisition."
+    elif state == ADMINISTRATION:
+        game.message = "ADMINISTRATION: creditors control the turnaround. Liquidation or acquisition is available."
+    elif state == COVENANT_PRESSURE:
+        game.message = "COVENANT PRESSURE: restructure, refinance, sell assets, downsize, or raise rescue capital."
+    elif state == CASH_CRISIS:
+        game.message = "CASH CRISIS: liquidity is tightening. Protect cash before covenants fail."
+    elif state == RESTRUCTURING:
+        game.message = "RESTRUCTURING: execute asset sales, investment, downsizing and refinancing to recover."
+    elif state == RECOVERY:
+        game.message = "RECOVERY: keep positive cash flow for %d more healthy day(s)." % max(0, DAYS_TO_STABLE - recovery_days)
     _sync_game_finance_mirror(finance)
     return result
 
@@ -207,8 +189,6 @@ func begin_restructuring(reason: String = "covenant pressure") -> Dictionary:
         _start_plan(reason)
     return {"ok": true, "plan": restructuring_plan.duplicate(true), "state": state}
 
-## Records a disposal through FinanceSystem so the proceeds are investing cash flow,
-## not operating revenue, and the gain/loss is reflected in retained earnings.
 func sell_asset(finance: Node, asset_name: String, sale_value: int, book_value: int = 0) -> Dictionary:
     if finance == null or sale_value <= 0 or book_value < 0:
         return {"ok": false, "message": "Invalid asset sale."}
@@ -217,8 +197,7 @@ func sell_asset(finance: Node, asset_name: String, sale_value: int, book_value: 
     if book_value > 0 and float(finance.fixed_assets) < float(book_value):
         return {"ok": false, "message": "Book value exceeds available fixed assets."}
     var result: Dictionary = finance.record_asset_sale(asset_name, sale_value, book_value)
-    if not bool(result.get("ok", false)):
-        return result
+    if not bool(result.get("ok", false)): return result
     var entry: Variant = {"asset": asset_name, "sale_value": sale_value, "book_value": book_value, "gain_loss": int(result.get("gain_loss", sale_value - book_value)), "day": _game_day()}
     asset_sale_history.append(entry)
     _ensure_plan("emergency asset sale")
@@ -229,13 +208,11 @@ func sell_asset(finance: Node, asset_name: String, sale_value: int, book_value: 
     return {"ok": true, "cash": finance.cash, "entry": entry, "message": "Asset sold for $%d." % sale_value}
 
 func secure_investment(finance: Node, amount: int, source: String = "distress investor") -> Dictionary:
-    if finance == null or amount <= 0:
-        return {"ok": false, "message": "Invalid investment."}
+    if finance == null or amount <= 0: return {"ok": false, "message": "Invalid investment."}
     if state not in [CASH_CRISIS, COVENANT_PRESSURE, RESTRUCTURING, INSOLVENT]:
         return {"ok": false, "message": "Emergency investment requires financial distress."}
     var result: Dictionary = finance.record_equity(amount, source)
-    if not bool(result.get("ok", false)):
-        return result
+    if not bool(result.get("ok", false)): return result
     var entry: Variant = {"amount": amount, "source": source, "day": _game_day()}
     investment_history.append(entry)
     _ensure_plan("new rescue investment")
@@ -251,36 +228,60 @@ func downsize(finance: Node, employees_reduced: int, daily_savings: int, severan
     if state not in [CASH_CRISIS, COVENANT_PRESSURE, RESTRUCTURING, INSOLVENT]:
         return {"ok": false, "message": "Downsizing requires financial distress."}
     var game: Variant = _game()
-    if game == null or int(game.employees) <= employees_reduced:
+    if game == null or game.command_system == null or game.command_system.employee_system == null:
+        return {"ok": false, "message": "Employee system is unavailable."}
+    var employee_commands = game.command_system.employee_system
+    var current_count := int(employee_commands.get_active_employee_count())
+    if current_count <= employees_reduced:
         return {"ok": false, "message": "The workforce cannot be reduced below one employee."}
     if finance.cash < severance:
         return {"ok": false, "message": "Insufficient cash for severance."}
+
+    var finance_before: Dictionary = finance.capture_state() if finance.has_method("capture_state") else {}
+    var employee_before: Dictionary = employee_commands.capture_state() if employee_commands.has_method("capture_state") else {}
     if severance > 0:
         var severance_result: Dictionary = finance.spend(severance, "employee severance")
-        if not bool(severance_result.get("ok", false)):
-            return severance_result
-    game.employees = max(1, int(game.employees) - employees_reduced)
-    var entry: Variant = {"employees_reduced": employees_reduced, "daily_savings": daily_savings, "severance": severance, "day": _game_day()}
+        if not bool(severance_result.get("ok", false)): return severance_result
+
+    var roster: Array = employee_commands.get_roster()
+    var removed := 0
+    for employee in roster:
+        if removed >= employees_reduced: break
+        if not employee is Dictionary: continue
+        var employee_id := str(employee.get("id", ""))
+        if employee_id.is_empty(): continue
+        var internal = employee_commands.get("employee_system")
+        if internal == null or not internal.has_method("fire_employee"): break
+        var fire_result = internal.fire_employee(employee_id, _game_day())
+        if fire_result is Dictionary and bool(fire_result.get("ok", false)):
+            removed += 1
+    employee_commands.sync_roster()
+
+    if removed != employees_reduced:
+        if not employee_before.is_empty() and employee_commands.has_method("restore_state"):
+            employee_commands.restore_state(employee_before)
+        if not finance_before.is_empty() and finance.has_method("restore_state"):
+            finance.restore_state(finance_before)
+        return {"ok": false, "message": "Downsizing could not be completed safely; the transaction was rolled back."}
+
+    var entry: Variant = {"employees_reduced": removed, "daily_savings": daily_savings, "severance": severance, "day": _game_day()}
     downsizing_history.append(entry)
     _ensure_plan("emergency downsizing")
-    restructuring_plan["downsizing"] = int(restructuring_plan.get("downsizing", 0)) + employees_reduced
+    restructuring_plan["downsizing"] = int(restructuring_plan.get("downsizing", 0)) + removed
     restructuring_plan["daily_savings"] = int(restructuring_plan.get("daily_savings", 0)) + daily_savings
     restructuring_plan["actions"] = int(restructuring_plan.get("actions", 0)) + 1
-    _event("downsizing", "Reduced workforce by %d" % employees_reduced, entry)
+    _event("downsizing", "Reduced workforce by %d" % removed, entry)
     _sync_game_finance_mirror(finance)
-    return {"ok": true, "cash": finance.cash, "entry": entry, "message": "Downsized by %d employee(s)." % employees_reduced}
+    return {"ok": true, "cash": finance.cash, "entry": entry, "message": "Downsized by %d employee(s)." % removed}
 
 func refinance(finance: Node, instrument_id: String, new_rate: float, new_term_periods: int) -> Dictionary:
-    if finance == null:
-        return {"ok": false, "message": "Finance system is required."}
+    if finance == null: return {"ok": false, "message": "Finance system is required."}
     if state not in [CASH_CRISIS, COVENANT_PRESSURE, RESTRUCTURING, INSOLVENT]:
         return {"ok": false, "message": "Refinancing requires financial distress."}
     var result: Dictionary = finance.refinance_loan(instrument_id, new_rate, new_term_periods)
-    if not bool(result.get("ok", false)):
-        return result
+    if not bool(result.get("ok", false)): return result
     var game: Variant = _game()
-    if game != null:
-        game.loan_payment = int(result.get("payment", game.loan_payment))
+    if game != null: game.loan_payment = int(result.get("payment", game.loan_payment))
     var entry: Variant = {"instrument": instrument_id, "new_rate": new_rate, "new_term": new_term_periods, "payment": result.get("payment", 0), "day": _game_day()}
     refinancing_history.append(entry)
     _ensure_plan("debt refinancing")
@@ -291,8 +292,7 @@ func refinance(finance: Node, instrument_id: String, new_rate: float, new_term_p
     return {"ok": true, "entry": entry, "message": "Debt refinanced: rate %.1f%%, payment $%d." % [new_rate * 100.0, int(result.get("payment", 0))]}
 
 func enter_administration(reason: String = "insolvency") -> Dictionary:
-    if state != INSOLVENT:
-        return {"ok": false, "message": "Administration requires insolvency."}
+    if state != INSOLVENT: return {"ok": false, "message": "Administration requires insolvency."}
     _transition(ADMINISTRATION, reason)
     var entry: Variant = {"reason": reason, "day": _game_day()}
     administration_history.append(entry)
@@ -301,33 +301,26 @@ func enter_administration(reason: String = "insolvency") -> Dictionary:
     return {"ok": true, "state": state, "entry": entry, "message": "Company entered administration. Liquidation or acquisition is possible."}
 
 func liquidate(finance: Node, assets_to_liquidate: Array = []) -> Dictionary:
-    if finance == null:
-        return {"ok": false, "message": "Finance system is required."}
-    if state != ADMINISTRATION:
-        return {"ok": false, "message": "Liquidation requires administration."}
+    if finance == null: return {"ok": false, "message": "Finance system is required."}
+    if state != ADMINISTRATION: return {"ok": false, "message": "Liquidation requires administration."}
     var total_book_value := 0.0
     for asset in assets_to_liquidate:
-        if asset is Dictionary:
-            total_book_value += max(0, int(asset.get("book_value", 0)))
+        if asset is Dictionary: total_book_value += max(0, int(asset.get("book_value", 0)))
     if total_book_value > float(finance.fixed_assets) + 0.01:
         return {"ok": false, "message": "Liquidation book values exceed available fixed assets."}
-
     var proceeds: int = 0
     var entries: Array = []
     for asset in assets_to_liquidate:
         if asset is Dictionary:
             var value: int = int(asset.get("liquidation_value", asset.get("value", 0)))
             var book_value: int = max(0, int(asset.get("book_value", 0)))
-            if value <= 0:
-                continue
+            if value <= 0: continue
             var sale_result: Dictionary = finance.record_asset_sale(str(asset.get("name", "asset")), value, book_value)
-            if not bool(sale_result.get("ok", false)):
-                return sale_result
+            if not bool(sale_result.get("ok", false)): return sale_result
             proceeds += value
-            var entry: Dictionary = {"asset": asset.get("name", "asset"), "sale_value": value, "book_value": book_value, "gain_loss": int(sale_result.get("gain_loss", value - book_value)), "day": _game_day()}
-            entries.append(entry)
-            liquidation_history.append(entry)
-
+            var sale_entry: Dictionary = {"asset": asset.get("name", "asset"), "sale_value": value, "book_value": book_value, "gain_loss": int(sale_result.get("gain_loss", value - book_value)), "day": _game_day()}
+            entries.append(sale_entry)
+            liquidation_history.append(sale_entry)
     _sync_game_finance_mirror(finance)
     var entry: Variant = {"proceeds": proceeds, "assets": assets_to_liquidate.duplicate(true), "day": _game_day(), "sales": entries.duplicate(true)}
     liquidation_history.append(entry)
@@ -336,10 +329,8 @@ func liquidate(finance: Node, assets_to_liquidate: Array = []) -> Dictionary:
     _log_game("LIQUIDATION: $%d in asset proceeds recovered." % proceeds)
     return {"ok": true, "proceeds": proceeds, "state": state, "entry": entry, "message": "Liquidation completed. $%d recovered." % proceeds}
 
-## Uses the AcquisitionSystem as the transaction authority for a distressed sale.
 func acquire_or_restructure(acquirer_id: String, target_id: String, acquisition_system: Node, price: int = 0) -> Dictionary:
-    if acquisition_system == null:
-        return {"ok": false, "message": "Acquisition system is required."}
+    if acquisition_system == null: return {"ok": false, "message": "Acquisition system is required."}
     if state not in [INSOLVENT, ADMINISTRATION]:
         return {"ok": false, "message": "Distressed acquisition is available after insolvency or administration."}
     var result: Dictionary = acquisition_system.acquire_company(acquirer_id, target_id, float(price), acquisition_system.TYPE_HOSTILE, true, true, true, true, 1.0)
@@ -355,58 +346,44 @@ func mark_recovery() -> Dictionary:
     _transition(RECOVERY, "restructuring actions restored financial stability")
     return {"ok": true, "state": state, "message": "Company entered recovery. Maintain healthy cash flow."}
 
-func runtime_restructure() -> Dictionary:
-    return begin_restructuring("player initiated formal turnaround plan")
+func runtime_restructure() -> Dictionary: return begin_restructuring("player initiated formal turnaround plan")
 
 func runtime_sell_selected_asset() -> Dictionary:
-    var game: Variant = _game()
-    var finance: Variant = _finance()
-    if game == null or finance == null:
-        return {"ok": false, "message": "Runtime dependencies unavailable."}
+    var game: Variant = _game(); var finance: Variant = _finance()
+    if game == null or finance == null: return {"ok": false, "message": "Runtime dependencies unavailable."}
     var selected: Variant = int(game.selected_expansion)
     if selected >= 0 and selected < game.expansion.properties.size():
         var asset: Dictionary = game.expansion.properties[selected]
         if bool(asset.get("owned", false)):
-            var cost: Variant = int(asset.get("cost", 5000))
-            var value: Variant = max(1000, int(round(float(cost) * 0.65)))
+            var cost: Variant = int(asset.get("cost", 5000)); var value: Variant = max(1000, int(round(float(cost) * 0.65)))
             var result: Dictionary = sell_asset(finance, str(asset.get("name", "Expansion Asset")), value, cost)
-            if bool(result.get("ok", false)):
-                asset["owned"] = false
+            if bool(result.get("ok", false)): asset["owned"] = false
             return result
     return {"ok": false, "message": "Select an owned expansion asset before selling."}
 
 func runtime_rescue_investment() -> Dictionary:
     var finance: Variant = _finance()
-    if finance == null:
-        return {"ok": false, "message": "FinanceSystem unavailable."}
-    return secure_investment(finance, 10000, "Emergency rescue investor")
+    return {"ok": false, "message": "FinanceSystem unavailable."} if finance == null else secure_investment(finance, 10000, "Emergency rescue investor")
 
 func runtime_downsize() -> Dictionary:
     var finance: Variant = _finance()
-    if finance == null:
-        return {"ok": false, "message": "FinanceSystem unavailable."}
-    return downsize(finance, 1, 180, 500)
+    return {"ok": false, "message": "FinanceSystem unavailable."} if finance == null else downsize(finance, 1, 180, 500)
 
 func runtime_refinance() -> Dictionary:
     var finance: Variant = _finance()
-    if finance == null:
-        return {"ok": false, "message": "FinanceSystem unavailable."}
+    if finance == null: return {"ok": false, "message": "FinanceSystem unavailable."}
     for id in finance.financing:
         var instrument: Dictionary = finance.financing[id]
-        var balance: Variant = float(instrument.get("balance", 0.0))
-        var instrument_type: Variant = str(instrument.get("type", ""))
+        var balance: Variant = float(instrument.get("balance", 0.0)); var instrument_type: Variant = str(instrument.get("type", ""))
         if balance > 0.0 and instrument_type != "equity":
             return refinance(finance, str(id), max(0.04, float(instrument.get("annual_rate", 0.12)) - 0.025), int(instrument.get("remaining_periods", 20)) + 15)
     return {"ok": false, "message": "No FinanceSystem debt instrument is available to refinance."}
 
-func runtime_administration() -> Dictionary:
-    return enter_administration("player entered administration after insolvency")
+func runtime_administration() -> Dictionary: return enter_administration("player entered administration after insolvency")
 
 func runtime_liquidation() -> Dictionary:
-    var game: Variant = _game()
-    var finance: Variant = _finance()
-    if game == null or finance == null:
-        return {"ok": false, "message": "Runtime dependencies unavailable."}
+    var game: Variant = _game(); var finance: Variant = _finance()
+    if game == null or finance == null: return {"ok": false, "message": "Runtime dependencies unavailable."}
     var assets: Array = []
     for p in game.expansion.properties:
         if bool(p.get("owned", false)):
@@ -418,14 +395,13 @@ func runtime_liquidation() -> Dictionary:
 
 func runtime_distressed_acquisition() -> Dictionary:
     var acquisition: Variant = get_node_or_null("../AcquisitionSystem")
-    if acquisition == null:
-        return {"ok": false, "message": "AcquisitionSystem unavailable."}
+    if acquisition == null: return {"ok": false, "message": "AcquisitionSystem unavailable."}
     for target_id in acquisition.targets:
         var target: Dictionary = acquisition.targets[target_id]
         if str(target.get("status", "independent")) not in ["acquired", "merged"]:
             var diligence: Variant = acquisition.due_diligence(str(target_id))
             var price: Variant = max(1, int(round(max(0.0, float(diligence.get("net_asset_value", 10000.0))) * 0.65)))
-            return acquire_or_restructure("renew_co", str(target_id), acquisition, price)
+            return acquire_or_restructure("restora_co", str(target_id), acquisition, price)
     return {"ok": false, "message": "No registered acquisition target is available for a distressed sale."}
 
 func status() -> Dictionary:
@@ -435,45 +411,25 @@ func capture_state() -> Dictionary:
     return {"system_version": SYSTEM_VERSION, "state": state, "previous_state": previous_state, "distress_score": distress_score, "cash_runway": cash_runway, "covenant_breaches": covenant_breaches.duplicate(), "restructuring_plan": restructuring_plan.duplicate(true), "asset_sale_history": asset_sale_history.duplicate(true), "investment_history": investment_history.duplicate(true), "downsizing_history": downsizing_history.duplicate(true), "refinancing_history": refinancing_history.duplicate(true), "administration_history": administration_history.duplicate(true), "liquidation_history": liquidation_history.duplicate(true), "events": events.duplicate(true), "recovery_days": recovery_days, "crisis_days": crisis_days, "covenant_days": covenant_days, "restructuring_days": restructuring_days, "next_plan_id": next_plan_id}
 
 func restore_state(snapshot: Dictionary) -> void:
-    if snapshot.is_empty():
-        return
-    state = str(snapshot.get("state", state))
-    previous_state = str(snapshot.get("previous_state", previous_state))
-    distress_score = float(snapshot.get("distress_score", distress_score))
-    cash_runway = float(snapshot.get("cash_runway", cash_runway))
-    var _cb_raw = snapshot.get("covenant_breaches", covenant_breaches)
-    if _cb_raw is Array:
-        covenant_breaches.clear()
-        for _item in _cb_raw:
-            covenant_breaches.append(str(_item))
-    else:
-        covenant_breaches = []
-    restructuring_plan = snapshot.get("restructuring_plan", {}).duplicate(true)
-    asset_sale_history = snapshot.get("asset_sale_history", []).duplicate(true)
-    investment_history = snapshot.get("investment_history", []).duplicate(true)
-    downsizing_history = snapshot.get("downsizing_history", []).duplicate(true)
-    refinancing_history = snapshot.get("refinancing_history", []).duplicate(true)
-    administration_history = snapshot.get("administration_history", []).duplicate(true)
-    liquidation_history = snapshot.get("liquidation_history", []).duplicate(true)
-    events = snapshot.get("events", []).duplicate(true)
-    recovery_days = int(snapshot.get("recovery_days", recovery_days))
-    crisis_days = int(snapshot.get("crisis_days", crisis_days))
-    covenant_days = int(snapshot.get("covenant_days", covenant_days))
-    restructuring_days = int(snapshot.get("restructuring_days", restructuring_days))
-    next_plan_id = int(snapshot.get("next_plan_id", next_plan_id))
+    if snapshot.is_empty(): return
+    state = str(snapshot.get("state", state)); previous_state = str(snapshot.get("previous_state", previous_state)); distress_score = float(snapshot.get("distress_score", distress_score)); cash_runway = float(snapshot.get("cash_runway", cash_runway))
+    var raw = snapshot.get("covenant_breaches", covenant_breaches)
+    covenant_breaches.clear()
+    if raw is Array:
+        for item in raw: covenant_breaches.append(str(item))
+    restructuring_plan = snapshot.get("restructuring_plan", {}).duplicate(true); asset_sale_history = snapshot.get("asset_sale_history", []).duplicate(true); investment_history = snapshot.get("investment_history", []).duplicate(true); downsizing_history = snapshot.get("downsizing_history", []).duplicate(true); refinancing_history = snapshot.get("refinancing_history", []).duplicate(true); administration_history = snapshot.get("administration_history", []).duplicate(true); liquidation_history = snapshot.get("liquidation_history", []).duplicate(true); events = snapshot.get("events", []).duplicate(true)
+    recovery_days = int(snapshot.get("recovery_days", recovery_days)); crisis_days = int(snapshot.get("crisis_days", crisis_days)); covenant_days = int(snapshot.get("covenant_days", covenant_days)); restructuring_days = int(snapshot.get("restructuring_days", restructuring_days)); next_plan_id = int(snapshot.get("next_plan_id", next_plan_id))
+    _refresh_distress_ui()
 
 func _start_plan(reason: String) -> void:
     restructuring_plan = {"id": "restruct_%d" % next_plan_id, "reason": reason, "asset_sales": 0, "investment": 0, "downsizing": 0, "daily_savings": 0, "refinancing": 0, "actions": 0, "created_day": _game_day()}
-    next_plan_id += 1
-    restructuring_days = 0
-    recovery_days = 0
+    next_plan_id += 1; restructuring_days = 0; recovery_days = 0
     _event("restructuring_started", reason, restructuring_plan)
     _log_game("RESTRUCTURING: recovery plan %s opened." % restructuring_plan["id"])
 
 func _ensure_plan(reason: String) -> void:
     if restructuring_plan.is_empty():
-        if state in [CASH_CRISIS, COVENANT_PRESSURE]:
-            _transition(RESTRUCTURING, reason)
+        if state in [CASH_CRISIS, COVENANT_PRESSURE]: _transition(RESTRUCTURING, reason)
         _start_plan(reason)
 
 func _has_restructuring_actions() -> bool:
@@ -488,94 +444,149 @@ func _estimate_daily_burn(game: Node, finance: Node) -> float:
 
 func _sync_game_finance_mirror(finance: Node) -> void:
     var game: Variant = _game()
-    if game == null or finance == null:
-        return
-    game.cash = int(finance.cash)
-    game.debt = int(finance.debt)
-    game.loan_payment = int(finance.loan_payment)
+    if game == null or finance == null: return
+    game.cash = int(finance.cash); game.debt = int(finance.debt); game.loan_payment = int(finance.loan_payment)
+
+func _panel_style() -> StyleBoxFlat:
+    var style := StyleBoxFlat.new()
+    style.bg_color = Color("0b1816")
+    style.border_color = Color("b45309")
+    style.set_border_width_all(1)
+    style.set_corner_radius_all(18)
+    style.shadow_color = Color(0,0,0,0.34)
+    style.shadow_size = 8
+    style.shadow_offset = Vector2(0,4)
+    return style
 
 func _build_distress_ui() -> void:
-    var layer: Variant = CanvasLayer.new()
-    layer.name = "BankruptcyControls"
-    layer.layer = 80
-    add_child(layer)
-    distress_panel = Panel.new()
+    distress_layer = CanvasLayer.new()
+    distress_layer.name = "BankruptcyControls"
+    distress_layer.layer = 80
+    add_child(distress_layer)
+
+    var scrim := ColorRect.new()
+    scrim.name = "DistressScrim"
+    scrim.color = Color(0.015,0.025,0.025,0.78)
+    scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    scrim.mouse_filter = Control.MOUSE_FILTER_STOP
+    distress_layer.add_child(scrim)
+
+    distress_panel = PanelContainer.new()
     distress_panel.name = "DistressPanel"
-    distress_panel.position = Vector2(20, 430)
-    distress_panel.size = Vector2(680, 325)
-    layer.add_child(distress_panel)
-    var box: Variant = VBoxContainer.new()
-    box.position = Vector2(12, 10)
-    box.size = Vector2(656, 305)
-    distress_panel.add_child(box)
+    distress_panel.add_theme_stylebox_override("panel", _panel_style())
+    distress_layer.add_child(distress_panel)
+
+    var outer := MarginContainer.new()
+    outer.add_theme_constant_override("margin_left", 16); outer.add_theme_constant_override("margin_right", 16); outer.add_theme_constant_override("margin_top", 14); outer.add_theme_constant_override("margin_bottom", 14)
+    distress_panel.add_child(outer)
+    var scroll := ScrollContainer.new()
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+    scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    outer.add_child(scroll)
+    var box := VBoxContainer.new()
+    box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    box.add_theme_constant_override("separation", 10)
+    scroll.add_child(box)
+
+    var title := Label.new()
+    title.text = "CORPORATE RECOVERY"
+    title.add_theme_font_size_override("font_size", 22)
+    title.add_theme_color_override("font_color", Color("fbbf24"))
+    box.add_child(title)
+    var caption := Label.new()
+    caption.text = "Stabilize liquidity, restructure obligations, or manage an orderly exit."
+    caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    caption.add_theme_font_size_override("font_size", 13)
+    box.add_child(caption)
+
     distress_status_label = Label.new()
     distress_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    distress_status_label.custom_minimum_size = Vector2(650, 90)
+    distress_status_label.add_theme_font_size_override("font_size", 13)
+    distress_status_label.custom_minimum_size = Vector2(0, 84)
     box.add_child(distress_status_label)
-    var row1: Variant = HBoxContainer.new()
-    box.add_child(row1)
-    _distress_button(row1, "RESTRUCTURE", runtime_restructure)
-    _distress_button(row1, "SELL ASSET", runtime_sell_selected_asset)
-    _distress_button(row1, "RESCUE $10K", runtime_rescue_investment)
-    var row2: Variant = HBoxContainer.new()
-    box.add_child(row2)
-    _distress_button(row2, "DOWNSIZE", runtime_downsize)
-    _distress_button(row2, "REFINANCE", runtime_refinance)
-    _distress_button(row2, "ADMINISTRATION", runtime_administration)
-    _distress_button(row2, "LIQUIDATE", runtime_liquidation)
-    var row3: Variant = HBoxContainer.new()
-    box.add_child(row3)
-    _distress_button(row3, "DISTRESSED ACQUISITION", runtime_distressed_acquisition)
-    _distress_button(row3, "MARK RECOVERY", mark_recovery)
 
-func _distress_button(row: HBoxContainer, text: String, callback: Callable) -> void:
-    var button: Variant = Button.new()
+    distress_action_grid = GridContainer.new()
+    distress_action_grid.columns = 3
+    distress_action_grid.add_theme_constant_override("h_separation", 8)
+    distress_action_grid.add_theme_constant_override("v_separation", 8)
+    box.add_child(distress_action_grid)
+    _distress_button("RESTRUCTURE", runtime_restructure)
+    _distress_button("SELL ASSET", runtime_sell_selected_asset)
+    _distress_button("RESCUE $10K", runtime_rescue_investment)
+    _distress_button("DOWNSIZE", runtime_downsize)
+    _distress_button("REFINANCE", runtime_refinance)
+    _distress_button("ADMINISTRATION", runtime_administration)
+    _distress_button("LIQUIDATE", runtime_liquidation)
+    _distress_button("DISTRESSED ACQUISITION", runtime_distressed_acquisition)
+    _distress_button("MARK RECOVERY", mark_recovery)
+    _layout_distress_ui()
+
+func _distress_button(text: String, callback: Callable) -> void:
+    var button := Button.new()
     button.text = text
-    button.custom_minimum_size = Vector2(150, 44)
-    button.pressed.connect(callback)
-    row.add_child(button)
+    button.custom_minimum_size = Vector2(140, 52)
+    button.focus_mode = Control.FOCUS_NONE
+    button.clip_text = true
+    button.add_theme_font_size_override("font_size", 12)
+    button.pressed.connect(_run_distress_action.bind(callback))
+    distress_action_grid.add_child(button)
+
+func _run_distress_action(callback: Callable) -> void:
+    if not callback.is_valid(): return
+    var result = callback.call()
+    if result is Dictionary:
+        var game = _game()
+        if game != null and result.has("message"): game.message = str(result.get("message", ""))
+    _refresh_distress_ui()
+
+func _layout_distress_ui() -> void:
+    if distress_panel == null: return
+    var size := get_viewport().get_visible_rect().size
+    var mobile := size.x < 700.0
+    var margin := 10.0 if mobile else 24.0
+    var width := minf(760.0, size.x - margin * 2.0)
+    var height := minf(610.0, size.y - margin * 2.0)
+    distress_panel.position = Vector2((size.x - width) * 0.5, (size.y - height) * 0.5)
+    distress_panel.size = Vector2(width, height)
+    if distress_action_grid != null:
+        distress_action_grid.columns = 1 if size.x < 390.0 else (2 if mobile else 3)
 
 func _refresh_distress_ui() -> void:
-    if distress_status_label == null:
-        return
-    distress_status_label.text = "DISTRESS: %s | score %.1f | runway %s days | breaches: %s\nPlan: %s" % [str(state).to_upper(), distress_score, "∞" if is_inf(cash_runway) else str(snapped(cash_runway, 0.1)), ", ".join(covenant_breaches) if covenant_breaches.size() > 0 else "none", str(restructuring_plan.get("id", "none"))]
+    if distress_status_label == null: return
+    if distress_layer != null:
+        distress_layer.visible = state != STABLE
+        distress_layer.process_mode = Node.PROCESS_MODE_INHERIT if state != STABLE else Node.PROCESS_MODE_DISABLED
+    distress_status_label.text = "STATE: %s\nDistress score %.1f • runway %s days • breaches %s\nRecovery plan: %s" % [str(state).to_upper(), distress_score, "∞" if is_inf(cash_runway) else str(snapped(cash_runway, 0.1)), ", ".join(covenant_breaches) if covenant_breaches.size() > 0 else "none", str(restructuring_plan.get("id", "none"))]
 
 func _transition(next_state: String, reason: String) -> void:
-    if state == next_state:
-        return
-    previous_state = state
-    state = next_state
+    if state == next_state: return
+    previous_state = state; state = next_state
     _event("state_transition", "%s -> %s: %s" % [previous_state, state, reason], {"from": previous_state, "to": state, "reason": reason})
     _log_game("DISTRESS: %s -> %s (%s)." % [previous_state.to_upper(), state.to_upper(), reason])
+    _refresh_distress_ui()
 
 func _event(kind: String, message: String, data: Dictionary = {}) -> void:
     events.append({"kind": kind, "message": message, "data": data.duplicate(true), "day": _game_day()})
-    if events.size() > 200:
-        events.pop_front()
+    if events.size() > 200: events.pop_front()
 
 func _log_game(text: String) -> void:
     var game: Variant = _game()
-    if game == null:
-        return
-    if game.has_method("add_log"):
-        game.add_log(text)
+    if game == null: return
+    if game.has_method("add_log"): game.add_log(text)
     elif "log_lines" in game:
         game.log_lines.append(text)
-        if game.log_lines.size() > 100:
-            game.log_lines.pop_front()
+        if game.log_lines.size() > 100: game.log_lines.pop_front()
 
 func _game() -> Variant:
     var root_game := get_node_or_null("/root/Renew")
-    if root_game != null:
-        return root_game
+    if root_game != null: return root_game
     var tree := get_tree()
-    if tree != null and tree.current_scene != null and tree.current_scene.has_method("advance_day"):
-        return tree.current_scene
+    if tree != null and tree.current_scene != null and tree.current_scene.has_method("advance_day"): return tree.current_scene
     return null
 
-func _finance() -> Variant:
-    return get_node_or_null("/root/RenewFinanceSystem")
-
+func _finance() -> Variant: return get_node_or_null("/root/RenewFinanceSystem")
 func _game_day() -> int:
     var game: Variant = _game()
     return int(game.day) if game != null else 0
