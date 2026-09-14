@@ -127,5 +127,11 @@ func reconcile_calendar(force_one_day: bool = false) -> Dictionary:
     return world_calendar.reconcile_calendar(force_one_day) if world_calendar != null else {"ok": false, "message": "World calendar unavailable."}
 
 func status() -> Dictionary:
-    var rate := passive_daily_run_rate(); var now := Time.get_unix_time_from_system(); var last := float(_get_time_value("last_passive_settlement_unix", now)); var demand := demand_snapshot(); var calendar := world_calendar.status() if world_calendar != null else {}
-    return {"daily_revenue": float(rate.get("revenue", 0.0)), "daily_expense": float(rate.get("expense", 0.0)), "daily_net": float(rate.get("net", 0.0)), "hourly_net": float(rate.get("net", 0.0)) / 24.0, "businesses": int(rate.get("businesses", 0)), "resource_sites": int(rate.get("resource_sites", 0)), "seconds_since_settlement": maxf(0.0, now - last), "settlement_interval_seconds": SETTLEMENT_INTERVAL_SECONDS, "offline_cap_seconds": MAX_OFFLINE_CATCHUP_SECONDS, "consumer_demand_remaining": int(demand.get("remaining", 0)), "calendar": calendar}
+    var rate: Dictionary = passive_daily_run_rate()
+    var now := Time.get_unix_time_from_system()
+    var last := float(_get_time_value("last_passive_settlement_unix", now))
+    var demand: Dictionary = demand_snapshot()
+    var calendar_state: Dictionary = {}
+    if world_calendar != null:
+        calendar_state = world_calendar.status()
+    return {"daily_revenue": float(rate.get("revenue", 0.0)), "daily_expense": float(rate.get("expense", 0.0)), "daily_net": float(rate.get("net", 0.0)), "hourly_net": float(rate.get("net", 0.0)) / 24.0, "businesses": int(rate.get("businesses", 0)), "resource_sites": int(rate.get("resource_sites", 0)), "seconds_since_settlement": maxf(0.0, now - last), "settlement_interval_seconds": SETTLEMENT_INTERVAL_SECONDS, "offline_cap_seconds": MAX_OFFLINE_CATCHUP_SECONDS, "consumer_demand_remaining": int(demand.get("remaining", 0)), "calendar": calendar_state}
