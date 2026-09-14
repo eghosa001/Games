@@ -138,18 +138,12 @@ func _grant_reward(reward_id: String) -> Dictionary:
             return {"ok": true, "cash": SPONSOR_GRANT_AMOUNT, "message": "Sponsor grant received."}
         return result
     if reward_id == "market_research":
-        var state = _state()
-        if state == null:
-            return {"ok": false, "message": "Game state unavailable."}
-        state.set_value("analytics", "market_research_date", _date_key())
+        _write_local_value("rewards", "market_research_date", _date_key())
         return {"ok": true, "message": "Expanded market research unlocked for today."}
     return {"ok": false, "message": "Unknown rewarded offer."}
 
 func has_market_research_today() -> bool:
-    var state = _state()
-    if state == null:
-        return false
-    return str(state.get_value("analytics", "market_research_date", "")) == _date_key()
+    return str(_read_local_value("rewards", "market_research_date", "")) == _date_key()
 
 func purchase_premium() -> Dictionary:
     if not subscriptions_enabled():
@@ -242,11 +236,20 @@ func _save_local_state() -> void:
     file.set_value("premium", "verified_until_unix", premium_verified_until_unix)
     file.save(LOCAL_STATE_PATH)
 
-func _read_counter(day_key: String, reward_id: String) -> int:
+func _read_local_value(section: String, key: String, default_value):
     var file := ConfigFile.new()
     if file.load(LOCAL_STATE_PATH) != OK:
-        return 0
-    return int(file.get_value("rewarded_" + day_key, reward_id, 0))
+        return default_value
+    return file.get_value(section, key, default_value)
+
+func _write_local_value(section: String, key: String, value) -> void:
+    var file := ConfigFile.new()
+    file.load(LOCAL_STATE_PATH)
+    file.set_value(section, key, value)
+    file.save(LOCAL_STATE_PATH)
+
+func _read_counter(day_key: String, reward_id: String) -> int:
+    return int(_read_local_value("rewarded_" + day_key, reward_id, 0))
 
 func _increment_reward_counters(reward_id: String) -> void:
     var day_key := _date_key()
