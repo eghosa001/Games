@@ -17,14 +17,64 @@ func _layout_responsive() -> void:
     super._layout_responsive()
     var size := root.size if root != null and root.size.x > 0.0 else get_viewport().get_visible_rect().size
     var mobile := size.x < 700.0
+    var narrow_phone := size.x < 420.0
+
     # Keep the persistent world edge visible on wide screens while retaining a
     # full-width management surface on mobile.
     shell.add_theme_constant_override("margin_left", 10 if mobile else 86)
+
+    # Premium mobile readability: never solve density by shrinking text until it
+    # is difficult to read. Narrow phones use a single action column instead.
+    brand.add_theme_font_size_override("font_size", 24 if mobile else 28)
+    location_label.add_theme_font_size_override("font_size", 12 if mobile else 13)
+    hero_caption.add_theme_font_size_override("font_size", 12 if mobile else 13)
+    hero_value.add_theme_font_size_override("font_size", 30 if mobile else 34)
+    hero_meta.add_theme_font_size_override("font_size", 12 if mobile else 13)
+    hero_goal.add_theme_font_size_override("font_size", 14 if mobile else 15)
+    hero_progress_label.add_theme_font_size_override("font_size", 12 if mobile else 13)
+    section_title.add_theme_font_size_override("font_size", 22 if mobile else 24)
+    section_caption.add_theme_font_size_override("font_size", 13 if mobile else 14)
+    status_label.add_theme_font_size_override("font_size", 13)
+    feedback_label.add_theme_font_size_override("font_size", 13)
+
+    for label in stat_names:
+        label.add_theme_font_size_override("font_size", 11 if mobile else 12)
+    for label in stat_values:
+        label.add_theme_font_size_override("font_size", 18 if mobile else 19)
+
+    action_grid.columns = 1 if narrow_phone else 2
     for child in action_grid.get_children():
         if child is Button:
             var action_button := child as Button
             action_button.clip_text = true
             action_button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+            action_button.custom_minimum_size.y = 64 if mobile else 68
+            action_button.add_theme_font_size_override("font_size", 13 if mobile else 14)
+
+    for button in mode_buttons:
+        button.custom_minimum_size.y = 50 if mobile else 52
+        button.add_theme_font_size_override("font_size", 11 if mobile else 12)
+
+    alerts_button.custom_minimum_size.y = 48
+    theme_button.custom_minimum_size.y = 48
+    hero_action.custom_minimum_size.y = 54
+    hero_action.add_theme_font_size_override("font_size", 12 if mobile else 13)
+
+func _open_decision_center() -> void:
+    var desk := get_node_or_null("/root/RenewManagementPolicyUI")
+    if desk != null and desk.has_method("_toggle"):
+        desk._toggle()
+        return
+    show_feedback("Decision center is temporarily unavailable.")
+
+func _open_screen(screen_name: String) -> void:
+    var manager := get_node_or_null("/root/RenewUIScreenManager")
+    if manager != null and manager.has_method("show_screen"):
+        var opened := manager.show_screen(screen_name)
+        if opened == false:
+            show_feedback("That management screen is not available yet.")
+        return
+    show_feedback("Management screens are temporarily unavailable.")
 
 func _property_system():
     if parent == null or parent.get("command_system") == null:
