@@ -12,13 +12,14 @@ func _run() -> void:
     check("Android export preset exists", not text.is_empty())
     check("Android platform preset exists", text.contains("platform=\"Android\""))
     check("Play Store preset exists", text.contains("name=\"Android Play Store\""))
-    check("Play Store release is AAB", text.contains("export_path=\"build/RENEW-release.aab\"") and text.contains("gradle_build/export_format=1"))
+    check("Play Store release is AAB", text.contains("export_path=\"build/Restora-release.aab\"") and text.contains("gradle_build/export_format=1"))
     check("Play Store release uses Gradle", text.contains("gradle_build/use_gradle_build=true"))
     check("Android 16/API 36 target is explicit", text.contains("gradle_build/target_sdk=\"36\""))
     check("minimum Android SDK is explicit", text.contains("gradle_build/min_sdk=\"24\""))
     check("64-bit ARM is enabled", text.contains("architectures/arm64-v8a=true"))
     check("32-bit ARM is disabled", text.contains("architectures/armeabi-v7a=false"))
     check("stable package identifier is configured", text.contains("package/unique_name=\"com.eghosa.renew\""))
+    check("Restora package display name is configured", text.contains("package/name=\"Restora\""))
     check("launcher app is enabled", text.contains("package/show_as_launcher_app=true"))
     check("release version code exists", text.contains("version/code=1"))
     check("release semantic version exists", text.contains("version/name=\"1.0.0\""))
@@ -44,7 +45,7 @@ func _run() -> void:
     check("no undeclared analytics/tracking implementation exists", not analytics_present)
 
     print("--- ANDROID RELEASE CONFIG SUMMARY ---")
-    print("Checks: %d | Failures: %d" % [27, failures.size()])
+    print("Checks: %d | Failures: %d" % [28, failures.size()])
     for failure in failures:
         print("FAILED: %s" % failure)
     if failures.size() > 0:
