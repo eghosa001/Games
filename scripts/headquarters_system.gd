@@ -17,7 +17,7 @@ var stage_index: Variant = 0
 var stage_progress: Variant = 0
 var owned_areas: Dictionary = {}
 var area_levels: Dictionary = {}
-var headquarters_name: Variant = "RENEW Office"
+var headquarters_name: Variant = "RESTORA Office"
 var headquarters_region: Variant = ""
 var headquarters_value: Variant = 0
 var expansion_history: Array = []
@@ -122,7 +122,7 @@ func daily_modifier() -> Dictionary:
 func capture_state() -> Dictionary:
     return {"stage_index": stage_index, "stage_progress": stage_progress, "owned_areas": owned_areas.duplicate(true), "area_levels": area_levels.duplicate(true), "headquarters_name": headquarters_name, "headquarters_region": headquarters_region, "headquarters_value": headquarters_value, "expansion_history": expansion_history.duplicate(true), "last_upgrade_day": last_upgrade_day}
 func restore_state(state: Dictionary) -> void:
-    stage_index = clamp(int(state.get("stage_index", 0)), 0, STAGES.size() - 1); stage_progress = int(state.get("stage_progress", 0)); headquarters_name = str(state.get("headquarters_name", "RENEW Office")); headquarters_region = str(state.get("headquarters_region", "")); headquarters_value = int(state.get("headquarters_value", 0))
+    stage_index = clamp(int(state.get("stage_index", 0)), 0, STAGES.size() - 1); stage_progress = int(state.get("stage_progress", 0)); headquarters_name = str(state.get("headquarters_name", "RESTORA Office")); headquarters_region = str(state.get("headquarters_region", "")); headquarters_value = int(state.get("headquarters_value", 0))
     var history = state.get("expansion_history", []); expansion_history = history.duplicate(true) if history is Array else []; last_upgrade_day = int(state.get("last_upgrade_day", 0))
     var saved_areas = state.get("owned_areas", {}); if saved_areas is Dictionary:
         for area_id in AREA_SPECS.keys(): owned_areas[area_id] = bool(saved_areas.get(area_id, false))
