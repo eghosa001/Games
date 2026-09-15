@@ -40,19 +40,24 @@ func _enter_tree() -> void:
 func _layout_responsive() -> void:
     if root == null or panel == null or label == null:
         return
-    var w: float = maxf(root.size.x, 320.0)
-    if w < 1600.0:
+    if _coordinator_active:
         panel.hide()
         return
-    panel.position = Vector2(w - 425.0, 116.0)
-    panel.size = Vector2(410.0, 82.0)
-    label.size = Vector2(panel.size.x - 28.0, 62.0)
+    var w: float = maxf(root.size.x, 320.0)
+    if w < 980.0:
+        panel.hide()
+        return
+    var width := 350.0 if w < 1440.0 else 410.0
+    var height := 76.0 if w < 1440.0 else 82.0
+    panel.position = Vector2(w - width - 18.0, 88.0)
+    panel.size = Vector2(width, height)
+    label.size = Vector2(panel.size.x - 28.0, panel.size.y - 20.0)
     label.add_theme_font_size_override("font_size", 13)
     panel.show()
 
 func _should_show() -> bool:
     if root == null: return false
-    return maxf(root.size.x, 320.0) >= 1600.0
+    return not _coordinator_active and maxf(root.size.x, 320.0) >= 980.0
 
 func _get_rect() -> Rect2:
     if panel == null: return Rect2()
@@ -60,11 +65,14 @@ func _get_rect() -> Rect2:
 
 func _set_coordinator_active(value: bool) -> void:
     _coordinator_active = value
+    if not value:
+        _layout_responsive()
 
 func _on_screen_changed(open: bool) -> void:
+    _coordinator_active = open
     if open:
         panel.hide()
-    elif not _coordinator_active:
+    else:
         _layout_responsive()
 
 func _process(_delta: float) -> void:
@@ -74,8 +82,11 @@ func _process(_delta: float) -> void:
     var coordinator := _coordinator()
     if coordinator != null:
         screen_name = coordinator.get_active_screen()
-    if screen_name == "":
+    _coordinator_active = screen_name != ""
+    if not _coordinator_active:
         _layout_responsive()
+    else:
+        panel.hide()
     var market = game.get_node_or_null("Systems/MarketDirector")
     var goals = game.get_node_or_null("Systems/EmpireGoals")
     var market_text: Variant = "MARKET: stable"

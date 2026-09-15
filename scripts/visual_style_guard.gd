@@ -2,7 +2,8 @@ extends Node
 
 ## RESTORA visual-style guard.
 ## Keeps the authored presentation active and prevents legacy/default controls,
-## undersized touch targets and tiny dynamically-created text from resurfacing.
+## undersized touch targets, inaccessible navigation and tiny dynamically-created
+## text from resurfacing.
 
 const PREMIUM_THEME_PATH := "res://Assets/Themes/EmpireTheme.tres"
 const LEGACY_WORLD_PATH := "/root/Renew/World/WorldView"
@@ -10,8 +11,8 @@ const PREMIUM_INDUSTRIAL_PATH := "/root/Renew/World/PremiumIndustrialScene"
 const PREMIUM_RESTORATION_PATH := "/root/Renew/World/PremiumRestorationScene"
 const BANKRUPTCY_PATH := "/root/Renew/Systems/BankruptcySystem"
 const MIN_TOUCH_TARGET := 48.0
-const MIN_BUTTON_FONT := 12
-const MIN_BODY_FONT := 12
+const MIN_BUTTON_FONT := 14
+const MIN_BODY_FONT := 14
 
 var _premium_theme: Theme
 var _refresh_queued := false
@@ -26,7 +27,9 @@ func _ready() -> void:
     call_deferred("_enforce_premium_presentation")
 
 func _process(delta: float) -> void:
-    # Distress state does not need a recursive/UI lookup every rendered frame.
+    # Authored controls can restyle themselves after creation. Reassert the
+    # accessibility contract every frame so focus and touch sizing remain final.
+    _theme_active_ui()
     _distress_refresh += delta
     if _distress_refresh >= 0.25:
         _distress_refresh = 0.0
@@ -39,24 +42,26 @@ func _on_node_added(node: Node) -> void:
             control.theme = _premium_theme
         _normalize_control(control)
         _normalize_mobile_shell_background(control)
+        # Do not defer a reference to the newly-added Control itself: transient
+        # controls may be freed before the deferred call runs. Re-scan the live
+        # UI tree instead, which safely ignores already-freed instances.
+        call_deferred("_theme_active_ui")
     _queue_refresh()
 
 func _normalize_control(control: Control) -> void:
     if control == null:
         return
 
-    # All interactive controls must be finger-safe. This also covers controls
-    # created by late-game systems after the initial scene has loaded.
     if control is BaseButton:
         var button := control as BaseButton
         button.custom_minimum_size.x = maxf(button.custom_minimum_size.x, MIN_TOUCH_TARGET)
         button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, MIN_TOUCH_TARGET)
         if button.get_theme_font_size("font_size") < MIN_BUTTON_FONT:
             button.add_theme_font_size_override("font_size", MIN_BUTTON_FONT)
-        button.focus_mode = Control.FOCUS_NONE
+        button.focus_mode = Control.FOCUS_ALL
+        if button.tooltip_text.strip_edges().is_empty() and not button.text.strip_edges().is_empty():
+            button.tooltip_text = button.text.strip_edges().capitalize()
 
-    # Preserve deliberately large authored typography while lifting only text
-    # that would otherwise become too small on a physical phone.
     if control is Label:
         var label := control as Label
         if label.get_theme_font_size("font_size") < MIN_BODY_FONT:
@@ -64,13 +69,16 @@ func _normalize_control(control: Control) -> void:
     elif control is LineEdit:
         var line_edit := control as LineEdit
         line_edit.custom_minimum_size.y = maxf(line_edit.custom_minimum_size.y, MIN_TOUCH_TARGET)
+        line_edit.focus_mode = Control.FOCUS_ALL
         if line_edit.get_theme_font_size("font_size") < MIN_BODY_FONT:
             line_edit.add_theme_font_size_override("font_size", MIN_BODY_FONT)
     elif control is OptionButton:
         var option := control as OptionButton
         option.custom_minimum_size.y = maxf(option.custom_minimum_size.y, MIN_TOUCH_TARGET)
+        option.focus_mode = Control.FOCUS_ALL
     elif control is SpinBox:
         control.custom_minimum_size.y = maxf(control.custom_minimum_size.y, MIN_TOUCH_TARGET)
+        control.focus_mode = Control.FOCUS_ALL
 
 func _normalize_mobile_shell_background(control: Control) -> void:
     var parent := control.get_parent()

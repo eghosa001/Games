@@ -6,7 +6,7 @@ run/main_scene="res://scenes/Main.tscn"
 
 [autoload]
 RenewWebResponsive="*res://scripts/web_responsive.gd"
-RenewGameState="*res://scripts/game_state.gd"
+RenewGameState="*res://scripts/game_state_fixed.gd"
 RenewFinanceSystem="*res://scripts/finance_system_fixed.gd"
 RenewSimulationSystem="*res://scripts/simulation_system.gd"
 RenewProductionSystem="*res://scripts/production_system.gd"
@@ -18,10 +18,12 @@ RenewServices="*res://scripts/renew_services.gd"
 RenewManagementPolicySystem="*res://scripts/management_policy_system.gd"
 RenewManagementPolicyUI="*res://scripts/management_policy_ui.gd"
 RenewRealTimeEconomySystem="*res://scripts/real_time_economy_system.gd"
+RenewCalendarDaySystem="*res://scripts/calendar_day_system.gd"
 RenewMonetizationSystem="*res://scripts/monetization_system.gd"
 RenewUIScreenManager="*res://scripts/ui_screen_manager.gd"
 RenewMobileProgressionGuide="*res://scripts/mobile_progression_guide.gd"
 RenewVisualStyleGuard="*res://scripts/visual_style_guard.gd"
+RenewReleaseUXGuard="*res://scripts/release_ux_guard.gd"
 
 [display]
 window/size/viewport_width=1280

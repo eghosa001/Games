@@ -13,7 +13,7 @@ const SERVICE_PATHS := {
     "RenewDiplomacySystem": "res://scripts/diplomacy_system.gd",
     "RenewDiplomacyAI": "res://scripts/diplomacy_ai.gd",
     "RenewDiplomacyEffects": "res://scripts/diplomacy_effects.gd",
-    "RenewDiplomacyControl": "res://scripts/diplomacy_control_bridge.gd",
+    "RenewDiplomacyControl": "res://scripts/diplomacy_control_bridge_fixed.gd",
     "RenewInfrastructureSystem": "res://scripts/infrastructure_system.gd",
     "RenewCollectionSystem": "res://scripts/collection_system.gd",
     "RenewLiveOpsSystem": "res://scripts/liveops_system.gd",

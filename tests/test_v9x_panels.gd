@@ -1,7 +1,8 @@
 extends SceneTree
 
-## V9 screens. Dashboard, finance, portfolio and corporation panels bind
-## authoritative systems, route actions through Main, and navigate cleanly.
+## Focused screen audit. Dashboard, finance, portfolio and corporation panels bind
+## authoritative systems, route actions through Main, and navigate cleanly from
+## the authored HOME/BUSINESS/EMPIRE/WORLD hierarchy.
 var passed := 0
 var failed := 0
 
@@ -20,16 +21,23 @@ func _panel(game: Node, names: Array) -> Dictionary:
     var out := {}
     for screen_name in names:
         var node: Node = game.get_node_or_null("UI/" + str(screen_name))
-        if node != null:
-            out[str(screen_name)] = node
+        if node != null: out[str(screen_name)] = node
+    return out
+
+func _buttons(hud: Node) -> Dictionary:
+    var out := {}
+    var grid := hud.get("action_grid") as GridContainer
+    if grid == null: return out
+    for child in grid.get_children():
+        if child is Button:
+            var button := child as Button
+            out[button.text.split("\n")[0].strip_edges()] = button
     return out
 
 func run() -> void:
     var scene = load("res://scenes/Main.tscn")
     check(scene != null, "Main scene loads for screen audit")
-    if scene == null:
-        quit(1)
-        return
+    if scene == null: quit(1); return
     var game = scene.instantiate()
     root.add_child(game)
     current_scene = game
@@ -37,7 +45,7 @@ func run() -> void:
     await process_frame
     var names := ["DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel"]
     var panels := _panel(game, names)
-    check(panels.size() == 4, "Four new screens mounted")
+    check(panels.size() == 4, "Four core management screens mounted")
     var manager = root.get_node_or_null("RenewUIScreenManager")
     check(manager != null, "Screen manager available")
     manager.show_screen("DashboardPanel")
@@ -87,17 +95,26 @@ func run() -> void:
     hud._set_tab(0)
     await process_frame
     await process_frame
-    var texts := {}
-    for child in (hud.get("action_grid") as Node).get_children():
-        if child is Button:
-            texts[str((child as Button).text)] = child
-    check(texts.has("DASHBOARD") and texts.has("PROPERTY") and texts.has("OWNERSHIP"), "LIVE hub links dashboard and focused property workspaces")
-    (texts["DASHBOARD"] as Button).pressed.emit()
-    await process_frame
-    await process_frame
-    check(str(manager.get_active_screen_name()) == "DashboardPanel", "Grid opens the dashboard")
+    var texts := _buttons(hud)
+    check(texts.has("Company overview") and texts.has("Properties") and texts.has("Save & settings"), "HOME links the core focused workspaces")
+    if texts.has("Company overview"):
+        (texts["Company overview"] as Button).pressed.emit()
+        await process_frame
+        await process_frame
+        check(str(manager.get_active_screen_name()) == "DashboardPanel", "HOME opens the dashboard")
     manager.hide_all_screens()
+
+    hud._set_tab(2)
+    await process_frame
+    texts = _buttons(hud)
+    check(texts.has("Competition"), "EMPIRE links competitive management")
+    if texts.has("Competition"):
+        (texts["Competition"] as Button).pressed.emit()
+        await process_frame
+        check(str(manager.get_active_screen_name()) == "CorporationsPanel", "EMPIRE opens corporations screen")
+    manager.hide_all_screens()
+
     game.free()
     await process_frame
-    print("V9 SCREENS RESULT: %d passed, %d failed" % [passed, failed])
+    print("FOCUSED SCREENS RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)

@@ -1,7 +1,7 @@
 extends SceneTree
 
-## Regression: the player-facing Main research facade must use the gameplay command
-## path so technology consumes both resources and elapsed simulation days.
+## Regression: the player-facing Main research facade spends resources immediately
+## but never hides elapsed game days. Completion is driven by real calendar rollover.
 var passed := 0
 var failed := 0
 
@@ -19,9 +19,7 @@ func check(ok: bool, label: String) -> void:
 func run() -> void:
     var packed := load("res://scenes/Main.tscn") as PackedScene
     check(packed != null, "Main scene loads")
-    if packed == null:
-        quit(1)
-        return
+    if packed == null: quit(1); return
     var game = packed.instantiate()
     root.add_child(game)
     current_scene = game
@@ -34,9 +32,7 @@ func run() -> void:
     var technology = services.get_service("RenewTechnologySystem") if services != null else null
     check(state != null and finance != null and technology != null, "Research dependency stack resolves")
     if state == null or finance == null or technology == null:
-        game.free()
-        quit(1)
-        return
+        game.free(); quit(1); return
 
     game.cash = 100000
     state.set_value("businesses", "business_open", true)
@@ -48,12 +44,15 @@ func run() -> void:
     await process_frame
     await process_frame
 
-    check(technology.is_unlocked("efficient_production"), "Main facade unlocks the selected technology")
-    check(int(game.day) == start_day + expected_days, "Main facade simulates the full research duration")
+    check(not technology.is_unlocked("efficient_production"), "Main facade starts selected technology as pending research")
+    check(int(game.day) == start_day, "Main facade never skips simulation days")
+    check(int(technology.get_last_research_duration_days()) == expected_days, "Main facade exposes research duration")
+    for _i in range(expected_days): technology.advance_calendar_day()
+    check(technology.is_unlocked("efficient_production"), "Calendar rollover completes selected technology")
+
     var research_spend := 0
     for entry in finance.history:
-        if not (entry is Dictionary):
-            continue
+        if not (entry is Dictionary): continue
         var record: Dictionary = entry
         if str(record.get("kind", "")) == "spend" and str(record.get("reason", "")).find("technology research") >= 0:
             research_spend += int(record.get("amount", 0))
