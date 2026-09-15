@@ -27,14 +27,14 @@ func _ready() -> void:
     call_deferred("_enforce_premium_presentation")
 
 func _process(delta: float) -> void:
-    # Re-assert premium interaction defaults at low frequency. Some authored
-    # controls are configured immediately after add_child(), so the node_added
-    # callback can otherwise run before their final focus mode is assigned.
+    # Some authored/premium-skin code restyles controls after creation and can
+    # overwrite focus/touch defaults. Reassert the accessibility contract every
+    # frame so this guard remains the final presentation authority.
+    _theme_active_ui()
     _distress_refresh += delta
     if _distress_refresh >= 0.25:
         _distress_refresh = 0.0
         _sync_distress_overlay()
-        _theme_active_ui()
 
 func _on_node_added(node: Node) -> void:
     if node is Control:
@@ -70,8 +70,6 @@ func _normalize_control(control: Control) -> void:
         if button.tooltip_text.strip_edges().is_empty() and not button.text.strip_edges().is_empty():
             button.tooltip_text = button.text.strip_edges().capitalize()
 
-    # Preserve deliberately large authored typography while lifting only text
-    # that would otherwise become too small on a physical phone.
     if control is Label:
         var label := control as Label
         if label.get_theme_font_size("font_size") < MIN_BODY_FONT:
