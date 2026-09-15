@@ -28,7 +28,12 @@ func run() -> void:
     await process_frame
 
     var state = root.get_node_or_null("RenewGameState")
-    var tech = root.get_node_or_null("RenewTechnologySystem")
+    var services = root.get_node_or_null("RenewServices")
+    var tech = services.get_service("RenewTechnologySystem") if services != null and services.has_method("get_service") else null
+    if tech == null:
+        tech = root.get_node_or_null("RenewTechnologySystem")
+    if tech == null:
+        tech = game.get_node_or_null("Systems/RenewTechnologySystem")
     if tech == null:
         tech = game.get_node_or_null("Systems/TechnologySystem")
     var gameplay = game.get_node_or_null("GameplayCommandSystem")
