@@ -44,18 +44,20 @@ func _layout_responsive() -> void:
         panel.hide()
         return
     var w: float = maxf(root.size.x, 320.0)
-    if w < 1600.0:
+    if w < 980.0:
         panel.hide()
         return
-    panel.position = Vector2(w - 425.0, 116.0)
-    panel.size = Vector2(410.0, 82.0)
-    label.size = Vector2(panel.size.x - 28.0, 62.0)
+    var width := 350.0 if w < 1440.0 else 410.0
+    var height := 76.0 if w < 1440.0 else 82.0
+    panel.position = Vector2(w - width - 18.0, 88.0)
+    panel.size = Vector2(width, height)
+    label.size = Vector2(panel.size.x - 28.0, panel.size.y - 20.0)
     label.add_theme_font_size_override("font_size", 13)
     panel.show()
 
 func _should_show() -> bool:
     if root == null: return false
-    return not _coordinator_active and maxf(root.size.x, 320.0) >= 1600.0
+    return not _coordinator_active and maxf(root.size.x, 320.0) >= 980.0
 
 func _get_rect() -> Rect2:
     if panel == null: return Rect2()
