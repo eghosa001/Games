@@ -57,7 +57,7 @@ func _draw_small_office(center: Vector2, w: float, h: float) -> void:
     var rect := Rect2(center.x - bw * 0.5, center.y - bh, bw, bh)
     _building(rect, 3, 2)
     draw_rect(Rect2(center.x - 15, center.y - 31, 30, 31), Color("0b171c"), true)
-    _sign(Vector2(center.x, rect.position.y - 9), "RENEW")
+    _sign(Vector2(center.x, rect.position.y - 9), "RESTORA")
 
 func _draw_headquarters(center: Vector2, w: float, h: float) -> void:
     var main_w := minf(176.0, w * 0.42)
@@ -67,7 +67,7 @@ func _draw_headquarters(center: Vector2, w: float, h: float) -> void:
     var wing_w := main_w * 0.35
     _building(Rect2(main.position.x - wing_w + 2, center.y - main_h * 0.62, wing_w, main_h * 0.62), 2, 2)
     _building(Rect2(main.end.x - 2, center.y - main_h * 0.62, wing_w, main_h * 0.62), 2, 2)
-    _sign(Vector2(center.x, main.position.y - 9), "RENEW HQ")
+    _sign(Vector2(center.x, main.position.y - 9), "RESTORA HQ")
 
 func _draw_corporate_center(center: Vector2, w: float, h: float) -> void:
     var tower_w := minf(142.0, w * 0.32)
@@ -106,7 +106,7 @@ func _draw_global_hq(center: Vector2, w: float, h: float) -> void:
     var podium_w := minf(320.0, w * 0.70)
     var podium_h := h * 0.16
     _building(Rect2(center.x - podium_w * 0.5, center.y - podium_h, podium_w, podium_h), 7, 1)
-    _sign(Vector2(center.x, tower.position.y - 43), "RENEW GLOBAL")
+    _sign(Vector2(center.x, tower.position.y - 43), "RESTORA GLOBAL")
 
 func _building(rect: Rect2, columns: int, rows: int) -> void:
     draw_rect(rect, BUILDING, true)
