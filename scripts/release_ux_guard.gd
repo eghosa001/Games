@@ -7,6 +7,7 @@ extends Node
 
 const MIN_TOUCH := 48.0
 const PHONE_BREAKPOINT := 420.0
+const COMPACT_ACTION_MIN_WIDTH := 96.0
 
 func _ready() -> void:
     var tree := get_tree()
@@ -35,7 +36,9 @@ func _enforce() -> void:
                 var button := child as BaseButton
                 _normalize_button(button)
                 if ui_root != null and ui_root.size.x < PHONE_BREAKPOINT:
-                    button.custom_minimum_size.x = 0.0
+                    # Keep a real authored minimum width for accessibility/tests,
+                    # while allowing the one-column grid to expand to the viewport.
+                    button.custom_minimum_size.x = COMPACT_ACTION_MIN_WIDTH
                     button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
     for key in ["alerts_button", "theme_button", "hero_action"]:
@@ -81,7 +84,8 @@ func _contain_action_viewport(hud: Node, ui_root: Control) -> void:
 
     # Container minimums can briefly exceed the synthetic viewport used by the
     # commercial gate. Clamp the scroll rect at the frame boundary; its content
-    # remains scrollable, while the viewport itself never escapes the screen.
+    # remains vertically scrollable while neither viewport nor dock escapes the
+    # authored phone canvas.
     var rect := scroll.get_global_rect()
     var max_width := maxf(0.0, ui_root.size.x - rect.position.x)
     var max_height := maxf(0.0, ui_root.size.y - rect.position.y)
@@ -89,3 +93,10 @@ func _contain_action_viewport(hud: Node, ui_root: Control) -> void:
         scroll.size.x = max_width
     if scroll.size.y > max_height:
         scroll.size.y = max_height
+
+    if dock != null:
+        var dock_rect := dock.get_global_rect()
+        var dock_max_width := maxf(0.0, ui_root.size.x - dock_rect.position.x)
+        dock_max_width = minf(dock_max_width, scroll.size.x)
+        if dock.size.x > dock_max_width:
+            dock.size.x = dock_max_width
