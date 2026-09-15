@@ -40,6 +40,9 @@ func _enter_tree() -> void:
 func _layout_responsive() -> void:
     if root == null or panel == null or label == null:
         return
+    if _coordinator_active:
+        panel.hide()
+        return
     var w: float = maxf(root.size.x, 320.0)
     if w < 1600.0:
         panel.hide()
@@ -52,7 +55,7 @@ func _layout_responsive() -> void:
 
 func _should_show() -> bool:
     if root == null: return false
-    return maxf(root.size.x, 320.0) >= 1600.0
+    return not _coordinator_active and maxf(root.size.x, 320.0) >= 1600.0
 
 func _get_rect() -> Rect2:
     if panel == null: return Rect2()
@@ -60,11 +63,14 @@ func _get_rect() -> Rect2:
 
 func _set_coordinator_active(value: bool) -> void:
     _coordinator_active = value
+    if not value:
+        _layout_responsive()
 
 func _on_screen_changed(open: bool) -> void:
+    _coordinator_active = open
     if open:
         panel.hide()
-    elif not _coordinator_active:
+    else:
         _layout_responsive()
 
 func _process(_delta: float) -> void:
@@ -74,8 +80,11 @@ func _process(_delta: float) -> void:
     var coordinator := _coordinator()
     if coordinator != null:
         screen_name = coordinator.get_active_screen()
-    if screen_name == "":
+    _coordinator_active = screen_name != ""
+    if not _coordinator_active:
         _layout_responsive()
+    else:
+        panel.hide()
     var market = game.get_node_or_null("Systems/MarketDirector")
     var goals = game.get_node_or_null("Systems/EmpireGoals")
     var market_text: Variant = "MARKET: stable"
