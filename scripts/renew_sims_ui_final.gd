@@ -127,6 +127,8 @@ func _apply_progression_discovery() -> void:
             _set_action_visible("Finance & contracts", _feature_available("finance"))
             if _feature_available("contracts") and bool(parent.business_open):
                 _screen("Contracts", "ContractPanel", "Obligations, delivery and commercial commitments")
+                if int(parent.contract_days) > 0:
+                    _action("Deliver contract", Callable(self, "_deliver_contract_now"), "Deliver available goods against the active commitment", true)
         2:
             _set_action_visible("Expansion", _feature_available("regions"))
             _set_action_visible("Competition", _feature_available("competitors"))
