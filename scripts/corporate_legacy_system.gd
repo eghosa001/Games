@@ -54,7 +54,7 @@ func _scan(day: int) -> void:
         record("founding", "First property — Old Warehouse", {"property":"Old Warehouse"}, 1, "first_property")
     var goods_value = main.get("finished_goods")
     if goods_value != null and int(goods_value) > 0:
-        record("products", "First product — RENEW Goods", {"product":"RENEW Goods"}, day, "first_product")
+        record("products", "First product — Restora Goods", {"product":"Restora Goods"}, day, "first_product")
     _scan_employees(day)
     _scan_research(day)
     _scan_rankings(day)

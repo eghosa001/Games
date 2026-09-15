@@ -4,7 +4,7 @@ extends CanvasLayer
 ## Keeps the council focused on high-level alliance decisions; detailed
 ## infrastructure/research actions belong in their dedicated systems.
 const PLAYER_ID := "player"
-const FOUNDING_NAME := "RENEW Restoration Consortium"
+const FOUNDING_NAME := "RESTORA Restoration Consortium"
 const FOUNDING_AMOUNT := 1000
 const PARTNERS := [{"id":"apex_materials","name":"Apex Materials","role":"Materials & heavy supply"},{"id":"northstar_logistics","name":"Northstar Logistics","role":"Transport & distribution"},{"id":"greenbuild_industries","name":"GreenBuild Industries","role":"Sustainable construction"}]
 const SURFACE := Color("0d2028")

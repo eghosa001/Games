@@ -209,7 +209,7 @@ func _style_button(button: Button) -> void:
 func _style_label(label: Label) -> void:
     var name_upper := label.name.to_upper()
     var text_upper := label.text.to_upper()
-    if name_upper.contains("TITLE") or name_upper.contains("HEADER") or text_upper.begins_with("RENEW"):
+    if name_upper.contains("TITLE") or name_upper.contains("HEADER") or (text_upper.begins_with("RESTORA") or text_upper.begins_with("RENEW")):
         label.add_theme_color_override("font_color", TEXT)
         label.add_theme_font_size_override("font_size", maxi(16, label.get_theme_font_size("font_size")))
     elif name_upper.contains("VALUE") or name_upper.contains("TOTAL") or name_upper.contains("AMOUNT"):
@@ -359,7 +359,7 @@ func _ensure_context_rail(screen: Node, active_name: String) -> void:
 
     var eyebrow := Label.new()
     eyebrow.name = "Eyebrow"
-    eyebrow.text = "RENEW // EXECUTIVE NETWORK"
+    eyebrow.text = "RESTORA // EXECUTIVE NETWORK"
     eyebrow.add_theme_color_override("font_color", MUTED)
     eyebrow.add_theme_font_size_override("font_size", 10)
     rail.add_child(eyebrow)

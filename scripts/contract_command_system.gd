@@ -73,7 +73,7 @@ func haggle_contract() -> void:
     else:
         final = int(round(float(ask) * 1.05))
         verdict = "They found the lowball insulting and raised the price."
-    var result: Dictionary = contracts.create_customer_contract(["RENEW Goods", "Harbor Retail Cooperative"], product, quantity, maxi(1, final), 70, {"frequency": "daily", "quantity_per_delivery": per_delivery, "duration_days": duration, "start_day": day}, "Harbor District Retail Hub", 600, {"player_can_cancel": true, "notice_days": 1, "fee": 900}, {"eligible": true, "term_days": duration, "price_adjustment": 0.05}, {"on_fulfilled": 10, "on_missed": -2, "on_cancelled": -4, "on_failed": -20}, "standard")
+    var result: Dictionary = contracts.create_customer_contract(["Restora Goods", "Harbor Retail Cooperative"], product, quantity, maxi(1, final), 70, {"frequency": "daily", "quantity_per_delivery": per_delivery, "duration_days": duration, "start_day": day}, "Harbor District Retail Hub", 600, {"player_can_cancel": true, "notice_days": 1, "fee": 900}, {"eligible": true, "term_days": duration, "price_adjustment": 0.05}, {"on_fulfilled": 10, "on_missed": -2, "on_cancelled": -4, "on_failed": -20}, "standard")
     if not bool(result.get("ok", false)): state_adapter.message(str(result.get("message", "No customer contract is available."))); return
     var contract: Dictionary = result.get("contract", {})
     state_adapter.set_value("contracts", "contract_days", int(contract.get("delivery_schedule", {}).get("duration_days", 1)))
