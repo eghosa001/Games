@@ -38,7 +38,7 @@ func _draw_grid(w: float, h: float) -> void:
         draw_line(Vector2(0, y), Vector2(w, y), Color("142229"), 1.0)
 
 func _draw_header(w: float) -> void:
-    draw_string(ThemeDB.fallback_font, Vector2(28, 42), "RENEW", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color("d8e5e6"))
+    draw_string(ThemeDB.fallback_font, Vector2(28, 42), "RESTORA", HORIZONTAL_ALIGNMENT_LEFT, -1, 26, Color("d8e5e6"))
     draw_string(ThemeDB.fallback_font, Vector2(125, 41), "BUILD FROM WHAT THEY LEFT BEHIND", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("789096"))
     draw_line(Vector2(28, 55), Vector2(w - 28, 55), Color("23353b"), 1.0)
 
@@ -68,7 +68,7 @@ func _draw_business(w: float, h: float) -> void:
     var card: Variant = Rect2(x, y, width, 220.0)
     draw_rect(card, Color("111d22"), true)
     draw_rect(card, Color("30464d"), false, 2.0)
-    draw_string(ThemeDB.fallback_font, Vector2(x + 20, y + 34), "RENEW GOODS", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("dce8e8"))
+    draw_string(ThemeDB.fallback_font, Vector2(x + 20, y + 34), "RESTORA GOODS", HORIZONTAL_ALIGNMENT_LEFT, -1, 20, Color("dce8e8"))
     var state: Variant = "OPEN" if bool(game.business_open) else "CLOSED"
     draw_string(ThemeDB.fallback_font, Vector2(x + 20, y + 58), state, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("7db29f") if bool(game.business_open) else Color("7d888b"))
     _stat(x + 20, y + 90, "INVENTORY", "%d" % int(game.finished_goods))
@@ -127,5 +127,5 @@ func _draw_network(w: float, h: float) -> void:
     draw_circle(c, 9, Color("5d8278"))
     draw_circle(b, 5, Color("b5cbc6"))
     draw_string(ThemeDB.fallback_font, a + Vector2(-42, 42), "RESOURCE", HORIZONTAL_ALIGNMENT_LEFT, 90, 10, Color("657b80"))
-    draw_string(ThemeDB.fallback_font, b + Vector2(-48, 48), "RENEW HUB", HORIZONTAL_ALIGNMENT_LEFT, 100, 10, Color("91a6a9"))
+    draw_string(ThemeDB.fallback_font, b + Vector2(-48, 48), "RESTORA HUB", HORIZONTAL_ALIGNMENT_LEFT, 100, 10, Color("91a6a9"))
     draw_string(ThemeDB.fallback_font, c + Vector2(-35, 42), "MARKET", HORIZONTAL_ALIGNMENT_LEFT, 80, 10, Color("657b80"))
