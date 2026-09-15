@@ -61,7 +61,7 @@ func _build_ui() -> void:
     panel.add_child(margin)
     var root := VBoxContainer.new(); root.add_theme_constant_override("separation", 9); margin.add_child(root)
     var header := HBoxContainer.new(); root.add_child(header)
-    var title := Label.new(); title.text = "RENEW CORPORATE MUSEUM"; title.add_theme_font_size_override("font_size", 21); title.add_theme_color_override("font_color", TEXT); header.add_child(title)
+    var title := Label.new(); title.text = "RESTORA CORPORATE MUSEUM"; title.add_theme_font_size_override("font_size", 21); title.add_theme_color_override("font_color", TEXT); header.add_child(title)
     var spacer := Control.new(); spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL; header.add_child(spacer)
     close_button = Button.new(); close_button.name = "CloseButton"; close_button.text = "CLOSE"; close_button.custom_minimum_size = Vector2(78, 46); close_button.focus_mode = Control.FOCUS_NONE; close_button.add_theme_font_size_override("font_size", 10); close_button.pressed.connect(close_screen); header.add_child(close_button)
     var status := Label.new(); status.text = "CORPORATE MEMORY  •  HISTORY & LEGACY"; status.add_theme_font_size_override("font_size", 9); status.add_theme_color_override("font_color", ACCENT); root.add_child(status)
@@ -142,7 +142,7 @@ func _render_items(items: Array, heading_text: String) -> void:
             var detail := Label.new(); detail.text = _details(details); detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; detail.add_theme_font_size_override("font_size", 10); detail.add_theme_color_override("font_color", MUTED); box.add_child(detail)
 
 func _render_legacy(s: Dictionary) -> void:
-    _section("THE RENEW LEGACY")
+    _section("THE RESTORA LEGACY")
     var text := Label.new(); text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; text.add_theme_font_size_override("font_size", 14); text.add_theme_color_override("font_color", TEXT)
     text.text = "A company is remembered for what it built, who built it, the risks it took, the crises it survived and the partnerships it created.\n\nArtifacts: %d\nEmployees remembered: %d\nContracts: %d\nAcquisitions / mergers: %d\nFailed projects: %d\nAwards: %d\nRankings: %d\nTechnologies: %d\nAlliance milestones: %d\nCrisis recoveries: %d" % [int(s.get("total",0)), int(s.get("employees",0)), int(s.get("contracts",0)), int(s.get("acquisitions",0)), int(s.get("failures",0)), int(s.get("awards",0)), int(s.get("rankings",0)), int(s.get("technologies",0)), int(s.get("alliances",0)), int(s.get("crisis_recoveries",0))]
     content.add_child(text)
