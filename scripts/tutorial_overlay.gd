@@ -97,11 +97,13 @@ func _layout_responsive() -> void:
     var narrow: bool = w < 700.0
     if dismissed:
         panel.hide()
-        collapsed_button.size = Vector2(112.0, 36.0)
         if narrow:
-            collapsed_button.position = Vector2(maxf(8.0, w - 120.0), maxf(96.0, h - 118.0))
-        else:
-            collapsed_button.position = Vector2(maxf(8.0, w - 126.0), maxf(64.0, h - 48.0))
+            # Phone layouts expose tutorial from the Home action list instead of
+            # floating a button over scrollable gameplay content.
+            collapsed_button.hide()
+            return
+        collapsed_button.size = Vector2(112.0, 36.0)
+        collapsed_button.position = Vector2(maxf(8.0, w - 126.0), maxf(64.0, h - 48.0))
         collapsed_button.show()
         return
     if narrow:
@@ -161,7 +163,7 @@ func _refresh() -> void:
     var step: int = int(tutorial.step)
     if step != last_step:
         last_step = step
-    title_label.text = String(current.get("title", "RENEW TUTORIAL"))
+    title_label.text = String(current.get("title", "RESTORA TUTORIAL"))
     progress_label.text = "PHASE A  •  STEP %d/%d" % [min(step + 1, tutorial.steps.size()), tutorial.steps.size()]
     body_label.text = String(current.get("text", "Keep building."))
     hint_label.text = "Goal: " + String(current.get("action", "COMPLETE"))
