@@ -73,6 +73,24 @@ jobs:
           if [ "$failures" -ne 0 ]; then
             printf 'Core-suite failures (%d):\n' "$failures"
             printf ' - %s\n' "${failed_tests[@]}"
+            {
+              echo "## Core-suite failures"
+              echo
+              echo "Failed test files:"
+              for t in "${failed_tests[@]}"; do
+                echo "- \`$t\`"
+              done
+              echo
+              echo "### Failure excerpts"
+              for t in "${failed_tests[@]}"; do
+                log="test_artifacts/logs/$(echo "$t" | tr '/' '_' | sed 's/\.gd$/.log/')"
+                echo
+                echo "#### \`$t\`"
+                echo '```text'
+                grep -E '(^|[[:space:]])(FAIL|FAILED|ERROR|SCRIPT ERROR|Parse Error|Invalid|Assertion)' "$log" | tail -n 80 || tail -n 80 "$log"
+                echo '```'
+              done
+            } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
 
