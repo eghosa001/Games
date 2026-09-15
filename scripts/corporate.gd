@@ -123,7 +123,7 @@ func _milestone_target(level: int) -> String:
         2: return "Corporate Challenger"
         3: return "Industry Player"
         4: return "Giant Killer"
-        5: return "RENEW Empire"
+        5: return "RESTORA Empire"
     return "Starting Company"
 
 func _check_milestones() -> void:
@@ -144,7 +144,7 @@ func show_status() -> void:
     var next: Variant = milestone_level + 1
     var next_name: Variant = _milestone_target(next)
     if next > 5:
-        parent.message = "ENDGAME: You have reached the RENEW Empire tier. Keep expanding, defending control and challenging the giants."
+        parent.message = "ENDGAME: You have reached the RESTORA Empire tier. Keep expanding, defending control and challenging the giants."
     else:
         parent.message = "CORPORATE STATUS: %s | Valuation $%s | Founder %.1f%% | Investors %.1f%% | Voting %.1f%% | Risk %.0f%% | Next: %s." % [_milestone_target(milestone_level), parent._money(valuation), founder_stake, investor_stake, _voting_percent(FOUNDER_ID), takeover_risk, next_name]
 
@@ -217,7 +217,7 @@ func pay_dividend() -> void:
 func go_public() -> void:
     _recalculate()
     if ownership == null or not ownership.has_entity(COMPANY_ID): parent.message = "Corporate ledger is unavailable."; return
-    if float(ownership.get_ownership_percent(COMPANY_ID, "public_float")) > 0.0: parent.message = "RENEW Co. is already listed."; return
+    if float(ownership.get_ownership_percent(COMPANY_ID, "public_float")) > 0.0: parent.message = "RESTORA Co. is already listed."; return
     if int(valuation) < 250000: parent.message = "Listing requires a $250K valuation (now $%s)." % parent._money(valuation); return
     if int(parent.reputation) < 40: parent.message = "Listing requires 40 reputation for investor trust."; return
     var moved: Variant = ownership.transfer_shares(COMPANY_ID, FOUNDER_ID, "public_float", 200000, OwnershipSystem.VOTE_ORDINARY, "ipo_float")

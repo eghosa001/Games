@@ -52,7 +52,7 @@ func get_business_purpose(purpose) -> Dictionary:
 func open_business() -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)) or str(state_adapter.get_value("properties", "stage", "Neglected")) != "Operational": state_adapter.message("Finish restoration first."); return
     if bool(state_adapter.get_value("businesses", "business_open", false)): state_adapter.message("%s is already open." % _business_name()); return
-    var existing_purpose: String = str(state_adapter.get_value("businesses", "business_purpose", "")); if existing_purpose.is_empty(): state_adapter.message("Choose what this restored property will become: press 4, 5 or 6."); return
+    var existing_purpose: String = str(state_adapter.get_value("businesses", "business_purpose", "")); if existing_purpose.is_empty(): state_adapter.message("Choose what this restored property will become from the business choices."); return
     create_business(existing_purpose)
 func choose_business_purpose(index: int) -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)): state_adapter.message("Acquire a property first."); return
@@ -63,7 +63,7 @@ func choose_business_purpose(index: int) -> void:
 func create_business(purpose_id: String = "") -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)) or str(state_adapter.get_value("properties", "stage", "Neglected")) != "Operational": state_adapter.message("Finish restoring the property first."); return
     if bool(state_adapter.get_value("businesses", "business_open", false)): state_adapter.message("%s is already open." % _business_name()); return
-    var purpose: Dictionary = get_business_purpose(purpose_id if not purpose_id.is_empty() else str(state_adapter.get_value("businesses", "business_purpose", ""))); if purpose.is_empty(): state_adapter.message("Choose a business purpose first: press 4, 5 or 6."); return
+    var purpose: Dictionary = get_business_purpose(purpose_id if not purpose_id.is_empty() else str(state_adapter.get_value("businesses", "business_purpose", ""))); if purpose.is_empty(): state_adapter.message("Choose a business purpose first from the available business choices."); return
     var cost := 3000; var cash: int = int(state_adapter.get_value("economy", "cash", 25000)); if cash < cost: state_adapter.message("Need $3,000 working capital to launch the business."); return
     var property: Dictionary = _selected_property(); var property_id: String = str(property.get("id", "")); var business_id: String = "%s_%s" % [purpose.get("id", "business"), property_id]; var spend: Dictionary = state_adapter.spend(cost, "business launch")
     if not bool(spend.get("ok", false)): state_adapter.message(str(spend.get("message", "Unable to fund the business launch."))); return
@@ -80,7 +80,7 @@ func _origin_property_name() -> String:
     var stored: String = str(state_adapter.get_value("businesses", "origin_property_name", ""))
     if not stored.is_empty(): return stored
     return str(_selected_property().get("name", "Property"))
-func _business_name() -> String: return str(state_adapter.get_value("businesses", "business_name", "RENEW Goods"))
+func _business_name() -> String: return str(state_adapter.get_value("businesses", "business_name", "Restora Goods"))
 func upgrade_business() -> void:
     if not bool(state_adapter.get_value("businesses", "business_open", false)): state_adapter.message("Create the business first."); return
     var level: int = int(state_adapter.get_value("businesses", "capacity_level", 1)); var cost: int = 4500 * level; var cash: int = int(state_adapter.get_value("economy", "cash", 25000)); if cash < cost: state_adapter.message("Capacity upgrade requires $%s." % state_adapter.money(cost)); return
