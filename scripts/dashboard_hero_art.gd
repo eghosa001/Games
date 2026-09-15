@@ -104,7 +104,7 @@ func _city_strip(rect: Rect2, day: int) -> void:
         draw_rect(Rect2(x + 3, base_y - bh + 5, maxf(2.0, bw - 6), 2), Color(GOLD.r, GOLD.g, GOLD.b, 0.25), true)
     var runner_x := rect.position.x + fmod(_clock * 23.0, maxf(1.0, rect.size.x * 0.82)) + rect.size.x * 0.06
     draw_circle(Vector2(runner_x, rect.position.y + rect.size.y * 0.91), 3.0, MINT)
-    draw_string(ThemeDB.fallback_font, rect.position + Vector2(4, 12), "RENEW CITY  •  DAY %d" % day, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 8, 9, MUTED)
+    draw_string(ThemeDB.fallback_font, rect.position + Vector2(4, 12), "RESTORA CITY  •  DAY %d" % day, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - 8, 9, MUTED)
 
 func _metric_bar(pos: Vector2, width: float, label: String, value: int, soft_cap: int, tint: Color) -> void:
     var ratio := clampf(float(maxi(0, value)) / float(maxi(1, soft_cap)), 0.0, 1.0)
