@@ -1,7 +1,8 @@
 extends SceneTree
 
-## V8.2: property market. Restored property sells at improved value;
-## leasing pays upfront rent and locks the building until expiry.
+## Property market: restored property sells at improved value; an operating
+## company protects its home from sale/lease; a vacant owned building can be
+## leased for upfront rent and stays tenant-locked until expiry.
 var passed := 0
 var failed := 0
 
@@ -19,9 +20,7 @@ func check(ok: bool, label: String) -> void:
 func run() -> void:
     var scene = load("res://scenes/Main.tscn")
     check(scene != null, "Main scene loads for property market")
-    if scene == null:
-        quit(1)
-        return
+    if scene == null: quit(1); return
     var game = scene.instantiate()
     root.add_child(game)
     current_scene = game
@@ -31,16 +30,15 @@ func run() -> void:
     var finance = root.get_node_or_null("RenewFinanceSystem")
     check(state != null and finance != null, "State and finance resolve")
     if state == null or finance == null:
-        game.free()
-        quit(1)
-        return
+        game.free(); quit(1); return
+
     game.cash = 250000
     game.day = 1
     game.inspect_property()
     game.acquire_property()
     check(bool(state.get_value("properties", "owned", false)), "Property acquired")
     game.sell_property()
-    check(not bool(state.get_value("properties", "owned", false)), "Property sells")
+    check(not bool(state.get_value("properties", "owned", false)), "Vacant property sells")
     check(int(finance.cash) > 250000 - 5000, "Sale pays above purchase price")
     check(str(state.get_value("company", "message", "")).find("Sold") >= 0, "Sale announced")
 
@@ -55,7 +53,13 @@ func run() -> void:
     game.open_business()
     game.sell_property()
     check(bool(state.get_value("properties", "owned", false)), "Operating business blocks the sale")
+    game.lease_property()
+    check(str(state.get_value("company", "message", "")).find("operating business") >= 0, "Operating business blocks leasing its home")
 
+    # Vacate the property before leasing. Leasing an actively occupied building
+    # would be a gameplay contradiction rather than a valid market action.
+    state.set_value("businesses", "business_open", false)
+    state.set_value("businesses", "origin_property_id", "")
     var props: Node = game.command_system.property_system
     var before := int(finance.cash)
     game.lease_property()
@@ -67,7 +71,8 @@ func run() -> void:
     state.set_value("player", "day", 30)
     game.restore_property()
     check(str(state.get_value("company", "message", "")).find("enant") < 0, "Expiry frees the building")
+
     game.free()
     await process_frame
-    print("V82 PROPERTY MARKET RESULT: %d passed, %d failed" % [passed, failed])
+    print("PROPERTY MARKET RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
