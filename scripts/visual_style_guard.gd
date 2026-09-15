@@ -27,11 +27,14 @@ func _ready() -> void:
     call_deferred("_enforce_premium_presentation")
 
 func _process(delta: float) -> void:
-    # Distress state does not need a recursive/UI lookup every rendered frame.
+    # Re-assert premium interaction defaults at low frequency. Some authored
+    # controls are configured immediately after add_child(), so the node_added
+    # callback can otherwise run before their final focus mode is assigned.
     _distress_refresh += delta
     if _distress_refresh >= 0.25:
         _distress_refresh = 0.0
         _sync_distress_overlay()
+        _theme_active_ui()
 
 func _on_node_added(node: Node) -> void:
     if node is Control:
@@ -40,7 +43,16 @@ func _on_node_added(node: Node) -> void:
             control.theme = _premium_theme
         _normalize_control(control)
         _normalize_mobile_shell_background(control)
+        call_deferred("_normalize_if_valid", control)
     _queue_refresh()
+
+func _normalize_if_valid(control: Control) -> void:
+    if control == null or not is_instance_valid(control) or control.is_queued_for_deletion():
+        return
+    if _premium_theme != null:
+        control.theme = _premium_theme
+    _normalize_control(control)
+    _normalize_mobile_shell_background(control)
 
 func _normalize_control(control: Control) -> void:
     if control == null:
