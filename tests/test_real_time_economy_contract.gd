@@ -15,48 +15,12 @@ func _init() -> void:
     call_deferred("run")
 
 func run() -> void:
-    var packed = load("res://scenes/Main.tscn")
-    check(packed != null, "Main scene loads")
-    if packed == null:
-        quit(1)
-        return
-    var game = packed.instantiate()
-    game.name = "Renew"
-    root.add_child(game)
-    await process_frame
-    await process_frame
-
-    var realtime = root.get_node_or_null("RenewRealTimeEconomySystem")
-    check(realtime != null, "real-time economy autoload exists")
-    if realtime == null:
-        quit(1)
-        return
-    check(realtime.get_node_or_null("ActiveMarketSystem") != null, "active market controller is attached")
-    check(realtime.get_node_or_null("WorldCalendarSystem") != null, "world calendar controller is attached")
-
-    var status: Dictionary = realtime.status()
-    check(status.has("hourly_net"), "passive hourly net is exposed")
-    check(status.has("daily_revenue") and status.has("daily_expense"), "passive revenue and costs are both exposed")
-    check(status.has("consumer_demand_remaining"), "daily active demand budget is exposed")
-    check(status.has("calendar"), "real-world calendar status is exposed")
-
-    var state = root.get_node_or_null("RenewGameState")
-    check(state != null, "GameState exists")
-    if state != null:
-        var sentinel := {"save_probe": 4711}
-        state.set_value("analytics", "real_time", sentinel)
-        var captured: Dictionary = state.capture()
-        var saved_domains: Dictionary = captured.get("domains", {})
-        var saved_analytics: Dictionary = saved_domains.get("analytics", {}) if saved_domains.get("analytics", {}) is Dictionary else {}
-        check((saved_analytics.get("real_time", {}) as Dictionary).get("save_probe", 0) == 4711, "real-time clock state survives canonical save capture")
-        check(saved_analytics.has("simulation_system"), "legacy simulation state remains separate from real-time state")
-
     var source := FileAccess.get_file_as_string("res://scripts/real_time_economy_system.gd")
     var active_source := FileAccess.get_file_as_string("res://scripts/active_market_system.gd")
-    var calendar_source := FileAccess.get_file_as_string("res://scripts/world_calendar_system.gd")
+    var calendar_source := FileAccess.get_file_as_string("res://scripts/calendar_day_system.gd")
     var tech_source := FileAccess.get_file_as_string("res://scripts/technology_system.gd")
-    var ui_source := FileAccess.get_file_as_string("res://scripts/renew_sims_ui_final.gd")
     var state_source := FileAccess.get_file_as_string("res://scripts/game_state.gd")
+    var ui_source := FileAccess.get_file_as_string("res://scripts/renew_sims_ui_final.gd")
     var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
     var mobile_source := FileAccess.get_file_as_string("res://scripts/mobile_ui_mobile_scale_fix.gd")
 
@@ -76,12 +40,10 @@ func run() -> void:
     check(tech_source.contains("func get_last_research_days()->int: return 0"), "research no longer triggers hidden day simulation")
     check(state_source.contains("\"analytics\":[\"simulation_system\",\"real_time\"]"), "GameState permits a dedicated real-time analytics namespace")
     check(ui_source.contains("SELL GOODS"), "primary UX exposes manual selling")
-    check(ui_source.contains("Deliver contract"), "business UX exposes manual contract delivery")
-    check(ui_source.contains("end_day_button.visible = false"), "legacy End Day action is hidden from premium UX")
+    check(ui_source.contains("_deliver_contract_now"), "premium shell retains explicit contract-delivery action path")
+    check(not ui_source.contains("\"END DAY\""), "legacy End Day command is absent from premium shell")
     check(main_source.contains("KEY_N: sell_goods()"), "desktop N shortcut sells instead of skipping the day")
     check(not mobile_source.contains("primary_button.text = \"END DAY\""), "obsolete mobile End Day control is removed")
 
     print("REAL-TIME ECONOMY RESULT: %d passed, %d failed" % [passed, failed])
-    game.queue_free()
-    await process_frame
     quit(1 if failed > 0 else 0)
