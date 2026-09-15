@@ -5,6 +5,7 @@ extends "res://scripts/renew_sims_ui.gd"
 # secondary systems back onto the home screen.
 
 var tabs: HBoxContainer
+var _last_decision_signature := ""
 
 func _build_ui() -> void:
     super._build_ui()
@@ -206,8 +207,25 @@ func _refresh() -> void:
     else:
         hero_meta.text = "%s:%s • LV %d • %s" % [hh, mm, level, "OPERATING" if bool(parent.business_open) else str(parent.stage).to_upper()]
 
+func _decision_signature() -> String:
+    if parent == null:
+        return ""
+    return "%s|%s|%s|%s|%s|%s|%s" % [
+        str(parent.inspected),
+        str(parent.owned),
+        str(parent.stage),
+        str(parent.restoration),
+        str(parent.business_open),
+        str(parent.finished_goods),
+        str(_progression_level())
+    ]
+
 func _process(delta: float) -> void:
     super._process(delta)
+    var decision_signature := _decision_signature()
+    if decision_signature != _last_decision_signature:
+        _last_decision_signature = decision_signature
+        _refresh()
     if background != null and background.color.a < 0.99: background.color.a = 1.0
     if location_label == null: return
     var policies = _management_policy()
