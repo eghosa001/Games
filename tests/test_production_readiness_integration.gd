@@ -8,7 +8,7 @@ extends SceneTree
 ## It does not fabricate soft-launch metrics.
 
 const REQUIRED_AUTOLOADS := {
-    "RenewGameState": "res://scripts/game_state.gd",
+    "RenewGameState": "res://scripts/game_state_fixed.gd",
     "RenewFinanceSystem": "res://scripts/finance_system_fixed.gd",
     "RenewProductionSystem": "res://scripts/production_system.gd",
     "RenewContractSystem": "res://scripts/contract_system.gd",
