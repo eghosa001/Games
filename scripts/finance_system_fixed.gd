@@ -133,3 +133,27 @@ func settle_debt_day() -> Dictionary:
     _update_credit_score(missed)
     var matured_investments: Array = settle_term_deposits()
     return {"interest": interest, "payment": payment, "missed": missed, "cash": cash, "debt": debt, "accrued_interest": _total_accrued_interest(), "credit_rating": credit_rating, "matured_investments": matured_investments}
+
+func restore_state(snapshot: Dictionary) -> void:
+    # Save files can contain tagged legacy non-finite values. A ledger must never
+    # rehydrate NaN/INF because one such value poisons every accounting invariant.
+    super.restore_state(_finite_snapshot(snapshot))
+
+func _finite_snapshot(value: Variant) -> Variant:
+    if value is float:
+        return value if is_finite(value) else 0.0
+    if value is Dictionary:
+        var out: Dictionary = {}
+        for key in (value as Dictionary).keys():
+            var item = (value as Dictionary)[key]
+            if item is Dictionary and item.size() == 1 and item.has("__renew_nonfinite_float__"):
+                out[key] = 0.0
+            else:
+                out[key] = _finite_snapshot(item)
+        return out
+    if value is Array:
+        var out: Array = []
+        for item in value:
+            out.append(_finite_snapshot(item))
+        return out
+    return value
