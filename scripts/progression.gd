@@ -10,7 +10,7 @@ var check_timer: Timer
 var milestones: Array[Dictionary] = [
     {"id":"acquired","title":"FIRST ASSET","rep":2,"cash":0,"text":"You own something the market had written off."},
     {"id":"restored","title":"REBUILDER","rep":4,"cash":0,"text":"The warehouse is fully restored. Neglect became productive capital."},
-    {"id":"opened","title":"FIRST BUSINESS","rep":3,"cash":0,"text":"RENEW Goods is operating. You have entered the market."},
+    {"id":"opened","title":"FIRST BUSINESS","rep":3,"cash":0,"text":"Restora Goods is operating. You have entered the market."},
     {"id":"profit","title":"PROFITABLE","rep":3,"cash":1000,"text":"Your first profitable operating day proves the model can work."},
     {"id":"regional","title":"GOING REGIONAL","rep":4,"cash":0,"text":"Your company now has a foothold beyond its original neighborhood."},
     {"id":"empire","title":"EMPIRE BUILDER","rep":8,"cash":2500,"text":"Multiple assets are working together. You are building an economic empire."}
