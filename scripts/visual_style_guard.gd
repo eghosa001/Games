@@ -27,9 +27,8 @@ func _ready() -> void:
     call_deferred("_enforce_premium_presentation")
 
 func _process(delta: float) -> void:
-    # Some authored/premium-skin code restyles controls after creation and can
-    # overwrite focus/touch defaults. Reassert the accessibility contract every
-    # frame so this guard remains the final presentation authority.
+    # Authored controls can restyle themselves after creation. Reassert the
+    # accessibility contract every frame so focus and touch sizing remain final.
     _theme_active_ui()
     _distress_refresh += delta
     if _distress_refresh >= 0.25:
@@ -43,23 +42,16 @@ func _on_node_added(node: Node) -> void:
             control.theme = _premium_theme
         _normalize_control(control)
         _normalize_mobile_shell_background(control)
-        call_deferred("_normalize_if_valid", control)
+        # Do not defer a reference to the newly-added Control itself: transient
+        # controls may be freed before the deferred call runs. Re-scan the live
+        # UI tree instead, which safely ignores already-freed instances.
+        call_deferred("_theme_active_ui")
     _queue_refresh()
-
-func _normalize_if_valid(control: Control) -> void:
-    if control == null or not is_instance_valid(control) or control.is_queued_for_deletion():
-        return
-    if _premium_theme != null:
-        control.theme = _premium_theme
-    _normalize_control(control)
-    _normalize_mobile_shell_background(control)
 
 func _normalize_control(control: Control) -> void:
     if control == null:
         return
 
-    # Every interactive control is finger-safe and remains reachable by
-    # keyboard/gamepad focus. This applies to late-created management screens too.
     if control is BaseButton:
         var button := control as BaseButton
         button.custom_minimum_size.x = maxf(button.custom_minimum_size.x, MIN_TOUCH_TARGET)
