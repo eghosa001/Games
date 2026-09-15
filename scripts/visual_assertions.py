@@ -2,9 +2,10 @@
 """
 visual_assertions.py — region-level visual assertions for browser-qa screenshots.
 
-These checks validate rendered intent rather than exact pixel-flat colours.
-RENEW uses layered/translucent panels and illustrated world surfaces, so colour
-entropy inside a UI region is not by itself evidence of ghost rendering.
+These checks validate the current RESTORA command-deck design rather than an
+obsolete world-sky background. Dark shell surfaces may be layered and textured,
+so the assertions allow normal variation while still rejecting bright/clear
+bleed-through, missing panels and broken compact layouts.
 """
 
 import sys
@@ -18,7 +19,6 @@ except ImportError:
 
 BG_DARK = (4, 18, 12, 30, 16, 30)
 PANEL_DARK = (8, 16, 22, 36, 28, 42)
-BACKDROP_TEAL = (16, 30, 48, 72, 60, 90)
 ACTION_DOCK = (5, 14, 18, 34, 22, 40)
 
 
@@ -47,18 +47,22 @@ def _sample_luminance(img, x0, y0, x1, y1, step=8):
     return values
 
 
-def assert_backdrop_visible(img, vw, vh):
+def assert_shell_backdrop(img, vw, vh):
     if vw < 700:
-        return True, "backdrop: skipped (narrow/mobile viewport)"
-    mean = _region_avg(img, int(vw * 0.1), 0, int(vw * 0.9), 66)
+        return True, "shell backdrop: skipped (narrow/mobile viewport)"
+    x0, y0, x1, y1 = int(vw * 0.1), 0, int(vw * 0.9), 66
+    mean = _region_avg(img, x0, y0, x1, y1)
     if mean is None:
-        return False, "backdrop: could not sample top strip"
-    if _in_range(mean, BACKDROP_TEAL, tol=16):
-        return True, f"backdrop: teal sky present in top strip ({mean})"
-    lum = sum(mean) / 3.0
-    if lum > 22:
-        return True, f"backdrop: rendered non-clear top strip ({mean}, lum={lum:.1f})"
-    return False, f"backdrop: top strip is near-clear-colour (mean={mean}, lum={lum:.1f})"
+        return False, "shell backdrop: could not sample top strip"
+    values = _sample_luminance(img, x0, y0, x1, y1)
+    if not values:
+        return False, "shell backdrop: no pixels sampled"
+    avg_lum = sum(values) / len(values)
+    bright_ratio = sum(v > 120 for v in values) / len(values)
+    in_range = _in_range(mean, BG_DARK, tol=20)
+    passed = in_range and avg_lum < 70 and bright_ratio < 0.08
+    return passed, (f"shell backdrop: mean={mean} avg_lum={avg_lum:.1f} "
+                    f"bright_ratio={bright_ratio:.3f} range={'OK' if in_range else 'BAD'}")
 
 
 def assert_dark_surface(img, x0, y0, x1, y1, expected, label):
@@ -90,7 +94,7 @@ def assert_screenshot(path, vw, vh):
 
     narrow = vw < 700
     if not narrow:
-        results.append(assert_backdrop_visible(img, vw, vh))
+        results.append(assert_shell_backdrop(img, vw, vh))
         results.append(assert_dark_surface(img, *R(4, 110, 100, 340), PANEL_DARK, "left_rail"))
         results.append(assert_dark_surface(img, *R(104, 216, int(vw * 0.92), int(vh * 0.80)), ACTION_DOCK, "action_dock"))
         results.append(assert_dark_surface(img, *R(104, 112, 440, 212), PANEL_DARK, "selected_card"))
