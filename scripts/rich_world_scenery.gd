@@ -1,6 +1,6 @@
 extends Node2D
 
-## Lightweight premium presentation world for RENEW. It only reads live state
+## Lightweight premium presentation world for RESTORA. It only reads live state
 ## for badges; simulation ownership remains elsewhere.
 
 const SKY_A := Color("08151d")
@@ -134,7 +134,7 @@ func _badges(w: float, h: float, compact: bool) -> void:
     if state != null and state.has_method("get_value"):
         day = int(state.call("get_value","player","day",1))
         cash = int(state.call("get_value","economy","cash",0))
-    _badge(Vector2(24.0,h-76.0),"RENEW CITY","DAY %d"%day)
+    _badge(Vector2(24.0,h-76.0),"RESTORA CITY","DAY %d"%day)
     _badge(Vector2(w-220.0,h-76.0),"ENTERPRISE VALUE","$%s"%_compact(cash))
 
 func _plate(c: Vector2, width: float, depth: float, height: float, top: Color, side: Color) -> void:
@@ -172,7 +172,7 @@ func _tower(p: Vector2, s: float) -> void:
         draw_line(p+Vector2(hw*0.82,yy),p+Vector2(4.0*s,hd*0.72+yy),Color(0.36,0.66,0.69,0.30),3.0*s)
     draw_line(roof[3],roof[0],GOLD,2.0*s)
     draw_line(roof[0],roof[1],GOLD,2.0*s)
-    draw_string(ThemeDB.fallback_font,p+Vector2(-29.0*s,-height*0.52),"RENEW",HORIZONTAL_ALIGNMENT_CENTER,58.0*s,maxi(9,int(12.0*s)),Color("f6e7b0"))
+    draw_string(ThemeDB.fallback_font,p+Vector2(-29.0*s,-height*0.52),"RESTORA",HORIZONTAL_ALIGNMENT_CENTER,58.0*s,maxi(9,int(12.0*s)),Color("f6e7b0"))
 
 func _desk(p: Vector2, s: float, variant: int) -> void:
     var woods: Array[Color] = [Color("b9865c"),Color("a67658"),Color("c39b69"),Color("93735c")]
