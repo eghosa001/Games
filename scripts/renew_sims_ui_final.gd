@@ -51,6 +51,15 @@ func _layout_responsive() -> void:
     hero_action.custom_minimum_size.y = 54
     hero_action.add_theme_font_size_override("font_size", 12 if mobile else 13)
 
+func _open_tutorial() -> void:
+    var tutorial_overlay := get_tree().root.get_node_or_null("Renew/UI/TutorialOverlay")
+    if tutorial_overlay == null:
+        tutorial_overlay = get_tree().root.get_node_or_null("UI/TutorialOverlay")
+    if tutorial_overlay != null and tutorial_overlay.has_method("_expand"):
+        tutorial_overlay.call("_expand")
+        return
+    show_feedback("Guided tutorial is temporarily unavailable.")
+
 func _open_decision_center() -> void:
     var desk := get_node_or_null("/root/RenewManagementPolicyUI")
     if desk != null and desk.has_method("_toggle"):
@@ -108,6 +117,10 @@ func _set_action_visible(label_text: String, visible: bool) -> void:
 
 func _apply_progression_discovery() -> void:
     match active_tab:
+        0:
+            var viewport_width := get_viewport().get_visible_rect().size.x
+            if viewport_width < 700.0:
+                _action("Guided tutorial", Callable(self, "_open_tutorial"), "Open the next objective without covering gameplay")
         1:
             _set_action_visible("People & demand", _feature_available("employees"))
             _set_action_visible("Finance & contracts", _feature_available("finance"))
