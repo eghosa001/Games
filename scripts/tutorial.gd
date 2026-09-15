@@ -9,7 +9,7 @@ var steps: Variant = [
     {"title":"INSPECT THE WAREHOUSE","text":"Inspect the abandoned warehouse to understand the opportunity.","action":"INSPECT"},
     {"title":"BUY YOUR FIRST PROPERTY","text":"Acquire the warehouse so you can invest in bringing it back to life.","action":"ACQUIRE"},
     {"title":"RESTORE THE PROPERTY","text":"Keep restoring the warehouse until it becomes operational.","action":"RESTORE"},
-    {"title":"OPEN RENEW GOODS","text":"The building is ready. Open your first business and begin operating.","action":"OPEN BUSINESS"},
+    {"title":"OPEN RESTORA GOODS","text":"The building is ready. Open your first business and begin operating.","action":"OPEN BUSINESS"},
     {"title":"BUY PRODUCTION INPUTS","text":"A business needs materials before it can make goods. Buy your first inputs.","action":"BUY INPUTS"},
     {"title":"PRODUCE YOUR FIRST GOODS","text":"Turn those inputs into finished inventory that can generate revenue.","action":"PRODUCE"},
     {"title":"MAKE YOUR FIRST SALE","text":"Sell finished goods into today's customer demand. You can keep managing the business throughout the real-world day.","action":"SELL GOODS"}

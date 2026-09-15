@@ -71,8 +71,8 @@ func _refresh() -> void:
     for child in content.get_children(): child.queue_free()
     var identity := RuntimeResolver.resolve("RenewIdentitySystem", "Systems/RenewIdentitySystem")
     var ranking := RuntimeResolver.resolve("RenewGlobalRankingSystem", "Systems/RenewGlobalRankingSystem")
-    var name := str(g.get("company_name")) if "company_name" in g else "RENEW COMPANY"
-    if name == "<null>" or name.is_empty(): name = "RENEW COMPANY"
+    var name := str(g.get("company_name")) if "company_name" in g else "RESTORA COMPANY"
+    if name == "<null>" or name.is_empty(): name = "RESTORA COMPANY"
     var day := int(g.get("day")) if "day" in g else 0; var rep := int(g.get("reputation")) if "reputation" in g else 0
     summary_label.text = "%s  •  DAY %d  •  REP %d" % [name, day, rep]
     if ranking != null and ranking.has_method("world_power"):

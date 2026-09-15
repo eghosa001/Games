@@ -1,6 +1,6 @@
 extends CanvasLayer
 
-## Responsive RENEW DAILY reader. News data remains authoritative in RenewNewsSystem.
+## Responsive RESTORA DAILY reader. News data remains authoritative in RenewNewsSystem.
 const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 const SURFACE := Color("0d2028")
 const SURFACE_2 := Color("102831")
@@ -54,7 +54,7 @@ func _build() -> void:
     margin.add_theme_constant_override("margin_top", 14); margin.add_theme_constant_override("margin_bottom", 14); panel.add_child(margin)
     var root := VBoxContainer.new(); root.add_theme_constant_override("separation", 8); margin.add_child(root)
     var header := HBoxContainer.new(); header.add_theme_constant_override("separation", 8); root.add_child(header)
-    issue_label = Label.new(); issue_label.text = "RENEW DAILY"; issue_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; issue_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; issue_label.add_theme_font_size_override("font_size", 21); issue_label.add_theme_color_override("font_color", TEXT); header.add_child(issue_label)
+    issue_label = Label.new(); issue_label.text = "RESTORA DAILY"; issue_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; issue_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; issue_label.add_theme_font_size_override("font_size", 21); issue_label.add_theme_color_override("font_color", TEXT); header.add_child(issue_label)
     var close := Button.new(); close.text = "CLOSE"; close.custom_minimum_size = Vector2(84, 46); close.focus_mode = Control.FOCUS_NONE; close.pressed.connect(close_screen); header.add_child(close)
     archive_label = Label.new(); archive_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; archive_label.add_theme_font_size_override("font_size", 11); archive_label.add_theme_color_override("font_color", MUTED); root.add_child(archive_label)
     scroll = ScrollContainer.new(); scroll.name = "NewsScroll"; scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; root.add_child(scroll)
@@ -67,10 +67,10 @@ func _process(delta: float) -> void:
 
 func _refresh(force: bool = false) -> void:
     var news = _news()
-    if news == null: issue_label.text = "RENEW DAILY — unavailable"; archive_label.text = "News service unavailable."; return
+    if news == null: issue_label.text = "RESTORA DAILY — unavailable"; archive_label.text = "News service unavailable."; return
     var issue: Dictionary = news.get_current_issue(); var stories: Array = issue.get("stories", []); var date_label := str(issue.get("date_label", "Today's Edition")); var signature := "%s|%s" % [date_label, str(stories)]
     if not force and signature == last_signature: return
-    last_signature = signature; issue_label.text = "RENEW DAILY  •  %s" % date_label; archive_label.text = "VERIFIED BUSINESS INTELLIGENCE  •  D / ESC"
+    last_signature = signature; issue_label.text = "RESTORA DAILY  •  %s" % date_label; archive_label.text = "VERIFIED BUSINESS INTELLIGENCE  •  D / ESC"
     var scroll_value := scroll.scroll_vertical
     for child in content.get_children(): child.queue_free()
     if stories.is_empty(): _add_message("The newsroom has no verified developments yet.", MUTED); _layout(); return
