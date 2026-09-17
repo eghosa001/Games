@@ -15,6 +15,23 @@ func _build_ui() -> void:
     hero_meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     tabs = bottom_nav
 
+func _world_3d_active() -> bool:
+    var world_3d := get_node_or_null("/root/Renew/World3D")
+    if world_3d == null:
+        return false
+    return bool(world_3d.get("presentation_enabled")) if "presentation_enabled" in world_3d else world_3d.visible
+
+func world_backdrop_alpha(using_3d: bool) -> float:
+    return 0.0 if using_3d else 1.0
+
+func _sync_world_presentation() -> void:
+    var using_3d := _world_3d_active()
+    if background != null:
+        background.color.a = world_backdrop_alpha(using_3d)
+    if hero_art != null:
+        var width := root.size.x if root != null and root.size.x > 0.0 else get_viewport().get_visible_rect().size.x
+        hero_art.visible = not using_3d and width >= 360.0
+
 func _layout_responsive() -> void:
     super._layout_responsive()
     var size := root.size if root != null and root.size.x > 0.0 else get_viewport().get_visible_rect().size
@@ -51,6 +68,7 @@ func _layout_responsive() -> void:
     theme_button.custom_minimum_size.y = 48
     hero_action.custom_minimum_size.y = 54
     hero_action.add_theme_font_size_override("font_size", 12 if mobile else 13)
+    _sync_world_presentation()
 
 func _open_tutorial() -> void:
     var tutorial_overlay := get_tree().root.get_node_or_null("Renew/UI/TutorialOverlay")
@@ -226,7 +244,7 @@ func _process(delta: float) -> void:
     if decision_signature != _last_decision_signature:
         _last_decision_signature = decision_signature
         _refresh()
-    if background != null and background.color.a < 0.99: background.color.a = 1.0
+    _sync_world_presentation()
     if location_label == null: return
     var policies = _management_policy()
     if policies == null:

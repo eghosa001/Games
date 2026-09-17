@@ -1,6 +1,7 @@
 extends SceneTree
 
 const PropertyVisual = preload("res://scripts/property_visual.gd")
+const MainHUD = preload("res://scripts/renew_sims_ui_final.gd")
 var failed := 0
 
 func _initialize() -> void:
@@ -18,6 +19,10 @@ func _run() -> void:
     check("320px restoration HUD uses compact layout", hud._uses_compact_layout(320.0))
     check("480px viewport height stays on-screen", is_equal_approx(hud._hud_height_for_viewport(480.0), 480.0))
     hud.free()
+    var main_hud := MainHUD.new()
+    check("3D mode exposes world behind main HUD", is_equal_approx(main_hud.world_backdrop_alpha(true), 0.0))
+    check("2D fallback keeps full HUD backdrop", is_equal_approx(main_hud.world_backdrop_alpha(false), 1.0))
+    main_hud.free()
     var overlay_text := FileAccess.get_file_as_string("res://scripts/property_visual.gd")
     check("restoration HUD uses selected property ownership", overlay_text.contains("property.get(\"owned\""))
     var project_text := FileAccess.get_file_as_string("res://project.godot")
