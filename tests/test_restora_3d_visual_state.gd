@@ -9,6 +9,7 @@ func _initialize() -> void:
 func _run() -> void:
     check("neglected stage maps to neglected", VisualState.stage_from_values(false, "Neglected", 0, 0, 0, 0) == "neglected")
     check("finished restoration maps to operational", VisualState.stage_from_values(true, "Operational", 100, 100, 100, 100) == "operational")
+    check("finished progress overrides stale label", VisualState.stage_from_values(true, "Painted", 100, 100, 100, 100) == "operational")
     check("factory property maps to factory archetype", VisualState.archetype_from_property({"type": "industrial_factory"}) == "factory")
     check("empty property falls back to warehouse", VisualState.archetype_from_property({}) == "warehouse")
     var snapshot := VisualState.snapshot_from_values({}, false, "Neglected", 0, 0, 0, 0, false, 0)
