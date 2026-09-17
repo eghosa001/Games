@@ -1,9 +1,19 @@
-class_name Restora3DVisualState
 extends RefCounted
+class_name Restora3DVisualState
 
 static func stage_from_values(owned: bool, stage: String, cleaning: int, repair: int, painting: int, furnishing: int) -> String:
     if not owned:
         return "neglected"
+    if furnishing >= 100:
+        return "operational"
+    if furnishing > 0:
+        return "furnished"
+    if painting >= 100:
+        return "painted"
+    if repair >= 100:
+        return "repaired"
+    if cleaning >= 100:
+        return "cleaned"
     var normalized := stage.strip_edges().to_lower()
     if normalized in ["operational", "open"]:
         return "operational"
@@ -14,16 +24,6 @@ static func stage_from_values(owned: bool, stage: String, cleaning: int, repair:
     if normalized == "repaired":
         return "repaired"
     if normalized in ["cleaned", "clean"]:
-        return "cleaned"
-    if furnishing >= 100:
-        return "operational"
-    if furnishing > 0:
-        return "furnished"
-    if painting >= 100:
-        return "painted"
-    if repair >= 100:
-        return "repaired"
-    if cleaning >= 100:
         return "cleaned"
     return "neglected"
 
