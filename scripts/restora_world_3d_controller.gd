@@ -10,16 +10,17 @@ var _poll_elapsed := 0.0
 var _last_snapshot: Dictionary = {}
 var _presenter: Node
 var _camera: Camera3D
+var _legacy_world_view: CanvasItem
 var _camera_target := Vector3(0.0, 1.8, 0.0)
 
 func _ready() -> void:
     _presenter = get_node_or_null("Properties/ActiveProperty3D")
     _camera = get_node_or_null("CameraRig/Camera3D") as Camera3D
+    _legacy_world_view = get_node_or_null("../World/WorldView") as CanvasItem
+    _apply_presentation_visibility()
     if not presentation_enabled:
-        visible = false
         set_process(false)
         return
-    visible = true
     if _camera != null:
         _camera.current = true
         _camera.look_at(_camera_target, Vector3.UP)
@@ -70,9 +71,14 @@ func _update_camera_for_snapshot(previous: Dictionary, snapshot: Dictionary, ani
     tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
     tween.tween_property(_camera, "position", desired, 0.55)
 
+func _apply_presentation_visibility() -> void:
+    visible = presentation_enabled
+    if _legacy_world_view != null:
+        _legacy_world_view.visible = not presentation_enabled
+
 func set_presentation_enabled(value: bool) -> void:
     presentation_enabled = value
-    visible = value
+    _apply_presentation_visibility()
     set_process(value)
     if value:
         _sync_visuals(false)
