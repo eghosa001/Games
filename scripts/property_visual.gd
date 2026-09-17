@@ -62,7 +62,7 @@ func _draw() -> void:
         return
     var index := clampi(int(state.get_value("properties", "selected_property", 0)), 0, catalog.size() - 1)
     var property: Dictionary = catalog[index]
-    var owned := bool(state.get_value("properties", "owned", false))
+    var owned := bool(property.get("owned", state.get_value("properties", "owned", false)))
     var stage := _visual_stage(property, owned)
     _sync_scene_art(stage, property)
     _draw_site_overlay(property, stage)
