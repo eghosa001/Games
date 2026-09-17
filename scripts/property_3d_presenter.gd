@@ -122,6 +122,7 @@ func _build_once() -> void:
     _loading_details.append(dock_canopy)
     var side_unit := _make_box("SideUnit", Vector3(1.8, 2.4, 2.0), Vector3(5.0, 1.4, -1.2), _wall_repaired, _detail_root)
     _loading_details.append(side_unit)
+    _variant_walls.append(side_unit)
 
     _build_archetype_variants()
 

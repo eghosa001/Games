@@ -12,6 +12,16 @@ func _run() -> void:
     check("missing state returns warehouse fallback", snapshot.get("archetype") == "warehouse")
     check("missing state returns neglected fallback", snapshot.get("stage") == "neglected")
     check("controller polling interval is mobile friendly", controller.poll_interval >= 0.10)
+    var expected_hidden_renderers := [
+        "../World/EmpireController",
+        "../World/Corporate",
+        "../World/WorldMissions",
+        "../World/RegionController",
+        "../World/BranchController",
+        "../World/RivalSupplyController",
+    ]
+    for path in expected_hidden_renderers:
+        check("3D mode suppresses legacy renderer " + path, Controller.LEGACY_WORLD_RENDERER_PATHS.has(path))
     controller.free()
     quit(1 if failed > 0 else 0)
 

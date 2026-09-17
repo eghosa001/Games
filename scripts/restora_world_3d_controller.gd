@@ -3,6 +3,15 @@ class_name RestoraWorld3DController
 
 const VisualState = preload("res://scripts/restora_3d_visual_state.gd")
 
+const LEGACY_WORLD_RENDERER_PATHS := [
+    "../World/EmpireController",
+    "../World/Corporate",
+    "../World/WorldMissions",
+    "../World/RegionController",
+    "../World/BranchController",
+    "../World/RivalSupplyController",
+]
+
 @export var poll_interval: float = 0.16
 @export var presentation_enabled: bool = true
 
@@ -13,6 +22,7 @@ var _district: Node
 var _camera: Camera3D
 var _legacy_world_view: CanvasItem
 var _legacy_property_map: CanvasItem
+var _legacy_world_renderers: Array[CanvasItem] = []
 var _camera_target := Vector3(0.0, 1.8, 0.0)
 
 func _ready() -> void:
@@ -21,6 +31,10 @@ func _ready() -> void:
     _camera = get_node_or_null("CameraRig/Camera3D") as Camera3D
     _legacy_world_view = get_node_or_null("../World/WorldView") as CanvasItem
     _legacy_property_map = get_node_or_null("../World/PropertyMap") as CanvasItem
+    for path in LEGACY_WORLD_RENDERER_PATHS:
+        var renderer := get_node_or_null(path) as CanvasItem
+        if renderer != null:
+            _legacy_world_renderers.append(renderer)
     _apply_presentation_visibility()
     if not presentation_enabled:
         set_process(false)
@@ -95,6 +109,9 @@ func _apply_presentation_visibility() -> void:
         _legacy_property_map.visible = not presentation_enabled
         _legacy_property_map.set_process(not presentation_enabled)
         _legacy_property_map.set_process_unhandled_input(not presentation_enabled)
+    for renderer in _legacy_world_renderers:
+        if renderer != null:
+            renderer.visible = not presentation_enabled
 
 func set_presentation_enabled(value: bool) -> void:
     presentation_enabled = value
