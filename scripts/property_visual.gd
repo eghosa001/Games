@@ -1,8 +1,8 @@
 extends Node2D
 
-## Premium restoration presentation layer.
-## The authored restoration scene remains the visual foundation while this
-## layer adds state-driven progression art, construction detail and status UI.
+## Premium restoration status layer.
+## When RestoraWorld3D is active, this keeps the useful restoration HUD while
+## suppressing the duplicate 2D building artwork.
 
 const STEPS := ["cleaning", "repair", "painting", "furnishing"]
 const BUILDING_SHEETS := [
@@ -33,6 +33,12 @@ func _process(delta: float) -> void:
     if fmod(_time, 0.12) < delta:
         queue_redraw()
 
+func _using_3d_world() -> bool:
+    var world_3d := get_node_or_null("../../World3D")
+    if world_3d == null:
+        return false
+    return bool(world_3d.get("presentation_enabled")) if "presentation_enabled" in world_3d else world_3d.visible
+
 func _ensure_progression_sprite() -> void:
     if _progression_sprite != null:
         return
@@ -48,7 +54,7 @@ func _draw() -> void:
     var state = get_node_or_null("/root/RenewGameState")
     var scene_art := get_node_or_null("../PremiumRestorationScene")
     if scene_art != null:
-        scene_art.visible = true
+        scene_art.visible = not _using_3d_world()
     if state == null:
         return
     var catalog = state.get_value("properties", "catalog", [])
@@ -64,6 +70,16 @@ func _draw() -> void:
 func _sync_scene_art(stage: String, property: Dictionary) -> void:
     var scene_art := get_node_or_null("../PremiumRestorationScene")
     _ensure_progression_sprite()
+    var property_type := str(property.get("type", property.get("kind", "warehouse"))).to_lower()
+    if property_type == "":
+        property_type = "warehouse"
+    if _using_3d_world():
+        if scene_art != null:
+            scene_art.visible = false
+        _progression_sprite.visible = false
+        _last_stage = stage
+        _last_property_type = property_type
+        return
     var progress := _stage_progress(stage)
     if scene_art != null:
         scene_art.visible = true
@@ -71,9 +87,6 @@ func _sync_scene_art(stage: String, property: Dictionary) -> void:
         var target_scale := 0.86 + progress * 0.06
         scene_art.scale = Vector2(target_scale, target_scale)
         _progression_sprite.position = scene_art.position
-    var property_type := str(property.get("type", property.get("kind", "warehouse"))).to_lower()
-    if property_type == "":
-        property_type = "warehouse"
     var sheet_index := 0
     if property_type.contains("factory") or property_type.contains("industrial"):
         sheet_index = 1
