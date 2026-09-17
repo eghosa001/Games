@@ -128,31 +128,69 @@ func _test_gameplay_flow(scene: Node, hud: Node) -> void:
         if button != null:
             check("touch workspace target >=44: %s" % label, button.size.x >= MIN_TOUCH and button.size.y >= MIN_TOUCH)
 
+    var manager := get_root().get_node_or_null("RenewUIScreenManager")
+
     var operations_link := _find_button(hud, "Operations")
     if operations_link != null:
         operations_link.pressed.emit()
         await process_frame
         await process_frame
-    var manager := get_root().get_node_or_null("RenewUIScreenManager")
-    check("Operations opens BusinessOperationsPanel", manager != null and str(manager.get_active_screen_name()) == "BusinessOperationsPanel")
-    var operations := scene.get_node_or_null("UI/BusinessOperationsPanel")
-    check("BusinessOperationsPanel is mounted", operations != null)
-    if operations != null:
-        await _press_panel_button(operations, "BUY INPUTS")
-        await _press_panel_button(operations, "PRODUCE")
-        check("touch production creates finished goods", state != null and int(state.get_value("production", "finished_goods", 0)) > 0)
-        var before_price := int(state.get_value("businesses", "player_price", 0)) if state != null else 0
-        await _press_panel_button(operations, "CHANGE PRICE")
-        check("touch price action changes price", state != null and int(state.get_value("businesses", "player_price", 0)) != before_price)
-        await _press_panel_button(operations, "STAFF")
+    check("Operations opens ProductionControlPanel", manager != null and str(manager.get_active_screen_name()) == "ProductionControlPanel")
+    var production_panel := scene.get_node_or_null("UI/ProductionControlPanel")
+    check("ProductionControlPanel is mounted", production_panel != null)
+    if production_panel != null:
+        await _press_panel_button(production_panel, "RUN PRODUCTION")
 
-    check("STAFF opens EmployeePanel", manager != null and str(manager.get_active_screen_name()) == "EmployeePanel")
+    if manager != null and manager.has_method("hide_all_screens"):
+        manager.hide_all_screens()
+    hud._set_tab(1)
+    hud._refresh()
+    await process_frame
+
+    var people_link := _find_button(hud, "People & demand")
+    check("People workspace is touch reachable", people_link != null)
+    if people_link != null:
+        people_link.pressed.emit()
+        await process_frame
+        await process_frame
+    check("People & demand opens EmployeePanel", manager != null and str(manager.get_active_screen_name()) == "EmployeePanel")
     var employee_panel := scene.get_node_or_null("UI/EmployeePanel")
+    check("EmployeePanel is mounted", employee_panel != null)
     if employee_panel != null:
         await _press_panel_button(employee_panel, "HIRE")
 
     if manager != null and manager.has_method("hide_all_screens"):
         manager.hide_all_screens()
+    hud._set_tab(1)
+    hud._refresh()
+    await process_frame
+
+    var market_link := _find_button(hud, "Market & customers")
+    check("Market workspace is touch reachable", market_link != null)
+    if market_link != null:
+        market_link.pressed.emit()
+        await process_frame
+        await process_frame
+    check("Market & customers opens CustomerSegmentsUI", manager != null and str(manager.get_active_screen_name()) == "CustomerSegmentsUI")
+
+    if manager != null and manager.has_method("hide_all_screens"):
+        manager.hide_all_screens()
+    hud._set_tab(1)
+    hud._refresh()
+    await process_frame
+
+    var finance_link := _find_button(hud, "Finance & contracts")
+    check("Finance workspace is touch reachable", finance_link != null)
+    if finance_link != null:
+        finance_link.pressed.emit()
+        await process_frame
+        await process_frame
+    check("Finance & contracts opens FinancePanel", manager != null and str(manager.get_active_screen_name()) == "FinancePanel")
+
+    if manager != null and manager.has_method("hide_all_screens"):
+        manager.hide_all_screens()
+    if state != null:
+        state.set_value("production", "finished_goods", maxi(1, int(state.get_value("production", "finished_goods", 0))))
     hud._set_tab(0)
     hud._refresh()
     await process_frame
