@@ -13,6 +13,8 @@ func _run() -> void:
     check("portfolio selector remains", main_text.contains("[node name=\"PortfolioPanel\" type=\"CanvasLayer\" parent=\"UI\"]"))
     var controller_text := FileAccess.get_file_as_string("res://scripts/restora_world_3d_controller.gd")
     check("3D mode suppresses legacy property map", controller_text.contains("../World/PropertyMap"))
+    var overlay_text := FileAccess.get_file_as_string("res://scripts/property_visual.gd")
+    check("restoration HUD uses selected property ownership", overlay_text.contains("property.get(\"owned\""))
     var project_text := FileAccess.get_file_as_string("res://project.godot")
     check("GL compatibility remains enabled", project_text.contains("renderer/rendering_method=\"gl_compatibility\""))
     quit(1 if failed > 0 else 0)
