@@ -36,6 +36,9 @@ func _run() -> void:
     var selected_snapshot := VisualState.snapshot_from_game_state(state)
     check("selected property owns its 3D state", selected_snapshot.get("owned") == true and selected_snapshot.get("stage") == "operational")
     check("open activity stays on origin property", selected_snapshot.get("business_open") == false)
+    state.values["businesses"]["origin_property_id"] = "b"
+    selected_snapshot = VisualState.snapshot_from_game_state(state)
+    check("origin property enables operating visuals", selected_snapshot.get("business_open") == true)
     state.free()
 
     print("RESTORA 3D VISUAL STATE: %s" % ("PASS" if failed == 0 else "FAIL"))
