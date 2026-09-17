@@ -27,17 +27,17 @@ func _buttons(hud: Node) -> Dictionary:
             out[str((child as Button).text)] = child
     return out
 
-func _press_empire_rival_action(game: Node, hud: Node, label: String) -> String:
+func _press_empire_competition(hud: Node) -> bool:
     hud._set_tab(2)
-    hud._set_page(1)
     await process_frame
     await process_frame
-    var found: Button = _buttons(hud).get(label)
+    var found: Button = _buttons(hud).get("Competition")
     if found == null:
-        return ""
+        return false
     found.pressed.emit()
     await process_frame
-    return str(game.command_system._state_value("company", "message", ""))
+    var manager = get_root().get_node_or_null("RenewUIScreenManager")
+    return manager != null and str(manager.get_active_screen_name()) == "CorporationsPanel"
 
 func _key(game: Node, code: Key) -> String:
     var ev := InputEventKey.new()
@@ -59,17 +59,18 @@ func run() -> void:
     await process_frame
     await process_frame
     var hud: Node = game.get_node_or_null("UI/MainHUD")
-    check(hud != null and hud.has_method("_set_tab") and hud.has_method("_set_page"), "Authoritative hierarchical action grid found")
+    check(hud != null and hud.has_method("_set_tab"), "Authoritative direct-navigation action grid found")
     if hud == null:
         game.free()
         quit(1)
         return
 
-    var compete_msg := await _press_empire_rival_action(game, hud, "COMPETE")
-    check(not compete_msg.is_empty(), "COMPETE reachable through EMPIRE > RIVALS")
-    check(compete_msg.find("alliance") >= 0, "COMPETE reports alliance state")
-    var goals_msg := await _press_empire_rival_action(game, hud, "GOALS")
-    check(goals_msg.find("GOALS") >= 0, "GOALS reachable through EMPIRE > RIVALS")
+    check(await _press_empire_competition(hud), "Competition workspace reachable through EMPIRE")
+    var manager = get_root().get_node_or_null("RenewUIScreenManager")
+    if manager != null:
+        manager.hide_all_screens()
+    var goals_msg := await _key(game, KEY_G)
+    check(goals_msg.find("GOALS") >= 0, "GOALS remains reachable through explicit strategy shortcut")
     check(goals_msg.find("Tycoon") >= 0, "GOALS names victory paths")
 
     hud._set_tab(3)
@@ -81,16 +82,11 @@ func run() -> void:
     check(((await _key(game, KEY_D)).find("victorious")) >= 0, "KEY_D retains explicit NEW COMPANY shortcut")
 
     hud._set_tab(2)
-    hud._set_page(1)
     await process_frame
     await process_frame
-    var small := 0
-    for label in ["COMPETE", "GOALS"]:
-        var b: Button = _buttons(hud).get(label)
-        if b == null or b.custom_minimum_size.y < 44.0:
-            small += 1
-    check(small == 0, "Strategic actions meet touch sizing")
-    check(hud.get("mobile_actions") != null, "Mobile action container present")
+    var competition: Button = _buttons(hud).get("Competition")
+    check(competition != null and competition.custom_minimum_size.y >= 44.0, "Strategic workspace action meets touch sizing")
+    check(hud.get("action_grid") != null, "Mobile action container present")
     game.free()
     await process_frame
     print("V51 UX PARITY RESULT: %d passed, %d failed" % [passed, failed])

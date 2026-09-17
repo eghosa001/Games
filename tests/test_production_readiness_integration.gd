@@ -1,10 +1,8 @@
 extends SceneTree
 
-## RENEW production-readiness integration gate.
-## This gate is intentionally cross-system: it checks that the finished 2D game
-## composes its major economic systems through live infrastructure autoloads,
-## scene-owned domain services and Main commands, that persistence exposes the
-## same domains, and that the active scene contains no 3D gameplay dependency.
+## RESTORA production-readiness integration gate.
+## This gate is intentionally cross-system: economic authority must remain in
+## GameState/domain systems while the hybrid 3D world stays presentation-only.
 ## It does not fabricate soft-launch metrics.
 
 const REQUIRED_AUTOLOADS := {
@@ -100,15 +98,11 @@ func test_2d_runtime_contract() -> void:
             check(FileAccess.file_exists(path), "Service source exists: " + path)
             check(services.get_service(service_name) != null, "Scene service is live: " + service_name)
 
-    var forbidden_3d := 0
-    var stack: Array[Node] = [game]
-    while not stack.is_empty():
-        var node: Node = stack.pop_back()
-        if node is Node3D:
-            forbidden_3d += 1
-        for child in node.get_children():
-            stack.append(child)
-    check(forbidden_3d == 0, "Active Main scene has no 3D gameplay dependency")
+    var world_3d := game.get_node_or_null("World3D")
+    check(world_3d is Node3D, "Hybrid 3D presentation root is active")
+    check(game.get_script() != null and str(game.get_script().resource_path) == "res://scripts/main.gd", "Authoritative Main gameplay boundary remains domain-driven")
+    var controller_source := FileAccess.get_file_as_string("res://scripts/restora_world_3d_controller.gd")
+    check(controller_source.contains("snapshot_from_game_state") and not controller_source.contains("set_value("), "3D controller reads snapshots without authoring simulation state")
 
 func test_persistence_contract() -> void:
     var save_source := FileAccess.get_file_as_string("res://scripts/save_system.gd")
