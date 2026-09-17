@@ -4,7 +4,9 @@ class_name Property3DPresenter
 var _visual_stage := "neglected"
 var _archetype := "warehouse"
 var _business_open := false
+var _operational_motion_enabled := false
 var _built := false
+var _motion_time := 0.0
 
 var _building_root: Node3D
 var _detail_root: Node3D
@@ -15,6 +17,7 @@ var _roof: MeshInstance3D
 var _sign: MeshInstance3D
 var _windows: Array[MeshInstance3D] = []
 var _lights: Array[OmniLight3D] = []
+var _machinery_parts: Array[Node3D] = []
 var _archetype_roots: Dictionary = {}
 
 var _wall_dirty: StandardMaterial3D
@@ -32,10 +35,22 @@ func _ready() -> void:
     _build_once()
     _apply_visual_state(false)
 
+func _process(delta: float) -> void:
+    if not _built or not _operational_motion_enabled:
+        return
+    _motion_time += delta
+    for index in range(_machinery_parts.size()):
+        var part := _machinery_parts[index]
+        if part == null:
+            continue
+        part.rotation.z += delta * (0.8 + float(index) * 0.22)
+        part.rotation.y = sin(_motion_time * 0.8 + float(index)) * 0.08
+
 func apply_snapshot(snapshot: Dictionary, animate: bool = true) -> void:
     _visual_stage = str(snapshot.get("stage", "neglected")).to_lower()
     _archetype = str(snapshot.get("archetype", "warehouse")).to_lower()
     _business_open = bool(snapshot.get("business_open", false))
+    _operational_motion_enabled = _visual_stage == "operational" and _business_open
     if not is_inside_tree():
         return
     _build_once()
@@ -54,6 +69,9 @@ func get_archetype_profile() -> String:
         "retail": return "storefront_canopy"
         "resource": return "processing_yard"
         _: return "warehouse_bays"
+
+func is_operational_motion_enabled() -> bool:
+    return _operational_motion_enabled
 
 func _build_once() -> void:
     if _built:
@@ -125,6 +143,13 @@ func _build_archetype_variants() -> void:
         _make_cylinder("Stack", 0.42, 4.2, Vector3(x, 6.6, -1.4), _metal, factory)
     _make_cylinder("ProcessTank", 1.0, 2.4, Vector3(4.2, 1.4, -2.0), _metal, factory)
     _make_box("PipeBridge", Vector3(5.2, 0.25, 0.3), Vector3(1.5, 3.4, -2.0), _accent, factory)
+    var factory_rotor := Node3D.new()
+    factory_rotor.name = "FactoryRotor"
+    factory_rotor.position = Vector3(4.2, 3.8, -1.9)
+    factory.add_child(factory_rotor)
+    _make_box("RotorBladeA", Vector3(2.2, 0.18, 0.22), Vector3.ZERO, _accent, factory_rotor)
+    _make_box("RotorBladeB", Vector3(0.18, 2.2, 0.22), Vector3.ZERO, _accent, factory_rotor)
+    _machinery_parts.append(factory_rotor)
     _archetype_roots["factory"] = factory
 
     var office := _new_variant_root("OfficeVariant")
@@ -147,6 +172,9 @@ func _build_archetype_variants() -> void:
     _make_box("Conveyor", Vector3(6.8, 0.38, 0.65), Vector3(0.0, 4.0, -2.5), _accent, resource)
     var conveyor_support := _make_box("ConveyorSupport", Vector3(0.35, 4.0, 0.35), Vector3(-3.0, 2.0, -2.5), _metal, resource)
     conveyor_support.rotation.z = -0.22
+    var conveyor_drum := _make_cylinder("ConveyorDrum", 0.48, 0.9, Vector3(3.0, 4.0, -2.5), _metal, resource)
+    conveyor_drum.rotation.x = PI * 0.5
+    _machinery_parts.append(conveyor_drum)
     _make_box("ResourceYard", Vector3(5.0, 0.65, 2.8), Vector3(4.2, 0.35, 2.4), _roof_dirty, resource)
     _archetype_roots["resource"] = resource
 
