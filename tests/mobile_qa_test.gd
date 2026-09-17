@@ -135,7 +135,7 @@ func _test_gameplay_flow(scene: Node, hud: Node) -> void:
         operations_link.pressed.emit()
         await process_frame
         await process_frame
-    check("Operations opens ProductionControlPanel", manager != null and str(manager.get_active_screen_name()) == "ProductionControlPanel")
+    check("Operations opens ProductionControlPanel", manager != null and manager.has_method("is_screen_open") and bool(manager.is_screen_open("ProductionControlPanel")))
     var production_panel := scene.get_node_or_null("UI/ProductionControlPanel")
     check("ProductionControlPanel is mounted", production_panel != null)
     if production_panel != null:
