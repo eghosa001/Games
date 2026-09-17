@@ -9,12 +9,14 @@ const VisualState = preload("res://scripts/restora_3d_visual_state.gd")
 var _poll_elapsed := 0.0
 var _last_snapshot: Dictionary = {}
 var _presenter: Node
+var _district: Node
 var _camera: Camera3D
 var _legacy_world_view: CanvasItem
 var _camera_target := Vector3(0.0, 1.8, 0.0)
 
 func _ready() -> void:
     _presenter = get_node_or_null("Properties/ActiveProperty3D")
+    _district = get_node_or_null("DistrictDressing/RestoraDistrict3D")
     _camera = get_node_or_null("CameraRig/Camera3D") as Camera3D
     _legacy_world_view = get_node_or_null("../World/WorldView") as CanvasItem
     _apply_presentation_visibility()
@@ -51,6 +53,8 @@ func _sync_visuals(animate: bool) -> void:
     _last_snapshot = snapshot.duplicate(true)
     if _presenter != null and _presenter.has_method("apply_snapshot"):
         _presenter.apply_snapshot(snapshot, animate)
+    if _district != null and _district.has_method("apply_snapshot"):
+        _district.apply_snapshot(snapshot, animate)
     _update_camera_for_snapshot(previous, snapshot, animate)
 
 func _update_camera_for_snapshot(previous: Dictionary, snapshot: Dictionary, animate: bool) -> void:
@@ -59,11 +63,14 @@ func _update_camera_for_snapshot(previous: Dictionary, snapshot: Dictionary, ani
     var stage := str(snapshot.get("stage", "neglected"))
     var stage_changed := str(previous.get("stage", "")) != stage
     var property_changed := int(previous.get("selected_property", -1)) != int(snapshot.get("selected_property", 0))
-    var desired := Vector3(10.8, 7.8, 12.4)
+    var business_open := bool(snapshot.get("business_open", false))
+    var desired := Vector3(12.8, 8.4, 14.8)
     if stage_changed and stage not in ["neglected", "cleaned"]:
-        desired = Vector3(8.4, 6.0, 9.4)
+        desired = Vector3(9.4, 6.4, 10.6)
     elif property_changed:
-        desired = Vector3(9.4, 6.8, 10.8)
+        desired = Vector3(11.2, 7.2, 12.7)
+    if stage == "operational" and business_open:
+        desired = Vector3(10.8, 6.8, 12.0)
     if not animate:
         _camera.position = desired
         return
