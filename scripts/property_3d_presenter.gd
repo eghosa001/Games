@@ -168,12 +168,12 @@ func _build_archetype_variants() -> void:
     _archetype_roots["factory"] = factory
 
     var office := _new_variant_root("OfficeVariant")
-    var office_tower := _make_box("OfficeTower", Vector3(5.4, 6.8, 4.3), Vector3(0.6, 4.7, -0.4), _wall_repaired, office)
+    var office_tower := _make_box("OfficeTower", Vector3(5.4, 6.8, 4.3), Vector3(0.6, 4.7, 0.7), _wall_repaired, office)
     _variant_walls.append(office_tower)
     for floor_index in range(4):
-        var glass_band := _make_box("GlassBand%d" % floor_index, Vector3(4.9, 0.58, 0.14), Vector3(0.6, 2.4 + floor_index * 1.4, 1.8), _glass_off, office)
+        var glass_band := _make_box("GlassBand%d" % floor_index, Vector3(4.9, 0.58, 0.14), Vector3(0.6, 2.4 + floor_index * 1.4, 2.9), _glass_off, office)
         _variant_glass.append(glass_band)
-    _make_box("OfficeCrown", Vector3(5.8, 0.35, 4.7), Vector3(0.6, 8.15, -0.4), _metal, office)
+    _make_box("OfficeCrown", Vector3(5.8, 0.35, 4.7), Vector3(0.6, 8.15, 0.7), _metal, office)
     _archetype_roots["office"] = office
 
     var retail := _new_variant_root("RetailVariant")
@@ -212,7 +212,7 @@ func _create_materials() -> void:
     _metal = _material(Color("3e5660"), 0.58, 0.46)
     _glass_off = _material(Color("4b6670"), 0.18, 0.38)
     _glass_on = _material(Color("ffdca0"), 0.12, 0.32, true)
-    _accent = _material(Color("e3b955"), 0.32, 0.42, true)
+    _accent = _material(Color("e3b955"), 0.32, 0.42)
     _ground_material = _material(Color("59615a"), 0.0, 1.0)
 
 func _material(color: Color, metallic: float, roughness: float, emissive: bool = false) -> StandardMaterial3D:
@@ -256,7 +256,7 @@ func _apply_visual_state(animate: bool) -> void:
         return
     var rank := _stage_rank(_visual_stage)
     _debris_root.visible = rank < 1
-    _roof.visible = rank >= 2 or rank == 0
+    _roof.visible = true
     _detail_root.visible = rank >= 2
     _operational_root.visible = rank >= 4
     _apply_archetype_visibility()
