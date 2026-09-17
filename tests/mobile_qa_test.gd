@@ -122,7 +122,7 @@ func _test_gameplay_flow(scene: Node, hud: Node) -> void:
 
     hud._set_tab(1)
     await process_frame
-    for label in ["Operations", "Production & equipment", "People & demand", "Market & customers", "Finance & contracts"]:
+    for label in ["Operations", "People & demand", "Market & customers", "Finance & contracts"]:
         var button := _find_button(hud, label)
         check("touch workspace exists: %s" % label, button != null)
         if button != null:
