@@ -56,6 +56,8 @@ func run() -> void:
     game.sell_property()
     check(bool(state.get_value("properties", "owned", false)), "Operating business blocks the sale")
 
+    state.set_value("businesses", "business_open", false)
+    state.set_value("businesses", "origin_property_id", "")
     var props: Node = game.command_system.property_system
     var before := int(finance.cash)
     game.lease_property()

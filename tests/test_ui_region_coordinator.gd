@@ -50,13 +50,13 @@ func run() -> void:
     var strat_root := strategy.get("root") as Control
     var tut_root := tutorial.get("overlay_root") as Control
 
-    if strat_root != null: strat_root.size = Vector2(1280, 720)
-    if tut_root != null: tut_root.size = Vector2(1280, 720)
+    if strat_root != null: strat_root.size = Vector2(1700, 900)
+    if tut_root != null: tut_root.size = Vector2(1700, 900)
     strategy._layout_responsive()
     tutorial._layout_responsive()
     coordinator.set_active_screen("")
     await process_frame
-    check("desktop strategy panel has position", strat_panel.position.x >= 0.0)
+    check("wide desktop strategy panel is visible", strat_panel.visible and strat_panel.position.x >= 0.0)
     check("desktop tutorial panel has position", tut_panel.position.x >= 0.0)
 
     if strat_root != null: strat_root.size = Vector2(390, 844)
@@ -67,7 +67,8 @@ func run() -> void:
     await process_frame
     check("mobile strategy HUD hides", not strat_panel.visible)
 
-    if strat_root != null: strat_root.size = Vector2(1280, 720)
+    if strat_root != null: strat_root.size = Vector2(1700, 900)
+    if tut_root != null: tut_root.size = Vector2(1700, 900)
     strategy._layout_responsive()
     tutorial._layout_responsive()
     var smgr := get_root().get_node_or_null("RenewUIScreenManager")

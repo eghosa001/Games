@@ -321,9 +321,7 @@ static func _sanitize_json_value(value):
     if value is float:
         if is_finite(value):
             return value
-        if is_nan(value):
-            return {NONFINITE_TAG: "nan"}
-        return {NONFINITE_TAG: "-inf" if value < 0.0 else "inf"}
+        return 0.0
     if value is Dictionary:
         var result: Dictionary = {}
         for key in value.keys():
@@ -339,13 +337,7 @@ static func _sanitize_json_value(value):
 static func _restore_json_value(value):
     if value is Dictionary:
         if value.size() == 1 and value.has(NONFINITE_TAG):
-            var kind := str(value[NONFINITE_TAG])
-            if kind == "inf":
-                return INF
-            if kind == "-inf":
-                return -INF
-            if kind == "nan":
-                return NAN
+            return 0.0
         var result: Dictionary = {}
         for key in value.keys():
             result[key] = _restore_json_value(value[key])

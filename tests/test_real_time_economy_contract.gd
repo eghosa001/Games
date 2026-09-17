@@ -76,8 +76,8 @@ func run() -> void:
     check(tech_source.contains("func get_last_research_days()->int: return 0"), "research no longer triggers hidden day simulation")
     check(state_source.contains("\"analytics\":[\"simulation_system\",\"real_time\"]"), "GameState permits a dedicated real-time analytics namespace")
     check(ui_source.contains("SELL GOODS"), "primary UX exposes manual selling")
-    check(ui_source.contains("Deliver contract"), "business UX exposes manual contract delivery")
-    check(ui_source.contains("end_day_button.visible = false"), "legacy End Day action is hidden from premium UX")
+    check(ui_source.contains("_action(\"Deliver contract\""), "business UX exposes manual contract delivery")
+    check(not ui_source.contains("_action(\"End day\"") and not ui_source.contains("_action(\"END DAY\""), "legacy End Day action is absent from premium UX")
     check(main_source.contains("KEY_N: sell_goods()"), "desktop N shortcut sells instead of skipping the day")
     check(not mobile_source.contains("primary_button.text = \"END DAY\""), "obsolete mobile End Day control is removed")
 

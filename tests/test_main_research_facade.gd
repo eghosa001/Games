@@ -48,8 +48,12 @@ func run() -> void:
     await process_frame
     await process_frame
 
-    check(technology.is_unlocked("efficient_production"), "Main facade unlocks the selected technology")
-    check(int(game.day) == start_day + expected_days, "Main facade simulates the full research duration")
+    check(not technology.is_unlocked("efficient_production"), "Main facade starts research without premature unlock")
+    check(int(game.day) == start_day, "Main facade does not hide-simulate calendar days")
+    check(int(technology.get_last_research_duration_days()) == expected_days, "Main facade records full research duration")
+    for _day in range(expected_days):
+        technology.advance_calendar_day()
+    check(technology.is_unlocked("efficient_production"), "Calendar progression unlocks the selected technology")
     var research_spend := 0
     for entry in finance.history:
         if not (entry is Dictionary):

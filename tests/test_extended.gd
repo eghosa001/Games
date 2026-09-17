@@ -124,7 +124,11 @@ func run() -> void:
         check(direct_research_ok, "Technology research succeeds with sufficient funds")
         check(int(finance.get("cash")) == tech_cash_before - 2500, "Technology research charges canonical finance")
         check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Technology cash mirror matches finance ledger")
-        check(bool(state.get_value("technology", "technology", {}).get("efficient_production", false)), "Technology unlock persists in GameState")
+        var saved_tech = state.get_value("technology", "technology", {}).get("efficient_production", false)
+        var research_persisted := saved_tech is Dictionary
+        if saved_tech is bool:
+            research_persisted = saved_tech
+        check(research_persisted, "Technology research persists in GameState")
         check(int(state.get_value("player", "day", 0)) == 10, "Technology system does not bypass the day simulation")
         state.set_value("technology", "technology", {})
         state.set_value("technology", "research_points", 20)
@@ -141,10 +145,14 @@ func run() -> void:
         state.set_value("businesses", "industry_id", "furniture")
         state.set_value("businesses", "business_name", "Furniture Factory")
         game.command_system.research_technology("efficient_production")
-        var research_days: int = int(tech_system.get_last_research_days())
-        check(research_days == 2, "Technology reports its elapsed research duration")
-        check(int(state.get_value("player", "day", 0)) == 12, "Research command runs elapsed days through canonical simulation")
-        check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Research elapsed-day simulation keeps finance and GameState synchronized")
+        var research_days: int = int(tech_system.get_last_research_duration_days())
+        check(research_days == 2, "Technology reports its real-calendar research duration")
+        check(int(state.get_value("player", "day", 0)) == 10, "Research command does not hidden-simulate calendar days")
+        check(not tech_system.is_unlocked("efficient_production"), "Research remains pending until calendar rollover")
+        for _day in range(research_days):
+            tech_system.advance_calendar_day()
+        check(tech_system.is_unlocked("efficient_production"), "Research unlocks after required calendar progress")
+        check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Research start keeps finance and GameState synchronized")
 
     _reset_ledger(finance, state, 25000)
     state.set_value("properties", "owned", true)
