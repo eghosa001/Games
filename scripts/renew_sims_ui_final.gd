@@ -36,7 +36,6 @@ func _layout_responsive() -> void:
     super._layout_responsive()
     var size := root.size if root != null and root.size.x > 0.0 else get_viewport().get_visible_rect().size
     var mobile := size.x < 700.0
-    var narrow_phone := size.x < 420.0
     shell.add_theme_constant_override("margin_left", 10 if mobile else 86)
     brand.add_theme_font_size_override("font_size", 24 if mobile else 28)
     location_label.add_theme_font_size_override("font_size", 12 if mobile else 13)
@@ -53,7 +52,7 @@ func _layout_responsive() -> void:
         label.add_theme_font_size_override("font_size", 11 if mobile else 12)
     for label in stat_values:
         label.add_theme_font_size_override("font_size", 18 if mobile else 19)
-    action_grid.columns = 1 if narrow_phone else 2
+    action_grid.columns = 2
     for child in action_grid.get_children():
         if child is Button:
             var action_button := child as Button
@@ -145,6 +144,8 @@ func _apply_progression_discovery() -> void:
             _set_action_visible("Finance & contracts", _feature_available("finance"))
             if _feature_available("contracts") and bool(parent.business_open):
                 _screen("Contracts", "ContractPanel", "Obligations, delivery and commercial commitments")
+                if int(parent.contract_days) > 0:
+                    _action("Deliver contract", Callable(self, "_deliver_contract_now"), "Settle today's active contract delivery", true)
         2:
             _set_action_visible("Expansion", _feature_available("regions"))
             _set_action_visible("Competition", _feature_available("competitors"))
