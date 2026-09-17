@@ -125,7 +125,10 @@ func run() -> void:
         check(int(finance.get("cash")) == tech_cash_before - 2500, "Technology research charges canonical finance")
         check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Technology cash mirror matches finance ledger")
         var saved_tech = state.get_value("technology", "technology", {}).get("efficient_production", false)
-        check(saved_tech == true or saved_tech is Dictionary, "Technology research persists in GameState")
+        var research_persisted := saved_tech is Dictionary
+        if saved_tech is bool:
+            research_persisted = saved_tech
+        check(research_persisted, "Technology research persists in GameState")
         check(int(state.get_value("player", "day", 0)) == 10, "Technology system does not bypass the day simulation")
         state.set_value("technology", "technology", {})
         state.set_value("technology", "research_points", 20)

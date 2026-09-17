@@ -98,8 +98,8 @@ func _check_responsive_touch_design(hud: Node) -> void:
         _check(grid != null and grid.columns == 2, "%dx%d keeps the compact two-column action grid" % [target.x, target.y])
         for button in _buttons(hud):
             _check(button.size.x >= MIN_TOUCH and button.size.y >= MIN_TOUCH, "%dx%d action '%s' remains touch-friendly" % [target.x, target.y, _primary_line(button)])
-        var dock := hud.get("action_dock") as Control
-        _check(_inside_viewport(dock, target), "%dx%d command dock stays inside viewport" % [target.x, target.y])
+        var scroll := hud.get("action_scroll") as Control
+        _check(_inside_viewport(scroll, target), "%dx%d scrollable command region stays inside viewport" % [target.x, target.y])
 
 func _check_workspace_reachability(hud: Node) -> void:
     var required := {
