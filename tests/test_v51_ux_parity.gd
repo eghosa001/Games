@@ -24,7 +24,8 @@ func _buttons(hud: Node) -> Dictionary:
         return out
     for child in grid.get_children():
         if child is Button:
-            out[str((child as Button).text)] = child
+            var button := child as Button
+            out[button.text.split("\n")[0].strip_edges()] = button
     return out
 
 func _press_empire_competition(hud: Node) -> bool:

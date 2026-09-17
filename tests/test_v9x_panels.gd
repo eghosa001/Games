@@ -90,7 +90,8 @@ func run() -> void:
     var texts := {}
     for child in (hud.get("action_grid") as Node).get_children():
         if child is Button:
-            texts[str((child as Button).text)] = child
+            var button := child as Button
+            texts[button.text.split("\n")[0].strip_edges()] = button
     check(texts.has("Company overview") and texts.has("Properties") and texts.has("Save & settings"), "HOME hub links dashboard and focused property workspaces")
     (texts["Company overview"] as Button).pressed.emit()
     await process_frame
