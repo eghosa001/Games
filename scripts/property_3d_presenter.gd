@@ -16,6 +16,7 @@ var _body: MeshInstance3D
 var _roof: MeshInstance3D
 var _sign: MeshInstance3D
 var _windows: Array[MeshInstance3D] = []
+var _loading_details: Array[Node3D] = []
 var _lights: Array[OmniLight3D] = []
 var _variant_walls: Array[MeshInstance3D] = []
 var _variant_glass: Array[MeshInstance3D] = []
@@ -75,6 +76,12 @@ func get_archetype_profile() -> String:
 func is_operational_motion_enabled() -> bool:
     return _operational_motion_enabled
 
+func uses_loading_bays() -> bool:
+    return _archetype in ["warehouse", "factory"]
+
+func uses_base_front_windows() -> bool:
+    return _archetype in ["warehouse", "factory"]
+
 func _build_once() -> void:
     if _built:
         return
@@ -102,7 +109,8 @@ func _build_once() -> void:
     _roof = _make_box("Roof", Vector3(9.4, 0.45, 6.2), Vector3(0.0, 4.15, 0.0), _roof_dirty, _building_root)
 
     for i in range(3):
-        _make_box("LoadingDoor%d" % i, Vector3(1.65, 2.2, 0.16), Vector3(-2.2 + i * 2.2, 1.55, 2.88), _metal, _detail_root)
+        var loading_door := _make_box("LoadingDoor%d" % i, Vector3(1.65, 2.2, 0.16), Vector3(-2.2 + i * 2.2, 1.55, 2.88), _metal, _detail_root)
+        _loading_details.append(loading_door)
     _make_box("OfficeDoor", Vector3(1.1, 2.2, 0.16), Vector3(3.25, 1.45, 2.88), _metal, _detail_root)
 
     for i in range(4):
@@ -110,8 +118,10 @@ func _build_once() -> void:
         _windows.append(window)
 
     _sign = _make_box("Sign", Vector3(3.3, 0.75, 0.18), Vector3(0.0, 4.55, 2.98), _accent, _detail_root)
-    _make_box("DockCanopy", Vector3(6.8, 0.18, 1.35), Vector3(-0.4, 3.2, 3.35), _metal, _detail_root)
-    _make_box("SideUnit", Vector3(1.8, 2.4, 2.0), Vector3(5.0, 1.4, -1.2), _wall_repaired, _detail_root)
+    var dock_canopy := _make_box("DockCanopy", Vector3(6.8, 0.18, 1.35), Vector3(-0.4, 3.2, 3.35), _metal, _detail_root)
+    _loading_details.append(dock_canopy)
+    var side_unit := _make_box("SideUnit", Vector3(1.8, 2.4, 2.0), Vector3(5.0, 1.4, -1.2), _wall_repaired, _detail_root)
+    _loading_details.append(side_unit)
 
     _build_archetype_variants()
 
@@ -247,9 +257,9 @@ func _apply_visual_state(animate: bool) -> void:
     _debris_root.visible = rank < 1
     _roof.visible = rank >= 2 or rank == 0
     _detail_root.visible = rank >= 2
-    _sign.visible = rank >= 3
     _operational_root.visible = rank >= 4
     _apply_archetype_visibility()
+    _sign.visible = rank >= 3 and uses_loading_bays()
 
     var wall_material: StandardMaterial3D = _wall_dirty
     var roof_material: StandardMaterial3D = _roof_dirty
@@ -291,6 +301,11 @@ func _apply_archetype_visibility() -> void:
         var root = _archetype_roots[key]
         if root is Node3D:
             root.visible = str(key) == target
+    for detail in _loading_details:
+        if detail != null:
+            detail.visible = uses_loading_bays()
+    for window in _windows:
+        window.visible = uses_base_front_windows()
 
 func _stage_rank(stage_name: String) -> int:
     match stage_name:

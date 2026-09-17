@@ -54,6 +54,9 @@ func get_visual_stage() -> String:
 func is_activity_enabled() -> bool:
     return _activity_enabled
 
+func heading_for_x_velocity(x_velocity: float) -> float:
+    return PI if x_velocity > 0.0 else 0.0
+
 func _build_once() -> void:
     if _built:
         return
@@ -134,8 +137,10 @@ func _build_construction_activity() -> void:
 
 func _build_operational_activity() -> void:
     _truck_a = _make_truck("DeliveryTruckA", Vector3(-8.0, 0.0, 7.0))
+    _truck_a.rotation.y = heading_for_x_velocity(1.0)
     _operations_root.add_child(_truck_a)
     _truck_b = _make_truck("DeliveryTruckB", Vector3(5.5, 0.0, 7.0))
+    _truck_b.rotation.y = heading_for_x_velocity(-1.0)
     _truck_b.scale = Vector3(0.85, 0.85, 0.85)
     _operations_root.add_child(_truck_b)
     _make_box("DispatchPallets", Vector3(2.4, 0.6, 1.3), Vector3(4.8, 0.3, 3.9), _yellow, _operations_root)
