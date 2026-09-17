@@ -25,16 +25,17 @@ func _run() -> void:
         "properties": {
             "selected_property": 1,
             "owned": false,
-            "stage": "Neglected",
+            "stage": "Operational",
             "catalog": [
-                {"name":"A", "owned":false},
-                {"name":"B", "type":"factory", "owned":true, "cleaning":100, "repair":100, "painting":100, "furnishing":100}
+                {"id":"a", "name":"A", "owned":false},
+                {"id":"b", "name":"B", "type":"factory", "owned":true, "cleaning":100, "repair":100, "painting":100, "furnishing":100}
             ]
         },
-        "businesses": {"business_open": true}
+        "businesses": {"business_open": true, "origin_property_id":"a"}
     }
     var selected_snapshot := VisualState.snapshot_from_game_state(state)
     check("selected property owns its 3D state", selected_snapshot.get("owned") == true and selected_snapshot.get("stage") == "operational")
+    check("open activity stays on origin property", selected_snapshot.get("business_open") == false)
     state.free()
 
     print("RESTORA 3D VISUAL STATE: %s" % ("PASS" if failed == 0 else "FAIL"))
