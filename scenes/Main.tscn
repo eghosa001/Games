@@ -1,4 +1,4 @@
-[gd_scene load_steps=51 format=3]
+[gd_scene load_steps=52 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -53,6 +53,7 @@
 [ext_resource path="res://scripts/save_load_ui.gd" type="Script" id="60"]
 [ext_resource path="res://scripts/progression_system.gd" type="Script" id="61"]
 [ext_resource path="res://scenes/RestoraWorld3D.tscn" type="PackedScene" id="62"]
+[ext_resource path="res://scripts/business_operations_ui.gd" type="Script" id="63"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -184,8 +185,11 @@ script=ExtResource("53")
 [node name="WorldOpportunitiesPanel" type="CanvasLayer" parent="UI"]
 layer=69
 script=ExtResource("55")
-[node name="ProductionControlPanel" type="CanvasLayer" parent="UI"]
+[node name="BusinessOperationsPanel" type="CanvasLayer" parent="UI"]
 layer=71
+script=ExtResource("63")
+[node name="ProductionControlPanel" type="CanvasLayer" parent="UI"]
+layer=76
 script=ExtResource("56")
 [node name="SupplyChainPanel" type="CanvasLayer" parent="UI"]
 layer=72

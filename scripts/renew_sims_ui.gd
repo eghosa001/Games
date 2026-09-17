@@ -616,7 +616,7 @@ func _refresh() -> void:
             _screen("Company overview", "DashboardPanel", "Health, alerts and performance", true)
             _screen("Properties", "PortfolioPanel", "See owned sites and restoration projects")
             if bool(parent.business_open):
-                _screen("Active company", "ProductionControlPanel", "Open the operating company workspace")
+                _screen("Active company", "BusinessOperationsPanel", "Open the touch-first operating company workspace")
             else:
                 _action(hero_action.text, _primary_move().get("call", Callable()), "Continue the current objective", true)
             _screen("Save & settings", "SaveLoadPanel", "Save, load and company controls")
@@ -636,7 +636,8 @@ func _refresh() -> void:
                     _action(name, Callable(self, "_choose_business").bind(i), detail, i == 0)
                 _screen("Market intelligence", "CustomerSegmentsUI", "Compare demand before you commit")
             else:
-                _screen("Operations", "ProductionControlPanel", "Production, inventory and throughput", true)
+                _screen("Operations", "BusinessOperationsPanel", "Buy inputs, produce, price and manage the operating company", true)
+                _screen("Production & equipment", "ProductionControlPanel", "Recipes, equipment condition, maintenance and automation")
                 _screen("People & demand", "EmployeePanel", "Staffing, assignments and development")
                 _screen("Market & customers", "CustomerSegmentsUI", "Demand, segments, pricing and marketing")
                 _screen("Finance & contracts", "FinancePanel", "Cash flow, debt and commercial commitments")
