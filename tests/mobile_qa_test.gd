@@ -83,7 +83,7 @@ func _test_world_tab(hud: Node) -> void:
     if actions == null: return
     check("WORLD tab has actionable controls", actions.get_child_count() > 0)
 
-func _test_gameplay_flow(_scene: Node, hud: Node) -> void:
+func _test_gameplay_flow(scene: Node, hud: Node) -> void:
     # Exercise the current direct mobile flow. The primary hero action owns the
     # acquisition/restoration sequence; deeper systems open focused workspaces.
     hud._set_tab(0)
@@ -122,11 +122,62 @@ func _test_gameplay_flow(_scene: Node, hud: Node) -> void:
 
     hud._set_tab(1)
     await process_frame
-    for label in ["Operations", "People & demand", "Market & customers", "Finance & contracts"]:
+    for label in ["Operations", "Production & equipment", "People & demand", "Market & customers", "Finance & contracts"]:
         var button := _find_button(hud, label)
         check("touch workspace exists: %s" % label, button != null)
         if button != null:
             check("touch workspace target >=44: %s" % label, button.size.x >= MIN_TOUCH and button.size.y >= MIN_TOUCH)
+
+    var operations_link := _find_button(hud, "Operations")
+    if operations_link != null:
+        operations_link.pressed.emit()
+        await process_frame
+        await process_frame
+    var manager := get_root().get_node_or_null("RenewUIScreenManager")
+    check("Operations opens BusinessOperationsPanel", manager != null and str(manager.get_active_screen_name()) == "BusinessOperationsPanel")
+    var operations := scene.get_node_or_null("UI/BusinessOperationsPanel")
+    check("BusinessOperationsPanel is mounted", operations != null)
+    if operations != null:
+        await _press_panel_button(operations, "BUY INPUTS")
+        await _press_panel_button(operations, "PRODUCE")
+        check("touch production creates finished goods", state != null and int(state.get_value("production", "finished_goods", 0)) > 0)
+        var before_price := int(state.get_value("businesses", "player_price", 0)) if state != null else 0
+        await _press_panel_button(operations, "CHANGE PRICE")
+        check("touch price action changes price", state != null and int(state.get_value("businesses", "player_price", 0)) != before_price)
+        await _press_panel_button(operations, "STAFF")
+
+    check("STAFF opens EmployeePanel", manager != null and str(manager.get_active_screen_name()) == "EmployeePanel")
+    var employee_panel := scene.get_node_or_null("UI/EmployeePanel")
+    if employee_panel != null:
+        await _press_panel_button(employee_panel, "HIRE")
+
+    if manager != null and manager.has_method("hide_all_screens"):
+        manager.hide_all_screens()
+    hud._set_tab(0)
+    hud._refresh()
+    await process_frame
+    await process_frame
+    await _exercise_primary_action(hud, "SELL GOODS")
+
+func _press_panel_button(panel: Node, label: String) -> void:
+    var button := _find_button_in_node(panel, label)
+    check("touch panel action exists: %s" % label, button != null)
+    if button != null:
+        check("touch panel target >=44: %s" % label, button.size.y >= MIN_TOUCH or button.custom_minimum_size.y >= MIN_TOUCH)
+        button.pressed.emit()
+        await process_frame
+        await process_frame
+
+func _find_button_in_node(node: Node, label: String) -> Button:
+    if node is Button:
+        var self_button := node as Button
+        if self_button.text.split("\n")[0].strip_edges().to_upper() == label.to_upper():
+            return self_button
+    for child in node.get_children():
+        var found := _find_button_in_node(child, label)
+        if found != null:
+            return found
+    return null
 
 func _exercise_primary_action(hud: Node, expected_label: String) -> void:
     var button := hud.get("hero_action") as Button
