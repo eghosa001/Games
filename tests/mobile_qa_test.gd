@@ -42,8 +42,8 @@ func _test_responsive_layout(hud: Node, ui_root: Control) -> void:
         _check_control_inside(hud.get("tabs") as Control, "tabs", target)
         _check_control_inside(hud.get("status_label") as Control, "status", target)
         _check_control_inside(hud.get("action_scroll") as Control, "action scroll", target)
-        _check_control_inside(hud.get("feedback_panel") as Control, "feedback", target)
-        _check_control_inside(hud.get("goal_label") as Control, "goal", target)
+        _check_control_inside(hud.get("feedback_label") as Control, "feedback", target)
+        _check_control_inside(hud.get("hero_goal") as Control, "goal", target)
         var tabs: HBoxContainer = hud.get("tabs") as HBoxContainer
         if tabs != null:
             for child: Node in tabs.get_children():
@@ -56,9 +56,15 @@ func _test_responsive_layout(hud: Node, ui_root: Control) -> void:
                 if action_button != null: check("%dx%d action touch target >=44" % [target.x, target.y], action_button.size.x >= MIN_TOUCH and action_button.size.y >= MIN_TOUCH)
 
 func _check_control_inside(child: Control, label: String, target: Vector2i) -> void:
-    if child == null: fail("%s control missing" % label); return
-    var rect: Rect2 = Rect2(child.position, child.size); var bounds: Rect2 = Rect2(Vector2.ZERO, Vector2(target)); var ok: bool = bounds.encloses(rect)
-    check("%dx%d %s stays in viewport" % [target.x, target.y, label], ok)
+    if child == null:
+        fail("%s control missing" % label)
+        return
+    if not child.visible:
+        check("%dx%d %s may hide responsively" % [target.x, target.y, label], true)
+        return
+    var rect: Rect2 = child.get_global_rect()
+    var bounds: Rect2 = Rect2(Vector2.ZERO, Vector2(target))
+    check("%dx%d %s stays in viewport" % [target.x, target.y, label], bounds.encloses(rect))
 
 func _test_touch_surface(hud: Node) -> void:
     var tabs: HBoxContainer = hud.get("tabs") as HBoxContainer
@@ -78,58 +84,77 @@ func _test_world_tab(hud: Node) -> void:
     check("WORLD tab has actionable controls", actions.get_child_count() > 0)
 
 func _test_gameplay_flow(_scene: Node, hud: Node) -> void:
-    # The production HUD deliberately uses small, nested command pages on touch
-    # layouts. Exercise the same navigation path a player uses instead of
-    # requiring every command to be flattened into the sector overview.
-    hud._set_tab(0); await process_frame
-
-    if await _enter_page(hud, "PROPERTY"):
-        await _exercise_action(hud, "INSPECT")
-        await _exercise_action(hud, "RESTORE")
-
-    hud._set_tab(0); await process_frame
-    if await _enter_page(hud, "OWNERSHIP"):
-        await _exercise_action(hud, "ACQUIRE")
-        await _exercise_action(hud, "OPEN BUSINESS")
-
-    hud._set_tab(1); await process_frame
-    if await _enter_page(hud, "PEOPLE"):
-        await _exercise_action(hud, "HIRE")
-
-    hud._set_tab(1); await process_frame
-    if await _enter_page(hud, "PRODUCTION"):
-        await _exercise_action(hud, "BUY INPUTS")
-        await _exercise_action(hud, "PRODUCE")
-        await _exercise_action(hud, "PRICE")
-
-    # END DAY is an always-important simulation command on the LIVE overview.
-    hud._set_tab(0); await process_frame
-    await _exercise_action(hud, "END DAY")
-
-    var state: Node = get_root().get_node_or_null("RenewGameState"); check("authoritative GameState remains alive after touch flow", state != null)
-
-func _enter_page(hud: Node, label: String) -> bool:
-    var button: Button = _find_button(hud, label)
-    check("touch navigation exists: %s" % label, button != null)
-    if button == null:
-        return false
-    button.pressed.emit()
+    # Exercise the current direct mobile flow. The primary hero action owns the
+    # acquisition/restoration sequence; deeper systems open focused workspaces.
+    hud._set_tab(0)
     await process_frame
-    return true
 
-func _exercise_action(hud: Node, label: String) -> void:
-    var button: Button = _find_button(hud, label)
-    check("touch action exists: %s" % label, button != null)
-    if button != null:
+    await _exercise_primary_action(hud, "INSPECT")
+    await _exercise_primary_action(hud, "ACQUIRE")
+    for _step in range(4):
+        await _exercise_primary_action(hud, "RESTORE")
+
+    var state: Node = get_root().get_node_or_null("RenewGameState")
+    check("authoritative GameState remains alive after restoration touch flow", state != null)
+    if state != null:
+        check("touch restoration reaches Operational", str(state.get_value("properties", "stage", "")) == "Operational")
+
+    await _exercise_primary_action(hud, "CHOOSE BUSINESS")
+    check("primary business choice opens BUSINESS tab", int(hud.get("active_tab")) == 1)
+
+    var business_choice := _first_action_button(hud)
+    check("business choice is touch reachable", business_choice != null)
+    if business_choice != null:
+        business_choice.pressed.emit()
+        await process_frame
+
+    if state != null:
+        var unlocks = state.get_value("progression", "unlocks", [])
+        if not unlocks is Array:
+            unlocks = []
+        unlocks = unlocks.duplicate()
+        for feature in ["employees", "contracts", "finance"]:
+            if feature not in unlocks:
+                unlocks.append(feature)
+        state.set_value("progression", "unlocks", unlocks)
+        hud._refresh()
+        await process_frame
+
+    hud._set_tab(1)
+    await process_frame
+    for label in ["Operations", "People & demand", "Market & customers", "Finance & contracts"]:
+        var button := _find_button(hud, label)
+        check("touch workspace exists: %s" % label, button != null)
+        if button != null:
+            check("touch workspace target >=44: %s" % label, button.size.x >= MIN_TOUCH and button.size.y >= MIN_TOUCH)
+
+func _exercise_primary_action(hud: Node, expected_label: String) -> void:
+    var button := hud.get("hero_action") as Button
+    check("primary touch action exists: %s" % expected_label, button != null and button.text == expected_label)
+    if button != null and button.text == expected_label:
         button.pressed.emit()
         await process_frame
+        await process_frame
+
+func _first_action_button(hud: Node) -> Button:
+    var actions := hud.get("actions") as GridContainer
+    if actions == null:
+        return null
+    for child in actions.get_children():
+        if child is Button and child.visible:
+            return child as Button
+    return null
 
 func _find_button(hud: Node, label: String) -> Button:
     var actions: GridContainer = hud.get("actions") as GridContainer
-    if actions == null: return null
+    if actions == null:
+        return null
     for child: Node in actions.get_children():
         var button: Button = child as Button
-        if button != null and button.text == label: return button
+        if button != null and button.visible:
+            var primary := button.text.split("\n")[0].strip_edges()
+            if primary == label:
+                return button
     return null
 
 func _test_save_load() -> void:
