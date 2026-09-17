@@ -52,6 +52,7 @@ static func snapshot_from_values(property: Dictionary, owned: bool, stage: Strin
 static func snapshot_from_game_state(state: Node) -> Dictionary:
     if state == null or not state.has_method("get_value"):
         return snapshot_from_values({}, false, "Neglected", 0, 0, 0, 0, false, 0)
+
     var catalog = state.get_value("properties", "catalog", [])
     var selected := maxi(0, int(state.get_value("properties", "selected_property", 0)))
     var property: Dictionary = {}
@@ -60,14 +61,29 @@ static func snapshot_from_game_state(state: Node) -> Dictionary:
         var value = catalog[selected]
         if value is Dictionary:
             property = value
+
+    var has_selected_property := not property.is_empty()
+    var owned := bool(property.get("owned", false)) if has_selected_property else bool(state.get_value("properties", "owned", false))
+    var stage := str(property.get("stage", "Neglected")) if has_selected_property else str(state.get_value("properties", "stage", "Neglected"))
+    var cleaning := int(property.get("cleaning", 0)) if has_selected_property else int(state.get_value("properties", "cleaning", 0))
+    var repair := int(property.get("repair", 0)) if has_selected_property else int(state.get_value("properties", "repair", 0))
+    var painting := int(property.get("painting", 0)) if has_selected_property else int(state.get_value("properties", "painting", 0))
+    var furnishing := int(property.get("furnishing", 0)) if has_selected_property else int(state.get_value("properties", "furnishing", 0))
+
+    var business_open := false
+    if has_selected_property and bool(state.get_value("businesses", "business_open", false)):
+        var origin_property_id := str(state.get_value("businesses", "origin_property_id", ""))
+        var selected_property_id := str(property.get("id", ""))
+        business_open = owned and selected_property_id != "" and selected_property_id == origin_property_id
+
     return snapshot_from_values(
         property,
-        bool(state.get_value("properties", "owned", false)),
-        str(state.get_value("properties", "stage", "Neglected")),
-        int(property.get("cleaning", state.get_value("properties", "cleaning", 0))),
-        int(property.get("repair", state.get_value("properties", "repair", 0))),
-        int(property.get("painting", state.get_value("properties", "painting", 0))),
-        int(property.get("furnishing", state.get_value("properties", "furnishing", 0))),
-        bool(state.get_value("businesses", "business_open", false)),
+        owned,
+        stage,
+        cleaning,
+        repair,
+        painting,
+        furnishing,
+        business_open,
         selected
     )
