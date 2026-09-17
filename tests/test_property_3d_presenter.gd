@@ -11,6 +11,8 @@ func _run() -> void:
     presenter.apply_snapshot({"stage":"painted", "archetype":"factory", "business_open":false}, false)
     check("presenter stores visual stage", presenter.get_visual_stage() == "painted")
     check("factory uses industrial profile", presenter.get_archetype_profile() == "industrial_stack")
+    presenter.apply_snapshot({"stage":"operational", "archetype":"factory", "business_open":true}, false)
+    check("operational property enables machinery", presenter.is_operational_motion_enabled())
     presenter.apply_snapshot({}, false)
     check("warehouse fallback is safe", presenter.get_visual_stage() == "neglected" and presenter.get_archetype_profile() == "warehouse_bays")
     presenter.free()
