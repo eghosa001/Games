@@ -64,6 +64,17 @@ func run() -> void:
         game.free()
         quit(1)
         return
+    var state = root.get_node_or_null("RenewGameState")
+    if state != null:
+        var unlocks = state.get_value("progression", "unlocks", [])
+        if not unlocks is Array:
+            unlocks = []
+        unlocks = unlocks.duplicate()
+        if "competitors" not in unlocks:
+            unlocks.append("competitors")
+        state.set_value("progression", "unlocks", unlocks)
+        hud._refresh()
+        await process_frame
 
     check(await _press_empire_competition(hud), "Competition workspace reachable through EMPIRE")
     var manager = get_root().get_node_or_null("RenewUIScreenManager")

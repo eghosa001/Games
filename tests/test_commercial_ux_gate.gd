@@ -30,6 +30,12 @@ func _run() -> void:
     if hud == null:
         _finish()
         return
+    var state = root.get_node_or_null("RenewGameState")
+    if state != null:
+        state.set_value("progression", "level", 10)
+        state.set_value("progression", "unlocks", ["employees","contracts","finance","regions","branches","supply_chain","competitors","ownership","alliances","diplomacy","infrastructure","technology","research","acquisitions","headquarters","world_power","legacy","prestige"])
+        hud._refresh()
+        await process_frame
 
     await _check_primary_navigation(hud)
     await _check_direct_action_density(hud)
