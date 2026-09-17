@@ -17,6 +17,8 @@ var _roof: MeshInstance3D
 var _sign: MeshInstance3D
 var _windows: Array[MeshInstance3D] = []
 var _lights: Array[OmniLight3D] = []
+var _variant_walls: Array[MeshInstance3D] = []
+var _variant_glass: Array[MeshInstance3D] = []
 var _machinery_parts: Array[Node3D] = []
 var _archetype_roots: Dictionary = {}
 
@@ -41,7 +43,7 @@ func _process(delta: float) -> void:
     _motion_time += delta
     for index in range(_machinery_parts.size()):
         var part := _machinery_parts[index]
-        if part == null:
+        if part == null or not part.is_visible_in_tree():
             continue
         part.rotation.z += delta * (0.8 + float(index) * 0.22)
         part.rotation.y = sin(_motion_time * 0.8 + float(index)) * 0.08
@@ -134,11 +136,13 @@ func _build_once() -> void:
 func _build_archetype_variants() -> void:
     var warehouse := _new_variant_root("WarehouseVariant")
     _make_box("DockFrame", Vector3(7.8, 0.28, 0.35), Vector3(-0.35, 3.45, 3.48), _metal, warehouse)
-    _make_box("RearStorage", Vector3(3.0, 2.1, 2.5), Vector3(-3.9, 1.2, -3.8), _wall_repaired, warehouse)
+    var warehouse_rear := _make_box("RearStorage", Vector3(3.0, 2.1, 2.5), Vector3(-3.9, 1.2, -3.8), _wall_repaired, warehouse)
+    _variant_walls.append(warehouse_rear)
     _archetype_roots["warehouse"] = warehouse
 
     var factory := _new_variant_root("FactoryVariant")
-    _make_box("FactoryHall", Vector3(5.4, 2.5, 3.2), Vector3(-2.2, 5.1, -0.7), _wall_repaired, factory)
+    var factory_hall := _make_box("FactoryHall", Vector3(5.4, 2.5, 3.2), Vector3(-2.2, 5.1, -0.7), _wall_repaired, factory)
+    _variant_walls.append(factory_hall)
     for x in [-3.4, -1.7, 2.9]:
         _make_cylinder("Stack", 0.42, 4.2, Vector3(x, 6.6, -1.4), _metal, factory)
     _make_cylinder("ProcessTank", 1.0, 2.4, Vector3(4.2, 1.4, -2.0), _metal, factory)
@@ -153,14 +157,17 @@ func _build_archetype_variants() -> void:
     _archetype_roots["factory"] = factory
 
     var office := _new_variant_root("OfficeVariant")
-    _make_box("OfficeTower", Vector3(5.4, 6.8, 4.3), Vector3(0.6, 4.7, -0.4), _wall_repaired, office)
+    var office_tower := _make_box("OfficeTower", Vector3(5.4, 6.8, 4.3), Vector3(0.6, 4.7, -0.4), _wall_repaired, office)
+    _variant_walls.append(office_tower)
     for floor_index in range(4):
-        _make_box("GlassBand%d" % floor_index, Vector3(4.9, 0.58, 0.14), Vector3(0.6, 2.4 + floor_index * 1.4, 1.8), _glass_off, office)
+        var glass_band := _make_box("GlassBand%d" % floor_index, Vector3(4.9, 0.58, 0.14), Vector3(0.6, 2.4 + floor_index * 1.4, 1.8), _glass_off, office)
+        _variant_glass.append(glass_band)
     _make_box("OfficeCrown", Vector3(5.8, 0.35, 4.7), Vector3(0.6, 8.15, -0.4), _metal, office)
     _archetype_roots["office"] = office
 
     var retail := _new_variant_root("RetailVariant")
-    _make_box("StorefrontGlass", Vector3(7.1, 2.15, 0.16), Vector3(0.0, 1.55, 2.98), _glass_off, retail)
+    var storefront_glass := _make_box("StorefrontGlass", Vector3(7.1, 2.15, 0.16), Vector3(0.0, 1.55, 2.98), _glass_off, retail)
+    _variant_glass.append(storefront_glass)
     _make_box("RetailCanopy", Vector3(8.4, 0.32, 1.65), Vector3(0.0, 3.2, 3.55), _accent, retail)
     _make_box("RetailPylon", Vector3(1.1, 4.8, 0.6), Vector3(5.7, 2.4, 2.0), _metal, retail)
     _make_box("RetailSign", Vector3(2.1, 1.1, 0.22), Vector3(5.7, 4.5, 2.0), _accent, retail)
@@ -244,24 +251,30 @@ func _apply_visual_state(animate: bool) -> void:
     _operational_root.visible = rank >= 4
     _apply_archetype_visibility()
 
-    if rank <= 0:
-        _body.material_override = _wall_dirty
-        _roof.material_override = _roof_dirty
-    elif rank == 1:
-        _body.material_override = _wall_repaired
-        _roof.material_override = _roof_dirty
+    var wall_material: StandardMaterial3D = _wall_dirty
+    var roof_material: StandardMaterial3D = _roof_dirty
+    if rank == 1:
+        wall_material = _wall_repaired
     elif rank == 2:
-        _body.material_override = _wall_repaired
-        _roof.material_override = _roof_clean
-    else:
-        _body.material_override = _wall_painted
-        _roof.material_override = _roof_clean
+        wall_material = _wall_repaired
+        roof_material = _roof_clean
+    elif rank >= 3:
+        wall_material = _wall_painted
+        roof_material = _roof_clean
+    _body.material_override = wall_material
+    _roof.material_override = roof_material
+    for surface in _variant_walls:
+        surface.material_override = wall_material
 
     var active := rank >= 5 and _business_open
+    var glass_material: StandardMaterial3D = _glass_on if active else _glass_off
     for window in _windows:
-        window.material_override = _glass_on if active else _glass_off
+        window.material_override = glass_material
+    for window in _variant_glass:
+        window.material_override = glass_material
     for light in _lights:
         light.visible = active
+    set_process(_operational_motion_enabled)
 
     var target_scale := _archetype_scale(_archetype)
     if animate:

@@ -142,13 +142,23 @@ func _visual_stage(property: Dictionary, owned: bool) -> String:
 func _draw_site_overlay(property: Dictionary, stage: String) -> void:
     var viewport_size := get_viewport_rect().size
     var w := maxf(viewport_size.x, 320.0)
-    var h := maxf(viewport_size.y, 568.0)
-    var progress := _stage_progress(stage)
-    draw_rect(Rect2(0, h - 116.0, w, 116.0), Color(0.02, 0.04, 0.05, 0.30), true)
-    _draw_site_lights(w, h, progress)
-    _draw_construction_activity(w, h, progress)
-    _draw_stage_banner(w, h, property, stage, progress)
-    _draw_progress_card(w, h, property, stage)
+    var h := _hud_height_for_viewport(viewport_size.y)
+    var stage_progress := _stage_progress(stage)
+    var actual_progress := _restoration_percent(property)
+    var compact := _uses_compact_layout(w)
+    var using_3d := _using_3d_world()
+    if not using_3d:
+        draw_rect(Rect2(0, h - 116.0, w, 116.0), Color(0.02, 0.04, 0.05, 0.30), true)
+        _draw_site_lights(w, h, stage_progress)
+        _draw_construction_activity(w, h, stage_progress)
+    elif not compact:
+        draw_rect(Rect2(0, h - 116.0, w, 116.0), Color(0.02, 0.04, 0.05, 0.14), true)
+
+    if compact:
+        _draw_compact_status_card(w, h, property, stage, actual_progress)
+    else:
+        _draw_stage_banner(w, h, property, stage, actual_progress)
+        _draw_progress_card(w, h, property, stage)
 
 func _draw_site_lights(w: float, h: float, progress: float) -> void:
     var intensity := 0.10 + progress * 0.20
@@ -175,7 +185,7 @@ func _draw_construction_activity(w: float, h: float, progress: float) -> void:
         var sway := sin(_time * 0.9 + i) * 5.0
         draw_line(Vector2(x, h - 120.0), Vector2(x + sway, h - 148.0), Color(SKY.r, SKY.g, SKY.b, 0.34 * activity), 2.0)
 
-func _draw_stage_banner(w: float, h: float, property: Dictionary, stage: String, progress: float) -> void:
+func _draw_stage_banner(w: float, h: float, property: Dictionary, stage: String, actual_progress: int) -> void:
     var font := ThemeDB.fallback_font
     var card := Rect2(18.0, h - 104.0, minf(330.0, w - 36.0), 76.0)
     draw_rect(card, PANEL, true)
@@ -183,7 +193,33 @@ func _draw_stage_banner(w: float, h: float, property: Dictionary, stage: String,
     draw_string(font, card.position + Vector2(16, 22), stage.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, card.size.x - 32, 16, TEXT)
     draw_string(font, card.position + Vector2(16, 41), str(property.get("name", "Acquired Property")), HORIZONTAL_ALIGNMENT_LEFT, card.size.x - 32, 11, MUTED)
     draw_string(font, card.position + Vector2(16, 61), _stage_caption(stage), HORIZONTAL_ALIGNMENT_LEFT, card.size.x - 32, 10, TEXT)
-    draw_string(font, card.position + Vector2(card.size.x - 58, 22), "%d%%" % int(progress * 100.0), HORIZONTAL_ALIGNMENT_RIGHT, 42, 13, GOLD)
+    draw_string(font, card.position + Vector2(card.size.x - 58, 22), "%d%%" % actual_progress, HORIZONTAL_ALIGNMENT_RIGHT, 42, 13, GOLD)
+
+func _restoration_percent(property: Dictionary) -> int:
+    var total := 0
+    for step in STEPS:
+        total += clampi(int(property.get(step, 0)), 0, 100)
+    return int(round(float(total) / float(STEPS.size())))
+
+func _hud_height_for_viewport(viewport_height: float) -> float:
+    return maxf(viewport_height, 240.0)
+
+func _uses_compact_layout(viewport_width: float) -> bool:
+    return viewport_width < 760.0
+
+func _draw_compact_status_card(w: float, h: float, property: Dictionary, stage: String, actual_progress: int) -> void:
+    var font := ThemeDB.fallback_font
+    var card := Rect2(12.0, maxf(8.0, h - 102.0), maxf(120.0, w - 24.0), 90.0)
+    var accent := GOLD if stage == "Operational" else GREEN
+    draw_rect(card, PANEL, true)
+    draw_rect(Rect2(card.position, Vector2(3.0, card.size.y)), accent, true)
+    draw_string(font, card.position + Vector2(14.0, 21.0), stage.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, card.size.x - 86.0, 14, TEXT)
+    draw_string(font, card.position + Vector2(card.size.x - 58.0, 21.0), "%d%%" % actual_progress, HORIZONTAL_ALIGNMENT_RIGHT, 44.0, 12, GOLD)
+    draw_string(font, card.position + Vector2(14.0, 42.0), str(property.get("name", "Acquired Property")), HORIZONTAL_ALIGNMENT_LEFT, card.size.x - 28.0, 10, MUTED)
+    var bar := Rect2(card.position + Vector2(14.0, 52.0), Vector2(maxf(80.0, card.size.x - 28.0), 7.0))
+    draw_rect(bar, Color("16282e"), true)
+    draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(float(actual_progress) / 100.0, 0.0, 1.0), bar.size.y)), accent, true)
+    draw_string(font, card.position + Vector2(14.0, 80.0), _stage_caption(stage), HORIZONTAL_ALIGNMENT_LEFT, card.size.x - 28.0, 9, TEXT)
 
 func _stage_caption(stage: String) -> String:
     match stage:

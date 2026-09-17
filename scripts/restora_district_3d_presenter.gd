@@ -167,6 +167,7 @@ func _apply_visual_state() -> void:
     var rank := _stage_rank(_visual_stage)
     _construction_root.visible = rank >= 1 and rank < 5
     _operations_root.visible = _activity_enabled
+    set_process(_construction_root.visible or _activity_enabled)
 
 func _animate_construction() -> void:
     if not _construction_root.visible:

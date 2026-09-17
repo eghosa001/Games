@@ -6,7 +6,7 @@ static func stage_from_values(owned: bool, stage: String, cleaning: int, repair:
         return "neglected"
     if furnishing >= 100:
         return "operational"
-    if furnishing > 0:
+    if furnishing >= 50:
         return "furnished"
     if painting >= 100:
         return "painted"
@@ -29,13 +29,17 @@ static func stage_from_values(owned: bool, stage: String, cleaning: int, repair:
 
 static func archetype_from_property(property: Dictionary) -> String:
     var kind := str(property.get("type", property.get("kind", property.get("category", "warehouse")))).to_lower()
-    if kind.contains("factory") or kind.contains("industrial") or kind.contains("manufactur"):
+    var name := str(property.get("name", "")).to_lower()
+    var descriptor := "%s %s" % [kind, name]
+    if descriptor.contains("factory") or descriptor.contains("industrial") or descriptor.contains("manufactur") or descriptor.contains("workshop"):
         return "factory"
-    if kind.contains("office") or kind.contains("headquarter") or kind == "hq":
+    if descriptor.contains("office") or descriptor.contains("headquarter") or kind == "hq":
         return "office"
-    if kind.contains("retail") or kind.contains("shop") or kind.contains("store"):
+    if kind.contains("commercial"):
         return "retail"
-    if kind.contains("resource") or kind.contains("mine") or kind.contains("farm") or kind.contains("fuel"):
+    if descriptor.contains("retail") or descriptor.contains("shop") or descriptor.contains("store") or descriptor.contains("market"):
+        return "retail"
+    if descriptor.contains("resource") or descriptor.contains("mine") or descriptor.contains("farm") or descriptor.contains("fuel"):
         return "resource"
     return "warehouse"
 

@@ -1,5 +1,6 @@
 extends SceneTree
 
+const PropertyVisual = preload("res://scripts/property_visual.gd")
 var failed := 0
 
 func _initialize() -> void:
@@ -13,6 +14,10 @@ func _run() -> void:
     check("portfolio selector remains", main_text.contains("[node name=\"PortfolioPanel\" type=\"CanvasLayer\" parent=\"UI\"]"))
     var controller_text := FileAccess.get_file_as_string("res://scripts/restora_world_3d_controller.gd")
     check("3D mode suppresses legacy property map", controller_text.contains("../World/PropertyMap"))
+    var hud := PropertyVisual.new()
+    check("320px restoration HUD uses compact layout", hud._uses_compact_layout(320.0))
+    check("480px viewport height stays on-screen", is_equal_approx(hud._hud_height_for_viewport(480.0), 480.0))
+    hud.free()
     var overlay_text := FileAccess.get_file_as_string("res://scripts/property_visual.gd")
     check("restoration HUD uses selected property ownership", overlay_text.contains("property.get(\"owned\""))
     var project_text := FileAccess.get_file_as_string("res://project.godot")

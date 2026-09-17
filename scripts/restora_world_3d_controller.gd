@@ -82,6 +82,13 @@ func _update_camera_for_snapshot(previous: Dictionary, snapshot: Dictionary, ani
 
 func _apply_presentation_visibility() -> void:
     visible = presentation_enabled
+    if _camera != null:
+        _camera.current = presentation_enabled
+    var child_process_mode := Node.PROCESS_MODE_INHERIT if presentation_enabled else Node.PROCESS_MODE_DISABLED
+    if _presenter != null:
+        _presenter.process_mode = child_process_mode
+    if _district != null:
+        _district.process_mode = child_process_mode
     if _legacy_world_view != null:
         _legacy_world_view.visible = not presentation_enabled
     if _legacy_property_map != null:
