@@ -122,7 +122,7 @@ func _test_gameplay_flow(scene: Node, hud: Node) -> void:
 
     hud._set_tab(1)
     await process_frame
-    for label in ["Operations", "People & demand", "Market & customers", "Finance & contracts"]:
+    for label in ["Operations", "Production & equipment", "People & demand", "Market & customers", "Finance & contracts"]:
         var button := _find_button(hud, label)
         check("touch workspace exists: %s" % label, button != null)
         if button != null:
@@ -135,7 +135,37 @@ func _test_gameplay_flow(scene: Node, hud: Node) -> void:
         operations_link.pressed.emit()
         await process_frame
         await process_frame
-    check("Operations opens ProductionControlPanel", manager != null and manager.has_method("is_screen_open") and bool(manager.is_screen_open("ProductionControlPanel")))
+    check("Operations opens BusinessOperationsPanel", manager != null and manager.has_method("is_screen_open") and bool(manager.is_screen_open("BusinessOperationsPanel")))
+    var operations := scene.get_node_or_null("UI/BusinessOperationsPanel")
+    check("BusinessOperationsPanel is mounted", operations != null)
+    if operations != null:
+        await _press_panel_button(operations, "BUY INPUTS")
+        await _press_panel_button(operations, "PRODUCE")
+        check("touch production creates finished goods", state != null and int(state.get_value("production", "finished_goods", 0)) > 0)
+        var before_price := int(state.get_value("businesses", "player_price", 0)) if state != null else 0
+        await _press_panel_button(operations, "CHANGE PRICE")
+        check("touch price action changes price", state != null and int(state.get_value("businesses", "player_price", 0)) != before_price)
+        await _press_panel_button(operations, "STAFF")
+
+    check("STAFF opens EmployeePanel", manager != null and manager.has_method("is_screen_open") and bool(manager.is_screen_open("EmployeePanel")))
+    var employee_panel := scene.get_node_or_null("UI/EmployeePanel")
+    check("EmployeePanel is mounted", employee_panel != null)
+    if employee_panel != null:
+        await _press_panel_button(employee_panel, "HIRE")
+
+    if manager != null and manager.has_method("hide_all_screens"):
+        manager.hide_all_screens()
+    hud._set_tab(1)
+    hud._refresh()
+    await process_frame
+
+    var production_link := _find_button(hud, "Production & equipment")
+    check("Production workspace is touch reachable", production_link != null)
+    if production_link != null:
+        production_link.pressed.emit()
+        await process_frame
+        await process_frame
+    check("Production & equipment opens ProductionControlPanel", manager != null and manager.has_method("is_screen_open") and bool(manager.is_screen_open("ProductionControlPanel")))
     var production_panel := scene.get_node_or_null("UI/ProductionControlPanel")
     check("ProductionControlPanel is mounted", production_panel != null)
     if production_panel != null:
@@ -153,11 +183,9 @@ func _test_gameplay_flow(scene: Node, hud: Node) -> void:
         people_link.pressed.emit()
         await process_frame
         await process_frame
-    check("People & demand opens EmployeePanel", manager != null and str(manager.get_active_screen_name()) == "EmployeePanel")
-    var employee_panel := scene.get_node_or_null("UI/EmployeePanel")
-    check("EmployeePanel is mounted", employee_panel != null)
-    if employee_panel != null:
-        await _press_panel_button(employee_panel, "HIRE")
+    check("People & demand opens EmployeePanel", manager != null and manager.has_method("is_screen_open") and bool(manager.is_screen_open("EmployeePanel")))
+    var people_panel := scene.get_node_or_null("UI/EmployeePanel")
+    check("EmployeePanel remains mounted through People route", people_panel != null)
 
     if manager != null and manager.has_method("hide_all_screens"):
         manager.hide_all_screens()
