@@ -31,6 +31,9 @@ func _run() -> void:
     var mirror_cash := int(state.get_value("economy", "cash", 0))
     check(game_cash == 35000, "Real new game starts with $35,000 (game=$%d finance=$%d mirror=$%d)" % [game_cash, finance_cash, mirror_cash])
     check(mirror_cash == game_cash, "Cash mirror matches FinanceSystem (game=$%d finance=$%d mirror=$%d)" % [game_cash, finance_cash, mirror_cash])
+    var balance_source := FileAccess.get_file_as_string("res://scripts/game_balance.gd")
+    check(not balance_source.contains("record_equity("), "Startup balance helper does not add extra equity")
+    check(not balance_source.contains("game.stages ="), "Startup balance helper leaves restoration stages authoritative")
 
     game.inspect_property()
     game.acquire_property()
