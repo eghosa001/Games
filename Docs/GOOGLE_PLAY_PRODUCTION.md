@@ -55,6 +55,12 @@ For every Play upload:
 
 Never reuse an old version code.
 
+## Advertising ID declaration
+
+The current repository does not ship a Google Mobile Ads SDK or production ad IDs, so do not claim that this artifact uses Advertising ID merely because monetization is planned.
+
+When the advertising provider is actually integrated, inspect the **merged release manifest**. If the shipped SDK uses Google Play services Advertising ID, the release artifact must contain `com.google.android.gms.permission.AD_ID` (either directly or through the SDK manifest), and the Play Console Advertising ID declaration must say the app uses it. Keep the declaration aligned with the artifact uploaded to each track.
+
 ## Monetization activation
 
 Monetization is intentionally disabled in source until real account-side configuration exists. Before enabling it:
