@@ -57,13 +57,17 @@ func privacy_policy_url() -> String:
 func register_provider(service: Node) -> void:
     provider = service
     monetization_status_changed.emit()
-    if _cached_premium_claim and subscriptions_enabled() and provider_ready_for_billing() and not _premium_revalidation_pending:
+    # Always ask the billing provider for the authoritative entitlement when
+    # subscriptions are enabled. This restores purchases after reinstall or on
+    # a new device even when there is no local cache to hint at prior Premium.
+    if subscriptions_enabled() and provider_ready_for_billing() and not _premium_revalidation_pending:
         _premium_revalidation_pending = true
         provider.restore_purchases(Callable(self, "_on_restore_result"))
 
 func unregister_provider(service: Node) -> void:
     if provider == service:
         provider = null
+        _premium_revalidation_pending = false
         monetization_status_changed.emit()
 
 func provider_ready_for_rewarded() -> bool:
