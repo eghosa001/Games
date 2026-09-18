@@ -24,6 +24,7 @@ var _legacy_world_view: CanvasItem
 var _legacy_property_map: CanvasItem
 var _legacy_world_renderers: Array[CanvasItem] = []
 var _camera_target := Vector3(0.0, 1.8, 0.0)
+var _camera_tween: Tween
 
 func _ready() -> void:
     _presenter = get_node_or_null("Properties/ActiveProperty3D")
@@ -87,12 +88,14 @@ func _update_camera_for_snapshot(previous: Dictionary, snapshot: Dictionary, ani
         desired = Vector3(11.2, 7.2, 12.7)
     if stage == "operational" and business_open:
         desired = Vector3(10.8, 6.8, 12.0)
+    if _camera_tween != null and _camera_tween.is_valid():
+        _camera_tween.kill()
     if not animate:
         _camera.position = desired
         return
-    var tween := create_tween()
-    tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-    tween.tween_property(_camera, "position", desired, 0.55)
+    _camera_tween = create_tween()
+    _camera_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+    _camera_tween.tween_property(_camera, "position", desired, 0.55)
 
 func _apply_presentation_visibility() -> void:
     visible = presentation_enabled
