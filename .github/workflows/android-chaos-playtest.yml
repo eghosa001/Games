@@ -31,7 +31,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -135,7 +135,7 @@ jobs:
 
       - name: Upload chaos evidence
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: RENEW-Android-Chaos-${{ github.run_number }}
           path: |
