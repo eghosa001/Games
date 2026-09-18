@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reliable APK installation for the RENEW Android AI playtest CI job.
+"""Reliable APK installation for the RESTORA Android AI playtest CI job.
 
 Captures the real adb install error, retries transient failures, and always writes
 an infrastructure QA report when installation cannot proceed so later workflow
@@ -37,7 +37,7 @@ def write_failure_report(out_dir: Path, package: str, apk: Path, attempts: list[
     finding = {
         "severity": "critical",
         "kind": "infrastructure-apk-install",
-        "title": "Android emulator could not install the RENEW QA APK",
+        "title": "Android emulator could not install the RESTORA QA APK",
         "evidence": evidence,
         "reproduction": "Run the Android AI Playtest workflow and inspect the APK install diagnostics before the playtest step.",
     }
@@ -63,14 +63,14 @@ def write_failure_report(out_dir: Path, package: str, apk: Path, attempts: list[
     }
     (out_dir / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     (out_dir / "adb-install.txt").write_text(evidence + "\n", encoding="utf-8")
-    md = f"""# RENEW Android AI Playtest Report
+    md = f"""# RESTORA Android AI Playtest Report
 
 - Result: **INFRASTRUCTURE FAILURE**
 - Package: `{package}`
 - APK: `{apk}`
 - Fingerprint: `{fingerprint}`
 
-## [CRITICAL] Android emulator could not install the RENEW QA APK
+## [CRITICAL] Android emulator could not install the RESTORA QA APK
 
 The gameplay agent did not start because Android package installation failed after retries. This is an emulator/installation failure, not a gameplay finding.
 
