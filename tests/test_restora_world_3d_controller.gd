@@ -12,6 +12,8 @@ func _run() -> void:
     check("missing state returns warehouse fallback", snapshot.get("archetype") == "warehouse")
     check("missing state returns neglected fallback", snapshot.get("stage") == "neglected")
     check("controller polling interval is mobile friendly", controller.poll_interval >= 0.10)
+    var source := FileAccess.get_file_as_string("res://scripts/restora_world_3d_controller.gd")
+    check("camera transition cancels stale tween", source.contains("_camera_tween.kill()"))
     var expected_hidden_renderers := [
         "../World/EmpireController",
         "../World/Corporate",

@@ -21,10 +21,13 @@ func _run() -> void:
     check("stable package identifier is configured", text.contains("package/unique_name=\"com.eghosa.renew\""))
     check("Restora package display name is configured", text.contains("package/name=\"Restora\""))
     check("launcher app is enabled", text.contains("package/show_as_launcher_app=true"))
+    check("adaptive icon foreground is configured", text.contains("launcher_icons/adaptive_foreground_432x432=\"res://Assets/renew_icon_foreground.svg\""))
+    check("adaptive icon background is configured", text.contains("launcher_icons/adaptive_background_432x432=\"res://Assets/renew_icon_background.svg\""))
+    check("Android 13 themed monochrome icon is configured", text.contains("launcher_icons/adaptive_monochrome_432x432=\"res://Assets/renew_icon_monochrome.svg\""))
     check("release version code exists", text.contains("version/code=1"))
     check("release semantic version exists", text.contains("version/name=\"1.0.0\""))
-    check("internet permission is enabled for opt-in monetization", text.contains("permissions/internet=true"))
-    check("network-state permission is enabled for opt-in monetization", text.contains("permissions/access_network_state=true"))
+    check("internet permission stays disabled until a network SDK ships", text.contains("permissions/internet=false"))
+    check("network-state permission stays disabled until a network SDK ships", text.contains("permissions/access_network_state=false"))
     check("Wi-Fi-state permission remains disabled", text.contains("permissions/access_wifi_state=false"))
     check("Android backup is disabled", text.contains("user_data_backup/allow=false"))
 
@@ -45,7 +48,7 @@ func _run() -> void:
     check("no undeclared analytics/tracking implementation exists", not analytics_present)
 
     print("--- ANDROID RELEASE CONFIG SUMMARY ---")
-    print("Checks: %d | Failures: %d" % [28, failures.size()])
+    print("Checks: %d | Failures: %d" % [31, failures.size()])
     for failure in failures:
         print("FAILED: %s" % failure)
     if failures.size() > 0:

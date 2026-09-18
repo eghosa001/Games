@@ -6,7 +6,7 @@ RENEW now has one canonical automated release decision: `.github/workflows/renew
 
 A commit on `main` is **automation-ready for release** only when all of the following succeed for the same commit SHA:
 
-1. **RENEW Godot Tests** — master game-plan coverage, mobile QA, fast regression suite, strict rendered quality gate, UI matrix, long soak, extreme soak and long-running balance suites.
+1. **RENEW Godot Tests** — core regression tests, master game-plan coverage, mobile QA and the rendered visual-quality gate. The normal per-commit workflow deliberately skips the long soak, extreme soak, exhaustive UI matrix, visual UI matrix and other long-running suites.
 2. **Godot Web Export** — import, release validation, clean Web export and deployment checks.
 3. **RENEW Android Export** — Android release configuration, smoke/new-game validation and export checks.
 4. **Live Browser QA** — the post-Web-export browser run against the deployed GitHub Pages build, including desktop/opening-loop/mobile screenshots, runtime-error detection and pixel-region assertions.
@@ -21,9 +21,9 @@ Documentation, file presence and unchecked roadmap boxes are not release evidenc
 |---|---|
 | Core restoration → operation loop | `tests/test_master_game_plan_coverage.gd`, `tests/test_new_game_flow.gd`, `tests/release/test_release_smoke.gd` |
 | Architecture/service integration | `tests/test_architecture_integrity.gd`, `tests/test_production_readiness_integration.gd` |
-| Persistence/save-load durability | fast regression suite plus `tests/test_long_soak.gd` and save-edge tests |
-| Economy/balance over time | `tests/long_running/test_30_60_180_365_day_balance.gd` |
-| Long-session stability | `tests/test_long_soak.gd`, `tests/test_extreme_soak.gd` |
+| Persistence/save-load durability | fast regression and save-edge tests; long-soak tests are additional deep-validation evidence |
+| Economy/balance over time | `tests/long_running/test_30_60_180_365_day_balance.gd` is a deep-validation suite, not part of the normal per-commit gate |
+| Long-session stability | `tests/test_long_soak.gd` and `tests/test_extreme_soak.gd` are deep-validation suites, not part of the normal per-commit gate |
 | Mobile layout/touch behavior | `tests/mobile_qa_test.gd`, rendered UI matrix and Live Browser QA 390×844 capture |
 | Visual presentation | `tests/test_quality_gate.gd`, `tests/test_visual_ui_matrix.gd`, `scripts/visual_assertions.py` |
 | Web release | `.github/workflows/web-export.yml` + post-deployment Live Browser QA |
@@ -37,8 +37,8 @@ Documentation, file presence and unchecked roadmap boxes are not release evidenc
 - Existing world presentation retained: restoration progress, business health, regions and supply network remain visible.
 - Existing goals, milestone celebrations and day-result reporting retained.
 - Release smoke test verifies the polished mobile UI is wired into `Main.tscn`.
-- Long-running 30/60/180/365-day balance validation is part of the slow CI suite.
-- A single release-gate workflow now aggregates the critical Godot, Web, Android and deployed-browser results.
+- Long-running 30/60/180/365-day balance validation remains available as a deep-validation suite; it is intentionally not run on every commit.
+- A single release-gate workflow aggregates the critical fast Godot, Web, Android and deployed-browser results.
 
 ## Human QA still required before store release
 
@@ -55,9 +55,10 @@ Automated readiness does **not** mean store-ready by itself. Before a public And
 
 ## Release rule
 
-The simulation architecture is regression-gated, but a release candidate is accepted only when:
+The simulation architecture is regression-gated, but a public release candidate is accepted only when:
 
-- **RENEW Release Gate is green for the exact candidate SHA**, and
+- **RENEW Release Gate is green for the exact candidate SHA**,
+- the deep validation appropriate to the release has been run (including long-session/balance suites for major releases), and
 - the physical-device/human QA checklist for that candidate has been completed.
 
-If either condition is missing, the build is not a release candidate yet.
+If any condition is missing, the build is not a release candidate yet.

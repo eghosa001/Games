@@ -151,10 +151,6 @@ func _advance_day_impl(state: Dictionary, context: Dictionary) -> Dictionary:
     var game_state = _game_state()
     if not bool(production_result.get("ok", false)):
         return {"ok": false, "message": str(production_result.get("message", "Production failed."))}
-    if game_state:
-        var production_message := str(game_state.get_value("company", "message", ""))
-        if production_message.find(" stopped:") >= 0:
-            return {"ok": false, "message": production_message}
     var finished_goods = int(state.get("finished_goods", 0))
     if game_state:
         state["finished_goods"] = int(game_state.get_value("production", "finished_goods", state.get("finished_goods", 0)))

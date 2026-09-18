@@ -1,4 +1,4 @@
-# RENEW V1 – Release Checklist
+# RESTORA V1 – Release Checklist
 
 ## ✅ Architecture & State (DONE)
 - [x] `GameState` is the single source of truth.
@@ -6,7 +6,7 @@
 - [x] `SaveSystem` uses canonical schema version 8.
 - [x] `main.gd` is a thin controller (UI compatibility preserved).
 
-## ✅ Balance (DONE – verified by existing Day-30 regression coverage)
+## ✅ Balance (DONE – real-start opening loop + Day-30 regression coverage)
 - [x] Furniture production is profitable.
 - [x] Starting cash = $35,000.
 - [x] Contract terms are fair.
@@ -40,13 +40,13 @@
 - [ ] Verify final Android permissions and package metadata.
 
 ## 📝 Store Metadata (PUBLISHING WORK)
-- [x] App name: RENEW.
+- [x] App name: Restora.
 - [x] Short description: "Build an empire from a neglected warehouse."
 - [ ] Capture final screenshots from the release build.
 - [ ] Publish privacy policy and terms of service.
 
 ## 🚀 Alpha / Soft Launch (POST-BUILD)
-- [ ] Closed Alpha with 50 testers.
+- [ ] If this is a personal Play developer account created after 13 November 2023, complete closed testing with at least 12 testers continuously opted in for 14 days before applying for production access.
 - [ ] Measure D1, D7, D30 retention.
 - [ ] Tune difficulty based on real player data.
 - [ ] Soft Launch (selected country).

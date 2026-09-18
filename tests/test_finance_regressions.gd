@@ -37,7 +37,7 @@ func run() -> void:
     await test_assumed_debt_does_not_create_cash()
     await test_asset_sale_is_investing_cash_flow_and_recognizes_gain_loss()
     await test_equity_buyback_reduces_equity_once()
-    print("\nRENEW FINANCE REGRESSION RESULT: %d passed, %d failed" % [passed, failed])
+    print("\nRESTORA FINANCE REGRESSION RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
 
 func test_interest_is_accrual_not_immediate_cash_outflow() -> void:
@@ -64,7 +64,7 @@ func test_accrued_interest_is_not_cash_flow_until_paid() -> void:
     var accrual = finance.settle_debt_day()
     var statement_after_accrual = finance.cash_flow_statement()
     check(float(statement_after_accrual["operating"]) == 0.0, "accrued interest is absent from operating cash flow before payment")
-    check(float(statement_after_accrual["net_change"]) == float(finance.cash - 25000), "cash-flow net change matches actual recorded cash movement")
+    check(float(statement_after_accrual["net_change"]) == float(finance.cash - 35000), "cash-flow net change matches actual recorded cash movement")
     check(finance.cash == cash_before, "cash remains unchanged after interest accrual")
     var payment = int(accrual["interest"])
     if payment > 0:
@@ -120,7 +120,6 @@ func test_multiple_loans_have_aggregate_scheduled_payment() -> void:
 
 func test_assumed_debt_does_not_create_cash() -> void:
     var finance = _finance()
-    finance.cash = 25000
     var before_cash = finance.cash
     var result = finance.assume_debt(12000, "merger target")
     check(bool(result.get("ok", false)), "assumed debt accepted")

@@ -7,6 +7,7 @@ var _business_open := false
 var _operational_motion_enabled := false
 var _built := false
 var _motion_time := 0.0
+var _building_tween: Tween
 
 var _building_root: Node3D
 var _detail_root: Node3D
@@ -288,11 +289,13 @@ func _apply_visual_state(animate: bool) -> void:
     set_process(_operational_motion_enabled)
 
     var target_scale := _archetype_scale(_archetype)
+    if _building_tween != null and _building_tween.is_valid():
+        _building_tween.kill()
     if animate:
         _building_root.scale = target_scale * 0.965
-        var tween := create_tween()
-        tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-        tween.tween_property(_building_root, "scale", target_scale, 0.34)
+        _building_tween = create_tween()
+        _building_tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+        _building_tween.tween_property(_building_root, "scale", target_scale, 0.34)
     else:
         _building_root.scale = target_scale
 

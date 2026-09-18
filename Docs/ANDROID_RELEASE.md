@@ -1,15 +1,15 @@
-# RENEW Android Release Gate
+# RESTORA Android Release Gate
 
 ## Automated in CI
 
 The repository contains an Android export preset and Android export workflow.
 
 - Godot: 4.7.2
-- Output: `build/RENEW-debug.apk`
+- Output: `build/Restora-debug.apk`
 - Package: `com.eghosa.renew`
 - ABI: ARM64 (`arm64-v8a`)
 - Minimum Android SDK: 24
-- Target Android SDK: 35
+- Target Android SDK: 36
 - Internet permission: disabled
 - Network-state permissions: disabled
 
@@ -19,7 +19,7 @@ The debug APK is intended for device QA. A signed store/release build still requ
 
 Requirements:
 - Godot `4.7.2` executable at the repository root
-- Android SDK with platform `android-35` and build tools installed
+- Android SDK with platform `android-36` and build tools `36.0.0` installed
 - Godot `4.7.2` export templates installed at `~/.local/share/godot/export_templates/4.7.2.stable`
 
 Set the SDK path and export:
@@ -27,15 +27,15 @@ Set the SDK path and export:
 ```sh
 export ANDROID_HOME=/path/to/android-sdk
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
-./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --export-debug "Android" build/RENEW-debug.apk
+./Godot_v4.7.2-stable_linux.x86_64 --headless --path . --export-debug "Android" build/Restora-debug.apk
 ```
 
 Verify the result:
 
 ```sh
-test -s build/RENEW-debug.apk
-sha256sum build/RENEW-debug.apk
-$ANDROID_HOME/build-tools/35.0.1/apksigner verify --verbose build/RENEW-debug.apk
+test -s build/Restora-debug.apk
+sha256sum build/Restora-debug.apk
+$ANDROID_HOME/build-tools/36.0.0/apksigner verify --verbose build/Restora-debug.apk
 ```
 
 ## Physical-device matrix
@@ -79,7 +79,7 @@ Repeat the same journey and verify:
 3. Own at least one passive asset and note its hourly run rate.
 4. Save, background and resume the app.
 5. Confirm demand usage and the passive settlement clock were not reset or duplicated.
-6. Force-close and reopen RENEW.
+6. Force-close and reopen RESTORA.
 7. Confirm the latest save restores the same real-time state.
 8. If enough real time elapsed, confirm only the elapsed passive amount is credited.
 9. Confirm offline catch-up is capped at 24 hours.
@@ -87,7 +87,7 @@ Repeat the same journey and verify:
 
 ## Internet / analytics verification
 
-RENEW currently has no network analytics implementation in `scripts/`, so the Android preset explicitly requests **no Internet permission**. This is the preferred privacy/minimal-permission configuration until a real analytics provider is intentionally added.
+RESTORA currently has no network analytics implementation in `scripts/`, so the Android preset explicitly requests **no Internet permission**. This is the preferred privacy/minimal-permission configuration until a real analytics provider is intentionally added.
 
 If analytics is added later, document the provider and endpoint, add only required permissions, make telemetry non-blocking, and update store/privacy disclosures.
 

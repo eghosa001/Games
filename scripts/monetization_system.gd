@@ -16,6 +16,8 @@ var provider: Node = null
 var premium_active := false
 var premium_verified_until_unix := 0.0
 var premium_source := "none"
+var _cached_premium_claim := false
+var _premium_revalidation_pending := false
 
 func _ready() -> void:
     _load_config()
@@ -55,10 +57,17 @@ func privacy_policy_url() -> String:
 func register_provider(service: Node) -> void:
     provider = service
     monetization_status_changed.emit()
+    # Always ask the billing provider for the authoritative entitlement when
+    # subscriptions are enabled. This restores purchases after reinstall or on
+    # a new device even when there is no local cache to hint at prior Premium.
+    if subscriptions_enabled() and provider_ready_for_billing() and not _premium_revalidation_pending:
+        _premium_revalidation_pending = true
+        provider.restore_purchases(Callable(self, "_on_restore_result"))
 
 func unregister_provider(service: Node) -> void:
     if provider == service:
         provider = null
+        _premium_revalidation_pending = false
         monetization_status_changed.emit()
 
 func provider_ready_for_rewarded() -> bool:
@@ -166,6 +175,8 @@ func _on_purchase_result(result: Dictionary) -> void:
     _apply_verified_purchase_result(result)
 
 func _on_restore_result(result: Dictionary) -> void:
+    _premium_revalidation_pending = false
+    _cached_premium_claim = false
     _apply_verified_purchase_result(result)
 
 func _apply_verified_purchase_result(result: Dictionary) -> void:
@@ -178,6 +189,7 @@ func _apply_verified_purchase_result(result: Dictionary) -> void:
     set_verified_premium_entitlement(true, str(result.get("source", "google_play")), float(result.get("expiry_unix", 0.0)))
 
 func set_verified_premium_entitlement(active: bool, source: String, expiry_unix: float) -> void:
+    _cached_premium_claim = false
     premium_active = active
     premium_source = source
     premium_verified_until_unix = expiry_unix
@@ -219,14 +231,19 @@ func _date_key() -> String:
     return "%04d-%02d-%02d" % [int(date.get("year", 0)), int(date.get("month", 0)), int(date.get("day", 0))]
 
 func _load_local_state() -> void:
+    premium_active = false
+    premium_source = "none"
+    premium_verified_until_unix = 0.0
+    _cached_premium_claim = false
     var file := ConfigFile.new()
     if file.load(LOCAL_STATE_PATH) != OK:
         return
-    premium_active = bool(file.get_value("premium", "active", false))
-    premium_source = str(file.get_value("premium", "source", "none"))
-    premium_verified_until_unix = float(file.get_value("premium", "verified_until_unix", 0.0))
-    if premium_verified_until_unix > 0.0 and Time.get_unix_time_from_system() >= premium_verified_until_unix:
-        premium_active = false
+    var cached_active := bool(file.get_value("premium", "active", false))
+    var cached_expiry := float(file.get_value("premium", "verified_until_unix", 0.0))
+    var unexpired := cached_expiry <= 0.0 or Time.get_unix_time_from_system() < cached_expiry
+    # Local storage is editable and therefore cannot establish entitlement.
+    # Keep only a hint that tells the billing provider to revalidate on startup.
+    _cached_premium_claim = cached_active and unexpired
 
 func _save_local_state() -> void:
     var file := ConfigFile.new()
