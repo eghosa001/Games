@@ -23,7 +23,7 @@ func _finance() -> Node:
 
 func _sync_cash(finance: Node) -> int:
     if finance == null:
-        return int(state_adapter.get_value("economy", "cash", 25000))
+        return int(state_adapter.get_value("economy", "cash", 35000))
     var cash: int = int(finance.get("cash"))
     # economy.cash is a read-only FinanceSystem mirror; sync it directly.
     var state = state_adapter.game_state()
