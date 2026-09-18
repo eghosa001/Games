@@ -1,11 +1,11 @@
-# RENEW Google Play production release
+# RESTORA Google Play production release
 
 This repository is prepared around Godot 4.7.2 and a dedicated **Android Play Store** export preset.
 
 ## Technical release baseline
 
 - package: `com.eghosa.renew`
-- app name: `RENEW`
+- app name: `Restora`
 - architecture: ARM64 enabled, ARMv7/x86 disabled
 - minimum SDK: API 24
 - target SDK: API 36 (Android 16)
@@ -39,7 +39,7 @@ The Android Play Store preset uses Gradle because Google Play distribution requi
 Install the matching Godot 4.7.2 export templates and the Android Gradle build template, then export without debug:
 
 ```text
-godot --headless --path . --export-release "Android Play Store" build/RENEW-release.aab
+godot --headless --path . --export-release "Android Play Store" build/Restora-release.aab
 ```
 
 Do not upload an unsigned, debug-signed or test-key bundle to production.
@@ -114,4 +114,12 @@ Before moving from internal/closed testing to production, verify at least:
 
 ## Release gate
 
-A release is not production-ready merely because the AAB builds. Production readiness requires the Godot test suite, Android config validation and release smoke/new-game-flow gates to pass on the exact commit being uploaded.
+The normal Android CI workflow exports and validates an installable **debug APK**. It does not prove that a production Play AAB is correctly signed because release credentials are intentionally not stored in the repository.
+
+A Play upload candidate therefore requires all of the following on the exact candidate commit:
+
+1. the repository release gate is green,
+2. deep validation appropriate to the release has been completed,
+3. a release-signed `Android Play Store` AAB has been exported with the protected upload key,
+4. the resulting AAB has been tested through a Play testing track, and
+5. the Play Console declarations and store metadata match the SDKs/features actually shipped.
