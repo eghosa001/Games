@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""RENEW autonomous Android playtester.
+"""RESTORA autonomous Android playtester.
 
 Free, local-only screenshot-guided test agent. It launches the APK, explores the
 rendered game with ADB input, learns which visual regions respond, records video,
@@ -312,7 +312,7 @@ def main():
     if args.package not in foreground_package():
         findings.append(Finding(
             "critical", "launch", "Game did not remain in foreground after launch",
-            launch[-1000:], "Install APK and launch the RENEW app.",
+            launch[-1000:], "Install APK and launch the RESTORA app.",
         ))
 
     remote_video = "/sdcard/renew-ai-playtest.mp4"
@@ -578,7 +578,7 @@ def main():
     (out / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
 
     md = [
-        "# RENEW Android Vision Playtest Report",
+        "# RESTORA Android Vision Playtest Report",
         "",
         f"- Package: `{args.package}`",
         f"- Seed: `{args.seed}`",
