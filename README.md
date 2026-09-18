@@ -6,9 +6,9 @@ RESTORA is an economic restoration and empire-building simulation game. The defi
 
 **Restoration → Business → Economy → Competition → Alliances → Empire**
 
-## Current status — PLAYABLE GODOT PROTOTYPE
+## Current status — V1 INTERNAL RELEASE CANDIDATE
 
-The active game is a Godot 4.x prototype demonstrating the restoration-to-empire loop:
+The active game is a feature-complete Godot 4.x V1 internal release candidate built around the restoration-to-empire loop:
 
 **Inspect → Acquire → Restore → Open → Operate → Earn → Reinvest → Expand → Control Supply → Defend Your Market**
 
@@ -140,4 +140,4 @@ The player should become emotionally attached to businesses because they persona
 
 ## Production polish
 
-The current build is undergoing the final mobile UI, presentation, balancing and release-readiness pass. Automated regression remains the release gate.
+The V1 code and presentation are feature-complete for an internal release candidate. Normal CI regression, Android debug export, Web export, deployed browser QA and the aggregate release gate are automated. Public-store release still requires the documented physical-device checks, release signing, store assets/privacy publication and any account-side monetization configuration that is intentionally not committed to source.
