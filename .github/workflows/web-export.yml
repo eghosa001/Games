@@ -22,7 +22,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -34,7 +34,7 @@ jobs:
           git archive --format=zip --output=build/source/restora-source.zip HEAD
 
       - name: Upload source snapshot
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Restora-source
           path: build/source/restora-source.zip
@@ -72,7 +72,7 @@ jobs:
           "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
 
       - name: Upload Godot runtime
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Godot-4.7.2-linux
           path: /home/runner/godot/Godot_v4.7.2-stable_linux.x86_64
@@ -136,7 +136,7 @@ jobs:
           EOF
 
       - name: Upload Web build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Restora-web
           path: build/web
