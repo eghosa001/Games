@@ -6,6 +6,8 @@ extends "res://scripts/renew_sims_ui.gd"
 
 var tabs: HBoxContainer
 var _last_decision_signature := ""
+var _presentation_poll_elapsed := 0.0
+const PRESENTATION_POLL_INTERVAL := 0.25
 
 func _build_ui() -> void:
     super._build_ui()
@@ -260,6 +262,10 @@ func _process(delta: float) -> void:
     if decision_signature != _last_decision_signature:
         _last_decision_signature = decision_signature
         _refresh()
+    _presentation_poll_elapsed += delta
+    if _presentation_poll_elapsed < PRESENTATION_POLL_INTERVAL:
+        return
+    _presentation_poll_elapsed = 0.0
     _sync_world_presentation()
     if location_label == null: return
     var policies = _management_policy()
