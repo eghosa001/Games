@@ -23,7 +23,7 @@ func run() -> void:
     check(gameplay_source.find("var result:Dictionary=business_system.produce_goods()") >= 0, "Gameplay consumes BusinessSystem structured production result")
     check(gameplay_source.find("after_message.find") < 0, "Gameplay does not infer production success from UI copy")
     check(simulation_source.find("business_system.produce_goods()") >= 0, "Daily simulation routes through BusinessSystem")
-    check(simulation_source.find("production_message.find(\" stopped:\")") >= 0, "Daily simulation converts production abort into transaction failure")
+    check(simulation_source.find("production_message.find") < 0, "Daily simulation does not infer production failure from UI copy")
     check(simulation_source.find("_transaction_restore(transaction_snapshot, context)") >= 0, "Simulation failure restores its transaction snapshot")
     print("PRODUCTION TRANSACTION BOUNDARY RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
