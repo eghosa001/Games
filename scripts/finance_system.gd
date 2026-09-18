@@ -11,9 +11,9 @@ const INSTRUMENT_SECURED_LOAN := "secured_loan"
 const INSTRUMENT_BOND := "bond"
 const INSTRUMENT_EQUITY := "equity"
 const INSTRUMENT_INVESTMENT := "investment"
-const OPENING_EQUITY := 25000.0
+const OPENING_EQUITY := 35000.0
 
-var cash: int = 25000
+var cash: int = 35000
 var debt: int = 0
 var loan_payment: int = 0
 var last_sales: int = 0
