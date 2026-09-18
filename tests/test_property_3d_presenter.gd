@@ -8,6 +8,8 @@ func _initialize() -> void:
 
 func _run() -> void:
     var presenter = Presenter.new()
+    var source := FileAccess.get_file_as_string("res://scripts/property_3d_presenter.gd")
+    check("property transition cancels stale tween", source.contains("_building_tween.kill()"))
     presenter.apply_snapshot({"stage":"painted", "archetype":"factory", "business_open":false}, false)
     check("presenter stores visual stage", presenter.get_visual_stage() == "painted")
     check("factory uses industrial profile", presenter.get_archetype_profile() == "industrial_stack")
