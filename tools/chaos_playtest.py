@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""RENEW destructive Android chaos playtester.
+"""RESTORA destructive Android chaos playtester.
 
 This agent is intentionally hostile. It does not try to play optimally; it tries to
 break the running game while preserving a deterministic seed and evidence trail.
@@ -328,7 +328,7 @@ def main():
     (out / "report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
 
     md = [
-        "# RENEW Android Chaos Playtest",
+        "# RESTORA Android Chaos Playtest",
         "",
         f"- Seed: `{args.seed}`",
         f"- Requested hostile actions: **{args.steps}**",
