@@ -103,7 +103,7 @@ func _layout_responsive() -> void:
             collapsed_button.hide()
             return
         collapsed_button.size = Vector2(112.0, 36.0)
-        collapsed_button.position = Vector2(maxf(8.0, w - 126.0), maxf(64.0, h - 48.0))
+        collapsed_button.position = Vector2(maxf(8.0, w - 126.0), maxf(64.0, h - 120.0))
         collapsed_button.show()
         return
     if narrow:
@@ -132,7 +132,7 @@ func _layout_responsive() -> void:
         continue_button.size = Vector2(92, 28)
     else:
         panel.hide()
-        collapsed_button.position = Vector2(maxf(8.0, w - 126.0), maxf(64.0, h - 48.0))
+        collapsed_button.position = Vector2(maxf(8.0, w - 126.0), maxf(64.0, h - 120.0))
         collapsed_button.size = Vector2(118.0, 38.0)
         collapsed_button.show()
         return
