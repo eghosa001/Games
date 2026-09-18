@@ -58,34 +58,10 @@ func _ownership_node():
         node=scene.get_node_or_null("Systems/OwnershipSystem")
         if node==null:node=scene.get_node_or_null("OwnershipSystem")
     return node
-func _production_transaction_participants()->Array:
-    return [{"name":"game_state","node":get_node_or_null("/root/RenewGameState")},{"name":"finance","node":get_node_or_null("/root/RenewFinanceSystem")},{"name":"production","node":business_system.production},{"name":"economy","node":supply_system.economy},{"name":"supply_chain","node":business_system.supply_chain},{"name":"business","node":business_system}]
-func _capture_production_transaction()->Dictionary:
-    var snapshot:Dictionary={"participants":{}}
-    for participant in _production_transaction_participants():
-        var node=participant.get("node");var name:=str(participant.get("name","unknown"))
-        if node==null:return {"ok":false,"message":"Production transaction cannot start: %s is unavailable."%name}
-        if name=="game_state":
-            if not node.has_method("capture") or not node.has_method("restore"):return {"ok":false,"message":"Production transaction cannot start: %s is not rollback-capable."%name}
-            snapshot["participants"][name]=node.capture()
-        else:
-            if not node.has_method("capture_state") or not node.has_method("restore_state"):return {"ok":false,"message":"Production transaction cannot start: %s is not rollback-capable."%name}
-            snapshot["participants"][name]=node.capture_state()
-    return {"ok":true,"snapshot":snapshot}
-func _restore_production_transaction(snapshot:Dictionary)->void:
-    var participants:Dictionary=snapshot.get("participants",{});var ordered:Array=["business","supply_chain","economy","production","finance","game_state"];var by_name:Dictionary={}
-    for participant in _production_transaction_participants():by_name[str(participant.get("name","unknown") )]=participant.get("node")
-    for name in ordered:
-        var node=by_name.get(name);var state=participants.get(name,null)
-        if node==null or not state is Dictionary:continue
-        if name=="game_state" and node.has_method("restore"):node.restore(state)
-        elif node.has_method("restore_state"):node.restore_state(state)
 func produce_goods()->void:
-    var transaction:=_capture_production_transaction()
-    if not bool(transaction.get("ok",false)):_set_state("company","message",str(transaction.get("message","Production transaction could not start.")));return
-    var before_message:=str(_state_value("company","message",""));business_system.produce_goods();var after_message:=str(_state_value("company","message",""));var success:=after_message.find(" produced ")>=0 and after_message.find("stopped")<0
-    if success:return
-    _restore_production_transaction(transaction["snapshot"]);_set_state("company","message",after_message if after_message!=before_message else "Production transaction failed and was rolled back.")
+    var result:Dictionary=business_system.produce_goods()
+    if not bool(result.get("ok",false)):
+        _set_state("company","message",str(result.get("message","Production failed and was rolled back.")))
 func hire_employee()->Dictionary: return employee_system.hire_employee()
 func train_employee(employee_id:String)->void: employee_system.train_employee(employee_id)
 func promote_employee(employee_id:String)->void: employee_system.promote_employee(employee_id)
