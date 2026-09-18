@@ -17,6 +17,14 @@ func _is_mobile_layout() -> bool:
     var size := get_viewport().get_visible_rect().size
     return OS.has_feature("mobile") or OS.has_feature("android") or OS.has_feature("ios") or size.x < 700.0
 
+func _world_3d_active(renew: Node) -> bool:
+    if renew == null:
+        return false
+    var world_3d := renew.get_node_or_null("World3D")
+    if world_3d == null:
+        return false
+    return bool(world_3d.get("presentation_enabled"))
+
 func _apply_mobile_compatibility() -> void:
     var hud := get_parent() as CanvasLayer
     if hud != null:
@@ -29,6 +37,7 @@ func _apply_mobile_compatibility() -> void:
     # Legacy world canvases are desktop-era full-screen layers. On phones they
     # yield to the managed responsive screens opened from the premium command deck.
     var mobile := _is_mobile_layout()
+    var allow_legacy_world := (not mobile) and not _world_3d_active(renew)
     var legacy_world_paths := [
         "World/EmpireController", "World/Corporate", "World/WorldMissions",
         "World/RegionController", "World/BranchController", "World/RivalSupplyController"
@@ -36,7 +45,7 @@ func _apply_mobile_compatibility() -> void:
     for path in legacy_world_paths:
         var node := renew.get_node_or_null(path)
         if node is CanvasItem:
-            node.visible = not mobile
+            node.visible = allow_legacy_world
 
     # If an old MobileGameShell survived a scene reload/hot reload, remove it so
     # there is never a second set of trading/time controls above the command deck.
