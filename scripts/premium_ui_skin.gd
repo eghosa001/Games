@@ -336,7 +336,9 @@ func _layout_screen_presentation(screen: Node, active_name: String) -> void:
     var panel := _primary_panel(screen)
     if panel != null:
         var target_x := viewport.x - panel.size.x - 42.0
-        panel.position.x = maxf(viewport.x * 0.43, target_x)
+        var preferred_x := maxf(viewport.x * 0.43, target_x)
+        var max_x := maxf(12.0, viewport.x - panel.size.x - 24.0)
+        panel.position.x = clampf(preferred_x, 12.0, max_x)
         panel.position.y = maxf(54.0, panel.position.y)
 
     if rail != null:

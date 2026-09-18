@@ -454,6 +454,8 @@ func _action(text: String, callback: Callable, subtitle := "", emphasis := false
     var button := Button.new()
     button.name = "Action_" + text.to_snake_case()
     button.text = text + ("\n" + subtitle if subtitle != "" else "")
+    button.set_meta("renew_primary_text", text)
+    button.set_meta("renew_subtitle", subtitle)
     button.alignment = HORIZONTAL_ALIGNMENT_LEFT
     button.custom_minimum_size = Vector2(148, 62)
     button.size_flags_horizontal = Control.SIZE_EXPAND_FILL

@@ -39,6 +39,9 @@ func _using_3d_world() -> bool:
         return false
     return bool(world_3d.get("presentation_enabled")) if "presentation_enabled" in world_3d else world_3d.visible
 
+func should_draw_site_overlay() -> bool:
+    return not _using_3d_world()
+
 func _ensure_progression_sprite() -> void:
     if _progression_sprite != null:
         return
@@ -65,7 +68,8 @@ func _draw() -> void:
     var owned := bool(property.get("owned", state.get_value("properties", "owned", false)))
     var stage := _visual_stage(property, owned)
     _sync_scene_art(stage, property)
-    _draw_site_overlay(property, stage)
+    if should_draw_site_overlay():
+        _draw_site_overlay(property, stage)
 
 func _sync_scene_art(stage: String, property: Dictionary) -> void:
     var scene_art := get_node_or_null("../PremiumRestorationScene")
