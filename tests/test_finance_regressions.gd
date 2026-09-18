@@ -120,7 +120,6 @@ func test_multiple_loans_have_aggregate_scheduled_payment() -> void:
 
 func test_assumed_debt_does_not_create_cash() -> void:
     var finance = _finance()
-    finance.cash = 25000
     var before_cash = finance.cash
     var result = finance.assume_debt(12000, "merger target")
     check(bool(result.get("ok", false)), "assumed debt accepted")
