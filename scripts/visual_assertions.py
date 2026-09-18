@@ -65,6 +65,31 @@ def assert_shell_backdrop(img, vw, vh):
                     f"bright_ratio={bright_ratio:.3f} range={'OK' if in_range else 'BAD'}")
 
 
+def assert_hybrid_world_surface(img, x0, y0, x1, y1, label):
+    """Validate exposed 3D/world content without pinning it to one palette.
+
+    The hybrid shell deliberately reveals rendered world geometry behind the UI.
+    Require a non-blank, non-washed-out, visually varied region so a flat missing
+    canvas, white error surface or fully black render still fails the gate.
+    """
+    mean = _region_avg(img, x0, y0, x1, y1)
+    if mean is None:
+        return False, f"{label}: empty region"
+    values = _sample_luminance(img, x0, y0, x1, y1)
+    if not values:
+        return False, f"{label}: no pixels sampled"
+    avg_lum = sum(values) / len(values)
+    variance = sum((v - avg_lum) ** 2 for v in values) / len(values)
+    std_lum = variance ** 0.5
+    dark_ratio = sum(v < 12 for v in values) / len(values)
+    bright_ratio = sum(v > 180 for v in values) / len(values)
+    passed = (18 <= avg_lum <= 125 and std_lum >= 10 and
+              dark_ratio < 0.65 and bright_ratio < 0.30)
+    return passed, (f"{label}: mean={mean} avg_lum={avg_lum:.1f} "
+                    f"std_lum={std_lum:.1f} dark_ratio={dark_ratio:.3f} "
+                    f"bright_ratio={bright_ratio:.3f}")
+
+
 def assert_dark_surface(img, x0, y0, x1, y1, expected, label):
     """Validate a dark UI surface without assuming it is pixel-flat."""
     mean = _region_avg(img, x0, y0, x1, y1)
@@ -100,11 +125,12 @@ def assert_screenshot(path, vw, vh):
         results.append(assert_dark_surface(img, *R(104, 112, 440, 212), PANEL_DARK, "selected_card"))
 
     dock_bottom = int(vh * 0.78) if narrow else int(vh * 0.80)
-    # In the compact layout this region is occupied by the overview panel,
-    # not the exposed base background used by desktop. Validate the rendered
-    # panel palette on mobile while preserving the stricter desktop baseline.
-    status_surface = PANEL_DARK if narrow else BG_DARK
-    results.append(assert_dark_surface(img, *R(4, dock_bottom, int(vw * 0.35), vh), status_surface, "status-area-bg"))
+    # The hybrid shell intentionally exposes the rendered 3D/world surface
+    # behind this area on both desktop and mobile. Validate that the region is
+    # present and visually textured without pinning it to the retired 2D palette.
+    results.append(assert_hybrid_world_surface(
+        img, *R(4, dock_bottom, int(vw * 0.35), vh), "status-area-world"
+    ))
     return results
 
 
