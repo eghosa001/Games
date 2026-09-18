@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Normalize Android playtest reports so CI only gates on RENEW-attributable faults."""
+"""Normalize Android playtest reports so CI only gates on RESTORA-attributable faults."""
 
 from __future__ import annotations
 
@@ -76,7 +76,7 @@ def sanitize(mode: str, report: dict, logcat: str) -> list[dict]:
         cleaned.append({
             "severity": "high",
             "kind": "rendering",
-            "title": "RENEW GLES3 shader programs failed to link",
+            "title": "RESTORA GLES3 shader programs failed to link",
             "evidence": render,
             "reproduction": "Launch the QA APK in the configured Android emulator and inspect logcat.",
         })
@@ -134,7 +134,7 @@ def recompute_memory(report: dict) -> None:
 
 def write_summary(mode: str, report: dict, path: Path) -> None:
     findings = report.get("findings", [])
-    lines = [f"# RENEW Android {mode.upper()} Playtest", ""]
+    lines = [f"# RESTORA Android {mode.upper()} Playtest", ""]
     lines.append(f"- Actionable findings: **{len(findings)}**")
     if mode == "chaos":
         lines.append(f"- Completed actions: **{report.get('steps_completed', 0)}/{report.get('steps_requested', 0)}**")
@@ -159,12 +159,12 @@ def write_summary(mode: str, report: dict, path: Path) -> None:
                 "",
             ]
     else:
-        lines += ["## Result", "", "No high-severity RENEW-attributable fault was detected.", ""]
+        lines += ["## Result", "", "No high-severity RESTORA-attributable fault was detected.", ""]
 
     lines += [
         "## Attribution",
         "",
-        "Device-wide Android service and launcher failures are excluded unless evidence references the RENEW package or an observed RENEW process PID.",
+        "Device-wide Android service and launcher failures are excluded unless evidence references the RESTORA package or an observed RESTORA process PID.",
         "",
     ]
     path.write_text("\n".join(lines), encoding="utf-8")
