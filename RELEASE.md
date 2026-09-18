@@ -6,7 +6,7 @@
 - [x] `SaveSystem` uses canonical schema version 8.
 - [x] `main.gd` is a thin controller (UI compatibility preserved).
 
-## ✅ Balance (DONE – verified by existing Day-30 regression coverage)
+## ✅ Balance (DONE – real-start opening loop + Day-30 regression coverage)
 - [x] Furniture production is profitable.
 - [x] Starting cash = $35,000.
 - [x] Contract terms are fair.
