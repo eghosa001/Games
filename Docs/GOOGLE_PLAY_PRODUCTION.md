@@ -16,7 +16,7 @@ This repository is prepared around Godot 4.7.2 and a dedicated **Android Play St
 - renderer: OpenGL compatibility
 - Android backup: disabled
 - immersive/edge-to-edge: enabled
-- Internet + network-state permissions: enabled so the production build can support opt-in ads once the provider SDK is installed
+- Internet + network-state permissions: disabled in the current offline artifact; enable only when a shipped network/monetization SDK actually requires them
 
 Google Play requires new mobile apps and app updates submitted from August 31, 2026 to target Android 16/API 36 or higher. Keep the target API at or above the current Play requirement before every release.
 
