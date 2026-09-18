@@ -1,8 +1,8 @@
-# RENEW
+# RESTORA
 
 **Start with nothing. Restore what others abandoned. Build businesses. Make allies. Control resources. Challenge giants. Build an empire.**
 
-RENEW is an economic restoration and empire-building simulation game. The defining loop is:
+RESTORA is an economic restoration and empire-building simulation game. The defining loop is:
 
 **Restoration → Business → Economy → Competition → Alliances → Empire**
 
@@ -14,7 +14,7 @@ The active game is a Godot 4.x prototype demonstrating the restoration-to-empire
 
 Implemented systems now include:
 - staged visual restoration of the first abandoned warehouse
-- RENEW Goods production, staffing, pricing, marketing and customer contracts
+- RESTORA Goods production, staffing, pricing, marketing and customer contracts
 - dynamic resource prices and supplier reliability choices
 - three NPC corporations with relationships, alliances and reactive competitive behavior
 - rivals expanding into districts and increasing local competitive pressure
@@ -41,11 +41,11 @@ Implemented systems now include:
 godot --headless --path . --script res://tests/test_runner.gd
 ```
 
-The full suite lives in `tests/` (`tests/TEST_SUITE.md` indexes every file) and runs in CI
-(`.github/workflows/godot-tests.yml`: fast suites + slow soaks). The strict release gate
-(`tests/test_quality_gate.gd`, protocol in `tests/QUALITY_TEST_PROTOCOL.md`) additionally
-requires a real renderer for its frame checkpoint, so it runs in browser QA rather than
-headless CI.
+The full suite lives in `tests/` (`tests/TEST_SUITE.md` indexes every file). The normal
+pull-request/main CI runs the core regression set, master game-plan coverage, mobile QA and
+the rendered quality gate. Long soak, extreme soak and exhaustive matrix suites remain
+available for deeper release validation rather than running on every commit. Browser QA is
+a separate deployed-build check.
 
 ### Run it
 
@@ -70,7 +70,7 @@ It checks the five target viewport sizes, 44×44 touch-target minimums, control 
 - **I** — inspect the abandoned property
 - **A** — acquire it
 - **R** — restore the next stage
-- **O** — open RENEW Goods after restoration
+- **O** — open RESTORA Goods after restoration
 - **N** — close the operating day
 - **P** — cycle selling price
 - **S** — buy core inputs
