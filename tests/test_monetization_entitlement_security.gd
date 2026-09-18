@@ -23,6 +23,8 @@ func _run() -> void:
     service._load_local_state()
     check(not service.is_premium(), "Cached local Premium cannot activate entitlement")
     check(bool(service.get("_cached_premium_claim")), "Unexpired cache is retained only as a revalidation hint")
+    var source := FileAccess.get_file_as_string("res://scripts/monetization_system.gd")
+    check(source.contains("if subscriptions_enabled() and provider_ready_for_billing()"), "Provider registration restores entitlement even without local cache")
 
     service.set_verified_premium_entitlement(true, "verified_test", Time.get_unix_time_from_system() + 86400.0)
     check(service.is_premium(), "Verified provider entitlement activates Premium")
