@@ -1,0 +1,57 @@
+extends SceneTree
+
+var failed := 0
+
+func _init() -> void:
+    call_deferred("_run")
+
+func _run() -> void:
+    var packed := load("res://scenes/Main.tscn") as PackedScene
+    check(packed != null, "Main scene loads")
+    if packed == null:
+        quit(1)
+        return
+
+    var game = packed.instantiate()
+    root.add_child(game)
+    current_scene = game
+    await process_frame
+    await process_frame
+
+    var state = root.get_node_or_null("RenewGameState")
+    var finance = root.get_node_or_null("RenewFinanceSystem")
+    check(state != null and finance != null, "Canonical state and finance resolve")
+    if state == null or finance == null:
+        game.free()
+        quit(1)
+        return
+
+    check(int(game.cash) == 35000, "Real new game starts with $35,000")
+    check(int(state.get_value("economy", "cash", 0)) == int(game.cash), "Cash mirror matches FinanceSystem")
+
+    game.inspect_property()
+    game.acquire_property()
+    for _i in range(4):
+        game.restore_property()
+        await process_frame
+    check(str(state.get_value("properties", "stage", "")) == "Operational", "Starting bankroll completes restoration")
+
+    game.choose_business_purpose(0)
+    check(bool(state.get_value("businesses", "business_open", false)), "Starting bankroll launches first business")
+
+    var cash_before_inputs := int(game.cash)
+    game.buy_inputs()
+    game.produce_goods()
+    check(int(state.get_value("production", "finished_goods", 0)) > 0, "Starting bankroll funds first production run")
+    check(int(game.cash) >= 0 and int(game.cash) < cash_before_inputs, "Opening production spends cash without bankruptcy")
+
+    game.queue_free()
+    await process_frame
+    quit(1 if failed > 0 else 0)
+
+func check(condition: bool, label: String) -> void:
+    if condition:
+        print("PASS: " + label)
+    else:
+        failed += 1
+        push_error("FAIL: " + label)
