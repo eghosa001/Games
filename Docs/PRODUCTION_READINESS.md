@@ -61,4 +61,4 @@ The simulation architecture is regression-gated, but a public release candidate 
 - the deep validation appropriate to the release has been run (including long-session/balance suites for major releases), and
 - the physical-device/human QA checklist for that candidate has been completed.
 
-If either condition is missing, the build is not a release candidate yet.
+If any condition is missing, the build is not a release candidate yet.
