@@ -26,8 +26,11 @@ func _run() -> void:
         quit(1)
         return
 
-    check(int(game.cash) == 35000, "Real new game starts with $35,000")
-    check(int(state.get_value("economy", "cash", 0)) == int(game.cash), "Cash mirror matches FinanceSystem")
+    var finance_cash := int(finance.get("cash"))
+    var game_cash := int(game.cash)
+    var mirror_cash := int(state.get_value("economy", "cash", 0))
+    check(game_cash == 35000, "Real new game starts with $35,000 (game=$%d finance=$%d mirror=$%d)" % [game_cash, finance_cash, mirror_cash])
+    check(mirror_cash == game_cash, "Cash mirror matches FinanceSystem (game=$%d finance=$%d mirror=$%d)" % [game_cash, finance_cash, mirror_cash])
 
     game.inspect_property()
     game.acquire_property()
