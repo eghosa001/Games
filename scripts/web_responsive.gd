@@ -73,6 +73,14 @@ func _set_visible(path: String, value: bool) -> void:
     elif node is CanvasItem:
         node.visible = value
 
+func _world_3d_active(renew: Node) -> bool:
+    if renew == null:
+        return false
+    var world_3d := renew.get_node_or_null("World3D")
+    if world_3d == null:
+        return false
+    return bool(world_3d.get("presentation_enabled"))
+
 func _apply_scene_visibility() -> void:
     var renew := get_node_or_null("/root/Renew")
     if renew == null:
@@ -81,6 +89,7 @@ func _apply_scene_visibility() -> void:
     if browser == Vector2i.ZERO:
         browser = _browser_size()
     var mobile := browser.y > browser.x * 1.15 or browser.x < 700
+    var using_3d := _world_3d_active(renew)
     var hud := renew.get_node_or_null("UI/MainHUD")
     var tab := int(hud.get("active_tab")) if hud != null else 0
 
@@ -92,7 +101,7 @@ func _apply_scene_visibility() -> void:
 
     var region_controller := renew.get_node_or_null("World/RegionController")
     if region_controller is CanvasItem:
-        region_controller.visible = tab == 3
+        region_controller.visible = (not using_3d) and tab == 3
 
     # BankruptcyControls is a CanvasLayer, not a CanvasItem. Always hide it
     # while the company is healthy; this prevents the legacy fixed 680x325 card
@@ -110,7 +119,18 @@ func _apply_scene_visibility() -> void:
     # and never on the compact mobile layout.
     var corporate := renew.get_node_or_null("World/Corporate")
     if corporate is CanvasItem:
-        corporate.visible = (not mobile) and tab == 2
+        corporate.visible = (not using_3d) and (not mobile) and tab == 2
+
+    if using_3d:
+        for path in [
+            "/root/Renew/World/WorldMissions",
+            "/root/Renew/World/EmpireController",
+            "/root/Renew/World/RivalSupplyController",
+            "/root/Renew/World/BranchController",
+            "/root/Renew/World/RegionController",
+            "/root/Renew/World/Corporate",
+        ]:
+            _set_visible(path, false)
 
     if mobile:
         _set_visible("/root/Renew/World/PropertyVisual", false)
