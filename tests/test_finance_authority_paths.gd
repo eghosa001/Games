@@ -108,7 +108,7 @@ func run() -> void:
     check(not bankruptcy.contains("finance.receive(int(proceeds), \"liquidation proceeds\")"), "Liquidation does not misclassify asset proceeds as operating revenue")
 
     var finance_script := _read("res://scripts/finance_system.gd")
-    check(finance_script.contains("const OPENING_EQUITY := 25000.0"), "Finance ledger has an explicit opening equity balance")
+    check(finance_script.contains("const OPENING_EQUITY := 35000.0"), "Finance ledger has an explicit opening equity balance")
     check(finance_script.contains("retained_earnings -= float(amount)"), "Finance spending records the equity effect of expenses")
     check(finance_script.contains("retained_earnings += float(amount)"), "Finance receipts record the equity effect of revenue")
     check(finance_script.contains("func capture_state()"), "FinanceSystem exposes transaction snapshots")
@@ -122,5 +122,5 @@ func run() -> void:
     check(finance_script.contains("func record_asset_sale"), "FinanceSystem exposes accounting-safe asset disposal")
     check(finance_script.contains("Cash flow is derived only from recorded cash movements"), "Cash-flow statement uses recorded cash movements")
 
-    print("\nRENEW FINANCE AUTHORITY PATH RESULT: %d passed, %d failed" % [passed, failed])
+    print("\nRESTORA FINANCE AUTHORITY PATH RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
