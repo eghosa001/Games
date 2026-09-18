@@ -34,3 +34,12 @@ Builds/
 # Godot binary snapshots
 Godot_v4.7.2-stable_linux.x86_64
 Godot_v4.7.2-stable_linux.x86_64.zip
+
+# Android / release signing secrets
+*.keystore
+*.jks
+*.p12
+*.pfx
+*.key
+service-account*.json
+google-services-private*.json
