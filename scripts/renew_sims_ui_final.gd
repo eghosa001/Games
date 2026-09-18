@@ -36,6 +36,10 @@ func _layout_responsive() -> void:
     super._layout_responsive()
     var size := root.size if root != null and root.size.x > 0.0 else get_viewport().get_visible_rect().size
     var mobile := size.x < 700.0
+    var short_phone := mobile and size.y < 700.0
+    var using_3d := _world_3d_active()
+    if stat_grid != null:
+        stat_grid.visible = not short_phone
     shell.add_theme_constant_override("margin_left", 10 if mobile else 86)
     brand.add_theme_font_size_override("font_size", 24 if mobile else 28)
     location_label.add_theme_font_size_override("font_size", 12 if mobile else 13)
@@ -57,9 +61,18 @@ func _layout_responsive() -> void:
         if child is Button:
             var action_button := child as Button
             action_button.clip_text = true
-            action_button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-            action_button.custom_minimum_size.y = 64 if mobile else 68
-            action_button.add_theme_font_size_override("font_size", 13 if mobile else 14)
+            action_button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+            action_button.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+            var primary := str(action_button.get_meta("renew_primary_text", action_button.text.split("\n")[0]))
+            var subtitle := str(action_button.get_meta("renew_subtitle", ""))
+            action_button.text = primary if short_phone or subtitle == "" else primary + "\n" + subtitle
+            if short_phone:
+                action_button.custom_minimum_size.y = 54
+            elif mobile:
+                action_button.custom_minimum_size.y = 84 if size.x < 360.0 else 78
+            else:
+                action_button.custom_minimum_size.y = 68
+            action_button.add_theme_font_size_override("font_size", 12 if mobile else 14)
     for button in mode_buttons:
         button.custom_minimum_size.y = 50 if mobile else 52
         button.add_theme_font_size_override("font_size", 11 if mobile else 12)
@@ -67,6 +80,8 @@ func _layout_responsive() -> void:
     theme_button.custom_minimum_size.y = 48
     hero_action.custom_minimum_size.y = 54
     hero_action.add_theme_font_size_override("font_size", 12 if mobile else 13)
+    if status_label != null:
+        status_label.visible = (not using_3d) and (not mobile) and size.y >= 720.0
     _sync_world_presentation()
 
 func _open_tutorial() -> void:
