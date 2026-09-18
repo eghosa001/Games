@@ -185,6 +185,7 @@ func _apply_verified_purchase_result(result: Dictionary) -> void:
     set_verified_premium_entitlement(true, str(result.get("source", "google_play")), float(result.get("expiry_unix", 0.0)))
 
 func set_verified_premium_entitlement(active: bool, source: String, expiry_unix: float) -> void:
+    _cached_premium_claim = false
     premium_active = active
     premium_source = source
     premium_verified_until_unix = expiry_unix
