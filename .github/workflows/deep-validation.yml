@@ -1,0 +1,102 @@
+name: RESTORA Deep Validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'release-validation/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: restora-deep-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  deep-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: sudo apt-get update && sudo apt-get install -y unzip curl xvfb
+
+      - name: Install Godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot_url="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          curl --fail --location --retry 5 --retry-delay 3 --retry-all-errors --connect-timeout 30 --max-time 300 "$godot_url" -o /tmp/godot.zip
+          unzip -tq /tmp/godot.zip >/dev/null
+          unzip -q /tmp/godot.zip
+          chmod +x "Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --version
+
+      - name: Import project
+        run: timeout 180s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
+
+      - name: Run deep simulation and UI suites
+        shell: bash
+        run: |
+          set -u
+          mkdir -p test_artifacts/deep-validation
+          failures=0
+
+          run_headless() {
+            local script="$1"
+            local name="$2"
+            echo "===== $script ====="
+            set +e
+            timeout 1200s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script "res://$script" 2>&1 | tee "test_artifacts/deep-validation/$name.log"
+            local status=${PIPESTATUS[0]}
+            set -e
+            if [ "$status" -ne 0 ]; then
+              echo "FAILED: $script ($status)"
+              failures=$((failures + 1))
+            fi
+          }
+
+          run_rendered() {
+            local script="$1"
+            local name="$2"
+            echo "===== $script ====="
+            set +e
+            timeout 1200s xvfb-run -a "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --path . --script "res://$script" 2>&1 | tee "test_artifacts/deep-validation/$name.log"
+            local status=${PIPESTATUS[0]}
+            set -e
+            if [ "$status" -ne 0 ]; then
+              echo "FAILED: $script ($status)"
+              failures=$((failures + 1))
+            fi
+          }
+
+          run_headless "tests/long_running/test_30_60_180_365_day_balance.gd" "balance-365"
+          run_headless "tests/test_long_soak.gd" "long-soak"
+          run_headless "tests/test_extreme_soak.gd" "extreme-soak"
+          run_rendered "tests/test_exhaustive_ui_matrix.gd" "exhaustive-ui-matrix"
+          run_rendered "tests/test_visual_ui_matrix.gd" "visual-ui-matrix"
+
+          if [ "$failures" -ne 0 ]; then
+            echo "Deep validation failures: $failures"
+            exit 1
+          fi
+
+      - name: Verify deep validation kept source clean
+        run: git diff --exit-code -- .
+
+      - name: Upload deep validation logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: restora-deep-validation-${{ github.sha }}
+          path: test_artifacts/deep-validation/**
+          if-no-files-found: error
+          retention-days: 14

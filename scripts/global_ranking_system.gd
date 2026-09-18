@@ -26,10 +26,10 @@ func _process(_delta: float) -> void:
     if day != last_day:
         process_day(day)
 
-func register_company(company_id: String, name: String = "", region: String = "global") -> Dictionary:
+func register_company(company_id: String, name: String = "", region: String = "") -> Dictionary:
     var id: Variant = str(company_id)
     if not companies.has(id):
-        companies[id] = {"id": id, "name": name if name != "" else id, "region": region, "metrics": {}}
+        companies[id] = {"id": id, "name": name if name != "" else id, "region": region if region != "" else "global", "metrics": {}}
     else:
         if name != "": companies[id]["name"] = name
         if region != "": companies[id]["region"] = region
