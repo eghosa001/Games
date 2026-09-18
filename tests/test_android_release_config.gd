@@ -26,8 +26,8 @@ func _run() -> void:
     check("Android 13 themed monochrome icon is configured", text.contains("launcher_icons/adaptive_monochrome_432x432=\"res://Assets/renew_icon_monochrome.svg\""))
     check("release version code exists", text.contains("version/code=1"))
     check("release semantic version exists", text.contains("version/name=\"1.0.0\""))
-    check("internet permission is enabled for opt-in monetization", text.contains("permissions/internet=true"))
-    check("network-state permission is enabled for opt-in monetization", text.contains("permissions/access_network_state=true"))
+    check("internet permission stays disabled until a network SDK ships", text.contains("permissions/internet=false"))
+    check("network-state permission stays disabled until a network SDK ships", text.contains("permissions/access_network_state=false"))
     check("Wi-Fi-state permission remains disabled", text.contains("permissions/access_wifi_state=false"))
     check("Android backup is disabled", text.contains("user_data_backup/allow=false"))
 
