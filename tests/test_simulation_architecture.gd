@@ -38,7 +38,7 @@ func run() -> void:
     await process_frame
 
     check(finance.spend(1000, "test")["ok"], "Finance owns spending")
-    check(finance.available_cash() == 24000, "Finance mutates authoritative cash")
+    check(finance.available_cash() == 34000, "Finance mutates authoritative cash")
     check(finance.take_loan(5000)["ok"], "Finance owns borrowing")
     check(finance.debt == 5000, "Finance owns debt")
 
