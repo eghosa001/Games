@@ -25,7 +25,7 @@ func _run() -> void:
     var property := FileAccess.get_file_as_string("res://scripts/property_3d_presenter.gd")
     check("property has branded 3D signage", property.contains("BrandLabel") and property.contains("RESTORA INDUSTRIES"))
     check("property has authored rooftop and bay detail", property.contains("RoofVent") and property.contains("BayStripe"))
-    check("property workers have visual role variation", property.contains("SafetyVest") and property.contains("_worker_blue"))
+    check("property workers have visual role variation", property.contains("_worker_blue") and property.contains("Vest") and property.contains("LegL") and property.contains("LegR"))
 
     var district := FileAccess.get_file_as_string("res://scripts/restora_district_3d_presenter.gd")
     check("district has branded environmental signage", district.contains("DistrictBrand") and district.contains("RESTORA DISTRICT"))
