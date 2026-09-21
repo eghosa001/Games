@@ -150,6 +150,7 @@ func _build_ui() -> void:
     alerts_button.custom_minimum_size = Vector2(92, 44)
     alerts_button.focus_mode = Control.FOCUS_NONE
     alerts_button.pressed.connect(_open_decision_center)
+    _wire_button_motion(alerts_button)
     header.add_child(alerts_button)
 
     theme_button = Button.new()
@@ -163,6 +164,7 @@ func _build_ui() -> void:
     theme_button.custom_minimum_size = Vector2(78, 44)
     theme_button.focus_mode = Control.FOCUS_NONE
     theme_button.pressed.connect(_toggle_theme)
+    _wire_button_motion(theme_button)
     header.add_child(theme_button)
 
     # Home pulse: one strong hero instead of many competing modules.
@@ -211,6 +213,7 @@ func _build_ui() -> void:
     hero_action.custom_minimum_size = Vector2(160, 54)
     hero_action.size_flags_vertical = Control.SIZE_SHRINK_CENTER
     hero_action.focus_mode = Control.FOCUS_NONE
+    _wire_button_motion(hero_action)
     hero_top.add_child(hero_action)
 
     var progress_row := HBoxContainer.new()
@@ -322,6 +325,7 @@ func _build_ui() -> void:
         button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         button.focus_mode = Control.FOCUS_NONE
         button.pressed.connect(_set_tab.bind(i))
+        _wire_button_motion(button)
         bottom_nav.add_child(button)
         mode_buttons.append(button)
 
@@ -347,6 +351,26 @@ func _apply_button_icon(button: Button, label: String, max_width: int = 22) -> v
     button.icon = texture
     button.icon_max_width = max_width
     button.expand_icon = true
+
+func _wire_button_motion(button: Button) -> void:
+    if button == null:
+        return
+    if not button.button_down.is_connected(_button_motion.bind(button, true)):
+        button.button_down.connect(_button_motion.bind(button, true))
+    if not button.button_up.is_connected(_button_motion.bind(button, false)):
+        button.button_up.connect(_button_motion.bind(button, false))
+
+func _button_motion(button: Button, pressed: bool) -> void:
+    if button == null or not is_instance_valid(button):
+        return
+    if bool(ProjectSettings.get_setting("renew/ui/reduce_motion", false)):
+        button.scale = Vector2.ONE
+        return
+    button.pivot_offset = button.size * 0.5
+    var target := Vector2(0.972, 0.972) if pressed else Vector2.ONE
+    var tween := create_tween()
+    tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+    tween.tween_property(button, "scale", target, 0.075 if pressed else 0.12)
 
 func _label(text: String, size: int) -> Label:
     var label := Label.new()
@@ -523,6 +547,7 @@ func _action(text: String, callback: Callable, subtitle := "", emphasis := false
     button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
     button.set_meta("renew_emphasis", emphasis)
     button.pressed.connect(_run_action.bind(callback))
+    _wire_button_motion(button)
     action_grid.add_child(button)
     _style_action_button(button)
 
@@ -559,8 +584,12 @@ func show_feedback(text: String) -> void:
     feedback_label.visible = true
     feedback_timer = 4.5
     feedback_label.modulate.a = 0.0
-    var tween := create_tween()
+    feedback_label.position.y += 4.0
+    var target_y := feedback_label.position.y - 4.0
+    var tween := create_tween().set_parallel(true)
+    tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
     tween.tween_property(feedback_label, "modulate:a", 1.0, 0.18)
+    tween.tween_property(feedback_label, "position:y", target_y, 0.20)
 
 func _open_decision_center() -> void:
     var desk := get_node_or_null("/root/RenewManagementPolicyUI")
@@ -740,11 +769,14 @@ func _animate_entry() -> void:
 func _animate_layer_change(serial: int) -> void:
     if action_dock == null: return
     action_dock.modulate.a = 0.0
-    action_dock.position.x = 14.0
+    action_dock.position.x = 18.0
+    action_dock.scale = Vector2(0.992, 0.992)
+    action_dock.pivot_offset = action_dock.size * 0.5
     var tween := create_tween().set_parallel(true)
-    tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-    tween.tween_property(action_dock, "modulate:a", 1.0, 0.20)
-    tween.tween_property(action_dock, "position:x", 0.0, 0.20)
+    tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+    tween.tween_property(action_dock, "modulate:a", 1.0, 0.24)
+    tween.tween_property(action_dock, "position:x", 0.0, 0.24)
+    tween.tween_property(action_dock, "scale", Vector2.ONE, 0.26)
 
 func _pulse_primary() -> void:
     if hero_action == null: return
