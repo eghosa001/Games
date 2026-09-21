@@ -233,7 +233,12 @@ func _enforce_single_screen() -> void:
         var was: bool = _previous_visible.get(node.name, false)
         if now and not was: newly_opened = node
         _previous_visible[node.name] = now
-    if newly_opened != null:
+    # An explicit show_screen() selection is authoritative. A late-visible
+    # legacy panel may be discovered by the periodic scan, but it must not steal
+    # focus from a valid active screen simply because a frame crossed the scan
+    # interval. Only adopt an externally-opened screen when there is no valid
+    # active screen left.
+    if newly_opened != null and (_active_screen == null or not _is_node_visible(_active_screen)):
         _active_screen = newly_opened
         _active_screen_name = newly_opened.name
         _ensure_close_button(_active_screen)
