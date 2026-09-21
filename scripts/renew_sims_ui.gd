@@ -124,10 +124,12 @@ func _build_ui() -> void:
     shell = MarginContainer.new()
     shell.name = "SafeArea"
     shell.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    shell.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(shell)
 
     page = VBoxContainer.new()
     page.name = "LayerStack"
+    page.mouse_filter = Control.MOUSE_FILTER_IGNORE
     page.add_theme_constant_override("separation", 10)
     shell.add_child(page)
 
