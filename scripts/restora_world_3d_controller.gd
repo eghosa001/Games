@@ -36,6 +36,10 @@ var _camera_idle_time := 0.0
 func _ready() -> void:
     _presenter = get_node_or_null("Properties/ActiveProperty3D")
     _district = get_node_or_null("DistrictDressing/RestoraDistrict3D")
+    if _presenter != null and _presenter.has_signal("property_interacted"):
+        var interaction := Callable(self, "_on_property_interacted")
+        if not _presenter.is_connected("property_interacted", interaction):
+            _presenter.connect("property_interacted", interaction)
     _camera = get_node_or_null("CameraRig/Camera3D") as Camera3D
     _environment_node = get_node_or_null("Environment") as WorldEnvironment
     _sun = get_node_or_null("Sun") as DirectionalLight3D
@@ -57,6 +61,36 @@ func _ready() -> void:
         _camera_base_target = _camera_target
         _camera.look_at(_camera_target, Vector3.UP)
     _sync_visuals(false)
+
+func _on_property_interacted(_stage: String, business_open: bool) -> void:
+    var game := get_tree().root.get_node_or_null("Renew")
+    if game == null:
+        return
+
+    # Direct-manipulation core loop: tapping the property advances the current
+    # meaningful property action instead of forcing a menu detour.
+    if not bool(game.get("inspected")):
+        if game.has_method("inspect_property"):
+            game.inspect_property()
+        return
+    if not bool(game.get("owned")):
+        if game.has_method("acquire_property"):
+            game.acquire_property()
+        return
+    if str(game.get("stage")).to_lower() != "operational":
+        if game.has_method("restore_property"):
+            game.restore_property()
+        return
+
+    if not business_open:
+        var hud := get_tree().root.get_node_or_null("Renew/UI/MainHUD")
+        if hud != null and hud.has_method("_open_business_choices"):
+            hud.call("_open_business_choices")
+        return
+
+    var manager := get_node_or_null("/root/RenewUIScreenManager")
+    if manager != null and manager.has_method("show_screen"):
+        manager.show_screen("BusinessOperationsPanel")
 
 func _process(delta: float) -> void:
     if not presentation_enabled:
