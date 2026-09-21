@@ -27,8 +27,10 @@ var stat_grid: GridContainer
 var stat_cards: Array[PanelContainer] = []
 var stat_names: Array[Label] = []
 var stat_values: Array[Label] = []
+var section_header: HBoxContainer
 var section_title: Label
 var section_caption: Label
+var world_spacer: Control
 var action_scroll: ScrollContainer
 var action_list: VBoxContainer
 var action_dock: PanelContainer
@@ -259,17 +261,25 @@ func _build_ui() -> void:
         stat_names.append(name)
         stat_values.append(value)
 
-    var section_row := HBoxContainer.new()
-    page.add_child(section_row)
+    section_header = HBoxContainer.new()
+    section_header.name = "SectionHeader"
+    page.add_child(section_header)
     var section_stack := VBoxContainer.new()
     section_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     section_stack.add_theme_constant_override("separation", 0)
-    section_row.add_child(section_stack)
+    section_header.add_child(section_stack)
     section_title = _label("Home", 20)
     section_caption = _label("Current objective and the few decisions that matter now.", 11)
     section_caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     section_stack.add_child(section_title)
     section_stack.add_child(section_caption)
+
+    world_spacer = Control.new()
+    world_spacer.name = "WorldPlaySpace"
+    world_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    world_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    world_spacer.visible = false
+    page.add_child(world_spacer)
 
     action_scroll = ScrollContainer.new()
     action_scroll.name = "DepthScroll"
