@@ -159,7 +159,7 @@ func _build_ui() -> void:
     var settings_icon := _icon_texture("settings")
     if settings_icon != null:
         theme_button.icon = settings_icon
-        theme_button.icon_max_width = 20
+        theme_button.add_theme_constant_override("icon_max_width", 20)
         theme_button.expand_icon = true
     theme_button.custom_minimum_size = Vector2(78, 44)
     theme_button.focus_mode = Control.FOCUS_NONE
@@ -349,7 +349,7 @@ func _apply_button_icon(button: Button, label: String, max_width: int = 22) -> v
     if texture == null:
         return
     button.icon = texture
-    button.icon_max_width = max_width
+    button.add_theme_constant_override("icon_max_width", max_width)
     button.expand_icon = true
 
 func _wire_button_motion(button: Button) -> void:
@@ -644,7 +644,7 @@ func _bind_primary_move() -> void:
     var primary_icon := _icon_texture(primary_icon_key)
     if primary_icon != null:
         hero_action.icon = primary_icon
-        hero_action.icon_max_width = 24
+        hero_action.add_theme_constant_override("icon_max_width", 24)
         hero_action.expand_icon = true
     var callable: Callable = move.get("call", Callable())
     if callable.is_valid(): hero_action.pressed.connect(_run_action.bind(callable))
