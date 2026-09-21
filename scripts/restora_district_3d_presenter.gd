@@ -5,6 +5,10 @@ var _visual_stage := "neglected"
 var _archetype := "warehouse"
 var _business_open := false
 var _activity_enabled := false
+var _activity_tier := 0
+var _traffic_level := 0
+var _worker_visual_count := 0
+var _reputation := 0
 var _built := false
 var _elapsed := 0.0
 
@@ -15,6 +19,9 @@ var _truck_a: Node3D
 var _truck_b: Node3D
 var _workers: Array[Node3D] = []
 var _construction_props: Array[Node3D] = []
+var _operations_workers: Array[Node3D] = []
+var _customer_actors: Array[Node3D] = []
+var _street_vehicles: Array[Node3D] = []
 
 var _concrete: StandardMaterial3D
 var _dark_metal: StandardMaterial3D
@@ -42,6 +49,10 @@ func apply_snapshot(snapshot: Dictionary, _animate: bool = true) -> void:
     _visual_stage = str(snapshot.get("stage", "neglected")).to_lower()
     _archetype = str(snapshot.get("archetype", "warehouse")).to_lower()
     _business_open = bool(snapshot.get("business_open", false))
+    _activity_tier = clampi(int(snapshot.get("activity_tier", 0)), 0, 3)
+    _traffic_level = clampi(int(snapshot.get("traffic_level", 0)), 0, 3)
+    _worker_visual_count = clampi(int(snapshot.get("worker_visual_count", 0)), 0, 6)
+    _reputation = maxi(0, int(snapshot.get("reputation", 0)))
     _activity_enabled = _visual_stage == "operational" and _business_open
     if not is_inside_tree():
         return
@@ -126,6 +137,18 @@ func _build_roadside() -> void:
     _make_box("FenceLeft", Vector3(5.5, 0.9, 0.12), Vector3(-9.6, 0.45, 2.0), _dark_metal, _district_root)
     _make_box("FenceRight", Vector3(5.5, 0.9, 0.12), Vector3(9.6, 0.45, 2.0), _dark_metal, _district_root)
 
+    # Lightweight district detail: lane markers, benches and planters improve
+    # scale/readability without introducing expensive imported meshes.
+    for x in [-10.5, -6.0, -1.5, 3.0, 7.5]:
+        _make_box("LaneMarker", Vector3(2.0, 0.03, 0.12), Vector3(x, 0.04, 7.0), _yellow, _district_root)
+    for x in [-7.5, 7.5]:
+        _make_box("BenchSeat", Vector3(1.8, 0.12, 0.55), Vector3(x, 0.55, 4.3), _office, _district_root)
+        _make_box("BenchLegA", Vector3(0.12, 0.55, 0.12), Vector3(x - 0.6, 0.28, 4.3), _dark_metal, _district_root)
+        _make_box("BenchLegB", Vector3(0.12, 0.55, 0.12), Vector3(x + 0.6, 0.28, 4.3), _dark_metal, _district_root)
+    for x in [-4.2, 4.2]:
+        _make_box("Planter", Vector3(1.1, 0.55, 1.1), Vector3(x, 0.28, 3.15), _concrete, _district_root)
+        _make_sphere("PlanterShrub", 0.62, Vector3(x, 1.0, 3.15), _green, _district_root)
+
 func _build_construction_activity() -> void:
     for index in range(3):
         var worker := _make_worker("Builder%d" % index, Vector3(-2.8 + index * 2.6, 0.0, 3.9), _construction_root)
@@ -145,6 +168,25 @@ func _build_operational_activity() -> void:
     _operations_root.add_child(_truck_b)
     _make_box("DispatchPallets", Vector3(2.4, 0.6, 1.3), Vector3(4.8, 0.3, 3.9), _yellow, _operations_root)
 
+    # Small actor pools are reused and visibility-scaled from authoritative
+    # activity data, keeping mobile draw/animation costs predictable.
+    for index in range(6):
+        var worker := _make_worker("Operator%d" % index, Vector3(-4.0 + float(index % 3) * 2.0, 0.0, 3.2 + float(index / 3) * 1.05), _operations_root)
+        worker.visible = false
+        _operations_workers.append(worker)
+
+    for index in range(4):
+        var customer := _make_worker("Visitor%d" % index, Vector3(-6.5 + float(index) * 1.6, 0.0, 4.7), _operations_root)
+        customer.scale = Vector3(0.86, 0.86, 0.86)
+        customer.visible = false
+        _customer_actors.append(customer)
+
+    for index in range(3):
+        var car := _make_car("StreetCar%d" % index, Vector3(-9.0 + float(index) * 5.5, 0.0, 7.0))
+        car.visible = false
+        _operations_root.add_child(car)
+        _street_vehicles.append(car)
+
 func _make_truck(node_name: String, position: Vector3) -> Node3D:
     var truck := Node3D.new()
     truck.name = node_name
@@ -155,6 +197,17 @@ func _make_truck(node_name: String, position: Vector3) -> Node3D:
         for z in [-0.66, 0.66]:
             _make_cylinder("Wheel", 0.34, 0.22, Vector3(x, 0.35, z), _dark_metal, truck)
     return truck
+
+func _make_car(node_name: String, position: Vector3) -> Node3D:
+    var car := Node3D.new()
+    car.name = node_name
+    car.position = position
+    _make_box("Body", Vector3(1.85, 0.58, 0.95), Vector3(0.0, 0.58, 0.0), _office, car)
+    _make_box("Cabin", Vector3(0.9, 0.48, 0.82), Vector3(-0.15, 1.02, 0.0), _glass, car)
+    for x in [-0.62, 0.62]:
+        for z in [-0.43, 0.43]:
+            _make_cylinder("Wheel", 0.22, 0.16, Vector3(x, 0.28, z), _dark_metal, car)
+    return car
 
 func _make_worker(node_name: String, position: Vector3, parent: Node) -> Node3D:
     var worker := Node3D.new()
@@ -172,6 +225,14 @@ func _apply_visual_state() -> void:
     var rank := _stage_rank(_visual_stage)
     _construction_root.visible = rank >= 1 and rank < 5
     _operations_root.visible = _activity_enabled
+    if _activity_enabled:
+        for index in range(_operations_workers.size()):
+            _operations_workers[index].visible = index < _worker_visual_count
+        var visible_customers := clampi(_activity_tier + (1 if _reputation >= 50 else 0), 0, _customer_actors.size())
+        for index in range(_customer_actors.size()):
+            _customer_actors[index].visible = index < visible_customers
+        for index in range(_street_vehicles.size()):
+            _street_vehicles[index].visible = index < _traffic_level
     set_process(_construction_root.visible or _activity_enabled)
 
 func _animate_construction() -> void:
@@ -187,10 +248,42 @@ func _animate_construction() -> void:
 func _animate_operations() -> void:
     if not _activity_enabled:
         return
+
+    var speed_boost := 1.0 + float(_activity_tier) * 0.12
     if _truck_a != null:
-        _truck_a.position.x = -12.0 + fmod(_elapsed * 1.4, 24.0)
+        _truck_a.position.x = -12.0 + fmod(_elapsed * 1.4 * speed_boost, 24.0)
     if _truck_b != null:
-        _truck_b.position.x = 12.0 - fmod(_elapsed * 1.0, 24.0)
+        _truck_b.position.x = 12.0 - fmod(_elapsed * 1.0 * speed_boost, 24.0)
+
+    for index in range(_operations_workers.size()):
+        var worker := _operations_workers[index]
+        if not worker.visible:
+            continue
+        var phase := _elapsed * (0.55 + float(index) * 0.04) + float(index) * 0.85
+        worker.position.x += sin(phase) * 0.004
+        worker.position.z += cos(phase * 0.73) * 0.003
+        worker.rotation.y = sin(phase * 0.8) * 0.35
+        worker.position.y = abs(sin(phase * 2.2)) * 0.025
+
+    for index in range(_customer_actors.size()):
+        var customer := _customer_actors[index]
+        if not customer.visible:
+            continue
+        var t := fmod(_elapsed * (0.08 + float(index) * 0.008) + float(index) * 0.21, 1.0)
+        customer.position.x = lerpf(-7.0, 5.8, t)
+        customer.position.z = 4.5 + sin(t * TAU + float(index)) * 0.35
+        customer.rotation.y = heading_for_x_velocity(1.0)
+
+    for index in range(_street_vehicles.size()):
+        var car := _street_vehicles[index]
+        if not car.visible:
+            continue
+        var direction := 1.0 if index % 2 == 0 else -1.0
+        var base_t := fmod(_elapsed * (0.10 + 0.018 * float(index)) * speed_boost + float(index) * 0.31, 1.0)
+        var t := base_t if direction > 0.0 else 1.0 - base_t
+        car.position.x = lerpf(-13.0, 13.0, t)
+        car.position.z = 7.55 + float(index % 2) * 0.55
+        car.rotation.y = heading_for_x_velocity(direction)
 
 func _stage_rank(stage_name: String) -> int:
     match stage_name:
