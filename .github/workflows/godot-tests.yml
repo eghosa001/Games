@@ -5,7 +5,17 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
+    inputs:
+      validation_mode:
+        description: "Validation scope"
+        required: true
+        default: full
+        type: choice
+        options:
+          - targeted
+          - full
 
 permissions:
   contents: read
@@ -27,6 +37,56 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Select CI scope
+        id: scope
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          full=false
+          reason="iterative change"
+
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
+            full=true
+            reason="main branch validation"
+          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "ready_for_review" ]]; then
+            full=true
+            reason="final PR validation"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.validation_mode }}" == "full" ]]; then
+            full=true
+            reason="manual full validation"
+          fi
+
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+          echo "CI mode: $reason (full=$full)"
+
+          if [[ "$full" == "false" ]]; then
+            if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+              base="${{ github.event.pull_request.base.sha }}"
+            elif [[ "${{ github.event_name }}" == "push" ]]; then
+              base="${{ github.event.before }}"
+            else
+              base="$(git rev-parse HEAD^ 2>/dev/null || git rev-parse HEAD)"
+            fi
+
+            git diff --name-only "$base" "$GITHUB_SHA" > changed_files.txt
+            python3 ci/select_relevant_tests.py --changed-file-list changed_files.txt --output selected_tests.txt
+
+            echo "### Targeted CI" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Only tests relevant to the changed files will run." >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Changed files:** $(wc -l < changed_files.txt)" >> "$GITHUB_STEP_SUMMARY"
+            echo "**Selected tests:** $(wc -l < selected_tests.txt)" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            sed 's/^/- `/; s/$/`/' selected_tests.txt >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Full CI" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            echo "Reason: $reason" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Install dependencies
         run: sudo apt-get update && sudo apt-get install -y unzip curl xvfb
 
@@ -44,7 +104,44 @@ jobs:
       - name: Import project
         run: timeout 180s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --editor --path . --quit
 
-      - name: Run core test suite
+      - name: Run targeted tests
+        if: steps.scope.outputs.full != 'true'
+        shell: bash
+        run: |
+          set -u
+          mkdir -p test_artifacts/logs
+          failures=0
+          failed_tests=()
+
+          if [[ ! -s selected_tests.txt ]]; then
+            echo "No gameplay/runtime tests are relevant to this change."
+            exit 0
+          fi
+
+          while IFS= read -r t; do
+            [[ -n "$t" ]] || continue
+            [[ -f "$t" ]] || continue
+
+            echo "===== $t ====="
+            log="test_artifacts/logs/$(echo "$t" | tr '/' '_' | sed 's/\.gd$/.log/')"
+            set +e
+            timeout 180s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script "res://$t" 2>&1 | tee "$log"
+            status=${PIPESTATUS[0]}
+            set -e
+            if [[ "$status" -ne 0 ]]; then
+              failures=$((failures + 1))
+              failed_tests+=("$t")
+            fi
+          done < selected_tests.txt
+
+          if [[ "$failures" -ne 0 ]]; then
+            printf 'Targeted-suite failures (%d):\n' "$failures"
+            printf ' - %s\n' "${failed_tests[@]}"
+            exit 1
+          fi
+
+      - name: Run full core suite
+        if: steps.scope.outputs.full == 'true'
         shell: bash
         run: |
           set -u
@@ -77,12 +174,15 @@ jobs:
           fi
 
       - name: Run game-plan coverage gate
+        if: steps.scope.outputs.full == 'true'
         run: timeout 300s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/test_master_game_plan_coverage.gd
 
       - name: Run mobile QA smoke test
+        if: steps.scope.outputs.full == 'true'
         run: timeout 300s "./Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --script res://tests/mobile_qa_test.gd
 
       - name: Run visual quality gate
+        if: steps.scope.outputs.full == 'true'
         shell: bash
         run: |
           set -euo pipefail
