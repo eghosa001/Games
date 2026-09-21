@@ -317,6 +317,8 @@ func _make_worker(node_name: String, position: Vector3, parent: Node) -> Node3D:
     _make_box("Body", Vector3(0.36, 0.78, 0.30), Vector3(0.0, 0.9, 0.0), clothing, worker)
     _make_box("ArmL", Vector3(0.09, 0.50, 0.09), Vector3(-0.25, 0.92, 0.0), clothing, worker)
     _make_box("ArmR", Vector3(0.09, 0.50, 0.09), Vector3(0.25, 0.92, 0.0), clothing, worker)
+    _make_box("LegL", Vector3(0.11, 0.56, 0.11), Vector3(-0.10, 0.35, 0.0), _dark_metal, worker)
+    _make_box("LegR", Vector3(0.11, 0.56, 0.11), Vector3(0.10, 0.35, 0.0), _dark_metal, worker)
     _make_sphere("Head", 0.2, Vector3(0.0, 1.42, 0.0), _office, worker)
     if is_builder:
         _make_box("Helmet", Vector3(0.46, 0.12, 0.38), Vector3(0.0, 1.6, 0.0), _yellow, worker)
@@ -395,6 +397,7 @@ func _animate_operations() -> void:
         worker.position.z += cos(phase * 0.73) * 0.003
         worker.rotation.y = sin(phase * 0.8) * 0.35
         worker.position.y = abs(sin(phase * 2.2)) * 0.025
+        _animate_actor_limbs(worker, phase, 0.34)
 
     for index in range(_customer_actors.size()):
         var customer := _customer_actors[index]
@@ -404,6 +407,7 @@ func _animate_operations() -> void:
         customer.position.x = lerpf(-7.0, 5.8, t)
         customer.position.z = 4.5 + sin(t * TAU + float(index)) * 0.35
         customer.rotation.y = heading_for_x_velocity(1.0)
+        _animate_actor_limbs(customer, _elapsed * 2.4 + float(index), 0.48)
 
     for index in range(_street_vehicles.size()):
         var car := _street_vehicles[index]
@@ -421,6 +425,19 @@ func _animate_operations() -> void:
         _event_label.modulate.a = 0.84 + 0.14 * sin(_elapsed * 2.1)
     if _rival_label != null and _rival_label.visible:
         _rival_label.modulate.a = 0.86 + 0.08 * sin(_elapsed * 0.9 + 1.2)
+
+func _animate_actor_limbs(actor: Node3D, phase: float, amplitude: float) -> void:
+    if actor == null:
+        return
+    var swing := sin(phase) * amplitude
+    var arm_l := actor.get_node_or_null("ArmL") as Node3D
+    var arm_r := actor.get_node_or_null("ArmR") as Node3D
+    var leg_l := actor.get_node_or_null("LegL") as Node3D
+    var leg_r := actor.get_node_or_null("LegR") as Node3D
+    if arm_l != null: arm_l.rotation.x = swing
+    if arm_r != null: arm_r.rotation.x = -swing
+    if leg_l != null: leg_l.rotation.x = -swing * 0.78
+    if leg_r != null: leg_r.rotation.x = swing * 0.78
 
 func _stage_rank(stage_name: String) -> int:
     match stage_name:
