@@ -32,6 +32,7 @@ var _street_vehicles: Array[Node3D] = []
 var _prosperity_props: Array[Node3D] = []
 var _event_props: Array[Node3D] = []
 var _rival_label: Label3D
+var _rival_facade: MeshInstance3D
 var _event_label: Label3D
 
 var _concrete: StandardMaterial3D
@@ -146,6 +147,8 @@ func _build_neighbors() -> void:
     _make_box("LeftWarehouse", Vector3(6.0, 3.1, 4.8), Vector3(-10.2, 1.45, -2.2), _brick, _district_root)
     _make_box("LeftRoof", Vector3(6.4, 0.32, 5.2), Vector3(-10.2, 3.15, -2.2), _dark_metal, _district_root)
     _make_box("RightOffice", Vector3(4.8, 5.4, 4.2), Vector3(9.6, 2.6, -2.8), _office, _district_root)
+    _rival_facade = _make_box("RivalCorporateAccent", Vector3(0.24, 4.6, 0.18), Vector3(7.12, 2.55, -0.62), _car_coral, _district_root)
+    _rival_facade.visible = false
     for floor_index in range(3):
         for col in range(2):
             _make_box("OfficeWindow%d_%d" % [floor_index, col], Vector3(1.25, 0.65, 0.12), Vector3(8.45 + col * 2.1, 1.35 + floor_index * 1.45, -0.64), _glass, _district_root)
@@ -340,6 +343,11 @@ func _apply_visual_state() -> void:
         _rival_label.visible = _rival_presence > 0 and not _rival_name.is_empty()
         if _rival_label.visible:
             _rival_label.text = "%s  •  %d%% SHARE" % [_rival_name.to_upper(), roundi(_rival_market_share * 100.0)]
+    if _rival_facade != null:
+        _rival_facade.visible = _rival_presence > 0 and not _rival_name.is_empty()
+        if _rival_facade.visible:
+            var share_scale := lerpf(0.45, 1.25, clampf(_rival_market_share / 0.45, 0.0, 1.0))
+            _rival_facade.scale.y = share_scale
 
     if _event_label != null:
         if _active_event_count > 0:
