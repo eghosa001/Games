@@ -9,6 +9,13 @@ var _activity_tier := 0
 var _traffic_level := 0
 var _worker_visual_count := 0
 var _reputation := 0
+var _prosperity_tier := 0
+var _economy_phase := "expansion"
+var _active_event_count := 0
+var _active_event_category := ""
+var _rival_name := ""
+var _rival_market_share := 0.0
+var _rival_presence := 0
 var _built := false
 var _elapsed := 0.0
 
@@ -22,6 +29,10 @@ var _construction_props: Array[Node3D] = []
 var _operations_workers: Array[Node3D] = []
 var _customer_actors: Array[Node3D] = []
 var _street_vehicles: Array[Node3D] = []
+var _prosperity_props: Array[Node3D] = []
+var _event_props: Array[Node3D] = []
+var _rival_label: Label3D
+var _event_label: Label3D
 
 var _concrete: StandardMaterial3D
 var _dark_metal: StandardMaterial3D
@@ -58,6 +69,13 @@ func apply_snapshot(snapshot: Dictionary, _animate: bool = true) -> void:
     _traffic_level = clampi(int(snapshot.get("traffic_level", 0)), 0, 3)
     _worker_visual_count = clampi(int(snapshot.get("worker_visual_count", 0)), 0, 6)
     _reputation = maxi(0, int(snapshot.get("reputation", 0)))
+    _prosperity_tier = clampi(int(snapshot.get("prosperity_tier", 0)), 0, 3)
+    _economy_phase = str(snapshot.get("economy_phase", "expansion")).to_lower()
+    _active_event_count = maxi(0, int(snapshot.get("active_event_count", 0)))
+    _active_event_category = str(snapshot.get("active_event_category", "")).to_lower()
+    _rival_name = str(snapshot.get("rival_name", ""))
+    _rival_market_share = clampf(float(snapshot.get("rival_market_share", 0.0)), 0.0, 1.0)
+    _rival_presence = maxi(0, int(snapshot.get("rival_presence", 0)))
     _activity_enabled = _visual_stage == "operational" and _business_open
     if not is_inside_tree():
         return
@@ -93,6 +111,7 @@ func _build_once() -> void:
 
     _build_neighbors()
     _build_roadside()
+    _build_world_state_feedback()
     _build_construction_activity()
     _build_operational_activity()
 
@@ -131,6 +150,18 @@ func _build_neighbors() -> void:
         for col in range(2):
             _make_box("OfficeWindow%d_%d" % [floor_index, col], Vector3(1.25, 0.65, 0.12), Vector3(8.45 + col * 2.1, 1.35 + floor_index * 1.45, -0.64), _glass, _district_root)
     _make_box("UtilityBuilding", Vector3(4.0, 2.4, 3.4), Vector3(10.6, 1.1, 4.0), _dark_metal, _district_root)
+
+    _make_box("RivalBillboardFrame", Vector3(4.4, 2.1, 0.24), Vector3(-9.6, 4.35, 0.4), _dark_metal, _district_root)
+    _rival_label = Label3D.new()
+    _rival_label.name = "RivalBillboard"
+    _rival_label.text = "MARKET RIVAL"
+    _rival_label.font_size = 30
+    _rival_label.pixel_size = 0.006
+    _rival_label.position = Vector3(-9.6, 4.35, 0.55)
+    _rival_label.modulate = Color("f0a1ad")
+    _rival_label.outline_modulate = Color(0.03, 0.04, 0.08, 0.92)
+    _rival_label.outline_size = 6
+    _district_root.add_child(_rival_label)
 
 func _build_roadside() -> void:
     for x in [-10.0, -5.0, 5.0, 10.0]:
@@ -176,6 +207,39 @@ func _build_roadside() -> void:
     _district_sign.outline_modulate = Color(0.02, 0.04, 0.09, 0.9)
     _district_sign.outline_size = 5
     _district_root.add_child(_district_sign)
+
+func _build_world_state_feedback() -> void:
+    _make_box("EventBoardFrame", Vector3(4.8, 1.6, 0.22), Vector3(0.0, 2.25, 5.15), _dark_metal, _district_root)
+    _event_label = Label3D.new()
+    _event_label.name = "WorldEventBoard"
+    _event_label.text = "CITY OPERATIONS NORMAL"
+    _event_label.font_size = 25
+    _event_label.pixel_size = 0.0058
+    _event_label.position = Vector3(0.0, 2.25, 5.30)
+    _event_label.modulate = Color("cfe7ff")
+    _event_label.outline_modulate = Color(0.02, 0.04, 0.09, 0.95)
+    _event_label.outline_size = 5
+    _district_root.add_child(_event_label)
+
+    for index in range(3):
+        var banner := Node3D.new()
+        banner.name = "ProsperityBanner%d" % index
+        banner.position = Vector3(-3.6 + index * 3.6, 0.0, 3.0)
+        _district_root.add_child(banner)
+        _make_box("Pole", Vector3(0.10, 2.4, 0.10), Vector3(0.0, 1.2, 0.0), _dark_metal, banner)
+        _make_box("Flag", Vector3(0.9, 0.55, 0.08), Vector3(0.48, 1.95, 0.0), _yellow, banner)
+        banner.visible = false
+        _prosperity_props.append(banner)
+
+    for index in range(3):
+        var marker := Node3D.new()
+        marker.name = "EventMarker%d" % index
+        marker.position = Vector3(-1.5 + index * 1.5, 0.0, 5.35)
+        _district_root.add_child(marker)
+        _make_box("EventPost", Vector3(0.12, 1.6, 0.12), Vector3(0.0, 0.8, 0.0), _dark_metal, marker)
+        _make_sphere("EventBeacon", 0.19, Vector3(0.0, 1.75, 0.0), _yellow, marker)
+        marker.visible = false
+        _event_props.append(marker)
 
 func _build_construction_activity() -> void:
     for index in range(3):
@@ -269,14 +333,37 @@ func _apply_visual_state() -> void:
     _operations_root.visible = _activity_enabled
     if _district_sign != null:
         _district_sign.modulate.a = 0.78 + minf(0.18, float(_reputation) / 500.0)
+
+    if _rival_label != null:
+        _rival_label.visible = _rival_presence > 0 and not _rival_name.is_empty()
+        if _rival_label.visible:
+            _rival_label.text = "%s  •  %d%% SHARE" % [_rival_name.to_upper(), roundi(_rival_market_share * 100.0)]
+
+    if _event_label != null:
+        if _active_event_count > 0:
+            var event_name := _active_event_category.replace("_", " ").to_upper()
+            _event_label.text = "LIVE EVENT  •  " + (event_name if not event_name.is_empty() else "WORLD DISRUPTION")
+            _event_label.modulate = Color("ffd27d") if _active_event_category in ["energy", "finance", "supply_chain", "production"] else Color("8ee7c4")
+        else:
+            _event_label.text = "ECONOMY  •  " + _economy_phase.to_upper()
+            _event_label.modulate = Color("8ee7c4") if _economy_phase in ["boom", "expansion", "recovery"] else Color("f0a1ad")
+
+    for index in range(_prosperity_props.size()):
+        _prosperity_props[index].visible = index < _prosperity_tier
+    for index in range(_event_props.size()):
+        _event_props[index].visible = index < mini(_active_event_count, _event_props.size())
+
     if _activity_enabled:
         for index in range(_operations_workers.size()):
             _operations_workers[index].visible = index < _worker_visual_count
-        var visible_customers := clampi(_activity_tier + (1 if _reputation >= 50 else 0), 0, _customer_actors.size())
+        var phase_delta := 1 if _economy_phase == "boom" else (-1 if _economy_phase == "recession" else 0)
+        var visible_customers := clampi(_activity_tier + (1 if _reputation >= 50 else 0) + phase_delta, 0, _customer_actors.size())
         for index in range(_customer_actors.size()):
             _customer_actors[index].visible = index < visible_customers
+        var phase_traffic := 1 if _economy_phase == "boom" else (-1 if _economy_phase == "recession" else 0)
+        var visual_traffic := clampi(_traffic_level + phase_traffic, 0, _street_vehicles.size())
         for index in range(_street_vehicles.size()):
-            _street_vehicles[index].visible = index < _traffic_level
+            _street_vehicles[index].visible = index < visual_traffic
     set_process(_construction_root.visible or _activity_enabled)
 
 func _animate_construction() -> void:
@@ -330,6 +417,10 @@ func _animate_operations() -> void:
         car.rotation.y = heading_for_x_velocity(direction)
     if _district_sign != null:
         _district_sign.modulate.a = 0.78 + 0.10 * sin(_elapsed * 1.1) + minf(0.10, float(_reputation) / 700.0)
+    if _event_label != null and _active_event_count > 0:
+        _event_label.modulate.a = 0.84 + 0.14 * sin(_elapsed * 2.1)
+    if _rival_label != null and _rival_label.visible:
+        _rival_label.modulate.a = 0.86 + 0.08 * sin(_elapsed * 0.9 + 1.2)
 
 func _stage_rank(stage_name: String) -> int:
     match stage_name:
