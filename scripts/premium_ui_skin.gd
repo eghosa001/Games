@@ -6,10 +6,10 @@ extends Control
 ## command-center screens keep their authored canvas so no content is obscured.
 
 const THEME_PATH := "res://Assets/Themes/EmpireTheme.tres"
-const DEEP := Color("071218")
-const SURFACE := Color("0b2028")
-const SURFACE_2 := Color("12313a")
-const EDGE := Color("416a70")
+const DEEP := Color("091122")
+const SURFACE := Color("101d3d")
+const SURFACE_2 := Color("17264c")
+const EDGE := Color("5367af")
 const GOLD := Color("f2c65c")
 const GREEN := Color("58d39b")
 const CYAN := Color("55c7e8")
@@ -17,8 +17,8 @@ const BLUE := Color("6f9cff")
 const PURPLE := Color("b78cff")
 const ORANGE := Color("ff9d62")
 const PINK := Color("ed7fbd")
-const TEXT := Color("f4faf7")
-const MUTED := Color("91a9ad")
+const TEXT := Color("f7f9ff")
+const MUTED := Color("aebde0")
 const PRIMARY_SECTORS := ["LIVE", "BUSINESS", "EMPIRE", "WORLD"]
 const CONTEXT_RAIL_NAME := "PremiumContextRail"
 
@@ -148,51 +148,61 @@ func _sector_accent(label: String) -> Color:
         return GREEN
     return EDGE
 
+
 func _style_panel(panel: Panel) -> void:
     if panel.name == CONTEXT_RAIL_NAME:
         return
     var accent := _sector_accent(panel.name)
     var box := StyleBoxFlat.new()
-    box.bg_color = Color(SURFACE.r, SURFACE.g, SURFACE.b, 0.84)
-    box.border_color = Color(accent.r, accent.g, accent.b, 0.34)
+    box.bg_color = Color(SURFACE.r, SURFACE.g, SURFACE.b, 0.92)
+    box.border_color = Color(accent.r, accent.g, accent.b, 0.46)
     box.set_border_width_all(1)
     box.set_border_width(SIDE_TOP, 2)
-    box.set_corner_radius_all(16)
-    box.shadow_color = Color(0, 0, 0, 0.46)
-    box.shadow_size = 12
-    box.shadow_offset = Vector2(0, 5)
-    box.content_margin_left = 14
-    box.content_margin_right = 14
-    box.content_margin_top = 12
-    box.content_margin_bottom = 12
+    box.set_corner_radius_all(20)
+    box.shadow_color = Color(0, 0, 0, 0.54)
+    box.shadow_size = 18
+    box.shadow_offset = Vector2(0, 8)
+    box.content_margin_left = 16
+    box.content_margin_right = 16
+    box.content_margin_top = 14
+    box.content_margin_bottom = 14
     panel.add_theme_stylebox_override("panel", box)
+
 
 func _style_button(button: Button) -> void:
     var accent := _sector_accent(button.text)
     var normal := StyleBoxFlat.new()
-    normal.bg_color = Color(SURFACE_2.r, SURFACE_2.g, SURFACE_2.b, 0.82)
-    normal.border_color = Color(accent.r, accent.g, accent.b, 0.34)
+    normal.bg_color = Color(SURFACE_2.r, SURFACE_2.g, SURFACE_2.b, 0.96)
+    normal.border_color = Color(accent.r, accent.g, accent.b, 0.44)
     normal.set_border_width_all(1)
-    normal.set_corner_radius_all(12)
-    normal.content_margin_left = 14
-    normal.content_margin_right = 14
-    normal.content_margin_top = 8
-    normal.content_margin_bottom = 8
+    normal.set_border_width(SIDE_TOP, 2)
+    normal.set_corner_radius_all(16)
+    normal.content_margin_left = 15
+    normal.content_margin_right = 15
+    normal.content_margin_top = 10
+    normal.content_margin_bottom = 10
+    normal.shadow_color = Color(0, 0, 0, 0.38)
+    normal.shadow_size = 9
+    normal.shadow_offset = Vector2(0, 4)
 
     var hover := normal.duplicate() as StyleBoxFlat
-    hover.bg_color = SURFACE_2.lerp(accent, 0.17)
-    hover.border_color = Color(accent.r, accent.g, accent.b, 0.92)
-    hover.shadow_color = Color(accent.r, accent.g, accent.b, 0.18)
-    hover.shadow_size = 10
-    hover.shadow_offset = Vector2(0, 2)
+    hover.bg_color = SURFACE_2.lerp(accent, 0.22)
+    hover.border_color = Color(accent.r, accent.g, accent.b, 0.96)
+    hover.shadow_color = Color(accent.r, accent.g, accent.b, 0.24)
+    hover.shadow_size = 14
+    hover.shadow_offset = Vector2(0, 5)
 
     var pressed := normal.duplicate() as StyleBoxFlat
-    pressed.bg_color = SURFACE_2.lerp(accent, 0.26)
+    pressed.bg_color = SURFACE_2.lerp(accent, 0.34)
     pressed.border_color = accent
+    pressed.shadow_color = Color(0, 0, 0, 0.24)
+    pressed.shadow_size = 4
+    pressed.shadow_offset = Vector2(0, 1)
 
     var disabled := normal.duplicate() as StyleBoxFlat
-    disabled.bg_color = Color("09171d", 0.72)
-    disabled.border_color = Color("253a40", 0.45)
+    disabled.bg_color = Color("0b1428", 0.72)
+    disabled.border_color = Color("34426f", 0.45)
+    disabled.shadow_size = 0
 
     button.add_theme_stylebox_override("normal", normal)
     button.add_theme_stylebox_override("hover", hover)
@@ -202,20 +212,26 @@ func _style_button(button: Button) -> void:
     button.add_theme_color_override("font_hover_color", Color.WHITE)
     button.add_theme_color_override("font_pressed_color", Color.WHITE)
     button.add_theme_color_override("font_disabled_color", MUTED)
-    button.add_theme_font_size_override("font_size", 11)
+    button.add_theme_color_override("font_outline_color", Color(0.02, 0.035, 0.08, 0.72))
+    button.add_theme_constant_override("outline_size", 1)
+    button.add_theme_font_size_override("font_size", 13)
     button.focus_mode = Control.FOCUS_NONE
-    button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 44.0)
+    button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+    button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 48.0)
+
 
 func _style_label(label: Label) -> void:
     var name_upper := label.name.to_upper()
     var text_upper := label.text.to_upper()
     if name_upper.contains("TITLE") or name_upper.contains("HEADER") or (text_upper.begins_with("RESTORA") or text_upper.begins_with("RENEW")):
         label.add_theme_color_override("font_color", TEXT)
-        label.add_theme_font_size_override("font_size", maxi(16, label.get_theme_font_size("font_size")))
+        label.add_theme_font_size_override("font_size", maxi(18, label.get_theme_font_size("font_size")))
+        label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.58))
+        label.add_theme_constant_override("shadow_offset_y", 2)
     elif name_upper.contains("VALUE") or name_upper.contains("TOTAL") or name_upper.contains("AMOUNT"):
-        label.add_theme_color_override("font_color", Color("f5deb0"))
+        label.add_theme_color_override("font_color", Color("ffe28a"))
     else:
-        label.add_theme_color_override("font_color", Color(TEXT.r, TEXT.g, TEXT.b, 0.91))
+        label.add_theme_color_override("font_color", Color(TEXT.r, TEXT.g, TEXT.b, 0.93))
 
 func _style_progress(progress: ProgressBar) -> void:
     var accent := _sector_accent(progress.name)
@@ -231,14 +247,21 @@ func _style_progress(progress: ProgressBar) -> void:
     progress.add_theme_stylebox_override("fill", fill)
     progress.add_theme_color_override("font_color", TEXT)
 
+
 func _style_line_edit(line: LineEdit) -> void:
     var box := StyleBoxFlat.new()
-    box.bg_color = Color("07171d", 0.80)
-    box.border_color = Color(EDGE.r, EDGE.g, EDGE.b, 0.62)
+    box.bg_color = Color("0c1730", 0.94)
+    box.border_color = Color(EDGE.r, EDGE.g, EDGE.b, 0.76)
     box.set_border_width_all(1)
-    box.set_corner_radius_all(10)
-    box.content_margin_left = 12
-    box.content_margin_right = 12
+    box.set_border_width(SIDE_TOP, 2)
+    box.set_corner_radius_all(14)
+    box.content_margin_left = 14
+    box.content_margin_right = 14
+    box.content_margin_top = 9
+    box.content_margin_bottom = 9
+    box.shadow_color = Color(0, 0, 0, 0.30)
+    box.shadow_size = 8
+    box.shadow_offset = Vector2(0, 3)
     line.add_theme_stylebox_override("normal", box)
     line.add_theme_color_override("font_color", TEXT)
     line.add_theme_color_override("font_placeholder_color", MUTED)
@@ -419,16 +442,18 @@ func _ensure_context_rail(screen: Node, active_name: String) -> void:
     footer.add_theme_font_size_override("font_size", 9)
     rail.add_child(footer)
 
+
 func _context_rail_style(accent: Color) -> StyleBoxFlat:
     var box := StyleBoxFlat.new()
-    box.bg_color = Color(DEEP.r, DEEP.g, DEEP.b, 0.94)
-    box.border_color = Color(accent.r, accent.g, accent.b, 0.42)
+    box.bg_color = Color(DEEP.r, DEEP.g, DEEP.b, 0.96)
+    box.border_color = Color(accent.r, accent.g, accent.b, 0.52)
     box.set_border_width_all(1)
     box.set_border_width(SIDE_LEFT, 3)
-    box.set_corner_radius_all(18)
-    box.shadow_color = Color(0, 0, 0, 0.42)
-    box.shadow_size = 16
-    box.shadow_offset = Vector2(0, 7)
+    box.set_border_width(SIDE_TOP, 2)
+    box.set_corner_radius_all(22)
+    box.shadow_color = Color(0, 0, 0, 0.52)
+    box.shadow_size = 22
+    box.shadow_offset = Vector2(0, 9)
     return box
 
 func _layout_rail_children(rail: Panel, width: float, height: float) -> void:
@@ -551,23 +576,42 @@ func _compact_number(value: int) -> String:
         return "%.1fK" % (float(value) / 1000.0)
     return str(value)
 
+
 func _draw() -> void:
     var size := get_viewport_rect().size
     if size.x <= 0.0 or size.y <= 0.0:
         return
     var mobile := size.x < 760.0
-    var top_h := 84.0 if mobile else 90.0
-    for i in range(6):
-        var alpha := 0.62 - float(i) * 0.075
-        var band_h := top_h / 6.0
-        draw_rect(Rect2(0, float(i) * band_h, size.x, band_h + 1), Color(DEEP.r, DEEP.g, DEEP.b, maxf(0.10, alpha)), true)
-    draw_rect(Rect2(0, 0, size.x, 2), Color(GOLD.r, GOLD.g, GOLD.b, 0.46), true)
-    draw_line(Vector2(18, top_h - 1), Vector2(size.x - 18, top_h - 1), Color(EDGE.r, EDGE.g, EDGE.b, 0.52), 1.0)
-    _corner(Vector2(18, top_h + 14), 28.0, GOLD)
-    _corner(Vector2(size.x - 18, top_h + 14), -28.0, CYAN)
-    var pulse_strength := 0.22 + 0.08 * sin(_pulse * 0.85)
-    _halo(Vector2(size.x * 0.22, top_h + 54), 90.0, Color(GREEN.r, GREEN.g, GREEN.b, pulse_strength * 0.08))
-    _halo(Vector2(size.x * 0.79, top_h + 38), 108.0, Color(CYAN.r, CYAN.g, CYAN.b, pulse_strength * 0.07))
+    var top_h := 88.0 if mobile else 96.0
+
+    # Layered bands reproduce the Figma navy gradient without heavy textures.
+    for i in range(8):
+        var alpha := 0.72 - float(i) * 0.065
+        var band_h := top_h / 8.0
+        var tint := DEEP.lerp(SURFACE_2, float(i) / 18.0)
+        draw_rect(Rect2(0, float(i) * band_h, size.x, band_h + 1), Color(tint.r, tint.g, tint.b, maxf(0.14, alpha)), true)
+
+    # Specular top rim and dark lower bevel make the HUD read as a physical tray.
+    draw_rect(Rect2(0, 0, size.x, 2), Color(GOLD.r, GOLD.g, GOLD.b, 0.62), true)
+    draw_rect(Rect2(0, 2, size.x, 1), Color(1, 1, 1, 0.12), true)
+    draw_line(Vector2(18, top_h - 2), Vector2(size.x - 18, top_h - 2), Color(EDGE.r, EDGE.g, EDGE.b, 0.68), 1.0)
+    draw_line(Vector2(18, top_h), Vector2(size.x - 18, top_h), Color(0, 0, 0, 0.36), 2.0)
+    _corner(Vector2(18, top_h + 14), 32.0, GOLD)
+    _corner(Vector2(size.x - 18, top_h + 14), -32.0, CYAN)
+
+    # Low-contrast diagonal material detail adds depth without reducing legibility.
+    var grid_alpha := 0.035 if mobile else 0.045
+    var step := 76.0 if mobile else 92.0
+    var x := -size.y
+    while x < size.x:
+        draw_line(Vector2(x, top_h), Vector2(x + size.y, size.y), Color(BLUE.r, BLUE.g, BLUE.b, grid_alpha), 1.0)
+        x += step
+
+    var pulse_strength := 0.28 + 0.10 * sin(_pulse * 0.85)
+    _halo(Vector2(size.x * 0.20, top_h + 58), 116.0, Color(GREEN.r, GREEN.g, GREEN.b, pulse_strength * 0.09))
+    _halo(Vector2(size.x * 0.80, top_h + 46), 138.0, Color(CYAN.r, CYAN.g, CYAN.b, pulse_strength * 0.08))
+    if not mobile:
+        _halo(Vector2(size.x * 0.52, size.y * 0.78), 180.0, Color(PURPLE.r, PURPLE.g, PURPLE.b, 0.018))
 
 func _corner(origin: Vector2, direction: float, tint: Color) -> void:
     draw_line(origin, origin + Vector2(direction, 0), Color(tint.r, tint.g, tint.b, 0.60), 2.0)
