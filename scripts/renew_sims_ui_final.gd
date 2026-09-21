@@ -17,6 +17,24 @@ func _build_ui() -> void:
     hero_meta.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     tabs = bottom_nav
 
+    # Top simulation games keep the world as the primary play surface.
+    # The header therefore exposes decisions/settings without turning theme
+    # switching into a first-class gameplay action.
+    for connection in theme_button.pressed.get_connections():
+        var callable: Callable = connection.get("callable", Callable())
+        if callable.is_valid():
+            theme_button.pressed.disconnect(callable)
+    theme_button.text = "SETTINGS"
+    theme_button.pressed.connect(Callable(self, "_open_screen").bind("SaveLoadPanel"))
+
+    if mode_buttons.size() >= 4:
+        mode_buttons[0].text = "PLAY"
+        var play_icon := _icon_texture("home")
+        if play_icon != null:
+            mode_buttons[0].icon = play_icon
+            mode_buttons[0].add_theme_constant_override("icon_max_width", 20)
+            mode_buttons[0].expand_icon = true
+
 func _world_3d_active() -> bool:
     var world_3d := get_node_or_null("/root/Renew/World3D")
     if world_3d == null:
@@ -41,7 +59,7 @@ func _layout_responsive() -> void:
     var short_phone := mobile and size.y < 700.0
     var using_3d := _world_3d_active()
     if stat_grid != null:
-        stat_grid.visible = not short_phone
+        stat_grid.visible = not short_phone and active_tab != 0
     shell.add_theme_constant_override("margin_left", 10 if mobile else 86)
     brand.add_theme_font_size_override("font_size", 24 if mobile else 28)
     location_label.add_theme_font_size_override("font_size", 12 if mobile else 13)
@@ -80,8 +98,22 @@ func _layout_responsive() -> void:
         button.add_theme_font_size_override("font_size", 11 if mobile else 12)
     alerts_button.custom_minimum_size.y = 48
     theme_button.custom_minimum_size.y = 48
-    hero_action.custom_minimum_size.y = 54
+    hero_action.custom_minimum_size = Vector2(126 if mobile else 176, 56 if mobile else 58)
     hero_action.add_theme_font_size_override("font_size", 12 if mobile else 13)
+
+    var world_first := using_3d and active_tab == 0
+    if world_spacer != null:
+        world_spacer.visible = world_first
+    if section_header != null:
+        section_header.visible = not world_first
+    if action_scroll != null:
+        action_scroll.visible = not world_first
+    if world_first:
+        hero_card.custom_minimum_size.y = 122 if mobile else 132
+        hero_goal.visible = true
+        hero_art.visible = false
+        if stat_grid != null:
+            stat_grid.visible = false
     if status_label != null:
         status_label.visible = (not using_3d) and (not mobile) and size.y >= 720.0
     _sync_world_presentation()
@@ -196,6 +228,72 @@ func _apply_progression_discovery() -> void:
     _restyle_actions()
     _layout_responsive()
 
+func _apply_top_game_structure() -> void:
+    if action_grid == null:
+        return
+
+    # Keep each strategic layer focused. Leading simulation games expose a
+    # handful of high-value entry points and let context reveal deeper tools.
+    match active_tab:
+        0:
+            # PLAY is the world itself. The hero CTA owns the core loop; no
+            # duplicate dashboard/menu grid is allowed to cover the world.
+            for child in action_grid.get_children():
+                child.visible = false
+                child.process_mode = Node.PROCESS_MODE_DISABLED
+        1:
+            _limit_visible_actions([
+                "Operations",
+                "People & demand",
+                "Finance & contracts",
+                "Contracts",
+                "Market intelligence",
+            ], 4)
+        2:
+            _limit_visible_actions([
+                "Portfolio & projects",
+                "Expansion",
+                "Competition",
+                "Headquarters",
+                "Acquisitions & mergers",
+            ], 4)
+        3:
+            _limit_visible_actions([
+                "Regions",
+                "Supply network",
+                "Opportunities",
+                "Intelligence",
+                "Market news",
+            ], 4)
+
+    _layout_responsive()
+
+func _limit_visible_actions(priority: Array[String], maximum: int) -> void:
+    var shown := 0
+    for wanted in priority:
+        for child in action_grid.get_children():
+            if not child is Button:
+                continue
+            var button := child as Button
+            var primary := str(button.get_meta("renew_primary_text", button.text.split("\n")[0])).strip_edges()
+            if primary != wanted:
+                continue
+            var allow := shown < maximum
+            button.visible = allow
+            button.process_mode = Node.PROCESS_MODE_INHERIT if allow else Node.PROCESS_MODE_DISABLED
+            if allow:
+                shown += 1
+
+    for child in action_grid.get_children():
+        if not child is Button:
+            continue
+        var button := child as Button
+        var primary := str(button.get_meta("renew_primary_text", button.text.split("\n")[0])).strip_edges()
+        if priority.has(primary):
+            continue
+        button.visible = false
+        button.process_mode = Node.PROCESS_MODE_DISABLED
+
 func _sell_goods_now() -> Dictionary:
     var economy = _real_time_economy()
     if economy == null or not economy.has_method("sell_goods"):
@@ -230,6 +328,7 @@ func _refresh() -> void:
     super._refresh()
     if parent == null: return
     _apply_progression_discovery()
+    _apply_top_game_structure()
     var clock := Time.get_datetime_dict_from_system()
     var hh := "%02d" % int(clock.get("hour", 0))
     var mm := "%02d" % int(clock.get("minute", 0))
@@ -277,8 +376,8 @@ func _process(delta: float) -> void:
     for alert in alerts:
         if alert is Dictionary and str(alert.get("severity", "")) == "critical": critical += 1
     if critical > 0:
-        location_label.text = "RESTORA • %d CRITICAL DECISION%s" % [critical, "" if critical == 1 else "S"]
+        location_label.text = "%d CRITICAL DECISION%s" % [critical, "" if critical == 1 else "S"]
     elif alerts.size() > 0:
-        location_label.text = "RESTORA • %d ACTIVE SIGNAL%s" % [alerts.size(), "" if alerts.size() == 1 else "S"]
+        location_label.text = "%d ACTIVE SIGNAL%s" % [alerts.size(), "" if alerts.size() == 1 else "S"]
     else:
-        location_label.text = "ACQUIRE • RESTORE • OPERATE • EXPAND"
+        location_label.text = "RESTORE • OPERATE • GROW"
