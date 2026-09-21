@@ -116,6 +116,8 @@ func _check_layout_contract(scene: Node, hud: Node) -> void:
         if tutorial != null:
             var troot := tutorial.get("overlay_root") as Control
             if troot != null: troot.size = viewport_size
+            if viewport_size.x < 700.0 and tutorial.has_method("_expand"):
+                tutorial._expand()
             tutorial._layout_responsive()
         if strategy != null:
             var sroot := strategy.get("root") as Control
@@ -127,6 +129,7 @@ func _check_layout_contract(scene: Node, hud: Node) -> void:
         if viewport_size.x < 700.0:
             check("mobile action dock stays inside viewport %s" % viewport_size, _inside_viewport(action_dock, viewport_size))
             if tutorial_panel != null and tutorial_panel.visible:
+                check("mobile tutorial stays inside viewport %s" % viewport_size, _inside_viewport(tutorial_panel, viewport_size))
                 check("mobile tutorial avoids action dock %s" % viewport_size, not tutorial_panel.get_global_rect().intersects(action_dock.get_global_rect()))
             check("mobile strategy HUD yields to primary shell %s" % viewport_size, strategy_panel == null or not strategy_panel.visible)
         else:

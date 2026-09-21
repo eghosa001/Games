@@ -17,18 +17,32 @@ func _ready() -> void:
     add_child(root_control)
     banner = Panel.new()
     banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    var banner_style := StyleBoxFlat.new()
+    banner_style.bg_color = Color("101d3d", 0.97)
+    banner_style.border_color = Color("f2c65c", 0.78)
+    banner_style.set_border_width_all(1)
+    banner_style.set_border_width(SIDE_TOP, 3)
+    banner_style.set_corner_radius_all(22)
+    banner_style.shadow_color = Color(0, 0, 0, 0.52)
+    banner_style.shadow_size = 20
+    banner_style.shadow_offset = Vector2(0, 9)
+    banner.add_theme_stylebox_override("panel", banner_style)
     banner.modulate.a = 0.0
     root_control.add_child(banner)
     title_label = Label.new()
     title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
     title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    title_label.add_theme_color_override("font_color", Color("ffe28a"))
+    title_label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.62))
+    title_label.add_theme_constant_override("shadow_offset_y", 2)
     banner.add_child(title_label)
     body_label = Label.new()
     body_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     body_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
     body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     body_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    body_label.add_theme_color_override("font_color", Color("e6ecff"))
     banner.add_child(body_label)
     _layout()
     var window := get_tree().root
@@ -125,16 +139,19 @@ func _takeover_wins() -> int:
 
 func _show_banner(title: String, body: String) -> void:
     _layout()
-    title_label.text = "★ " + title + " ★"
+    title_label.text = "✦  " + title + "  ✦"
     body_label.text = body
     banner.show()
     timer = 5.0
-    var tween: Variant = create_tween()
+    var tween: Variant = create_tween().set_parallel(true)
     tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-    banner.scale = Vector2(0.92, 0.92)
+    var final_position := banner.position
+    banner.position.y -= 18.0
+    banner.scale = Vector2(0.90, 0.90)
     banner.modulate.a = 0.0
-    tween.tween_property(banner, "scale", Vector2.ONE, 0.28)
-    tween.parallel().tween_property(banner, "modulate:a", 1.0, 0.20)
+    tween.tween_property(banner, "position", final_position, 0.34)
+    tween.tween_property(banner, "scale", Vector2.ONE, 0.34)
+    tween.tween_property(banner, "modulate:a", 1.0, 0.20)
 
 func _hide_banner() -> void:
     var tween: Variant = create_tween()

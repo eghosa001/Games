@@ -24,7 +24,10 @@ var _legacy_world_view: CanvasItem
 var _legacy_property_map: CanvasItem
 var _legacy_world_renderers: Array[CanvasItem] = []
 var _camera_target := Vector3(0.0, 1.8, 0.0)
+var _camera_base_target := Vector3(0.0, 1.8, 0.0)
+var _camera_base_position := Vector3(12.8, 8.4, 14.8)
 var _camera_tween: Tween
+var _camera_idle_time := 0.0
 
 func _ready() -> void:
     _presenter = get_node_or_null("Properties/ActiveProperty3D")
@@ -42,21 +45,21 @@ func _ready() -> void:
         return
     if _camera != null:
         _camera.current = true
+        _camera_base_position = _camera.position
+        _camera_base_target = _camera_target
         _camera.look_at(_camera_target, Vector3.UP)
     _sync_visuals(false)
 
 func _process(delta: float) -> void:
     if not presentation_enabled:
         return
+    _camera_idle_time += delta
     _poll_elapsed += delta
+    _update_camera_pose()
     if _poll_elapsed < poll_interval:
-        if _camera != null:
-            _camera.look_at(_camera_target, Vector3.UP)
         return
     _poll_elapsed = 0.0
     _sync_visuals(true)
-    if _camera != null:
-        _camera.look_at(_camera_target, Vector3.UP)
 
 func read_visual_snapshot(state: Node) -> Dictionary:
     return VisualState.snapshot_from_game_state(state)
@@ -81,21 +84,55 @@ func _update_camera_for_snapshot(previous: Dictionary, snapshot: Dictionary, ani
     var stage_changed := str(previous.get("stage", "")) != stage
     var property_changed := int(previous.get("selected_property", -1)) != int(snapshot.get("selected_property", 0))
     var business_open := bool(snapshot.get("business_open", false))
-    var desired := Vector3(12.8, 8.4, 14.8)
+    var activity_tier := clampi(int(snapshot.get("activity_tier", 0)), 0, 3)
+
+    var desired_position := Vector3(12.8, 8.4, 14.8)
+    var desired_target := Vector3(0.0, 1.8, 0.0)
+    var desired_fov := 45.0
+
+    if property_changed:
+        desired_position = Vector3(11.2, 7.2, 12.7)
+        desired_target = Vector3(0.0, 2.0, 0.1)
+        desired_fov = 43.0
     if stage_changed and stage not in ["neglected", "cleaned"]:
-        desired = Vector3(9.4, 6.4, 10.6)
-    elif property_changed:
-        desired = Vector3(11.2, 7.2, 12.7)
+        desired_position = Vector3(9.4, 6.4, 10.6)
+        desired_target = Vector3(0.0, 2.15, 0.25)
+        desired_fov = 41.5
     if stage == "operational" and business_open:
-        desired = Vector3(10.8, 6.8, 12.0)
+        desired_position = Vector3(10.8, 6.8, 12.0)
+        desired_target = Vector3(0.0, 2.0, 1.0)
+        desired_fov = 42.0 - float(activity_tier) * 0.55
+
     if _camera_tween != null and _camera_tween.is_valid():
         _camera_tween.kill()
+
+    _camera_base_position = desired_position
+    _camera_base_target = desired_target
     if not animate:
-        _camera.position = desired
+        _camera.position = desired_position
+        _camera.fov = desired_fov
+        _camera_target = desired_target
         return
-    _camera_tween = create_tween()
-    _camera_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-    _camera_tween.tween_property(_camera, "position", desired, 0.55)
+
+    _camera_tween = create_tween().set_parallel(true)
+    _camera_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+    _camera_tween.tween_property(_camera, "position", desired_position, 0.72)
+    _camera_tween.tween_property(_camera, "fov", desired_fov, 0.72)
+    _camera_tween.tween_method(_set_camera_target, _camera_target, desired_target, 0.72)
+
+func _set_camera_target(value: Vector3) -> void:
+    _camera_target = value
+
+func _update_camera_pose() -> void:
+    if _camera == null:
+        return
+    # Subtle presentation drift gives the world depth without turning the
+    # management camera into a constantly orbiting cinematic camera.
+    if _camera_tween == null or not _camera_tween.is_valid():
+        var drift_x := sin(_camera_idle_time * 0.22) * 0.10
+        var drift_y := sin(_camera_idle_time * 0.17 + 0.8) * 0.045
+        _camera_target = _camera_base_target + Vector3(drift_x, drift_y, 0.0)
+    _camera.look_at(_camera_target, Vector3.UP)
 
 func _apply_presentation_visibility() -> void:
     visible = presentation_enabled

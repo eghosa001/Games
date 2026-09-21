@@ -36,7 +36,11 @@ func _run() -> void:
                 {"id":"b", "name":"B", "type":"factory", "owned":true, "cleaning":100, "repair":100, "painting":100, "furnishing":100}
             ]
         },
-        "businesses": {"business_open": true, "origin_property_id":"a"}
+        "businesses": {"business_open": true, "origin_property_id":"a", "capacity_level":3, "marketing_level":2},
+        "employees": {"roster":[{"id":"e1"},{"id":"e2"},{"id":"e3"},{"id":"e4"},{"id":"e5"}]},
+        "production": {"finished_goods":12},
+        "economy": {"last_sales":7, "total_profit":2400},
+        "player": {"day":8, "reputation":64}
     }
     var selected_snapshot := VisualState.snapshot_from_game_state(state)
     check("selected property owns its 3D state", selected_snapshot.get("owned") == true and selected_snapshot.get("stage") == "operational")
@@ -44,6 +48,10 @@ func _run() -> void:
     state.values["businesses"]["origin_property_id"] = "b"
     selected_snapshot = VisualState.snapshot_from_game_state(state)
     check("origin property enables operating visuals", selected_snapshot.get("business_open") == true)
+    check("live company activity raises visual tier", int(selected_snapshot.get("activity_tier", 0)) == 3)
+    check("live staffing drives visible worker pool", int(selected_snapshot.get("worker_visual_count", 0)) == 5)
+    check("sales and marketing drive district traffic", int(selected_snapshot.get("traffic_level", 0)) == 3)
+    check("snapshot carries authoritative day and reputation", int(selected_snapshot.get("day", 0)) == 8 and int(selected_snapshot.get("reputation", 0)) == 64)
     state.free()
 
     print("RESTORA 3D VISUAL STATE: %s" % ("PASS" if failed == 0 else "FAIL"))

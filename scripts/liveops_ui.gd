@@ -2,12 +2,12 @@ extends CanvasLayer
 
 ## Responsive live-operations surface. World events remain authoritative in LiveOpsSystem.
 const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
-const SURFACE := Color("0d2028")
-const SURFACE_2 := Color("102831")
-const BORDER := Color("274852")
-const TEXT := Color("e7f2ef")
-const MUTED := Color("78949a")
-const ACCENT := Color("d5b56e")
+const SURFACE := Color("0b1630")
+const SURFACE_2 := Color("14254d")
+const BORDER := Color("5367af")
+const TEXT := Color("f7f9ff")
+const MUTED := Color("adbbe0")
+const ACCENT := Color("f2c65c")
 const SUCCESS := Color("62d69a")
 const WARNING := Color("e9c56b")
 const DANGER := Color("ef7676")
@@ -28,7 +28,7 @@ func _ready() -> void:
     if not get_viewport().size_changed.is_connected(_layout): get_viewport().size_changed.connect(_layout)
 
 func _build_ui() -> void:
-    panel = Panel.new(); panel.name = "LiveOpsPanel"; panel.add_theme_stylebox_override("panel", _style(SURFACE, BORDER, 14)); add_child(panel)
+    panel = Panel.new(); panel.name = "LiveOpsPanel"; panel.add_theme_stylebox_override("panel", _style(SURFACE, BORDER, 20)); add_child(panel)
     title_label = Label.new(); title_label.text = "LIVE OPERATIONS"; title_label.add_theme_font_size_override("font_size", 20); title_label.add_theme_color_override("font_color", TEXT); panel.add_child(title_label)
     season_label = Label.new(); season_label.add_theme_font_size_override("font_size", 11); season_label.add_theme_color_override("font_color", MUTED); panel.add_child(season_label)
     close_button = Button.new(); close_button.text = "CLOSE"; close_button.custom_minimum_size = Vector2(84, 46); close_button.focus_mode = Control.FOCUS_NONE; close_button.mouse_filter = Control.MOUSE_FILTER_STOP; close_button.pressed.connect(_close); panel.add_child(close_button)
@@ -36,7 +36,7 @@ func _build_ui() -> void:
     content = VBoxContainer.new(); content.add_theme_constant_override("separation", 10); content.size_flags_horizontal = Control.SIZE_EXPAND_FILL; scroll.add_child(content)
 
 func _style(bg: Color, border: Color, radius := 12) -> StyleBoxFlat:
-    var s := StyleBoxFlat.new(); s.bg_color = bg; s.border_color = border; s.set_border_width_all(1); s.set_corner_radius_all(radius); s.content_margin_left = 12; s.content_margin_right = 12; s.content_margin_top = 10; s.content_margin_bottom = 10; return s
+    var s := StyleBoxFlat.new(); s.bg_color = bg; s.border_color = border; s.set_border_width_all(1); s.set_border_width(SIDE_TOP, 2); s.set_corner_radius_all(radius); s.content_margin_left = 14; s.content_margin_right = 14; s.content_margin_top = 12; s.content_margin_bottom = 12; s.shadow_color = Color(0, 0, 0, 0.36); s.shadow_size = 10; s.shadow_offset = Vector2(0, 4); return s
 
 func _process(delta: float) -> void:
     if panel == null or not panel.visible: return
@@ -97,13 +97,13 @@ func _add_message(text: String, tint: Color) -> void:
     var label := Label.new(); label.text = text; label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; label.add_theme_font_size_override("font_size", 11); label.add_theme_color_override("font_color", tint); content.add_child(label)
 
 func _add_card(title: String, meta: String, tint: Color) -> void:
-    var card := PanelContainer.new(); card.add_theme_stylebox_override("panel", _style(SURFACE_2, BORDER, 10)); card.custom_minimum_size = Vector2(0, 68); content.add_child(card)
+    var card := PanelContainer.new(); card.add_theme_stylebox_override("panel", _style(SURFACE_2, Color(BORDER.r, BORDER.g, BORDER.b, 0.72), 14)); card.custom_minimum_size = Vector2(0, 76); content.add_child(card)
     var box := VBoxContainer.new(); box.add_theme_constant_override("separation", 4); card.add_child(box)
     var heading := Label.new(); heading.text = title; heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; heading.add_theme_font_size_override("font_size", 14); heading.add_theme_color_override("font_color", TEXT); box.add_child(heading)
     var detail := Label.new(); detail.text = meta; detail.add_theme_font_size_override("font_size", 10); detail.add_theme_color_override("font_color", tint); box.add_child(detail)
 
 func _add_progress_card(title: String, progress: float, target: float, pct: float, expiry: int) -> void:
-    var card := PanelContainer.new(); card.add_theme_stylebox_override("panel", _style(SURFACE_2, BORDER, 10)); card.custom_minimum_size = Vector2(0, 86); content.add_child(card)
+    var card := PanelContainer.new(); card.add_theme_stylebox_override("panel", _style(SURFACE_2, Color(BORDER.r, BORDER.g, BORDER.b, 0.72), 14)); card.custom_minimum_size = Vector2(0, 94); content.add_child(card)
     var box := VBoxContainer.new(); box.add_theme_constant_override("separation", 5); card.add_child(box)
     var heading := Label.new(); heading.text = title; heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; heading.add_theme_font_size_override("font_size", 14); heading.add_theme_color_override("font_color", TEXT); box.add_child(heading)
     var progress_label := Label.new(); progress_label.text = "%.0f / %.0f   •   %d%%" % [progress, target, roundi(pct * 100.0)]; progress_label.add_theme_font_size_override("font_size", 10); progress_label.add_theme_color_override("font_color", SUCCESS if pct >= 1.0 else (WARNING if pct >= 0.7 else MUTED)); box.add_child(progress_label)
