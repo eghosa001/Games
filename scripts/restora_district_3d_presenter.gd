@@ -33,6 +33,11 @@ var _yellow: StandardMaterial3D
 var _truck_material: StandardMaterial3D
 var _worker_material: StandardMaterial3D
 var _lamp_material: StandardMaterial3D
+var _car_blue: StandardMaterial3D
+var _car_coral: StandardMaterial3D
+var _person_blue: StandardMaterial3D
+var _person_green: StandardMaterial3D
+var _district_sign: Label3D
 
 func _ready() -> void:
     _build_once()
@@ -102,6 +107,10 @@ func _create_materials() -> void:
     _truck_material = _material(Color("557c8b"), 0.2, 0.58)
     _worker_material = _material(Color("d8863d"), 0.0, 0.82)
     _lamp_material = _material(Color("ffe2a3"), 0.0, 0.35, true)
+    _car_blue = _material(Color("4f6fcb"), 0.28, 0.38)
+    _car_coral = _material(Color("cc6678"), 0.22, 0.42)
+    _person_blue = _material(Color("5578d8"), 0.02, 0.78)
+    _person_green = _material(Color("4fa77a"), 0.02, 0.78)
 
 func _material(color: Color, metallic: float, roughness: float, emissive: bool = false) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
@@ -149,6 +158,25 @@ func _build_roadside() -> void:
         _make_box("Planter", Vector3(1.1, 0.55, 1.1), Vector3(x, 0.28, 3.15), _concrete, _district_root)
         _make_sphere("PlanterShrub", 0.62, Vector3(x, 1.0, 3.15), _green, _district_root)
 
+    # Branded district furniture and transit cues make the environment read as
+    # a designed place rather than a collection of primitive boxes.
+    _make_box("BusShelterRoof", Vector3(3.0, 0.14, 1.25), Vector3(-7.3, 2.25, 4.8), _dark_metal, _district_root)
+    _make_box("BusShelterBack", Vector3(3.0, 1.65, 0.12), Vector3(-7.3, 1.35, 4.25), _glass, _district_root)
+    for x in [-8.6, -6.0]:
+        _make_box("BusShelterPost", Vector3(0.10, 2.2, 0.10), Vector3(x, 1.1, 4.8), _dark_metal, _district_root)
+
+    _make_box("DistrictSignBase", Vector3(3.6, 1.25, 0.26), Vector3(7.5, 1.15, 4.55), _dark_metal, _district_root)
+    _district_sign = Label3D.new()
+    _district_sign.name = "DistrictBrand"
+    _district_sign.text = "RESTORA DISTRICT"
+    _district_sign.font_size = 28
+    _district_sign.pixel_size = 0.006
+    _district_sign.position = Vector3(7.5, 1.18, 4.72)
+    _district_sign.modulate = Color("ffe8a3")
+    _district_sign.outline_modulate = Color(0.02, 0.04, 0.09, 0.9)
+    _district_sign.outline_size = 5
+    _district_root.add_child(_district_sign)
+
 func _build_construction_activity() -> void:
     for index in range(3):
         var worker := _make_worker("Builder%d" % index, Vector3(-2.8 + index * 2.6, 0.0, 3.9), _construction_root)
@@ -192,6 +220,7 @@ func _make_truck(node_name: String, position: Vector3) -> Node3D:
     truck.name = node_name
     truck.position = position
     _make_box("Cargo", Vector3(2.8, 1.55, 1.45), Vector3(0.25, 1.15, 0.0), _truck_material, truck)
+    _make_box("CargoStripe", Vector3(2.3, 0.16, 1.48), Vector3(0.25, 1.35, 0.0), _yellow, truck)
     _make_box("Cab", Vector3(1.05, 1.25, 1.45), Vector3(-1.65, 0.9, 0.0), _office, truck)
     for x in [-1.55, 0.85]:
         for z in [-0.66, 0.66]:
@@ -202,7 +231,11 @@ func _make_car(node_name: String, position: Vector3) -> Node3D:
     var car := Node3D.new()
     car.name = node_name
     car.position = position
-    _make_box("Body", Vector3(1.85, 0.58, 0.95), Vector3(0.0, 0.58, 0.0), _office, car)
+    var variant := int(node_name.unicode_at(node_name.length() - 1)) if node_name.length() > 0 else 0
+    var body_material: StandardMaterial3D = _car_blue if variant % 2 == 0 else _car_coral
+    _make_box("Body", Vector3(1.85, 0.58, 0.95), Vector3(0.0, 0.58, 0.0), body_material, car)
+    _make_box("BumperFront", Vector3(0.12, 0.22, 0.88), Vector3(-0.98, 0.48, 0.0), _dark_metal, car)
+    _make_box("BumperRear", Vector3(0.12, 0.22, 0.88), Vector3(0.98, 0.48, 0.0), _dark_metal, car)
     _make_box("Cabin", Vector3(0.9, 0.48, 0.82), Vector3(-0.15, 1.02, 0.0), _glass, car)
     for x in [-0.62, 0.62]:
         for z in [-0.43, 0.43]:
@@ -214,9 +247,18 @@ func _make_worker(node_name: String, position: Vector3, parent: Node) -> Node3D:
     worker.name = node_name
     worker.position = position
     parent.add_child(worker)
-    _make_box("Body", Vector3(0.34, 0.75, 0.28), Vector3(0.0, 0.9, 0.0), _worker_material, worker)
+    var variant := int(node_name.unicode_at(node_name.length() - 1)) if node_name.length() > 0 else 0
+    var is_builder := node_name.begins_with("Builder")
+    var clothing: StandardMaterial3D = _worker_material if is_builder else (_person_blue if variant % 2 == 0 else _person_green)
+    _make_box("Body", Vector3(0.36, 0.78, 0.30), Vector3(0.0, 0.9, 0.0), clothing, worker)
+    _make_box("ArmL", Vector3(0.09, 0.50, 0.09), Vector3(-0.25, 0.92, 0.0), clothing, worker)
+    _make_box("ArmR", Vector3(0.09, 0.50, 0.09), Vector3(0.25, 0.92, 0.0), clothing, worker)
     _make_sphere("Head", 0.2, Vector3(0.0, 1.42, 0.0), _office, worker)
-    _make_box("Helmet", Vector3(0.46, 0.12, 0.38), Vector3(0.0, 1.6, 0.0), _yellow, worker)
+    if is_builder:
+        _make_box("Helmet", Vector3(0.46, 0.12, 0.38), Vector3(0.0, 1.6, 0.0), _yellow, worker)
+        _make_box("SafetyVest", Vector3(0.38, 0.18, 0.32), Vector3(0.0, 1.0, 0.0), _yellow, worker)
+    else:
+        _make_box("Hair", Vector3(0.34, 0.10, 0.30), Vector3(0.0, 1.58, 0.0), _dark_metal, worker)
     return worker
 
 func _apply_visual_state() -> void:
@@ -225,6 +267,8 @@ func _apply_visual_state() -> void:
     var rank := _stage_rank(_visual_stage)
     _construction_root.visible = rank >= 1 and rank < 5
     _operations_root.visible = _activity_enabled
+    if _district_sign != null:
+        _district_sign.modulate.a = 0.78 + minf(0.18, float(_reputation) / 500.0)
     if _activity_enabled:
         for index in range(_operations_workers.size()):
             _operations_workers[index].visible = index < _worker_visual_count
@@ -284,6 +328,8 @@ func _animate_operations() -> void:
         car.position.x = lerpf(-13.0, 13.0, t)
         car.position.z = 7.55 + float(index % 2) * 0.55
         car.rotation.y = heading_for_x_velocity(direction)
+    if _district_sign != null:
+        _district_sign.modulate.a = 0.78 + 0.10 * sin(_elapsed * 1.1) + minf(0.10, float(_reputation) / 700.0)
 
 func _stage_rank(stage_name: String) -> int:
     match stage_name:
