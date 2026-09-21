@@ -1,6 +1,8 @@
 extends Node3D
 class_name Property3DPresenter
 
+signal property_interacted(stage: String, business_open: bool)
+
 var _visual_stage := "neglected"
 var _archetype := "warehouse"
 var _business_open := false
@@ -14,6 +16,7 @@ var _prosperity_tier := 0
 var _built := false
 var _motion_time := 0.0
 var _building_tween: Tween
+var _interaction_area: Area3D
 
 var _building_root: Node3D
 var _detail_root: Node3D
@@ -133,11 +136,41 @@ func uses_loading_bays() -> bool:
 func uses_base_front_windows() -> bool:
     return _archetype in ["warehouse", "factory"]
 
+func _build_interaction_area() -> void:
+    if _interaction_area != null:
+        return
+    _interaction_area = Area3D.new()
+    _interaction_area.name = "PropertyInteractionArea"
+    _interaction_area.position = Vector3(0.0, 2.4, 0.0)
+    _interaction_area.input_ray_pickable = true
+    _interaction_area.collision_layer = 1
+    _interaction_area.collision_mask = 0
+    add_child(_interaction_area)
+
+    var shape := CollisionShape3D.new()
+    shape.name = "TapTarget"
+    var box := BoxShape3D.new()
+    box.size = Vector3(11.5, 6.2, 8.5)
+    shape.shape = box
+    _interaction_area.add_child(shape)
+    _interaction_area.input_event.connect(_on_property_input)
+
+func _on_property_input(_camera: Node, event: InputEvent, _event_position: Vector3, _normal: Vector3, _shape_idx: int) -> void:
+    var activate := false
+    if event is InputEventMouseButton:
+        var mouse_event := event as InputEventMouseButton
+        activate = mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed
+    elif event is InputEventScreenTouch:
+        activate = (event as InputEventScreenTouch).pressed
+    if activate:
+        property_interacted.emit(_visual_stage, _business_open)
+
 func _build_once() -> void:
     if _built:
         return
     _built = true
     _create_materials()
+    _build_interaction_area()
 
     _building_root = Node3D.new()
     _building_root.name = "Building"
