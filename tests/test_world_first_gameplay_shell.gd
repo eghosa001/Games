@@ -22,6 +22,14 @@ func _run() -> void:
     check("settings is utility not a theme-mode gameplay action", final.contains('theme_button.text = "SETTINGS"'))
     check("core-loop primary action remains state driven", final.contains('"INSPECT"') and final.contains('"ACQUIRE"') and final.contains('"RESTORE"') and final.contains('"PRODUCE"') and final.contains('"SELL GOODS"'))
 
+    var property := FileAccess.get_file_as_string("res://scripts/property_3d_presenter.gd")
+    var world := FileAccess.get_file_as_string("res://scripts/restora_world_3d_controller.gd")
+    var operations := FileAccess.get_file_as_string("res://scripts/business_operations_ui.gd")
+    check("primary 3D property exposes direct interaction", property.contains("property_interacted") and property.contains("PropertyInteractionArea"))
+    check("property taps route through inspect acquire restore operate", world.contains("_on_property_interacted") and world.contains("inspect_property") and world.contains("acquire_property") and world.contains("restore_property") and world.contains("BusinessOperationsPanel"))
+    check("frequent operating actions use a contextual sheet", operations.contains("contextual sheet") and operations.contains("viewport.y - h - 8.0"))
+    check("empty HUD space passes input through to 3D", base.contains("shell.mouse_filter = Control.MOUSE_FILTER_IGNORE") and base.contains("page.mouse_filter = Control.MOUSE_FILTER_IGNORE"))
+
     print("WORLD-FIRST GAMEPLAY SHELL: %s" % ("PASS" if failed == 0 else "FAIL"))
     quit(1 if failed > 0 else 0)
 
