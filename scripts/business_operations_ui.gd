@@ -20,12 +20,12 @@ var price_button: Button
 var staff_button: Button
 var status: Label
 
-const BG := Color("08151bf7")
-const CARD := Color("10252d")
-const BORDER := Color("31565e")
-const TEXT := Color("edf6f3")
-const MUTED := Color("8fa8ac")
-const ACCENT := Color("d8b76d")
+const BG := Color("0b1630f2")
+const CARD := Color("14254d")
+const BORDER := Color("5367af")
+const TEXT := Color("f7f9ff")
+const MUTED := Color("adbbe0")
+const ACCENT := Color("f2c65c")
 const POSITIVE := Color("86c9a9")
 const WARNING := Color("f0ad88")
 
@@ -40,15 +40,15 @@ func _ready() -> void:
 
 func _build() -> void:
     scrim = ColorRect.new()
-    scrim.color = Color(0.01, 0.04, 0.06, 0.82)
+    scrim.color = Color(0.01, 0.02, 0.06, 0.34)
     scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     scrim.mouse_filter = Control.MOUSE_FILTER_STOP
     add_child(scrim)
     panel = Panel.new()
     panel.add_theme_stylebox_override("panel", _style(BG, BORDER, 18))
     add_child(panel)
-    header = _label("BUSINESS OPERATIONS", 19, TEXT)
-    summary = _label("LIVE OPERATING BOARD", 9, MUTED)
+    header = _label("OPERATE", 20, TEXT)
+    summary = _label("LIVE COMPANY • TAP ACTIONS, WATCH THE WORLD RESPOND", 9, MUTED)
     production_label = _label("", 11, TEXT)
     inventory_label = _label("", 10, MUTED)
     machine_label = _label("", 10, MUTED)
@@ -75,9 +75,14 @@ func _label(text: String, size: int, color: Color) -> Label:
 func _style(bg: Color, border: Color, radius: int) -> StyleBoxFlat:
     var s := StyleBoxFlat.new()
     s.bg_color = bg; s.border_color = border
-    s.set_border_width_all(1); s.set_corner_radius_all(radius)
+    s.set_border_width_all(1)
+    s.set_border_width(SIDE_TOP, 2)
+    s.set_corner_radius_all(radius)
     s.content_margin_left = 12; s.content_margin_right = 12
     s.content_margin_top = 8; s.content_margin_bottom = 8
+    s.shadow_color = Color(0, 0, 0, 0.42)
+    s.shadow_size = 14
+    s.shadow_offset = Vector2(0, 6)
     return s
 
 func _button(text: String, callback: Callable, height: int) -> Button:
@@ -94,31 +99,41 @@ func _button(text: String, callback: Callable, height: int) -> Button:
 
 func _layout() -> void:
     if panel == null: return
-    var s := get_viewport().get_visible_rect().size
-    var phone := s.x < 430.0
-    var narrow := s.x < 720.0
-    var w := minf(780.0, maxf(304.0, s.x - (16.0 if narrow else 56.0)))
-    var h := minf(620.0, maxf(470.0, s.y - (70.0 if narrow else 90.0)))
-    panel.size = Vector2(w, minf(h, s.y - 16.0))
-    panel.position = Vector2((s.x - w) * 0.5, maxf(38.0, (s.y - panel.size.y) * 0.5))
-    header.position = Vector2(14, 10); header.size = Vector2(w - 112, 28)
-    summary.position = Vector2(14, 39); summary.size = Vector2(w - 112, 18)
-    close_button.position = Vector2(w - 88, 10); close_button.size = Vector2(76, 44)
-    production_label.position = Vector2(14, 72); production_label.size = Vector2(w - 28, 42)
-    inventory_label.position = Vector2(14, 116); inventory_label.size = Vector2(w - 28, 56)
-    machine_label.position = Vector2(14, 174); machine_label.size = Vector2(w - 28, 56)
+    var viewport := get_viewport().get_visible_rect().size
+    var phone := viewport.x < 430.0
+    var narrow := viewport.x < 720.0
+
+    # Frequent operating actions behave as a contextual sheet so the player
+    # keeps visual contact with the simulated business instead of entering a
+    # disconnected full-screen dashboard.
+    var w := viewport.x - 16.0 if narrow else minf(430.0, viewport.x - 32.0)
+    var h := minf(520.0, maxf(390.0, viewport.y * (0.60 if narrow else 0.74)))
+    panel.size = Vector2(w, h)
+    panel.position = Vector2(
+        8.0 if narrow else viewport.x - w - 16.0,
+        viewport.y - h - 8.0 if narrow else maxf(16.0, (viewport.y - h) * 0.5)
+    )
+
+    header.position = Vector2(16, 12); header.size = Vector2(w - 116, 28)
+    summary.position = Vector2(16, 42); summary.size = Vector2(w - 116, 20)
+    close_button.position = Vector2(w - 92, 10); close_button.size = Vector2(76, 44)
+    production_label.position = Vector2(16, 76); production_label.size = Vector2(w - 32, 38)
+    inventory_label.position = Vector2(16, 116); inventory_label.size = Vector2(w - 32, 50)
+    machine_label.position = Vector2(16, 168); machine_label.size = Vector2(w - 32, 50)
+
     var buttons := [produce_button, buy_inputs_button, upgrade_button, marketing_button, price_button, staff_button]
-    var gap := 7.0
-    var bw := (w - 28.0 - gap) / 2.0
-    var actions_y := 238.0
+    var gap := 8.0
+    var columns := 2
+    var bw := (w - 32.0 - gap) / float(columns)
+    var actions_y := 226.0
     for i in range(buttons.size()):
-        var row := i / 2
-        var col := i % 2
-        buttons[i].position = Vector2(14.0 + col * (bw + gap), actions_y + row * 53.0)
+        var row := i / columns
+        var col := i % columns
+        buttons[i].position = Vector2(16.0 + col * (bw + gap), actions_y + row * 54.0)
         buttons[i].size = Vector2(bw, 46)
-        buttons[i].add_theme_font_size_override("font_size", 9 if phone or narrow else 10)
-    status.position = Vector2(14, minf(actions_y + 3.0 * 53.0 + 8.0, panel.size.y - 48.0))
-    status.size = Vector2(w - 28, 42)
+        buttons[i].add_theme_font_size_override("font_size", 9 if phone else 10)
+    status.position = Vector2(16, minf(actions_y + 3.0 * 54.0 + 8.0, panel.size.y - 46.0))
+    status.size = Vector2(w - 32, 38)
 
 func open_screen() -> void:
     visible = true
