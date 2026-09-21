@@ -40,6 +40,10 @@ func _run() -> void:
     check("focused-screen motion honors reduced motion", screens.contains("renew/ui/reduce_motion"))
     check("focused-screen transition uses cubic easing", screens.contains("Tween.TRANS_CUBIC"))
 
+    var settings := FileAccess.get_file_as_string("res://scripts/save_load_ui.gd")
+    check("settings exposes reduce motion control", settings.contains("REDUCE MOTION") and settings.contains("UI_PREFS_PATH"))
+    check("settings matches premium navy art direction", settings.contains("0b1630") and settings.contains("5367af"))
+
     print("PREMIUM ART DIRECTION: %s" % ("PASS" if failed == 0 else "FAIL"))
     quit(1 if failed > 0 else 0)
 
