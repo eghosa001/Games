@@ -19,14 +19,14 @@ var notices_button: Button
 var close_button: Button
 var refresh_clock := 0.0
 
-const SURFACE := Color("0b1c23", 0.93)
-const CONTENT := Color("0a171d", 0.76)
-const BORDER := Color("36575e", 0.68)
-const TEXT := Color("edf6f2")
-const MUTED := Color("89a3a7")
-const ACCENT := Color("e2bb63")
-const MINT := Color("65c69c")
-const SCRIM := Color(0.01, 0.055, 0.07, 0.52)
+const SURFACE := Color("0b1630", 0.96)
+const CONTENT := Color("111f42", 0.88)
+const BORDER := Color("5267ad", 0.76)
+const TEXT := Color("f7f9ff")
+const MUTED := Color("adbbe0")
+const ACCENT := Color("f2c65c")
+const MINT := Color("65d4a4")
+const SCRIM := Color(0.015, 0.025, 0.07, 0.46)
 
 func _ready() -> void:
     layer = 63
@@ -57,10 +57,11 @@ func _style(bg: Color, border: Color, radius := 16) -> StyleBoxFlat:
     style.bg_color = bg
     style.border_color = border
     style.set_border_width_all(1)
+    style.set_border_width(SIDE_TOP, 2)
     style.set_corner_radius_all(radius)
-    style.shadow_color = Color(0, 0, 0, 0.34)
-    style.shadow_size = 14
-    style.shadow_offset = Vector2(0, 5)
+    style.shadow_color = Color(0, 0, 0, 0.50)
+    style.shadow_size = 20
+    style.shadow_offset = Vector2(0, 8)
     return style
 
 func _build_ui() -> void:
@@ -72,7 +73,7 @@ func _build_ui() -> void:
 
     panel = Panel.new()
     panel.name = "DashboardPanel"
-    panel.add_theme_stylebox_override("panel", _style(SURFACE, BORDER, 20))
+    panel.add_theme_stylebox_override("panel", _style(SURFACE, BORDER, 28))
     add_child(panel)
 
     hero = DashboardHeroArt.new()
@@ -81,7 +82,7 @@ func _build_ui() -> void:
 
     content_surface = Panel.new()
     content_surface.name = "ExecutiveBriefSurface"
-    content_surface.add_theme_stylebox_override("panel", _style(CONTENT, Color(BORDER.r, BORDER.g, BORDER.b, 0.48), 16))
+    content_surface.add_theme_stylebox_override("panel", _style(CONTENT, Color(BORDER.r, BORDER.g, BORDER.b, 0.56), 20))
     panel.add_child(content_surface)
 
     title_label = _label("EXECUTIVE COMMAND", 22, TEXT)
@@ -113,7 +114,7 @@ func _button(text: String) -> Button:
     button.text = text
     button.focus_mode = Control.FOCUS_NONE
     button.clip_text = true
-    button.custom_minimum_size = Vector2(44, 46)
+    button.custom_minimum_size = Vector2(48, 50)
     panel.add_child(button)
     return button
 
@@ -133,11 +134,11 @@ func _layout() -> void:
     var pad := 16.0 if mobile else 22.0
     title_label.position = Vector2(pad, 15)
     title_label.size = Vector2(width * 0.58, 30)
-    title_label.add_theme_font_size_override("font_size", 18 if mobile else 22)
+    title_label.add_theme_font_size_override("font_size", 20 if mobile else 24)
     status_label.position = Vector2(width - 160.0 - pad, 19)
     status_label.size = Vector2(160.0, 20)
     status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-    status_label.add_theme_font_size_override("font_size", 9 if mobile else 10)
+    status_label.add_theme_font_size_override("font_size", 10 if mobile else 11)
 
     if mobile:
         _layout_mobile(width, pad)
@@ -177,7 +178,7 @@ func _layout_desktop(width: float, pad: float) -> void:
     primary_button.position = Vector2(right_x + (action_w + gap) * 2.0, y)
     primary_button.size = Vector2(action_w, 44)
     for button in [close_button, notices_button, primary_button]:
-        button.add_theme_font_size_override("font_size", 10)
+        button.add_theme_font_size_override("font_size", 11)
 
 func _layout_mobile(width: float, pad: float) -> void:
     var top := 54.0
@@ -194,16 +195,16 @@ func _layout_mobile(width: float, pad: float) -> void:
     var text_w := width - pad * 2.0 - inner * 2.0
     overview_label.position = Vector2(pad + inner, content_y + 10)
     overview_label.size = Vector2(text_w, 34)
-    overview_label.add_theme_font_size_override("font_size", 10)
+    overview_label.add_theme_font_size_override("font_size", 11)
     objective_label.position = Vector2(pad + inner, content_y + 49)
     objective_label.size = Vector2(text_w, 45)
-    objective_label.add_theme_font_size_override("font_size", 10)
+    objective_label.add_theme_font_size_override("font_size", 11)
     ops_label.position = Vector2(pad + inner, content_y + 99)
     ops_label.size = Vector2(text_w, 40)
-    ops_label.add_theme_font_size_override("font_size", 9)
+    ops_label.add_theme_font_size_override("font_size", 10)
     events_label.position = Vector2(pad + inner, content_y + 143)
     events_label.size = Vector2(text_w, maxf(26.0, content_h - 151.0))
-    events_label.add_theme_font_size_override("font_size", 9)
+    events_label.add_theme_font_size_override("font_size", 10)
 
     var gap := 7.0
     var half := (width - pad * 2.0 - gap) * 0.5
@@ -216,7 +217,7 @@ func _layout_mobile(width: float, pad: float) -> void:
     primary_button.position = Vector2(pad, row_two_y)
     primary_button.size = Vector2(width - pad * 2.0, 43)
     for button in [close_button, notices_button, primary_button]:
-        button.add_theme_font_size_override("font_size", 9)
+        button.add_theme_font_size_override("font_size", 10)
 
 func _refresh(_force: bool) -> void:
     var state = _state()
