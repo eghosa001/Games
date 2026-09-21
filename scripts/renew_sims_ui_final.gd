@@ -229,6 +229,59 @@ func _apply_progression_discovery() -> void:
     _restyle_actions()
     _layout_responsive()
 
+func _apply_tab_progression() -> void:
+    if mode_buttons.size() < 4:
+        return
+    var level := _progression_level()
+    var empire_unlocked := level >= 3
+    var world_unlocked := level >= 3
+
+    mode_buttons[0].disabled = false
+    mode_buttons[1].disabled = false
+    mode_buttons[2].disabled = not empire_unlocked
+    mode_buttons[3].disabled = not world_unlocked
+    mode_buttons[2].text = "EMPIRE" if empire_unlocked else "EMPIRE\nLV 3"
+    mode_buttons[3].text = "WORLD" if world_unlocked else "WORLD\nLV 3"
+    mode_buttons[2].tooltip_text = "Build your first stable company to unlock empire management." if not empire_unlocked else "Portfolio, expansion and competition."
+    mode_buttons[3].tooltip_text = "Reach Company Level 3 to unlock regions and supply networks." if not world_unlocked else "Regions, logistics and external opportunities."
+
+    if active_tab >= 2 and level < 3:
+        active_tab = 0
+
+func _update_progress_strip() -> void:
+    if parent == null or hero_progress == null or hero_progress_label == null:
+        return
+    if str(parent.stage) != "Operational":
+        hero_progress.min_value = 0
+        hero_progress.max_value = 100
+        _update_progress_strip()
+        return
+
+    var progression = _strategic_progression()
+    if progression == null or not progression.has_method("get_progress"):
+        hero_progress.min_value = 0
+        hero_progress.max_value = 100
+        hero_progress.value = 100
+        hero_progress_label.text = "Company operating"
+        return
+
+    var progress: Dictionary = progression.get_progress()
+    var level := int(progress.get("level", 1))
+    var xp := int(progress.get("xp", 0))
+    var current := int(progress.get("current_threshold", 0))
+    var next := int(progress.get("next_threshold", -1))
+    if next <= current:
+        hero_progress.min_value = 0
+        hero_progress.max_value = 1
+        hero_progress.value = 1
+        hero_progress_label.text = "LV %d • MAX" % level
+        return
+
+    hero_progress.min_value = current
+    hero_progress.max_value = next
+    hero_progress.value = clampi(xp, current, next)
+    hero_progress_label.text = "LV %d • %d / %d XP" % [level, xp, next]
+
 func _apply_top_game_structure() -> void:
     if action_grid == null:
         return
@@ -329,7 +382,9 @@ func _refresh() -> void:
     super._refresh()
     if parent == null: return
     _apply_progression_discovery()
+    _apply_tab_progression()
     _apply_top_game_structure()
+    _update_progress_strip()
     var clock := Time.get_datetime_dict_from_system()
     var hh := "%02d" % int(clock.get("hour", 0))
     var mm := "%02d" % int(clock.get("minute", 0))
