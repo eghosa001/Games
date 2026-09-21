@@ -229,10 +229,13 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("files", nargs="*")
+    parser.add_argument("--changed-file-list", help="Optional newline-delimited changed-file list")
     parser.add_argument("--output", help="Optional file to write selected test paths")
     args = parser.parse_args()
 
     files = [p.strip() for p in args.files if p.strip()]
+    if args.changed_file_list:
+        files.extend(p.strip() for p in Path(args.changed_file_list).read_text(encoding="utf-8").splitlines() if p.strip())
     selected, groups = select(files)
 
     print("Changed files:")
