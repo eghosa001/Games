@@ -7,6 +7,10 @@ var _business_open := false
 var _operational_motion_enabled := false
 var _activity_tier := 0
 var _worker_visual_count := 0
+var _finished_goods := 0
+var _total_profit := 0
+var _capacity_level := 1
+var _prosperity_tier := 0
 var _built := false
 var _motion_time := 0.0
 var _building_tween: Tween
@@ -29,6 +33,8 @@ var _variant_walls: Array[MeshInstance3D] = []
 var _variant_glass: Array[MeshInstance3D] = []
 var _machinery_parts: Array[Node3D] = []
 var _site_workers: Array[Node3D] = []
+var _inventory_crates: Array[Node3D] = []
+var _capacity_modules: Array[Node3D] = []
 var _forklift: Node3D
 var _forklift_base := Vector3.ZERO
 var _archetype_roots: Dictionary = {}
@@ -70,13 +76,23 @@ func _process(delta: float) -> void:
         var phase := _motion_time * (0.7 + float(index) * 0.05) + float(index) * 0.8
         worker.rotation.y = sin(phase) * 0.42
         worker.position.y = abs(sin(phase * 2.1)) * 0.03
+        var arm_l := worker.get_node_or_null("ArmL") as Node3D
+        var arm_r := worker.get_node_or_null("ArmR") as Node3D
+        var leg_l := worker.get_node_or_null("LegL") as Node3D
+        var leg_r := worker.get_node_or_null("LegR") as Node3D
+        var swing := sin(phase * 2.0) * 0.42
+        if arm_l != null: arm_l.rotation.x = swing
+        if arm_r != null: arm_r.rotation.x = -swing
+        if leg_l != null: leg_l.rotation.x = -swing * 0.75
+        if leg_r != null: leg_r.rotation.x = swing * 0.75
 
     if _forklift != null and _forklift.visible:
         var travel := (sin(_motion_time * (0.55 + float(_activity_tier) * 0.08)) + 1.0) * 0.5
         _forklift.position = _forklift_base + Vector3(lerpf(0.0, 5.2, travel), 0.0, sin(_motion_time * 0.45) * 0.18)
         _forklift.rotation.y = 0.0 if cos(_motion_time * 0.55) >= 0.0 else PI
     if _brand_label != null and _brand_label.visible and _business_open:
-        _brand_label.modulate.a = 0.88 + sin(_motion_time * 1.6) * 0.08
+        var profit_glow := 0.04 if _total_profit > 0 else 0.0
+        _brand_label.modulate.a = 0.84 + profit_glow + sin(_motion_time * 1.6) * 0.08
 
 func apply_snapshot(snapshot: Dictionary, animate: bool = true) -> void:
     _visual_stage = str(snapshot.get("stage", "neglected")).to_lower()
@@ -84,6 +100,10 @@ func apply_snapshot(snapshot: Dictionary, animate: bool = true) -> void:
     _business_open = bool(snapshot.get("business_open", false))
     _activity_tier = clampi(int(snapshot.get("activity_tier", 0)), 0, 3)
     _worker_visual_count = clampi(int(snapshot.get("worker_visual_count", 0)), 0, 6)
+    _finished_goods = maxi(0, int(snapshot.get("finished_goods", 0)))
+    _total_profit = int(snapshot.get("total_profit", 0))
+    _capacity_level = maxi(1, int(snapshot.get("capacity_level", 1)))
+    _prosperity_tier = clampi(int(snapshot.get("prosperity_tier", 0)), 0, 3)
     _operational_motion_enabled = _visual_stage == "operational" and _business_open
     if not is_inside_tree():
         return
@@ -208,7 +228,25 @@ func _build_once() -> void:
     _make_box("InstallBench", Vector3(2.6, 0.65, 1.0), Vector3(-3.8, 0.5, 3.1), _metal, _furnishing_root)
 
     _make_box("Pallets", Vector3(1.6, 0.45, 1.1), Vector3(4.3, 0.45, 3.1), _metal, _operational_root)
-    _make_box("DispatchCrate", Vector3(1.0, 0.85, 0.9), Vector3(2.9, 0.65, 3.2), _accent, _operational_root)
+    for index in range(8):
+        var crate := Node3D.new()
+        crate.name = "InventoryCrate%d" % index
+        crate.position = Vector3(2.8 + float(index % 4) * 0.78, 0.0, 2.7 + float(index / 4) * 0.92)
+        _operational_root.add_child(crate)
+        _make_box("Body", Vector3(0.66, 0.60, 0.66), Vector3(0.0, 0.42, 0.0), _accent if index % 2 == 0 else _trim_material, crate)
+        _make_box("Band", Vector3(0.70, 0.10, 0.70), Vector3(0.0, 0.48, 0.0), _metal, crate)
+        crate.visible = false
+        _inventory_crates.append(crate)
+
+    for index in range(3):
+        var module := Node3D.new()
+        module.name = "CapacityModule%d" % index
+        module.position = Vector3(-4.7 + float(index) * 1.4, 0.0, -3.3)
+        _building_root.add_child(module)
+        _make_box("ModuleBody", Vector3(1.05, 1.45, 1.05), Vector3(0.0, 0.9, 0.0), _metal, module)
+        _make_box("ModuleCap", Vector3(1.18, 0.12, 1.18), Vector3(0.0, 1.68, 0.0), _safety_material, module)
+        module.visible = false
+        _capacity_modules.append(module)
 
     for x in [-2.6, 2.6]:
         var light := OmniLight3D.new()
@@ -397,6 +435,8 @@ func _make_site_worker(node_name: String, position: Vector3, parent: Node) -> No
     _make_box("HardHat", Vector3(0.42, 0.11, 0.36), Vector3(0.0, 1.65, 0.0), _safety_material, worker)
     _make_box("ArmL", Vector3(0.10, 0.55, 0.10), Vector3(-0.26, 0.95, 0.0), uniform, worker)
     _make_box("ArmR", Vector3(0.10, 0.55, 0.10), Vector3(0.26, 0.95, 0.0), uniform, worker)
+    _make_box("LegL", Vector3(0.12, 0.58, 0.12), Vector3(-0.10, 0.38, 0.0), _metal, worker)
+    _make_box("LegR", Vector3(0.12, 0.58, 0.12), Vector3(0.10, 0.38, 0.0), _metal, worker)
     return worker
 
 func _apply_visual_state(animate: bool) -> void:
@@ -444,10 +484,16 @@ func _apply_visual_state(animate: bool) -> void:
         window.material_override = glass_material
     for light in _lights:
         light.visible = active
+        light.light_energy = 1.45 + float(_activity_tier) * 0.22 + float(_prosperity_tier) * 0.10
     for index in range(_site_workers.size()):
         _site_workers[index].visible = active and index < _worker_visual_count
+    var visible_crates := clampi(int(ceil(float(_finished_goods) / 8.0)), 0, _inventory_crates.size())
+    for index in range(_inventory_crates.size()):
+        _inventory_crates[index].visible = active and index < visible_crates
+    for index in range(_capacity_modules.size()):
+        _capacity_modules[index].visible = rank >= 4 and index < clampi(_capacity_level - 1, 0, _capacity_modules.size())
     if _forklift != null:
-        _forklift.visible = active and uses_loading_bays() and _activity_tier >= 2
+        _forklift.visible = active and uses_loading_bays() and (_activity_tier >= 2 or visible_crates >= 3)
     set_process(_operational_motion_enabled)
 
     var target_scale := _archetype_scale(_archetype)
