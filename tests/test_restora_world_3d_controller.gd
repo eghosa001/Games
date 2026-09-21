@@ -14,6 +14,9 @@ func _run() -> void:
     check("controller polling interval is mobile friendly", controller.poll_interval >= 0.10)
     var source := FileAccess.get_file_as_string("res://scripts/restora_world_3d_controller.gd")
     check("camera transition cancels stale tween", source.contains("_camera_tween.kill()"))
+    check("world lighting reacts to economic phase", source.contains("_update_environment_for_snapshot") and source.contains("\"recession\"") and source.contains("\"boom\""))
+    check("live crises tint the physical world", source.contains("active_event_category") and source.contains("rim_color"))
+    check("environment motion respects reduced-motion preference", source.contains("renew/ui/reduce_motion"))
     var expected_hidden_renderers := [
         "../World/EmpireController",
         "../World/Corporate",
