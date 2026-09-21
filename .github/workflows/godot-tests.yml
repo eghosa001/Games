@@ -62,7 +62,11 @@ jobs:
           echo "CI mode: $reason (full=$full)"
 
           if [[ "$full" == "false" ]]; then
-            if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "synchronize" && -n "${{ github.event.before }}" ]]; then
+              # During active iteration, validate only the newly pushed delta.
+              # The full PR/project is validated when marked Ready for review.
+              base="${{ github.event.before }}"
+            elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
               base="${{ github.event.pull_request.base.sha }}"
             elif [[ "${{ github.event_name }}" == "push" ]]; then
               base="${{ github.event.before }}"
