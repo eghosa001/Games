@@ -110,11 +110,20 @@ func _layout_responsive() -> void:
     if action_scroll != null:
         action_scroll.visible = not world_first
     if world_first:
-        hero_card.custom_minimum_size.y = 122 if mobile else 132
-        hero_goal.visible = true
+        hero_card.custom_minimum_size.y = 104 if mobile else 110
+        hero_card.modulate.a = 0.94
+        hero_caption.visible = false
+        hero_goal.visible = size.y >= 560.0
+        hero_goal.add_theme_font_size_override("font_size", 12 if mobile else 13)
+        hero_meta.add_theme_font_size_override("font_size", 10 if mobile else 11)
+        hero_value.add_theme_font_size_override("font_size", 26 if mobile else 30)
+        hero_progress.custom_minimum_size.y = 6
         hero_art.visible = false
         if stat_grid != null:
             stat_grid.visible = false
+    else:
+        hero_card.modulate.a = 1.0
+        hero_caption.visible = true
     if status_label != null:
         status_label.visible = (not using_3d) and (not mobile) and size.y >= 720.0
     _sync_world_presentation()
