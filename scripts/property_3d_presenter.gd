@@ -5,6 +5,8 @@ var _visual_stage := "neglected"
 var _archetype := "warehouse"
 var _business_open := false
 var _operational_motion_enabled := false
+var _activity_tier := 0
+var _worker_visual_count := 0
 var _built := false
 var _motion_time := 0.0
 var _building_tween: Tween
@@ -13,6 +15,9 @@ var _building_root: Node3D
 var _detail_root: Node3D
 var _operational_root: Node3D
 var _debris_root: Node3D
+var _cleaning_root: Node3D
+var _repair_root: Node3D
+var _furnishing_root: Node3D
 var _body: MeshInstance3D
 var _roof: MeshInstance3D
 var _sign: MeshInstance3D
@@ -22,6 +27,9 @@ var _lights: Array[OmniLight3D] = []
 var _variant_walls: Array[MeshInstance3D] = []
 var _variant_glass: Array[MeshInstance3D] = []
 var _machinery_parts: Array[Node3D] = []
+var _site_workers: Array[Node3D] = []
+var _forklift: Node3D
+var _forklift_base := Vector3.ZERO
 var _archetype_roots: Dictionary = {}
 
 var _wall_dirty: StandardMaterial3D
@@ -47,13 +55,28 @@ func _process(delta: float) -> void:
         var part := _machinery_parts[index]
         if part == null or not part.is_visible_in_tree():
             continue
-        part.rotation.z += delta * (0.8 + float(index) * 0.22)
+        part.rotation.z += delta * (0.8 + float(index) * 0.22) * (1.0 + float(_activity_tier) * 0.12)
         part.rotation.y = sin(_motion_time * 0.8 + float(index)) * 0.08
+
+    for index in range(_site_workers.size()):
+        var worker := _site_workers[index]
+        if not worker.visible:
+            continue
+        var phase := _motion_time * (0.7 + float(index) * 0.05) + float(index) * 0.8
+        worker.rotation.y = sin(phase) * 0.42
+        worker.position.y = abs(sin(phase * 2.1)) * 0.03
+
+    if _forklift != null and _forklift.visible:
+        var travel := (sin(_motion_time * (0.55 + float(_activity_tier) * 0.08)) + 1.0) * 0.5
+        _forklift.position = _forklift_base + Vector3(lerpf(0.0, 5.2, travel), 0.0, sin(_motion_time * 0.45) * 0.18)
+        _forklift.rotation.y = 0.0 if cos(_motion_time * 0.55) >= 0.0 else PI
 
 func apply_snapshot(snapshot: Dictionary, animate: bool = true) -> void:
     _visual_stage = str(snapshot.get("stage", "neglected")).to_lower()
     _archetype = str(snapshot.get("archetype", "warehouse")).to_lower()
     _business_open = bool(snapshot.get("business_open", false))
+    _activity_tier = clampi(int(snapshot.get("activity_tier", 0)), 0, 3)
+    _worker_visual_count = clampi(int(snapshot.get("worker_visual_count", 0)), 0, 6)
     _operational_motion_enabled = _visual_stage == "operational" and _business_open
     if not is_inside_tree():
         return
@@ -105,6 +128,18 @@ func _build_once() -> void:
     _debris_root.name = "Debris"
     add_child(_debris_root)
 
+    _cleaning_root = Node3D.new()
+    _cleaning_root.name = "CleaningStage"
+    add_child(_cleaning_root)
+
+    _repair_root = Node3D.new()
+    _repair_root.name = "RepairStage"
+    add_child(_repair_root)
+
+    _furnishing_root = Node3D.new()
+    _furnishing_root.name = "FurnishingStage"
+    add_child(_furnishing_root)
+
     _make_box("SiteSlab", Vector3(14.0, 0.35, 10.0), Vector3(0.0, 0.0, 0.0), _ground_material, self)
     _body = _make_box("MainBody", Vector3(8.8, 3.8, 5.6), Vector3(0.0, 2.1, 0.0), _wall_dirty, _building_root)
     _roof = _make_box("Roof", Vector3(9.4, 0.45, 6.2), Vector3(0.0, 4.15, 0.0), _roof_dirty, _building_root)
@@ -131,6 +166,19 @@ func _build_once() -> void:
         var chunk := _make_box("Debris%d" % i, Vector3(0.55 + i * 0.08, 0.25, 0.4), Vector3(-4.6 + i * 1.6, 0.35, 3.6 - float(i % 2)), _roof_dirty, _debris_root)
         chunk.rotation.y = float(i) * 0.37
 
+    # Stage-specific visual storytelling. These props are presentation-only and
+    # appear strictly from the authoritative restoration stage.
+    _make_box("CleaningBin", Vector3(1.15, 0.8, 0.9), Vector3(-4.6, 0.48, 3.45), _metal, _cleaning_root)
+    _make_box("CleaningCart", Vector3(1.5, 0.55, 0.75), Vector3(4.4, 0.36, 3.35), _accent, _cleaning_root)
+    for x in [-3.8, -1.9, 0.0, 1.9, 3.8]:
+        _make_box("ScaffoldPost", Vector3(0.14, 4.2, 0.14), Vector3(x, 2.15, 3.35), _metal, _repair_root)
+    for y in [1.0, 2.4, 3.8]:
+        _make_box("ScaffoldRail", Vector3(8.0, 0.10, 0.12), Vector3(0.0, y, 3.35), _accent, _repair_root)
+    _make_box("MaterialStack", Vector3(2.0, 0.7, 1.15), Vector3(-4.2, 0.5, 2.95), _wall_repaired, _repair_root)
+
+    _make_box("FurnitureCrates", Vector3(2.4, 1.15, 1.35), Vector3(3.8, 0.75, 3.2), _accent, _furnishing_root)
+    _make_box("InstallBench", Vector3(2.6, 0.65, 1.0), Vector3(-3.8, 0.5, 3.1), _metal, _furnishing_root)
+
     _make_box("Pallets", Vector3(1.6, 0.45, 1.1), Vector3(4.3, 0.45, 3.1), _metal, _operational_root)
     _make_box("DispatchCrate", Vector3(1.0, 0.85, 0.9), Vector3(2.9, 0.65, 3.2), _accent, _operational_root)
 
@@ -144,6 +192,21 @@ func _build_once() -> void:
         light.shadow_enabled = false
         _operational_root.add_child(light)
         _lights.append(light)
+
+    for index in range(6):
+        var worker := _make_site_worker("SiteWorker%d" % index, Vector3(-4.5 + float(index % 3) * 2.2, 0.0, 3.3 + float(index / 3) * 0.9), _operational_root)
+        worker.visible = false
+        _site_workers.append(worker)
+
+    _forklift = Node3D.new()
+    _forklift.name = "Forklift"
+    _forklift.position = Vector3(-2.8, 0.0, 3.9)
+    _forklift_base = _forklift.position
+    _operational_root.add_child(_forklift)
+    _make_box("ForkliftBody", Vector3(1.15, 0.72, 0.9), Vector3(0.0, 0.62, 0.0), _accent, _forklift)
+    _make_box("ForkliftMast", Vector3(0.12, 1.5, 0.95), Vector3(0.62, 1.0, 0.0), _metal, _forklift)
+    _make_box("ForkA", Vector3(0.95, 0.08, 0.10), Vector3(1.0, 0.22, -0.28), _metal, _forklift)
+    _make_box("ForkB", Vector3(0.95, 0.08, 0.10), Vector3(1.0, 0.22, 0.28), _metal, _forklift)
 
 func _build_archetype_variants() -> void:
     var warehouse := _new_variant_root("WarehouseVariant")
@@ -252,11 +315,34 @@ func _make_cylinder(node_name: String, radius: float, height: float, position: V
     parent.add_child(instance)
     return instance
 
+func _make_site_worker(node_name: String, position: Vector3, parent: Node) -> Node3D:
+    var worker := Node3D.new()
+    worker.name = node_name
+    worker.position = position
+    parent.add_child(worker)
+    _make_box("Body", Vector3(0.34, 0.78, 0.28), Vector3(0.0, 0.92, 0.0), _accent, worker)
+    var head_mesh := SphereMesh.new()
+    head_mesh.radius = 0.21
+    head_mesh.height = 0.42
+    head_mesh.radial_segments = 8
+    head_mesh.rings = 4
+    var head := MeshInstance3D.new()
+    head.name = "Head"
+    head.mesh = head_mesh
+    head.position = Vector3(0.0, 1.46, 0.0)
+    head.material_override = _wall_painted
+    worker.add_child(head)
+    _make_box("HardHat", Vector3(0.42, 0.11, 0.36), Vector3(0.0, 1.65, 0.0), _accent, worker)
+    return worker
+
 func _apply_visual_state(animate: bool) -> void:
     if not _built:
         return
     var rank := _stage_rank(_visual_stage)
     _debris_root.visible = rank < 1
+    _cleaning_root.visible = rank == 1
+    _repair_root.visible = rank in [2, 3]
+    _furnishing_root.visible = rank == 4
     _roof.visible = true
     _detail_root.visible = rank >= 2
     _operational_root.visible = rank >= 4
@@ -286,6 +372,10 @@ func _apply_visual_state(animate: bool) -> void:
         window.material_override = glass_material
     for light in _lights:
         light.visible = active
+    for index in range(_site_workers.size()):
+        _site_workers[index].visible = active and index < _worker_visual_count
+    if _forklift != null:
+        _forklift.visible = active and uses_loading_bays() and _activity_tier >= 2
     set_process(_operational_motion_enabled)
 
     var target_scale := _archetype_scale(_archetype)
