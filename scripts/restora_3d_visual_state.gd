@@ -53,6 +53,73 @@ static func snapshot_from_values(property: Dictionary, owned: bool, stage: Strin
         "property_name": str(property.get("name", "Restora Property")),
     }
 
+static func _activity_context(state: Node, business_open: bool) -> Dictionary:
+    if state == null or not state.has_method("get_value"):
+        return {
+            "day": 1,
+            "reputation": 0,
+            "finished_goods": 0,
+            "last_sales": 0,
+            "total_profit": 0,
+            "capacity_level": 1,
+            "marketing_level": 0,
+            "employee_count": 0,
+            "activity_tier": 0,
+            "traffic_level": 0,
+            "worker_visual_count": 0,
+            "is_profitable": false,
+        }
+
+    var roster = state.get_value("employees", "roster", [])
+    var employees := roster.size() if roster is Array else 0
+    var finished_goods := maxi(0, int(state.get_value("production", "finished_goods", 0)))
+    var last_sales := maxi(0, int(state.get_value("economy", "last_sales", 0)))
+    var total_profit := int(state.get_value("economy", "total_profit", 0))
+    var capacity := maxi(1, int(state.get_value("businesses", "capacity_level", 1)))
+    var marketing := maxi(0, int(state.get_value("businesses", "marketing_level", 0)))
+    var reputation := maxi(0, int(state.get_value("player", "reputation", 0)))
+
+    var activity_score := 0
+    if business_open:
+        activity_score += 2
+    if finished_goods > 0:
+        activity_score += 1
+    if last_sales > 0:
+        activity_score += 1
+    if capacity >= 2:
+        activity_score += 1
+    if marketing >= 1:
+        activity_score += 1
+    if employees >= 4:
+        activity_score += 1
+    if total_profit > 0:
+        activity_score += 1
+
+    var activity_tier := 0
+    if business_open:
+        activity_tier = 1
+        if activity_score >= 4:
+            activity_tier = 2
+        if activity_score >= 7:
+            activity_tier = 3
+    var traffic_level := clampi(activity_tier + (1 if marketing >= 2 or last_sales >= 5 else 0), 0, 3)
+    var worker_visual_count := 0 if not business_open else clampi(maxi(2, employees), 2, 6)
+
+    return {
+        "day": maxi(1, int(state.get_value("player", "day", 1))),
+        "reputation": reputation,
+        "finished_goods": finished_goods,
+        "last_sales": last_sales,
+        "total_profit": total_profit,
+        "capacity_level": capacity,
+        "marketing_level": marketing,
+        "employee_count": employees,
+        "activity_tier": activity_tier,
+        "traffic_level": traffic_level,
+        "worker_visual_count": worker_visual_count,
+        "is_profitable": total_profit > 0,
+    }
+
 static func snapshot_from_game_state(state: Node) -> Dictionary:
     if state == null or not state.has_method("get_value"):
         return snapshot_from_values({}, false, "Neglected", 0, 0, 0, 0, false, 0)
@@ -80,7 +147,7 @@ static func snapshot_from_game_state(state: Node) -> Dictionary:
         var selected_property_id := str(property.get("id", ""))
         business_open = owned and selected_property_id != "" and selected_property_id == origin_property_id
 
-    return snapshot_from_values(
+    var snapshot := snapshot_from_values(
         property,
         owned,
         stage,
@@ -91,3 +158,5 @@ static func snapshot_from_game_state(state: Node) -> Dictionary:
         business_open,
         selected
     )
+    snapshot.merge(_activity_context(state, business_open), true)
+    return snapshot
