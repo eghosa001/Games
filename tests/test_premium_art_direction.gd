@@ -35,6 +35,7 @@ func _run() -> void:
     var liveops := FileAccess.get_file_as_string("res://scripts/liveops_ui.gd")
     check("live operations uses bespoke event iconography", liveops.contains("_make_icon(\"opportunities\"") and liveops.contains("_make_icon(\"intelligence\""))
     check("live operations has premium progress styling", liveops.contains("_progress_style"))
+    check("live operations has distinct seasonal hero identity", liveops.contains("_add_season_hero") and liveops.contains("_season_theme"))
 
     var screens := FileAccess.get_file_as_string("res://scripts/ui_screen_manager.gd")
     check("focused-screen motion honors reduced motion", screens.contains("renew/ui/reduce_motion"))
@@ -43,6 +44,12 @@ func _run() -> void:
     var settings := FileAccess.get_file_as_string("res://scripts/save_load_ui.gd")
     check("settings exposes reduce motion control", settings.contains("REDUCE MOTION") and settings.contains("UI_PREFS_PATH"))
     check("settings matches premium navy art direction", settings.contains("0b1630") and settings.contains("5367af"))
+
+    var tutorial := FileAccess.get_file_as_string("res://scripts/tutorial_overlay.gd")
+    check("first-session onboarding has visible progress", tutorial.contains("progress_bar") and tutorial.contains("STEP %d/%d"))
+
+    var visual_state := FileAccess.get_file_as_string("res://scripts/restora_3d_visual_state.gd")
+    check("3D state carries prosperity rivalry and live events", visual_state.contains("prosperity_tier") and visual_state.contains("rival_market_share") and visual_state.contains("active_event_category"))
 
     print("PREMIUM ART DIRECTION: %s" % ("PASS" if failed == 0 else "FAIL"))
     quit(1 if failed > 0 else 0)
