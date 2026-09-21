@@ -21,6 +21,7 @@ var _furnishing_root: Node3D
 var _body: MeshInstance3D
 var _roof: MeshInstance3D
 var _sign: MeshInstance3D
+var _brand_label: Label3D
 var _windows: Array[MeshInstance3D] = []
 var _loading_details: Array[Node3D] = []
 var _lights: Array[OmniLight3D] = []
@@ -42,6 +43,10 @@ var _glass_off: StandardMaterial3D
 var _glass_on: StandardMaterial3D
 var _accent: StandardMaterial3D
 var _ground_material: StandardMaterial3D
+var _trim_material: StandardMaterial3D
+var _safety_material: StandardMaterial3D
+var _worker_blue: StandardMaterial3D
+var _worker_green: StandardMaterial3D
 
 func _ready() -> void:
     _build_once()
@@ -70,6 +75,8 @@ func _process(delta: float) -> void:
         var travel := (sin(_motion_time * (0.55 + float(_activity_tier) * 0.08)) + 1.0) * 0.5
         _forklift.position = _forklift_base + Vector3(lerpf(0.0, 5.2, travel), 0.0, sin(_motion_time * 0.45) * 0.18)
         _forklift.rotation.y = 0.0 if cos(_motion_time * 0.55) >= 0.0 else PI
+    if _brand_label != null and _brand_label.visible and _business_open:
+        _brand_label.modulate.a = 0.88 + sin(_motion_time * 1.6) * 0.08
 
 func apply_snapshot(snapshot: Dictionary, animate: bool = true) -> void:
     _visual_stage = str(snapshot.get("stage", "neglected")).to_lower()
@@ -153,7 +160,28 @@ func _build_once() -> void:
         var window := _make_box("Window%d" % i, Vector3(1.1, 0.85, 0.12), Vector3(-3.1 + i * 2.05, 3.0, 2.91), _glass_off, _detail_root)
         _windows.append(window)
 
-    _sign = _make_box("Sign", Vector3(3.3, 0.75, 0.18), Vector3(0.0, 4.55, 2.98), _accent, _detail_root)
+    _sign = _make_box("Sign", Vector3(3.6, 0.82, 0.18), Vector3(0.0, 4.58, 3.00), _accent, _detail_root)
+    _make_box("SignTopHighlight", Vector3(3.35, 0.08, 0.05), Vector3(0.0, 4.82, 3.11), _trim_material, _detail_root)
+    _brand_label = Label3D.new()
+    _brand_label.name = "BrandLabel"
+    _brand_label.text = "RESTORA WORKS"
+    _brand_label.font_size = 32
+    _brand_label.modulate = Color("fff2c7")
+    _brand_label.outline_modulate = Color(0.03, 0.05, 0.10, 0.9)
+    _brand_label.outline_size = 6
+    _brand_label.position = Vector3(0.0, 4.58, 3.13)
+    _brand_label.pixel_size = 0.0065
+    _detail_root.add_child(_brand_label)
+
+    for i in range(3):
+        var bay_x := -2.2 + i * 2.2
+        _make_box("BayStripeL%d" % i, Vector3(0.10, 0.05, 2.4), Vector3(bay_x - 0.82, 0.205, 3.25), _safety_material, _detail_root)
+        _make_box("BayStripeR%d" % i, Vector3(0.10, 0.05, 2.4), Vector3(bay_x + 0.82, 0.205, 3.25), _safety_material, _detail_root)
+
+    for x in [-3.2, -1.1, 1.1, 3.2]:
+        _make_box("RoofVent", Vector3(0.55, 0.32, 0.55), Vector3(x, 4.55, -0.9), _metal, _detail_root)
+        _make_box("RoofVentCap", Vector3(0.68, 0.09, 0.68), Vector3(x, 4.75, -0.9), _trim_material, _detail_root)
+
     var dock_canopy := _make_box("DockCanopy", Vector3(6.8, 0.18, 1.35), Vector3(-0.4, 3.2, 3.35), _metal, _detail_root)
     _loading_details.append(dock_canopy)
     var side_unit := _make_box("SideUnit", Vector3(1.8, 2.4, 2.0), Vector3(5.0, 1.4, -1.2), _wall_repaired, _detail_root)
@@ -222,6 +250,9 @@ func _build_archetype_variants() -> void:
         _make_cylinder("Stack", 0.42, 4.2, Vector3(x, 6.6, -1.4), _metal, factory)
     _make_cylinder("ProcessTank", 1.0, 2.4, Vector3(4.2, 1.4, -2.0), _metal, factory)
     _make_box("PipeBridge", Vector3(5.2, 0.25, 0.3), Vector3(1.5, 3.4, -2.0), _accent, factory)
+    for x in [-2.8, 0.0, 2.8]:
+        _make_box("FactoryTruss", Vector3(0.16, 2.8, 0.16), Vector3(x, 4.8, 1.55), _trim_material, factory)
+    _make_box("FactoryServiceWalkway", Vector3(6.6, 0.18, 0.85), Vector3(0.0, 4.1, 1.35), _metal, factory)
     var factory_rotor := Node3D.new()
     factory_rotor.name = "FactoryRotor"
     factory_rotor.position = Vector3(4.2, 3.8, -1.9)
@@ -238,6 +269,9 @@ func _build_archetype_variants() -> void:
         var glass_band := _make_box("GlassBand%d" % floor_index, Vector3(4.9, 0.58, 0.14), Vector3(0.6, 2.4 + floor_index * 1.4, 2.9), _glass_off, office)
         _variant_glass.append(glass_band)
     _make_box("OfficeCrown", Vector3(5.8, 0.35, 4.7), Vector3(0.6, 8.15, 0.7), _metal, office)
+    _make_box("OfficeCrownGlow", Vector3(4.8, 0.10, 0.14), Vector3(0.6, 8.27, 2.95), _accent, office)
+    for floor_index in range(3):
+        _make_box("OfficeSideFin%d" % floor_index, Vector3(0.16, 1.05, 3.8), Vector3(3.15, 2.5 + float(floor_index) * 1.7, 0.7), _trim_material, office)
     _archetype_roots["office"] = office
 
     var retail := _new_variant_root("RetailVariant")
@@ -246,6 +280,10 @@ func _build_archetype_variants() -> void:
     _make_box("RetailCanopy", Vector3(8.4, 0.32, 1.65), Vector3(0.0, 3.2, 3.55), _accent, retail)
     _make_box("RetailPylon", Vector3(1.1, 4.8, 0.6), Vector3(5.7, 2.4, 2.0), _metal, retail)
     _make_box("RetailSign", Vector3(2.1, 1.1, 0.22), Vector3(5.7, 4.5, 2.0), _accent, retail)
+    for x in [-2.8, -0.9, 0.9, 2.8]:
+        _make_box("RetailAwning%d" % int((x + 3.0) * 10.0), Vector3(1.25, 0.18, 1.05), Vector3(x, 2.65, 3.45), _safety_material if int(abs(x) * 10.0) % 2 == 0 else _accent, retail)
+    _make_box("RetailPlanterL", Vector3(1.2, 0.45, 0.8), Vector3(-4.4, 0.45, 3.0), _trim_material, retail)
+    _make_box("RetailPlanterR", Vector3(1.2, 0.45, 0.8), Vector3(4.4, 0.45, 3.0), _trim_material, retail)
     _archetype_roots["retail"] = retail
 
     var resource := _new_variant_root("ResourceVariant")
@@ -258,6 +296,9 @@ func _build_archetype_variants() -> void:
     conveyor_drum.rotation.x = PI * 0.5
     _machinery_parts.append(conveyor_drum)
     _make_box("ResourceYard", Vector3(5.0, 0.65, 2.8), Vector3(4.2, 0.35, 2.4), _roof_dirty, resource)
+    for x in [-4.5, 4.5]:
+        _make_box("ResourceBeaconPost", Vector3(0.12, 2.8, 0.12), Vector3(x, 1.4, 2.8), _metal, resource)
+        _make_sphere("ResourceBeacon", 0.22, Vector3(x, 2.95, 2.8), _accent, resource)
     _archetype_roots["resource"] = resource
 
 func _new_variant_root(node_name: String) -> Node3D:
@@ -278,6 +319,10 @@ func _create_materials() -> void:
     _glass_on = _material(Color("ffdca0"), 0.12, 0.32, true)
     _accent = _material(Color("e3b955"), 0.32, 0.42)
     _ground_material = _material(Color("59615a"), 0.0, 1.0)
+    _trim_material = _material(Color("b7c4d4"), 0.55, 0.30)
+    _safety_material = _material(Color("f2c65c"), 0.18, 0.42, true)
+    _worker_blue = _material(Color("5578d8"), 0.04, 0.72)
+    _worker_green = _material(Color("4fa77a"), 0.02, 0.76)
 
 func _material(color: Color, metallic: float, roughness: float, emissive: bool = false) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
@@ -315,12 +360,29 @@ func _make_cylinder(node_name: String, radius: float, height: float, position: V
     parent.add_child(instance)
     return instance
 
+func _make_sphere(node_name: String, radius: float, position: Vector3, material: Material, parent: Node) -> MeshInstance3D:
+    var mesh := SphereMesh.new()
+    mesh.radius = radius
+    mesh.height = radius * 2.0
+    mesh.radial_segments = 10
+    mesh.rings = 6
+    var instance := MeshInstance3D.new()
+    instance.name = node_name
+    instance.mesh = mesh
+    instance.position = position
+    instance.material_override = material
+    parent.add_child(instance)
+    return instance
+
 func _make_site_worker(node_name: String, position: Vector3, parent: Node) -> Node3D:
     var worker := Node3D.new()
     worker.name = node_name
     worker.position = position
     parent.add_child(worker)
-    _make_box("Body", Vector3(0.34, 0.78, 0.28), Vector3(0.0, 0.92, 0.0), _accent, worker)
+    var role_index := int(node_name.unicode_at(node_name.length() - 1)) if node_name.length() > 0 else 0
+    var uniform: StandardMaterial3D = _worker_blue if role_index % 3 == 0 else (_worker_green if role_index % 3 == 1 else _accent)
+    _make_box("Body", Vector3(0.38, 0.80, 0.30), Vector3(0.0, 0.92, 0.0), uniform, worker)
+    _make_box("Vest", Vector3(0.40, 0.20, 0.32), Vector3(0.0, 1.02, 0.0), _safety_material, worker)
     var head_mesh := SphereMesh.new()
     head_mesh.radius = 0.21
     head_mesh.height = 0.42
@@ -332,7 +394,9 @@ func _make_site_worker(node_name: String, position: Vector3, parent: Node) -> No
     head.position = Vector3(0.0, 1.46, 0.0)
     head.material_override = _wall_painted
     worker.add_child(head)
-    _make_box("HardHat", Vector3(0.42, 0.11, 0.36), Vector3(0.0, 1.65, 0.0), _accent, worker)
+    _make_box("HardHat", Vector3(0.42, 0.11, 0.36), Vector3(0.0, 1.65, 0.0), _safety_material, worker)
+    _make_box("ArmL", Vector3(0.10, 0.55, 0.10), Vector3(-0.26, 0.95, 0.0), uniform, worker)
+    _make_box("ArmR", Vector3(0.10, 0.55, 0.10), Vector3(0.26, 0.95, 0.0), uniform, worker)
     return worker
 
 func _apply_visual_state(animate: bool) -> void:
@@ -348,6 +412,14 @@ func _apply_visual_state(animate: bool) -> void:
     _operational_root.visible = rank >= 4
     _apply_archetype_visibility()
     _sign.visible = rank >= 3 and uses_loading_bays()
+    if _brand_label != null:
+        _brand_label.visible = rank >= 3
+        match _archetype:
+            "factory": _brand_label.text = "RESTORA INDUSTRIES"
+            "office": _brand_label.text = "RESTORA GROUP"
+            "retail": _brand_label.text = "RESTORA MARKET"
+            "resource": _brand_label.text = "RESTORA RESOURCES"
+            _: _brand_label.text = "RESTORA WORKS"
 
     var wall_material: StandardMaterial3D = _wall_dirty
     var roof_material: StandardMaterial3D = _roof_dirty
