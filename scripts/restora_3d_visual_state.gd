@@ -70,8 +70,8 @@ static func _activity_context(state: Node, business_open: bool) -> Dictionary:
             "is_profitable": false,
         }
 
-    var roster = state.get_value("employees", "roster", [])
-    var employees := roster.size() if roster is Array else 0
+    var roster: Variant = state.get_value("employees", "roster", [])
+    var employees: int = (roster as Array).size() if roster is Array else 0
     var finished_goods := maxi(0, int(state.get_value("production", "finished_goods", 0)))
     var last_sales := maxi(0, int(state.get_value("economy", "last_sales", 0)))
     var total_profit := int(state.get_value("economy", "total_profit", 0))
@@ -79,7 +79,7 @@ static func _activity_context(state: Node, business_open: bool) -> Dictionary:
     var marketing := maxi(0, int(state.get_value("businesses", "marketing_level", 0)))
     var reputation := maxi(0, int(state.get_value("player", "reputation", 0)))
 
-    var activity_score := 0
+    var activity_score: int = 0
     if business_open:
         activity_score += 2
     if finished_goods > 0:
@@ -95,15 +95,15 @@ static func _activity_context(state: Node, business_open: bool) -> Dictionary:
     if total_profit > 0:
         activity_score += 1
 
-    var activity_tier := 0
+    var activity_tier: int = 0
     if business_open:
         activity_tier = 1
         if activity_score >= 4:
             activity_tier = 2
         if activity_score >= 7:
             activity_tier = 3
-    var traffic_level := clampi(activity_tier + (1 if marketing >= 2 or last_sales >= 5 else 0), 0, 3)
-    var worker_visual_count := 0 if not business_open else clampi(maxi(2, employees), 2, 6)
+    var traffic_level: int = clampi(activity_tier + (1 if marketing >= 2 or last_sales >= 5 else 0), 0, 3)
+    var worker_visual_count: int = 0 if not business_open else clampi(maxi(2, employees), 2, 6)
 
     return {
         "day": maxi(1, int(state.get_value("player", "day", 1))),
