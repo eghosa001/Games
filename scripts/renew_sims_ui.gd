@@ -63,6 +63,33 @@ const DARK_BORDER := Color("1f3934")
 const DARK_ACCENT := Color("5eead4")
 const DARK_GOLD := Color("e5b95f")
 const WARN := Color("f0b24a")
+const ICON_ROOT := "res://Assets/Art/Icons/"
+const ACTION_ICON_MAP := {
+    "HOME": "home",
+    "BUSINESS": "business",
+    "EMPIRE": "empire",
+    "WORLD": "world",
+    "COMPANY OVERVIEW": "business",
+    "PROPERTIES": "property",
+    "ACTIVE COMPANY": "business",
+    "SAVE & SETTINGS": "settings",
+    "OPERATIONS": "business",
+    "PRODUCTION & EQUIPMENT": "production",
+    "PEOPLE & DEMAND": "people",
+    "MARKET & CUSTOMERS": "market",
+    "FINANCE & CONTRACTS": "finance",
+    "PORTFOLIO & PROJECTS": "property",
+    "EXPANSION": "empire",
+    "HQ & TECHNOLOGY": "empire",
+    "COMPETITION": "intelligence",
+    "REGIONS": "world",
+    "SUPPLY NETWORK": "supply",
+    "OPPORTUNITIES": "opportunities",
+    "INTELLIGENCE": "intelligence",
+    "MARKET INTELLIGENCE": "market",
+    "DECISIONS": "decisions",
+    "ALERTS": "decisions",
+}
 
 func _ready() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
@@ -119,6 +146,7 @@ func _build_ui() -> void:
     alerts_button = Button.new()
     alerts_button.name = "DecisionCenter"
     alerts_button.text = "DECISIONS"
+    _apply_button_icon(alerts_button, "DECISIONS", 20)
     alerts_button.custom_minimum_size = Vector2(92, 44)
     alerts_button.focus_mode = Control.FOCUS_NONE
     alerts_button.pressed.connect(_open_decision_center)
@@ -127,6 +155,11 @@ func _build_ui() -> void:
     theme_button = Button.new()
     theme_button.name = "ThemeToggle"
     theme_button.text = "LIGHT"
+    var settings_icon := _icon_texture("settings")
+    if settings_icon != null:
+        theme_button.icon = settings_icon
+        theme_button.icon_max_width = 20
+        theme_button.expand_icon = true
     theme_button.custom_minimum_size = Vector2(78, 44)
     theme_button.focus_mode = Control.FOCUS_NONE
     theme_button.pressed.connect(_toggle_theme)
@@ -284,12 +317,36 @@ func _build_ui() -> void:
         var button := Button.new()
         button.name = "Nav_" + legacy_names[i]
         button.text = names[i]
+        _apply_button_icon(button, names[i], 20)
         button.custom_minimum_size = Vector2(100, 48)
         button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         button.focus_mode = Control.FOCUS_NONE
         button.pressed.connect(_set_tab.bind(i))
         bottom_nav.add_child(button)
         mode_buttons.append(button)
+
+func _icon_texture(icon_key: String) -> Texture2D:
+    var normalized := icon_key.strip_edges().to_lower()
+    if normalized.is_empty():
+        return null
+    var path := ICON_ROOT + normalized + ".svg"
+    if not ResourceLoader.exists(path):
+        return null
+    return load(path) as Texture2D
+
+func _icon_for_action(label: String) -> Texture2D:
+    var key := str(ACTION_ICON_MAP.get(label.strip_edges().to_upper(), ""))
+    return _icon_texture(key)
+
+func _apply_button_icon(button: Button, label: String, max_width: int = 22) -> void:
+    if button == null:
+        return
+    var texture := _icon_for_action(label)
+    if texture == null:
+        return
+    button.icon = texture
+    button.icon_max_width = max_width
+    button.expand_icon = true
 
 func _label(text: String, size: int) -> Label:
     var label := Label.new()
@@ -405,6 +462,7 @@ func _layout_responsive() -> void:
     location_label.visible = size.x >= 340.0
     theme_button.visible = size.x >= 420.0
     alerts_button.text = "ALERTS" if size.x < 420.0 else "DECISIONS"
+    _apply_button_icon(alerts_button, alerts_button.text, 19)
     alerts_button.custom_minimum_size.x = 72 if size.x < 420.0 else 92
     section_caption.visible = size.y >= 640.0
     status_label.visible = not mobile and size.y >= 720.0
@@ -454,6 +512,7 @@ func _action(text: String, callback: Callable, subtitle := "", emphasis := false
     var button := Button.new()
     button.name = "Action_" + text.to_snake_case()
     button.text = text + ("\n" + subtitle if subtitle != "" else "")
+    _apply_button_icon(button, text, 24)
     button.set_meta("renew_primary_text", text)
     button.set_meta("renew_subtitle", subtitle)
     button.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -545,6 +604,19 @@ func _bind_primary_move() -> void:
         if callable.is_valid(): hero_action.pressed.disconnect(callable)
     var move := _primary_move()
     hero_action.text = str(move.get("label", "NEXT MOVE"))
+    var primary_icon_key := "property"
+    match hero_action.text:
+        "PRODUCE": primary_icon_key = "production"
+        "BUSINESS": primary_icon_key = "business"
+        "CHOOSE BUSINESS": primary_icon_key = "market"
+        "ACQUIRE": primary_icon_key = "finance"
+        "INSPECT": primary_icon_key = "intelligence"
+        "RESTORE": primary_icon_key = "property"
+    var primary_icon := _icon_texture(primary_icon_key)
+    if primary_icon != null:
+        hero_action.icon = primary_icon
+        hero_action.icon_max_width = 24
+        hero_action.expand_icon = true
     var callable: Callable = move.get("call", Callable())
     if callable.is_valid(): hero_action.pressed.connect(_run_action.bind(callable))
 
