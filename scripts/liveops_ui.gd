@@ -95,7 +95,9 @@ func _refresh(force: bool = false) -> void:
     last_signature = signature
     season_label.text = "SEASON %d   •   LIVE WORLD PROGRAMME" % int(state.get("season", 1))
     var scroll_value := scroll.scroll_vertical
-    _clear_content(); _add_section("ROTATING OPPORTUNITIES", ACCENT)
+    _clear_content()
+    _add_season_hero(state, offers)
+    _add_section("ROTATING OPPORTUNITIES", ACCENT)
     if offers.is_empty(): _add_message("No rotating offers are active.", MUTED)
     else:
         for item in offers.values(): _add_card(str(item.get("title", "Opportunity")), "Expires Day %d" % int(item.get("expires_day", 0)), ACCENT)
@@ -110,6 +112,77 @@ func _refresh(force: bool = false) -> void:
     _add_progress_card(str(goal.get("title", "Community Goal")), goal_progress, goal_target, clampf(goal_progress / goal_target, 0.0, 1.0), -1)
     _add_message("Seasonal events and world crises are governed by the authoritative world-event systems.", MUTED)
     _layout(); scroll.set_deferred("scroll_vertical", scroll_value)
+
+func _season_theme(offers: Dictionary) -> Dictionary:
+    var title := "RESTORA SEASON"
+    var icon := "opportunities"
+    var tint := ACCENT
+    for item in offers.values():
+        if not item is Dictionary:
+            continue
+        var id := str((item as Dictionary).get("id", "")).to_lower()
+        var item_title := str((item as Dictionary).get("title", "")).strip_edges()
+        if not item_title.is_empty():
+            title = item_title
+        if id.contains("industrial"):
+            icon = "production"
+            tint = Color("f2b45c")
+        elif id.contains("trade"):
+            icon = "supply"
+            tint = Color("67cbe2")
+        elif id.contains("innovation"):
+            icon = "intelligence"
+            tint = Color("9a83ff")
+        elif id.contains("energy"):
+            icon = "production"
+            tint = Color("ffd36b")
+        break
+    return {"title": title, "icon": icon, "tint": tint}
+
+func _add_season_hero(state: Dictionary, offers: Dictionary) -> void:
+    var theme := _season_theme(offers)
+    var tint: Color = theme.get("tint", ACCENT)
+    var hero := PanelContainer.new()
+    hero.add_theme_stylebox_override("panel", _style(Color(SURFACE_2.r, SURFACE_2.g, SURFACE_2.b, 0.98), Color(tint.r, tint.g, tint.b, 0.82), 18))
+    hero.custom_minimum_size = Vector2(0, 112)
+    content.add_child(hero)
+
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 14)
+    hero.add_child(row)
+    row.add_child(_make_icon(str(theme.get("icon", "opportunities")), 46))
+
+    var box := VBoxContainer.new()
+    box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    box.add_theme_constant_override("separation", 4)
+    row.add_child(box)
+
+    var season := Label.new()
+    season.text = "SEASON %d" % int(state.get("season", 1))
+    season.add_theme_font_size_override("font_size", 11)
+    season.add_theme_color_override("font_color", tint)
+    box.add_child(season)
+
+    var title := Label.new()
+    title.text = str(theme.get("title", "RESTORA SEASON"))
+    title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    title.add_theme_font_size_override("font_size", 18)
+    title.add_theme_color_override("font_color", TEXT)
+    box.add_child(title)
+
+    var day := 1
+    var game = get_node_or_null("/root/RenewGameState")
+    if game != null and game.has_method("get_value"):
+        day = int(game.get_value("player", "day", 1))
+    var remaining := 0
+    for item in offers.values():
+        if item is Dictionary:
+            remaining = maxi(remaining, int((item as Dictionary).get("expires_day", day)) - day)
+    var meta := Label.new()
+    meta.text = "LIVE PROGRAMME  •  %d DAYS REMAINING" % maxi(0, remaining)
+    meta.add_theme_font_size_override("font_size", 10)
+    meta.add_theme_color_override("font_color", MUTED)
+    box.add_child(meta)
 
 func _clear_content() -> void:
     if content == null: return
