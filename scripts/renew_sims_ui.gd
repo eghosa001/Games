@@ -63,6 +63,33 @@ const DARK_BORDER := Color("1f3934")
 const DARK_ACCENT := Color("5eead4")
 const DARK_GOLD := Color("e5b95f")
 const WARN := Color("f0b24a")
+const ICON_ROOT := "res://Assets/Art/Icons/"
+const ACTION_ICON_MAP := {
+    "HOME": "home",
+    "BUSINESS": "business",
+    "EMPIRE": "empire",
+    "WORLD": "world",
+    "COMPANY OVERVIEW": "business",
+    "PROPERTIES": "property",
+    "ACTIVE COMPANY": "business",
+    "SAVE & SETTINGS": "settings",
+    "OPERATIONS": "business",
+    "PRODUCTION & EQUIPMENT": "production",
+    "PEOPLE & DEMAND": "people",
+    "MARKET & CUSTOMERS": "market",
+    "FINANCE & CONTRACTS": "finance",
+    "PORTFOLIO & PROJECTS": "property",
+    "EXPANSION": "empire",
+    "HQ & TECHNOLOGY": "empire",
+    "COMPETITION": "intelligence",
+    "REGIONS": "world",
+    "SUPPLY NETWORK": "supply",
+    "OPPORTUNITIES": "opportunities",
+    "INTELLIGENCE": "intelligence",
+    "MARKET INTELLIGENCE": "market",
+    "DECISIONS": "decisions",
+    "ALERTS": "decisions",
+}
 
 func _ready() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
@@ -119,17 +146,25 @@ func _build_ui() -> void:
     alerts_button = Button.new()
     alerts_button.name = "DecisionCenter"
     alerts_button.text = "DECISIONS"
+    _apply_button_icon(alerts_button, "DECISIONS", 20)
     alerts_button.custom_minimum_size = Vector2(92, 44)
     alerts_button.focus_mode = Control.FOCUS_NONE
     alerts_button.pressed.connect(_open_decision_center)
+    _wire_button_motion(alerts_button)
     header.add_child(alerts_button)
 
     theme_button = Button.new()
     theme_button.name = "ThemeToggle"
     theme_button.text = "LIGHT"
+    var settings_icon := _icon_texture("settings")
+    if settings_icon != null:
+        theme_button.icon = settings_icon
+        theme_button.add_theme_constant_override("icon_max_width", 20)
+        theme_button.expand_icon = true
     theme_button.custom_minimum_size = Vector2(78, 44)
     theme_button.focus_mode = Control.FOCUS_NONE
     theme_button.pressed.connect(_toggle_theme)
+    _wire_button_motion(theme_button)
     header.add_child(theme_button)
 
     # Home pulse: one strong hero instead of many competing modules.
@@ -178,6 +213,7 @@ func _build_ui() -> void:
     hero_action.custom_minimum_size = Vector2(160, 54)
     hero_action.size_flags_vertical = Control.SIZE_SHRINK_CENTER
     hero_action.focus_mode = Control.FOCUS_NONE
+    _wire_button_motion(hero_action)
     hero_top.add_child(hero_action)
 
     var progress_row := HBoxContainer.new()
@@ -284,12 +320,57 @@ func _build_ui() -> void:
         var button := Button.new()
         button.name = "Nav_" + legacy_names[i]
         button.text = names[i]
+        _apply_button_icon(button, names[i], 20)
         button.custom_minimum_size = Vector2(100, 48)
         button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         button.focus_mode = Control.FOCUS_NONE
         button.pressed.connect(_set_tab.bind(i))
+        _wire_button_motion(button)
         bottom_nav.add_child(button)
         mode_buttons.append(button)
+
+func _icon_texture(icon_key: String) -> Texture2D:
+    var normalized := icon_key.strip_edges().to_lower()
+    if normalized.is_empty():
+        return null
+    var path := ICON_ROOT + normalized + ".svg"
+    if not ResourceLoader.exists(path):
+        return null
+    return load(path) as Texture2D
+
+func _icon_for_action(label: String) -> Texture2D:
+    var key := str(ACTION_ICON_MAP.get(label.strip_edges().to_upper(), ""))
+    return _icon_texture(key)
+
+func _apply_button_icon(button: Button, label: String, max_width: int = 22) -> void:
+    if button == null:
+        return
+    var texture := _icon_for_action(label)
+    if texture == null:
+        return
+    button.icon = texture
+    button.add_theme_constant_override("icon_max_width", max_width)
+    button.expand_icon = true
+
+func _wire_button_motion(button: Button) -> void:
+    if button == null:
+        return
+    if not button.button_down.is_connected(_button_motion.bind(button, true)):
+        button.button_down.connect(_button_motion.bind(button, true))
+    if not button.button_up.is_connected(_button_motion.bind(button, false)):
+        button.button_up.connect(_button_motion.bind(button, false))
+
+func _button_motion(button: Button, pressed: bool) -> void:
+    if button == null or not is_instance_valid(button):
+        return
+    if bool(ProjectSettings.get_setting("renew/ui/reduce_motion", false)):
+        button.scale = Vector2.ONE
+        return
+    button.pivot_offset = button.size * 0.5
+    var target := Vector2(0.972, 0.972) if pressed else Vector2.ONE
+    var tween := create_tween()
+    tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+    tween.tween_property(button, "scale", target, 0.075 if pressed else 0.12)
 
 func _label(text: String, size: int) -> Label:
     var label := Label.new()
@@ -405,6 +486,7 @@ func _layout_responsive() -> void:
     location_label.visible = size.x >= 340.0
     theme_button.visible = size.x >= 420.0
     alerts_button.text = "ALERTS" if size.x < 420.0 else "DECISIONS"
+    _apply_button_icon(alerts_button, alerts_button.text, 19)
     alerts_button.custom_minimum_size.x = 72 if size.x < 420.0 else 92
     section_caption.visible = size.y >= 640.0
     status_label.visible = not mobile and size.y >= 720.0
@@ -454,6 +536,7 @@ func _action(text: String, callback: Callable, subtitle := "", emphasis := false
     var button := Button.new()
     button.name = "Action_" + text.to_snake_case()
     button.text = text + ("\n" + subtitle if subtitle != "" else "")
+    _apply_button_icon(button, text, 24)
     button.set_meta("renew_primary_text", text)
     button.set_meta("renew_subtitle", subtitle)
     button.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -464,6 +547,7 @@ func _action(text: String, callback: Callable, subtitle := "", emphasis := false
     button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
     button.set_meta("renew_emphasis", emphasis)
     button.pressed.connect(_run_action.bind(callback))
+    _wire_button_motion(button)
     action_grid.add_child(button)
     _style_action_button(button)
 
@@ -500,8 +584,12 @@ func show_feedback(text: String) -> void:
     feedback_label.visible = true
     feedback_timer = 4.5
     feedback_label.modulate.a = 0.0
-    var tween := create_tween()
+    feedback_label.position.y += 4.0
+    var target_y := feedback_label.position.y - 4.0
+    var tween := create_tween().set_parallel(true)
+    tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
     tween.tween_property(feedback_label, "modulate:a", 1.0, 0.18)
+    tween.tween_property(feedback_label, "position:y", target_y, 0.20)
 
 func _open_decision_center() -> void:
     var desk := get_node_or_null("/root/RenewManagementPolicyUI")
@@ -545,6 +633,19 @@ func _bind_primary_move() -> void:
         if callable.is_valid(): hero_action.pressed.disconnect(callable)
     var move := _primary_move()
     hero_action.text = str(move.get("label", "NEXT MOVE"))
+    var primary_icon_key := "property"
+    match hero_action.text:
+        "PRODUCE": primary_icon_key = "production"
+        "BUSINESS": primary_icon_key = "business"
+        "CHOOSE BUSINESS": primary_icon_key = "market"
+        "ACQUIRE": primary_icon_key = "finance"
+        "INSPECT": primary_icon_key = "intelligence"
+        "RESTORE": primary_icon_key = "property"
+    var primary_icon := _icon_texture(primary_icon_key)
+    if primary_icon != null:
+        hero_action.icon = primary_icon
+        hero_action.add_theme_constant_override("icon_max_width", 24)
+        hero_action.expand_icon = true
     var callable: Callable = move.get("call", Callable())
     if callable.is_valid(): hero_action.pressed.connect(_run_action.bind(callable))
 
@@ -668,11 +769,14 @@ func _animate_entry() -> void:
 func _animate_layer_change(serial: int) -> void:
     if action_dock == null: return
     action_dock.modulate.a = 0.0
-    action_dock.position.x = 14.0
+    action_dock.position.x = 18.0
+    action_dock.scale = Vector2(0.992, 0.992)
+    action_dock.pivot_offset = action_dock.size * 0.5
     var tween := create_tween().set_parallel(true)
-    tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-    tween.tween_property(action_dock, "modulate:a", 1.0, 0.20)
-    tween.tween_property(action_dock, "position:x", 0.0, 0.20)
+    tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+    tween.tween_property(action_dock, "modulate:a", 1.0, 0.24)
+    tween.tween_property(action_dock, "position:x", 0.0, 0.24)
+    tween.tween_property(action_dock, "scale", Vector2.ONE, 0.26)
 
 func _pulse_primary() -> void:
     if hero_action == null: return

@@ -131,6 +131,8 @@ func _check_layout_contract(scene: Node, hud: Node) -> void:
             if tutorial_panel != null and tutorial_panel.visible:
                 check("mobile tutorial stays inside viewport %s" % viewport_size, _inside_viewport(tutorial_panel, viewport_size))
                 check("mobile tutorial avoids action dock %s" % viewport_size, not tutorial_panel.get_global_rect().intersects(action_dock.get_global_rect()))
+                var tutorial_progress := tutorial.get("progress_bar") as Control
+                check("mobile tutorial progress is visible %s" % viewport_size, tutorial_progress != null and tutorial_progress.visible and tutorial_panel.get_global_rect().encloses(tutorial_progress.get_global_rect()))
             check("mobile strategy HUD yields to primary shell %s" % viewport_size, strategy_panel == null or not strategy_panel.visible)
         else:
             if tutorial_panel != null and tutorial_panel.visible:

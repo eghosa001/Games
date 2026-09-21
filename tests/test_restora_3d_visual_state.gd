@@ -39,8 +39,16 @@ func _run() -> void:
         "businesses": {"business_open": true, "origin_property_id":"a", "capacity_level":3, "marketing_level":2},
         "employees": {"roster":[{"id":"e1"},{"id":"e2"},{"id":"e3"},{"id":"e4"},{"id":"e5"}]},
         "production": {"finished_goods":12},
-        "economy": {"last_sales":7, "total_profit":2400},
-        "player": {"day":8, "reputation":64}
+        "economy": {"last_sales":7, "total_profit":32000},
+        "player": {"day":8, "reputation":64},
+        "events": {
+            "active":{"event:1":{"category":"energy"}},
+            "seasonal":{"economy_cycle":{"phase":"boom","start_day":1}}
+        },
+        "competitors": {
+            "selected_rival":0,
+            "rivals":[{"name":"Apex Materials","market_share":0.31,"presence":2}]
+        }
     }
     var selected_snapshot := VisualState.snapshot_from_game_state(state)
     check("selected property owns its 3D state", selected_snapshot.get("owned") == true and selected_snapshot.get("stage") == "operational")
@@ -52,6 +60,10 @@ func _run() -> void:
     check("live staffing drives visible worker pool", int(selected_snapshot.get("worker_visual_count", 0)) == 5)
     check("sales and marketing drive district traffic", int(selected_snapshot.get("traffic_level", 0)) == 3)
     check("snapshot carries authoritative day and reputation", int(selected_snapshot.get("day", 0)) == 8 and int(selected_snapshot.get("reputation", 0)) == 64)
+    check("profit capacity and reputation raise prosperity", int(selected_snapshot.get("prosperity_tier", 0)) == 3)
+    check("economy cycle reaches 3D world", str(selected_snapshot.get("economy_phase", "")) == "boom")
+    check("active event reaches 3D world", int(selected_snapshot.get("active_event_count", 0)) == 1 and str(selected_snapshot.get("active_event_category", "")) == "energy")
+    check("selected rival reaches district presentation", str(selected_snapshot.get("rival_name", "")) == "Apex Materials" and is_equal_approx(float(selected_snapshot.get("rival_market_share", 0.0)), 0.31))
     state.free()
 
     print("RESTORA 3D VISUAL STATE: %s" % ("PASS" if failed == 0 else "FAIL"))

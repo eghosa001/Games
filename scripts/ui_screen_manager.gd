@@ -155,7 +155,7 @@ func _ensure_modal_backdrop() -> void:
     _modal_backdrop = ColorRect.new()
     _modal_backdrop.name = "Backdrop"
     _modal_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    _modal_backdrop.color = Color(0.015, 0.035, 0.045, 0.72)
+    _modal_backdrop.color = Color(0.018, 0.028, 0.075, 0.76)
     _modal_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
     _modal_backdrop.visible = false
     _modal_backdrop.gui_input.connect(_on_backdrop_input)
@@ -201,15 +201,19 @@ func _animate_screen_in(node: Node) -> void:
     if control == null: return
     if _screen_tween != null and _screen_tween.is_valid(): _screen_tween.kill()
     control.pivot_offset = control.size * 0.5
+    if bool(ProjectSettings.get_setting("renew/ui/reduce_motion", false)):
+        control.modulate.a = 1.0
+        control.scale = Vector2.ONE
+        return
     control.modulate.a = 0.0
-    control.scale = Vector2(0.985, 0.985)
-    control.position.y += 12.0
-    var target_y := control.position.y - 12.0
+    control.scale = Vector2(0.976, 0.976)
+    control.position.y += 16.0
+    var target_y := control.position.y - 16.0
     _screen_tween = create_tween().set_parallel(true)
-    _screen_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-    _screen_tween.tween_property(control, "modulate:a", 1.0, 0.20)
-    _screen_tween.tween_property(control, "scale", Vector2.ONE, 0.20)
-    _screen_tween.tween_property(control, "position:y", target_y, 0.20)
+    _screen_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+    _screen_tween.tween_property(control, "modulate:a", 1.0, 0.22)
+    _screen_tween.tween_property(control, "scale", Vector2.ONE, 0.26)
+    _screen_tween.tween_property(control, "position:y", target_y, 0.25)
 
 func hide_all_screens() -> void:
     _suppress_hooks = true

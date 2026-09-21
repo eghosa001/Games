@@ -11,6 +11,7 @@ const ACCENT := Color("f2c65c")
 const SUCCESS := Color("62d69a")
 const WARNING := Color("e9c56b")
 const DANGER := Color("ef7676")
+const ICON_ROOT := "res://Assets/Art/Icons/"
 var panel: Panel
 var title_label: Label
 var season_label: Label
@@ -37,6 +38,30 @@ func _build_ui() -> void:
 
 func _style(bg: Color, border: Color, radius := 12) -> StyleBoxFlat:
     var s := StyleBoxFlat.new(); s.bg_color = bg; s.border_color = border; s.set_border_width_all(1); s.set_border_width(SIDE_TOP, 2); s.set_corner_radius_all(radius); s.content_margin_left = 14; s.content_margin_right = 14; s.content_margin_top = 12; s.content_margin_bottom = 12; s.shadow_color = Color(0, 0, 0, 0.36); s.shadow_size = 10; s.shadow_offset = Vector2(0, 4); return s
+
+func _icon(key: String) -> Texture2D:
+    var path := ICON_ROOT + key + ".svg"
+    return load(path) as Texture2D if ResourceLoader.exists(path) else null
+
+func _make_icon(key: String, size := 30) -> TextureRect:
+    var icon := TextureRect.new()
+    icon.texture = _icon(key)
+    icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    icon.custom_minimum_size = Vector2(size, size)
+    icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    return icon
+
+func _progress_style(bg: Color, fill: Color) -> Array[StyleBoxFlat]:
+    var track := StyleBoxFlat.new()
+    track.bg_color = bg
+    track.set_corner_radius_all(6)
+    var value := StyleBoxFlat.new()
+    value.bg_color = fill
+    value.set_corner_radius_all(6)
+    value.shadow_color = Color(fill.r, fill.g, fill.b, 0.22)
+    value.shadow_size = 5
+    return [track, value]
 
 func _process(delta: float) -> void:
     if panel == null or not panel.visible: return
@@ -70,7 +95,9 @@ func _refresh(force: bool = false) -> void:
     last_signature = signature
     season_label.text = "SEASON %d   •   LIVE WORLD PROGRAMME" % int(state.get("season", 1))
     var scroll_value := scroll.scroll_vertical
-    _clear_content(); _add_section("ROTATING OPPORTUNITIES", ACCENT)
+    _clear_content()
+    _add_season_hero(state, offers)
+    _add_section("ROTATING OPPORTUNITIES", ACCENT)
     if offers.is_empty(): _add_message("No rotating offers are active.", MUTED)
     else:
         for item in offers.values(): _add_card(str(item.get("title", "Opportunity")), "Expires Day %d" % int(item.get("expires_day", 0)), ACCENT)
@@ -86,6 +113,77 @@ func _refresh(force: bool = false) -> void:
     _add_message("Seasonal events and world crises are governed by the authoritative world-event systems.", MUTED)
     _layout(); scroll.set_deferred("scroll_vertical", scroll_value)
 
+func _season_theme(offers: Dictionary) -> Dictionary:
+    var title := "RESTORA SEASON"
+    var icon := "opportunities"
+    var tint := ACCENT
+    for item in offers.values():
+        if not item is Dictionary:
+            continue
+        var id := str((item as Dictionary).get("id", "")).to_lower()
+        var item_title := str((item as Dictionary).get("title", "")).strip_edges()
+        if not item_title.is_empty():
+            title = item_title
+        if id.contains("industrial"):
+            icon = "production"
+            tint = Color("f2b45c")
+        elif id.contains("trade"):
+            icon = "supply"
+            tint = Color("67cbe2")
+        elif id.contains("innovation"):
+            icon = "intelligence"
+            tint = Color("9a83ff")
+        elif id.contains("energy"):
+            icon = "production"
+            tint = Color("ffd36b")
+        break
+    return {"title": title, "icon": icon, "tint": tint}
+
+func _add_season_hero(state: Dictionary, offers: Dictionary) -> void:
+    var theme := _season_theme(offers)
+    var tint: Color = theme.get("tint", ACCENT)
+    var hero := PanelContainer.new()
+    hero.add_theme_stylebox_override("panel", _style(Color(SURFACE_2.r, SURFACE_2.g, SURFACE_2.b, 0.98), Color(tint.r, tint.g, tint.b, 0.82), 18))
+    hero.custom_minimum_size = Vector2(0, 112)
+    content.add_child(hero)
+
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 14)
+    hero.add_child(row)
+    row.add_child(_make_icon(str(theme.get("icon", "opportunities")), 46))
+
+    var box := VBoxContainer.new()
+    box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    box.add_theme_constant_override("separation", 4)
+    row.add_child(box)
+
+    var season := Label.new()
+    season.text = "SEASON %d" % int(state.get("season", 1))
+    season.add_theme_font_size_override("font_size", 11)
+    season.add_theme_color_override("font_color", tint)
+    box.add_child(season)
+
+    var title := Label.new()
+    title.text = str(theme.get("title", "RESTORA SEASON"))
+    title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    title.add_theme_font_size_override("font_size", 18)
+    title.add_theme_color_override("font_color", TEXT)
+    box.add_child(title)
+
+    var day := 1
+    var game = get_node_or_null("/root/RenewGameState")
+    if game != null and game.has_method("get_value"):
+        day = int(game.get_value("player", "day", 1))
+    var remaining := 0
+    for item in offers.values():
+        if item is Dictionary:
+            remaining = maxi(remaining, int((item as Dictionary).get("expires_day", day)) - day)
+    var meta := Label.new()
+    meta.text = "LIVE PROGRAMME  •  %d DAYS REMAINING" % maxi(0, remaining)
+    meta.add_theme_font_size_override("font_size", 10)
+    meta.add_theme_color_override("font_color", MUTED)
+    box.add_child(meta)
+
 func _clear_content() -> void:
     if content == null: return
     for child in content.get_children(): child.queue_free()
@@ -97,17 +195,25 @@ func _add_message(text: String, tint: Color) -> void:
     var label := Label.new(); label.text = text; label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; label.add_theme_font_size_override("font_size", 11); label.add_theme_color_override("font_color", tint); content.add_child(label)
 
 func _add_card(title: String, meta: String, tint: Color) -> void:
-    var card := PanelContainer.new(); card.add_theme_stylebox_override("panel", _style(SURFACE_2, Color(BORDER.r, BORDER.g, BORDER.b, 0.72), 14)); card.custom_minimum_size = Vector2(0, 76); content.add_child(card)
-    var box := VBoxContainer.new(); box.add_theme_constant_override("separation", 4); card.add_child(box)
+    var card := PanelContainer.new(); card.add_theme_stylebox_override("panel", _style(SURFACE_2, Color(BORDER.r, BORDER.g, BORDER.b, 0.72), 14)); card.custom_minimum_size = Vector2(0, 82); content.add_child(card)
+    var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 12); card.add_child(row)
+    row.add_child(_make_icon("opportunities", 34))
+    var box := VBoxContainer.new(); box.size_flags_horizontal = Control.SIZE_EXPAND_FILL; box.add_theme_constant_override("separation", 4); row.add_child(box)
     var heading := Label.new(); heading.text = title; heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; heading.add_theme_font_size_override("font_size", 14); heading.add_theme_color_override("font_color", TEXT); box.add_child(heading)
     var detail := Label.new(); detail.text = meta; detail.add_theme_font_size_override("font_size", 10); detail.add_theme_color_override("font_color", tint); box.add_child(detail)
 
 func _add_progress_card(title: String, progress: float, target: float, pct: float, expiry: int) -> void:
-    var card := PanelContainer.new(); card.add_theme_stylebox_override("panel", _style(SURFACE_2, Color(BORDER.r, BORDER.g, BORDER.b, 0.72), 14)); card.custom_minimum_size = Vector2(0, 94); content.add_child(card)
-    var box := VBoxContainer.new(); box.add_theme_constant_override("separation", 5); card.add_child(box)
+    var card := PanelContainer.new(); card.add_theme_stylebox_override("panel", _style(SURFACE_2, Color(BORDER.r, BORDER.g, BORDER.b, 0.72), 14)); card.custom_minimum_size = Vector2(0, 104); content.add_child(card)
+    var row := HBoxContainer.new(); row.add_theme_constant_override("separation", 12); card.add_child(row)
+    row.add_child(_make_icon("intelligence", 34))
+    var box := VBoxContainer.new(); box.size_flags_horizontal = Control.SIZE_EXPAND_FILL; box.add_theme_constant_override("separation", 5); row.add_child(box)
     var heading := Label.new(); heading.text = title; heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; heading.add_theme_font_size_override("font_size", 14); heading.add_theme_color_override("font_color", TEXT); box.add_child(heading)
     var progress_label := Label.new(); progress_label.text = "%.0f / %.0f   •   %d%%" % [progress, target, roundi(pct * 100.0)]; progress_label.add_theme_font_size_override("font_size", 10); progress_label.add_theme_color_override("font_color", SUCCESS if pct >= 1.0 else (WARNING if pct >= 0.7 else MUTED)); box.add_child(progress_label)
-    var bar := ProgressBar.new(); bar.min_value = 0.0; bar.max_value = 1.0; bar.value = pct; bar.show_percentage = false; bar.custom_minimum_size = Vector2(0, 8); box.add_child(bar)
+    var bar := ProgressBar.new(); bar.min_value = 0.0; bar.max_value = 1.0; bar.value = pct; bar.show_percentage = false; bar.custom_minimum_size = Vector2(0, 9)
+    var styles := _progress_style(Color(MUTED.r, MUTED.g, MUTED.b, 0.14), SUCCESS if pct >= 1.0 else ACCENT)
+    bar.add_theme_stylebox_override("background", styles[0])
+    bar.add_theme_stylebox_override("fill", styles[1])
+    box.add_child(bar)
     if expiry >= 0:
         var expiry_label := Label.new(); expiry_label.text = "Expires Day %d" % expiry; expiry_label.add_theme_font_size_override("font_size", 9); expiry_label.add_theme_color_override("font_color", MUTED); box.add_child(expiry_label)
 

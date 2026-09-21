@@ -68,6 +68,13 @@ static func _activity_context(state: Node, business_open: bool) -> Dictionary:
             "traffic_level": 0,
             "worker_visual_count": 0,
             "is_profitable": false,
+            "prosperity_tier": 0,
+            "economy_phase": "expansion",
+            "active_event_count": 0,
+            "active_event_category": "",
+            "rival_name": "",
+            "rival_market_share": 0.0,
+            "rival_presence": 0,
         }
 
     var roster: Variant = state.get_value("employees", "roster", [])
@@ -78,6 +85,32 @@ static func _activity_context(state: Node, business_open: bool) -> Dictionary:
     var capacity := maxi(1, int(state.get_value("businesses", "capacity_level", 1)))
     var marketing := maxi(0, int(state.get_value("businesses", "marketing_level", 0)))
     var reputation := maxi(0, int(state.get_value("player", "reputation", 0)))
+    var seasonal: Variant = state.get_value("events", "seasonal", {})
+    var economy_phase := "expansion"
+    if seasonal is Dictionary and (seasonal as Dictionary).get("economy_cycle") is Dictionary:
+        economy_phase = str(((seasonal as Dictionary)["economy_cycle"] as Dictionary).get("phase", "expansion"))
+
+    var active_events: Variant = state.get_value("events", "active", {})
+    var active_event_count := 0
+    var active_event_category := ""
+    if active_events is Dictionary:
+        active_event_count = (active_events as Dictionary).size()
+        for value in (active_events as Dictionary).values():
+            if value is Dictionary:
+                active_event_category = str((value as Dictionary).get("category", ""))
+                break
+
+    var rival_name := ""
+    var rival_market_share := 0.0
+    var rival_presence := 0
+    var rivals: Variant = state.get_value("competitors", "rivals", [])
+    if rivals is Array and not (rivals as Array).is_empty():
+        var selected_rival := clampi(int(state.get_value("competitors", "selected_rival", 0)), 0, (rivals as Array).size() - 1)
+        var rival: Variant = (rivals as Array)[selected_rival]
+        if rival is Dictionary and not bool((rival as Dictionary).get("eliminated", false)):
+            rival_name = str((rival as Dictionary).get("name", ""))
+            rival_market_share = clampf(float((rival as Dictionary).get("market_share", 0.0)), 0.0, 1.0)
+            rival_presence = maxi(0, int((rival as Dictionary).get("presence", 0)))
 
     var activity_score: int = 0
     if business_open:
@@ -104,6 +137,16 @@ static func _activity_context(state: Node, business_open: bool) -> Dictionary:
             activity_tier = 3
     var traffic_level: int = clampi(activity_tier + (1 if marketing >= 2 or last_sales >= 5 else 0), 0, 3)
     var worker_visual_count: int = 0 if not business_open else clampi(maxi(2, employees), 2, 6)
+    var prosperity_score := 0
+    if total_profit > 0:
+        prosperity_score += 1
+    if total_profit >= 25000:
+        prosperity_score += 1
+    if reputation >= 50:
+        prosperity_score += 1
+    if capacity >= 3:
+        prosperity_score += 1
+    var prosperity_tier := clampi(prosperity_score, 0, 3)
 
     return {
         "day": maxi(1, int(state.get_value("player", "day", 1))),
@@ -118,6 +161,13 @@ static func _activity_context(state: Node, business_open: bool) -> Dictionary:
         "traffic_level": traffic_level,
         "worker_visual_count": worker_visual_count,
         "is_profitable": total_profit > 0,
+        "prosperity_tier": prosperity_tier,
+        "economy_phase": economy_phase,
+        "active_event_count": active_event_count,
+        "active_event_category": active_event_category,
+        "rival_name": rival_name,
+        "rival_market_share": rival_market_share,
+        "rival_presence": rival_presence,
     }
 
 static func snapshot_from_game_state(state: Node) -> Dictionary:

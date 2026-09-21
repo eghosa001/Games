@@ -9,6 +9,13 @@ var _activity_tier := 0
 var _traffic_level := 0
 var _worker_visual_count := 0
 var _reputation := 0
+var _prosperity_tier := 0
+var _economy_phase := "expansion"
+var _active_event_count := 0
+var _active_event_category := ""
+var _rival_name := ""
+var _rival_market_share := 0.0
+var _rival_presence := 0
 var _built := false
 var _elapsed := 0.0
 
@@ -22,6 +29,11 @@ var _construction_props: Array[Node3D] = []
 var _operations_workers: Array[Node3D] = []
 var _customer_actors: Array[Node3D] = []
 var _street_vehicles: Array[Node3D] = []
+var _prosperity_props: Array[Node3D] = []
+var _event_props: Array[Node3D] = []
+var _rival_label: Label3D
+var _rival_facade: MeshInstance3D
+var _event_label: Label3D
 
 var _concrete: StandardMaterial3D
 var _dark_metal: StandardMaterial3D
@@ -33,6 +45,11 @@ var _yellow: StandardMaterial3D
 var _truck_material: StandardMaterial3D
 var _worker_material: StandardMaterial3D
 var _lamp_material: StandardMaterial3D
+var _car_blue: StandardMaterial3D
+var _car_coral: StandardMaterial3D
+var _person_blue: StandardMaterial3D
+var _person_green: StandardMaterial3D
+var _district_sign: Label3D
 
 func _ready() -> void:
     _build_once()
@@ -53,6 +70,13 @@ func apply_snapshot(snapshot: Dictionary, _animate: bool = true) -> void:
     _traffic_level = clampi(int(snapshot.get("traffic_level", 0)), 0, 3)
     _worker_visual_count = clampi(int(snapshot.get("worker_visual_count", 0)), 0, 6)
     _reputation = maxi(0, int(snapshot.get("reputation", 0)))
+    _prosperity_tier = clampi(int(snapshot.get("prosperity_tier", 0)), 0, 3)
+    _economy_phase = str(snapshot.get("economy_phase", "expansion")).to_lower()
+    _active_event_count = maxi(0, int(snapshot.get("active_event_count", 0)))
+    _active_event_category = str(snapshot.get("active_event_category", "")).to_lower()
+    _rival_name = str(snapshot.get("rival_name", ""))
+    _rival_market_share = clampf(float(snapshot.get("rival_market_share", 0.0)), 0.0, 1.0)
+    _rival_presence = maxi(0, int(snapshot.get("rival_presence", 0)))
     _activity_enabled = _visual_stage == "operational" and _business_open
     if not is_inside_tree():
         return
@@ -88,6 +112,7 @@ func _build_once() -> void:
 
     _build_neighbors()
     _build_roadside()
+    _build_world_state_feedback()
     _build_construction_activity()
     _build_operational_activity()
 
@@ -102,6 +127,10 @@ func _create_materials() -> void:
     _truck_material = _material(Color("557c8b"), 0.2, 0.58)
     _worker_material = _material(Color("d8863d"), 0.0, 0.82)
     _lamp_material = _material(Color("ffe2a3"), 0.0, 0.35, true)
+    _car_blue = _material(Color("4f6fcb"), 0.28, 0.38)
+    _car_coral = _material(Color("cc6678"), 0.22, 0.42)
+    _person_blue = _material(Color("5578d8"), 0.02, 0.78)
+    _person_green = _material(Color("4fa77a"), 0.02, 0.78)
 
 func _material(color: Color, metallic: float, roughness: float, emissive: bool = false) -> StandardMaterial3D:
     var material := StandardMaterial3D.new()
@@ -118,10 +147,24 @@ func _build_neighbors() -> void:
     _make_box("LeftWarehouse", Vector3(6.0, 3.1, 4.8), Vector3(-10.2, 1.45, -2.2), _brick, _district_root)
     _make_box("LeftRoof", Vector3(6.4, 0.32, 5.2), Vector3(-10.2, 3.15, -2.2), _dark_metal, _district_root)
     _make_box("RightOffice", Vector3(4.8, 5.4, 4.2), Vector3(9.6, 2.6, -2.8), _office, _district_root)
+    _rival_facade = _make_box("RivalCorporateAccent", Vector3(0.24, 4.6, 0.18), Vector3(7.12, 2.55, -0.62), _car_coral, _district_root)
+    _rival_facade.visible = false
     for floor_index in range(3):
         for col in range(2):
             _make_box("OfficeWindow%d_%d" % [floor_index, col], Vector3(1.25, 0.65, 0.12), Vector3(8.45 + col * 2.1, 1.35 + floor_index * 1.45, -0.64), _glass, _district_root)
     _make_box("UtilityBuilding", Vector3(4.0, 2.4, 3.4), Vector3(10.6, 1.1, 4.0), _dark_metal, _district_root)
+
+    _make_box("RivalBillboardFrame", Vector3(4.4, 2.1, 0.24), Vector3(-9.6, 4.35, 0.4), _dark_metal, _district_root)
+    _rival_label = Label3D.new()
+    _rival_label.name = "RivalBillboard"
+    _rival_label.text = "MARKET RIVAL"
+    _rival_label.font_size = 30
+    _rival_label.pixel_size = 0.006
+    _rival_label.position = Vector3(-9.6, 4.35, 0.55)
+    _rival_label.modulate = Color("f0a1ad")
+    _rival_label.outline_modulate = Color(0.03, 0.04, 0.08, 0.92)
+    _rival_label.outline_size = 6
+    _district_root.add_child(_rival_label)
 
 func _build_roadside() -> void:
     for x in [-10.0, -5.0, 5.0, 10.0]:
@@ -148,6 +191,58 @@ func _build_roadside() -> void:
     for x in [-4.2, 4.2]:
         _make_box("Planter", Vector3(1.1, 0.55, 1.1), Vector3(x, 0.28, 3.15), _concrete, _district_root)
         _make_sphere("PlanterShrub", 0.62, Vector3(x, 1.0, 3.15), _green, _district_root)
+
+    # Branded district furniture and transit cues make the environment read as
+    # a designed place rather than a collection of primitive boxes.
+    _make_box("BusShelterRoof", Vector3(3.0, 0.14, 1.25), Vector3(-7.3, 2.25, 4.8), _dark_metal, _district_root)
+    _make_box("BusShelterBack", Vector3(3.0, 1.65, 0.12), Vector3(-7.3, 1.35, 4.25), _glass, _district_root)
+    for x in [-8.6, -6.0]:
+        _make_box("BusShelterPost", Vector3(0.10, 2.2, 0.10), Vector3(x, 1.1, 4.8), _dark_metal, _district_root)
+
+    _make_box("DistrictSignBase", Vector3(3.6, 1.25, 0.26), Vector3(7.5, 1.15, 4.55), _dark_metal, _district_root)
+    _district_sign = Label3D.new()
+    _district_sign.name = "DistrictBrand"
+    _district_sign.text = "RESTORA DISTRICT"
+    _district_sign.font_size = 28
+    _district_sign.pixel_size = 0.006
+    _district_sign.position = Vector3(7.5, 1.18, 4.72)
+    _district_sign.modulate = Color("ffe8a3")
+    _district_sign.outline_modulate = Color(0.02, 0.04, 0.09, 0.9)
+    _district_sign.outline_size = 5
+    _district_root.add_child(_district_sign)
+
+func _build_world_state_feedback() -> void:
+    _make_box("EventBoardFrame", Vector3(4.8, 1.6, 0.22), Vector3(0.0, 2.25, 5.15), _dark_metal, _district_root)
+    _event_label = Label3D.new()
+    _event_label.name = "WorldEventBoard"
+    _event_label.text = "CITY OPERATIONS NORMAL"
+    _event_label.font_size = 25
+    _event_label.pixel_size = 0.0058
+    _event_label.position = Vector3(0.0, 2.25, 5.30)
+    _event_label.modulate = Color("cfe7ff")
+    _event_label.outline_modulate = Color(0.02, 0.04, 0.09, 0.95)
+    _event_label.outline_size = 5
+    _district_root.add_child(_event_label)
+
+    for index in range(3):
+        var banner := Node3D.new()
+        banner.name = "ProsperityBanner%d" % index
+        banner.position = Vector3(-3.6 + index * 3.6, 0.0, 3.0)
+        _district_root.add_child(banner)
+        _make_box("Pole", Vector3(0.10, 2.4, 0.10), Vector3(0.0, 1.2, 0.0), _dark_metal, banner)
+        _make_box("Flag", Vector3(0.9, 0.55, 0.08), Vector3(0.48, 1.95, 0.0), _yellow, banner)
+        banner.visible = false
+        _prosperity_props.append(banner)
+
+    for index in range(3):
+        var marker := Node3D.new()
+        marker.name = "EventMarker%d" % index
+        marker.position = Vector3(-1.5 + index * 1.5, 0.0, 5.35)
+        _district_root.add_child(marker)
+        _make_box("EventPost", Vector3(0.12, 1.6, 0.12), Vector3(0.0, 0.8, 0.0), _dark_metal, marker)
+        _make_sphere("EventBeacon", 0.19, Vector3(0.0, 1.75, 0.0), _yellow, marker)
+        marker.visible = false
+        _event_props.append(marker)
 
 func _build_construction_activity() -> void:
     for index in range(3):
@@ -192,6 +287,7 @@ func _make_truck(node_name: String, position: Vector3) -> Node3D:
     truck.name = node_name
     truck.position = position
     _make_box("Cargo", Vector3(2.8, 1.55, 1.45), Vector3(0.25, 1.15, 0.0), _truck_material, truck)
+    _make_box("CargoStripe", Vector3(2.3, 0.16, 1.48), Vector3(0.25, 1.35, 0.0), _yellow, truck)
     _make_box("Cab", Vector3(1.05, 1.25, 1.45), Vector3(-1.65, 0.9, 0.0), _office, truck)
     for x in [-1.55, 0.85]:
         for z in [-0.66, 0.66]:
@@ -202,7 +298,11 @@ func _make_car(node_name: String, position: Vector3) -> Node3D:
     var car := Node3D.new()
     car.name = node_name
     car.position = position
-    _make_box("Body", Vector3(1.85, 0.58, 0.95), Vector3(0.0, 0.58, 0.0), _office, car)
+    var variant := int(node_name.unicode_at(node_name.length() - 1)) if node_name.length() > 0 else 0
+    var body_material: StandardMaterial3D = _car_blue if variant % 2 == 0 else _car_coral
+    _make_box("Body", Vector3(1.85, 0.58, 0.95), Vector3(0.0, 0.58, 0.0), body_material, car)
+    _make_box("BumperFront", Vector3(0.12, 0.22, 0.88), Vector3(-0.98, 0.48, 0.0), _dark_metal, car)
+    _make_box("BumperRear", Vector3(0.12, 0.22, 0.88), Vector3(0.98, 0.48, 0.0), _dark_metal, car)
     _make_box("Cabin", Vector3(0.9, 0.48, 0.82), Vector3(-0.15, 1.02, 0.0), _glass, car)
     for x in [-0.62, 0.62]:
         for z in [-0.43, 0.43]:
@@ -214,9 +314,20 @@ func _make_worker(node_name: String, position: Vector3, parent: Node) -> Node3D:
     worker.name = node_name
     worker.position = position
     parent.add_child(worker)
-    _make_box("Body", Vector3(0.34, 0.75, 0.28), Vector3(0.0, 0.9, 0.0), _worker_material, worker)
+    var variant := int(node_name.unicode_at(node_name.length() - 1)) if node_name.length() > 0 else 0
+    var is_builder := node_name.begins_with("Builder")
+    var clothing: StandardMaterial3D = _worker_material if is_builder else (_person_blue if variant % 2 == 0 else _person_green)
+    _make_box("Body", Vector3(0.36, 0.78, 0.30), Vector3(0.0, 0.9, 0.0), clothing, worker)
+    _make_box("ArmL", Vector3(0.09, 0.50, 0.09), Vector3(-0.25, 0.92, 0.0), clothing, worker)
+    _make_box("ArmR", Vector3(0.09, 0.50, 0.09), Vector3(0.25, 0.92, 0.0), clothing, worker)
+    _make_box("LegL", Vector3(0.11, 0.56, 0.11), Vector3(-0.10, 0.35, 0.0), _dark_metal, worker)
+    _make_box("LegR", Vector3(0.11, 0.56, 0.11), Vector3(0.10, 0.35, 0.0), _dark_metal, worker)
     _make_sphere("Head", 0.2, Vector3(0.0, 1.42, 0.0), _office, worker)
-    _make_box("Helmet", Vector3(0.46, 0.12, 0.38), Vector3(0.0, 1.6, 0.0), _yellow, worker)
+    if is_builder:
+        _make_box("Helmet", Vector3(0.46, 0.12, 0.38), Vector3(0.0, 1.6, 0.0), _yellow, worker)
+        _make_box("SafetyVest", Vector3(0.38, 0.18, 0.32), Vector3(0.0, 1.0, 0.0), _yellow, worker)
+    else:
+        _make_box("Hair", Vector3(0.34, 0.10, 0.30), Vector3(0.0, 1.58, 0.0), _dark_metal, worker)
     return worker
 
 func _apply_visual_state() -> void:
@@ -225,14 +336,44 @@ func _apply_visual_state() -> void:
     var rank := _stage_rank(_visual_stage)
     _construction_root.visible = rank >= 1 and rank < 5
     _operations_root.visible = _activity_enabled
+    if _district_sign != null:
+        _district_sign.modulate.a = 0.78 + minf(0.18, float(_reputation) / 500.0)
+
+    if _rival_label != null:
+        _rival_label.visible = _rival_presence > 0 and not _rival_name.is_empty()
+        if _rival_label.visible:
+            _rival_label.text = "%s  •  %d%% SHARE" % [_rival_name.to_upper(), roundi(_rival_market_share * 100.0)]
+    if _rival_facade != null:
+        _rival_facade.visible = _rival_presence > 0 and not _rival_name.is_empty()
+        if _rival_facade.visible:
+            var share_scale := lerpf(0.45, 1.25, clampf(_rival_market_share / 0.45, 0.0, 1.0))
+            _rival_facade.scale.y = share_scale
+
+    if _event_label != null:
+        if _active_event_count > 0:
+            var event_name := _active_event_category.replace("_", " ").to_upper()
+            _event_label.text = "LIVE EVENT  •  " + (event_name if not event_name.is_empty() else "WORLD DISRUPTION")
+            _event_label.modulate = Color("ffd27d") if _active_event_category in ["energy", "finance", "supply_chain", "production"] else Color("8ee7c4")
+        else:
+            _event_label.text = "ECONOMY  •  " + _economy_phase.to_upper()
+            _event_label.modulate = Color("8ee7c4") if _economy_phase in ["boom", "expansion", "recovery"] else Color("f0a1ad")
+
+    for index in range(_prosperity_props.size()):
+        _prosperity_props[index].visible = index < _prosperity_tier
+    for index in range(_event_props.size()):
+        _event_props[index].visible = index < mini(_active_event_count, _event_props.size())
+
     if _activity_enabled:
         for index in range(_operations_workers.size()):
             _operations_workers[index].visible = index < _worker_visual_count
-        var visible_customers := clampi(_activity_tier + (1 if _reputation >= 50 else 0), 0, _customer_actors.size())
+        var phase_delta := 1 if _economy_phase == "boom" else (-1 if _economy_phase == "recession" else 0)
+        var visible_customers := clampi(_activity_tier + (1 if _reputation >= 50 else 0) + phase_delta, 0, _customer_actors.size())
         for index in range(_customer_actors.size()):
             _customer_actors[index].visible = index < visible_customers
+        var phase_traffic := 1 if _economy_phase == "boom" else (-1 if _economy_phase == "recession" else 0)
+        var visual_traffic := clampi(_traffic_level + phase_traffic, 0, _street_vehicles.size())
         for index in range(_street_vehicles.size()):
-            _street_vehicles[index].visible = index < _traffic_level
+            _street_vehicles[index].visible = index < visual_traffic
     set_process(_construction_root.visible or _activity_enabled)
 
 func _animate_construction() -> void:
@@ -264,6 +405,7 @@ func _animate_operations() -> void:
         worker.position.z += cos(phase * 0.73) * 0.003
         worker.rotation.y = sin(phase * 0.8) * 0.35
         worker.position.y = abs(sin(phase * 2.2)) * 0.025
+        _animate_actor_limbs(worker, phase, 0.34)
 
     for index in range(_customer_actors.size()):
         var customer := _customer_actors[index]
@@ -273,6 +415,7 @@ func _animate_operations() -> void:
         customer.position.x = lerpf(-7.0, 5.8, t)
         customer.position.z = 4.5 + sin(t * TAU + float(index)) * 0.35
         customer.rotation.y = heading_for_x_velocity(1.0)
+        _animate_actor_limbs(customer, _elapsed * 2.4 + float(index), 0.48)
 
     for index in range(_street_vehicles.size()):
         var car := _street_vehicles[index]
@@ -284,6 +427,25 @@ func _animate_operations() -> void:
         car.position.x = lerpf(-13.0, 13.0, t)
         car.position.z = 7.55 + float(index % 2) * 0.55
         car.rotation.y = heading_for_x_velocity(direction)
+    if _district_sign != null:
+        _district_sign.modulate.a = 0.78 + 0.10 * sin(_elapsed * 1.1) + minf(0.10, float(_reputation) / 700.0)
+    if _event_label != null and _active_event_count > 0:
+        _event_label.modulate.a = 0.84 + 0.14 * sin(_elapsed * 2.1)
+    if _rival_label != null and _rival_label.visible:
+        _rival_label.modulate.a = 0.86 + 0.08 * sin(_elapsed * 0.9 + 1.2)
+
+func _animate_actor_limbs(actor: Node3D, phase: float, amplitude: float) -> void:
+    if actor == null:
+        return
+    var swing := sin(phase) * amplitude
+    var arm_l := actor.get_node_or_null("ArmL") as Node3D
+    var arm_r := actor.get_node_or_null("ArmR") as Node3D
+    var leg_l := actor.get_node_or_null("LegL") as Node3D
+    var leg_r := actor.get_node_or_null("LegR") as Node3D
+    if arm_l != null: arm_l.rotation.x = swing
+    if arm_r != null: arm_r.rotation.x = -swing
+    if leg_l != null: leg_l.rotation.x = -swing * 0.78
+    if leg_r != null: leg_r.rotation.x = swing * 0.78
 
 func _stage_rank(stage_name: String) -> int:
     match stage_name:

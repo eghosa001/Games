@@ -1,13 +1,14 @@
 extends CanvasLayer
 
 ## Dedicated persistence command surface. Gameplay state remains authoritative on Main/SaveSystem.
-const SURFACE := Color("0b1b22")
-const SURFACE_2 := Color("102a31")
-const BORDER := Color("31565d")
-const TEXT := Color("edf6f3")
-const MUTED := Color("8da7aa")
-const ACCENT := Color("d8b76d")
-const SCRIM := Color(0.02, 0.08, 0.10, 0.82)
+const SURFACE := Color("0b1630")
+const SURFACE_2 := Color("14254d")
+const BORDER := Color("5367af")
+const TEXT := Color("f7f9ff")
+const MUTED := Color("adbbe0")
+const ACCENT := Color("f2c65c")
+const SCRIM := Color(0.018, 0.028, 0.075, 0.84)
+const UI_PREFS_PATH := "user://restora_ui.cfg"
 
 var dimmer: ColorRect
 var panel: PanelContainer
@@ -18,6 +19,7 @@ var load_button: Button
 var new_button: Button
 var confirm_button: Button
 var cancel_button: Button
+var reduce_motion_toggle: CheckButton
 var visible_panel := false
 var confirm_new := false
 var parent: Node
@@ -51,7 +53,11 @@ func _style(bg: Color, border: Color = BORDER, radius := 12) -> StyleBoxFlat:
     s.bg_color = bg
     s.border_color = border
     s.set_border_width_all(1)
+    s.set_border_width(SIDE_TOP, 2)
     s.set_corner_radius_all(radius)
+    s.shadow_color = Color(0, 0, 0, 0.38)
+    s.shadow_size = 10
+    s.shadow_offset = Vector2(0, 4)
     return s
 
 func _build_ui() -> void:
@@ -105,6 +111,22 @@ func _build_ui() -> void:
     status.add_theme_color_override("font_color", MUTED)
     root.add_child(status)
 
+    var preference_label := Label.new()
+    preference_label.text = "ACCESSIBILITY & MOTION"
+    preference_label.add_theme_font_size_override("font_size", 9)
+    preference_label.add_theme_color_override("font_color", ACCENT)
+    root.add_child(preference_label)
+
+    reduce_motion_toggle = CheckButton.new()
+    reduce_motion_toggle.text = "REDUCE MOTION"
+    reduce_motion_toggle.tooltip_text = "Minimize screen and button movement while keeping all gameplay feedback."
+    reduce_motion_toggle.custom_minimum_size = Vector2(0, 44)
+    reduce_motion_toggle.add_theme_font_size_override("font_size", 11)
+    reduce_motion_toggle.add_theme_color_override("font_color", TEXT)
+    reduce_motion_toggle.toggled.connect(_on_reduce_motion_toggled)
+    root.add_child(reduce_motion_toggle)
+    _load_ui_preferences()
+
     save_button = _button("SAVE COMPANY", _save)
     load_button = _button("LOAD COMPANY", _load)
     new_button = _button("START NEW DYNASTY", _request_new)
@@ -134,8 +156,8 @@ func _button(text: String, callback: Callable) -> Button:
     b.focus_mode = Control.FOCUS_NONE
     b.add_theme_font_size_override("font_size", 10)
     b.add_theme_stylebox_override("normal", _style(SURFACE_2))
-    b.add_theme_stylebox_override("hover", _style(Color("18363a"), ACCENT))
-    b.add_theme_stylebox_override("pressed", _style(Color("18363a"), ACCENT))
+    b.add_theme_stylebox_override("hover", _style(Color("1b3265"), ACCENT))
+    b.add_theme_stylebox_override("pressed", _style(Color("10214a"), ACCENT))
     b.pressed.connect(callback)
     return b
 
@@ -196,6 +218,26 @@ func _confirm_new() -> void:
 func _cancel_new() -> void:
     confirm_new = false
     _refresh()
+
+func _load_ui_preferences() -> void:
+    var config := ConfigFile.new()
+    var reduced := bool(ProjectSettings.get_setting("renew/ui/reduce_motion", false))
+    if config.load(UI_PREFS_PATH) == OK:
+        reduced = bool(config.get_value("accessibility", "reduce_motion", reduced))
+    ProjectSettings.set_setting("renew/ui/reduce_motion", reduced)
+    if reduce_motion_toggle != null:
+        reduce_motion_toggle.set_pressed_no_signal(reduced)
+
+func _save_ui_preferences() -> void:
+    var config := ConfigFile.new()
+    config.set_value("accessibility", "reduce_motion", bool(ProjectSettings.get_setting("renew/ui/reduce_motion", false)))
+    config.save(UI_PREFS_PATH)
+
+func _on_reduce_motion_toggled(value: bool) -> void:
+    ProjectSettings.set_setting("renew/ui/reduce_motion", value)
+    _save_ui_preferences()
+    if status != null:
+        status.text = "Reduced motion enabled." if value else "Full premium motion enabled."
 
 func _unhandled_input(event: InputEvent) -> void:
     if not visible_panel: return

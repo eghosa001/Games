@@ -20,6 +20,10 @@ var _last_snapshot: Dictionary = {}
 var _presenter: Node
 var _district: Node
 var _camera: Camera3D
+var _environment_node: WorldEnvironment
+var _sun: DirectionalLight3D
+var _sky_fill: DirectionalLight3D
+var _property_rim: OmniLight3D
 var _legacy_world_view: CanvasItem
 var _legacy_property_map: CanvasItem
 var _legacy_world_renderers: Array[CanvasItem] = []
@@ -33,6 +37,10 @@ func _ready() -> void:
     _presenter = get_node_or_null("Properties/ActiveProperty3D")
     _district = get_node_or_null("DistrictDressing/RestoraDistrict3D")
     _camera = get_node_or_null("CameraRig/Camera3D") as Camera3D
+    _environment_node = get_node_or_null("Environment") as WorldEnvironment
+    _sun = get_node_or_null("Sun") as DirectionalLight3D
+    _sky_fill = get_node_or_null("SkyFill") as DirectionalLight3D
+    _property_rim = get_node_or_null("PropertyRim") as OmniLight3D
     _legacy_world_view = get_node_or_null("../World/WorldView") as CanvasItem
     _legacy_property_map = get_node_or_null("../World/PropertyMap") as CanvasItem
     for path in LEGACY_WORLD_RENDERER_PATHS:
@@ -75,7 +83,88 @@ func _sync_visuals(animate: bool) -> void:
         _presenter.apply_snapshot(snapshot, animate)
     if _district != null and _district.has_method("apply_snapshot"):
         _district.apply_snapshot(snapshot, animate)
+    _update_environment_for_snapshot(snapshot, animate)
     _update_camera_for_snapshot(previous, snapshot, animate)
+
+func _update_environment_for_snapshot(snapshot: Dictionary, animate: bool) -> void:
+    var phase := str(snapshot.get("economy_phase", "expansion")).to_lower()
+    var prosperity := clampi(int(snapshot.get("prosperity_tier", 0)), 0, 3)
+    var event_count := maxi(0, int(snapshot.get("active_event_count", 0)))
+    var event_category := str(snapshot.get("active_event_category", "")).to_lower()
+
+    var background := Color("09122a")
+    var ambient := Color("9dadd8")
+    var ambient_energy := 0.70
+    var sun_color := Color("ffe7c2")
+    var sun_energy := 1.20
+    var fill_color := Color("7d9cff")
+    var fill_energy := 0.32
+    var rim_color := Color("70a8ff")
+    var rim_energy := 0.68 + float(prosperity) * 0.08
+
+    match phase:
+        "boom":
+            background = Color("10234a")
+            ambient = Color("b9c8ff")
+            ambient_energy = 0.82
+            sun_color = Color("ffe5a8")
+            sun_energy = 1.34
+            fill_energy = 0.40
+        "recession":
+            background = Color("07101d")
+            ambient = Color("8290b6")
+            ambient_energy = 0.55
+            sun_color = Color("c8d1e3")
+            sun_energy = 0.92
+            fill_color = Color("6679a8")
+            fill_energy = 0.24
+            rim_energy = 0.48
+        "recovery":
+            background = Color("0b1b32")
+            ambient = Color("9dbed0")
+            ambient_energy = 0.72
+            sun_color = Color("f5e2bd")
+            sun_energy = 1.18
+        "overheating":
+            background = Color("24152a")
+            ambient = Color("d7a9b3")
+            ambient_energy = 0.72
+            sun_color = Color("ffd0aa")
+            sun_energy = 1.28
+            fill_color = Color("b17188")
+
+    if event_count > 0:
+        if event_category in ["energy", "finance", "supply_chain", "production"]:
+            background = background.lerp(Color("341923"), 0.40)
+            ambient = ambient.lerp(Color("ffb280"), 0.32)
+            rim_color = Color("ff9b68")
+            rim_energy += 0.18
+        else:
+            background = background.lerp(Color("0c2f2c"), 0.28)
+            ambient = ambient.lerp(Color("86d8c3"), 0.24)
+            rim_color = Color("7fe3c3")
+
+    if _environment_node != null and _environment_node.environment != null:
+        var environment := _environment_node.environment
+        environment.background_color = background
+        environment.ambient_light_color = ambient
+        environment.ambient_light_energy = ambient_energy
+
+    _apply_light_state(_sun, sun_color, sun_energy, animate)
+    _apply_light_state(_sky_fill, fill_color, fill_energy, animate)
+    _apply_light_state(_property_rim, rim_color, rim_energy, animate)
+
+func _apply_light_state(light: Light3D, color: Color, energy: float, animate: bool) -> void:
+    if light == null:
+        return
+    if not animate or bool(ProjectSettings.get_setting("renew/ui/reduce_motion", false)):
+        light.light_color = color
+        light.light_energy = energy
+        return
+    var tween := create_tween().set_parallel(true)
+    tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+    tween.tween_property(light, "light_color", color, 0.45)
+    tween.tween_property(light, "light_energy", energy, 0.45)
 
 func _update_camera_for_snapshot(previous: Dictionary, snapshot: Dictionary, animate: bool) -> void:
     if _camera == null:

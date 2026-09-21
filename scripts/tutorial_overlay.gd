@@ -8,6 +8,7 @@ var panel: Panel
 var title_label: Label
 var body_label: Label
 var progress_label: Label
+var progress_bar: ProgressBar
 var hint_label: Label
 var continue_button: Button
 var collapsed_button: Button
@@ -75,6 +76,23 @@ func _build() -> void:
     progress_label.add_theme_font_size_override("font_size", 11)
     progress_label.add_theme_color_override("font_color", Color("f2c65c"))
     panel.add_child(progress_label)
+    progress_bar = ProgressBar.new()
+    progress_bar.min_value = 0.0
+    progress_bar.max_value = 1.0
+    progress_bar.value = 0.0
+    progress_bar.show_percentage = false
+    progress_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    var progress_bg := StyleBoxFlat.new()
+    progress_bg.bg_color = Color("1b2a54")
+    progress_bg.set_corner_radius_all(5)
+    var progress_fill := StyleBoxFlat.new()
+    progress_fill.bg_color = Color("f2c65c")
+    progress_fill.set_corner_radius_all(5)
+    progress_fill.shadow_color = Color("f2c65c", 0.22)
+    progress_fill.shadow_size = 4
+    progress_bar.add_theme_stylebox_override("background", progress_bg)
+    progress_bar.add_theme_stylebox_override("fill", progress_fill)
+    panel.add_child(progress_bar)
     body_label = Label.new()
     body_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -123,26 +141,31 @@ func _layout_responsive() -> void:
     if narrow:
         var panel_y := 96.0 if h >= 640.0 else 84.0
         panel.position = Vector2(8.0, panel_y)
-        panel.size = Vector2(w - 16.0, 118.0)
+        panel.size = Vector2(w - 16.0, 126.0)
+        var content_width := panel.size.x - 28.0
         title_label.position = Vector2(14, 10)
-        title_label.size = Vector2(w - 142.0, 26)
+        title_label.size = Vector2(maxf(120.0, panel.size.x - 142.0), 26)
         title_label.add_theme_font_size_override("font_size", 16)
-        progress_label.position = Vector2(14, 38)
-        progress_label.size = Vector2(w - 28.0, 18)
-        body_label.position = Vector2(14, 60)
-        body_label.size = Vector2(w - 28.0, 48)
+        progress_label.position = Vector2(14, 36)
+        progress_label.size = Vector2(content_width, 18)
+        progress_bar.position = Vector2(14, 56)
+        progress_bar.size = Vector2(content_width, 6)
+        body_label.position = Vector2(14, 68)
+        body_label.size = Vector2(content_width, 48)
         body_label.add_theme_font_size_override("font_size", 12)
         hint_label.hide()
-        continue_button.position = Vector2(w - 112.0, 10)
+        continue_button.position = Vector2(panel.size.x - 112.0, 10)
         continue_button.size = Vector2(98, 44)
     elif w >= 1000.0:
         panel.position = Vector2(w - 445.0, 116.0)
-        panel.size = Vector2(430.0, 118.0)
+        panel.size = Vector2(430.0, 126.0)
         title_label.position = Vector2(18, 10)
         title_label.size = Vector2(panel.size.x - 36.0, 24)
         progress_label.position = Vector2(18, 34)
         progress_label.size = Vector2(panel.size.x - 36.0, 18)
-        body_label.position = Vector2(18, 58)
+        progress_bar.position = Vector2(18, 54)
+        progress_bar.size = Vector2(panel.size.x - 36.0, 6)
+        body_label.position = Vector2(18, 66)
         body_label.size = Vector2(panel.size.x - 36.0, 46)
         hint_label.hide()
         continue_button.position = Vector2(panel.size.x - 116.0, 12)
@@ -181,7 +204,10 @@ func _refresh() -> void:
     if step != last_step:
         last_step = step
     title_label.text = String(current.get("title", "RESTORA TUTORIAL"))
-    progress_label.text = "PHASE A  •  STEP %d/%d" % [min(step + 1, tutorial.steps.size()), tutorial.steps.size()]
+    var total_steps := maxi(1, tutorial.steps.size())
+    progress_label.text = "PHASE A  •  STEP %d/%d" % [min(step + 1, total_steps), total_steps]
+    if progress_bar != null:
+        progress_bar.value = clampf(float(step + 1) / float(total_steps), 0.0, 1.0)
     body_label.text = String(current.get("text", "Keep building."))
     hint_label.text = "Goal: " + String(current.get("action", "COMPLETE"))
     if tutorial.completed:
