@@ -54,19 +54,32 @@ func _build() -> void:
     add_child(overlay_root)
     panel = Panel.new()
     panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    var tutorial_style := StyleBoxFlat.new()
+    tutorial_style.bg_color = Color("0b1630", 0.96)
+    tutorial_style.border_color = Color("687cff", 0.72)
+    tutorial_style.set_border_width_all(1)
+    tutorial_style.set_border_width(SIDE_TOP, 2)
+    tutorial_style.set_corner_radius_all(18)
+    tutorial_style.shadow_color = Color(0, 0, 0, 0.46)
+    tutorial_style.shadow_size = 16
+    tutorial_style.shadow_offset = Vector2(0, 7)
+    panel.add_theme_stylebox_override("panel", tutorial_style)
     overlay_root.add_child(panel)
     title_label = Label.new()
     title_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    title_label.add_theme_font_size_override("font_size", 16)
+    title_label.add_theme_font_size_override("font_size", 18)
+    title_label.add_theme_color_override("font_color", Color("f7f9ff"))
     panel.add_child(title_label)
     progress_label = Label.new()
     progress_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     progress_label.add_theme_font_size_override("font_size", 11)
+    progress_label.add_theme_color_override("font_color", Color("f2c65c"))
     panel.add_child(progress_label)
     body_label = Label.new()
     body_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
     body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    body_label.add_theme_font_size_override("font_size", 12)
+    body_label.add_theme_font_size_override("font_size", 13)
+    body_label.add_theme_color_override("font_color", Color("dfe7ff"))
     panel.add_child(body_label)
     hint_label = Label.new()
     hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -74,6 +87,7 @@ func _build() -> void:
     panel.add_child(hint_label)
     continue_button = Button.new()
     continue_button.text = "GOT IT"
+    continue_button.custom_minimum_size = Vector2(96, 44)
     continue_button.focus_mode = Control.FOCUS_NONE
     continue_button.mouse_filter = Control.MOUSE_FILTER_STOP
     continue_button.pressed.connect(_dismiss_current)
@@ -107,29 +121,32 @@ func _layout_responsive() -> void:
         collapsed_button.show()
         return
     if narrow:
-        panel.position = Vector2(8.0, maxf(108.0, (maxf(114.0, h - clampf(h * 0.40, 218.0, 250.0) - 8.0) - 8.0) - 86.0))
-        panel.size = Vector2(w - 16.0, 86.0)
-        title_label.position = Vector2(10, 8)
-        title_label.size = Vector2(w - 132.0, 24)
-        progress_label.position = Vector2(10, 32)
-        progress_label.size = Vector2(w - 20.0, 18)
-        body_label.position = Vector2(10, 50)
-        body_label.size = Vector2(w - 20.0, 32)
+        var panel_y := 96.0 if h >= 640.0 else 84.0
+        panel.position = Vector2(8.0, panel_y)
+        panel.size = Vector2(w - 16.0, 118.0)
+        title_label.position = Vector2(14, 10)
+        title_label.size = Vector2(w - 142.0, 26)
+        title_label.add_theme_font_size_override("font_size", 16)
+        progress_label.position = Vector2(14, 38)
+        progress_label.size = Vector2(w - 28.0, 18)
+        body_label.position = Vector2(14, 60)
+        body_label.size = Vector2(w - 28.0, 48)
+        body_label.add_theme_font_size_override("font_size", 12)
         hint_label.hide()
-        continue_button.position = Vector2(w - 106.0, 8)
-        continue_button.size = Vector2(94, 32)
+        continue_button.position = Vector2(w - 112.0, 10)
+        continue_button.size = Vector2(98, 44)
     elif w >= 1000.0:
-        panel.position = Vector2(w - 425.0, 116.0)
-        panel.size = Vector2(410.0, 96.0)
+        panel.position = Vector2(w - 445.0, 116.0)
+        panel.size = Vector2(430.0, 118.0)
         title_label.position = Vector2(18, 10)
         title_label.size = Vector2(panel.size.x - 36.0, 24)
         progress_label.position = Vector2(18, 34)
         progress_label.size = Vector2(panel.size.x - 36.0, 18)
-        body_label.position = Vector2(18, 54)
-        body_label.size = Vector2(panel.size.x - 36.0, 30)
+        body_label.position = Vector2(18, 58)
+        body_label.size = Vector2(panel.size.x - 36.0, 46)
         hint_label.hide()
-        continue_button.position = Vector2(panel.size.x - 110.0, 62)
-        continue_button.size = Vector2(92, 28)
+        continue_button.position = Vector2(panel.size.x - 116.0, 12)
+        continue_button.size = Vector2(98, 42)
     else:
         panel.hide()
         collapsed_button.position = Vector2(maxf(8.0, w - 126.0), maxf(64.0, h - 120.0))
