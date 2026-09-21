@@ -100,6 +100,7 @@ func _layout_responsive() -> void:
     theme_button.custom_minimum_size.y = 48
     hero_action.custom_minimum_size = Vector2(126 if mobile else 176, 56 if mobile else 58)
     hero_action.add_theme_font_size_override("font_size", 12 if mobile else 13)
+    theme_button.text = "SETTINGS"
 
     var world_first := using_3d and active_tab == 0
     if world_spacer != null:
