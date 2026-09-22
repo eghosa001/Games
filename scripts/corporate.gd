@@ -1,6 +1,6 @@
 extends Node2D
 
-# RENEW Corporate Layer.
+# RESTORA Corporate Layer.
 # OwnershipSystem is the sole source of truth for shares, holders, voting,
 # board seats, dividends, investor confidence and takeover defense.
 
