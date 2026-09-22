@@ -1,5 +1,5 @@
 extends Node
-## RENEW service registry. Domain systems are ordinary scene Nodes under Systems;
+## RESTORA service registry. Domain systems are ordinary scene Nodes under Systems;
 ## only infrastructure services remain true autoloads.
 
 var _services: Dictionary = {}
@@ -70,7 +70,7 @@ func _create_service(service_name: String, systems: Node) -> Node:
         return existing
     var path: String = SERVICE_PATHS[service_name]
     if not ResourceLoader.exists(path):
-        push_warning("RENEW service script missing: %s" % path)
+        push_warning("RESTORA service script missing: %s" % path)
         return null
     var node := Node.new()
     node.name = service_name
