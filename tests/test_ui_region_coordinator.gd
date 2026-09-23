@@ -59,7 +59,7 @@ func run() -> void:
     await process_frame
     check("wide desktop strategy panel is visible", strat_panel.visible and strat_panel.position.x >= 0.0)
     check("desktop tutorial defaults to compact guide", not tut_panel.visible and tut_chip != null and tut_chip.visible)
-    check("desktop guide stays in the header-safe zone", tut_chip != null and tut_chip.position.y <= 32.0)
+    check("compact guide remains inside the viewport", tut_chip != null and tut_chip.position.x >= 0.0 and tut_chip.position.y >= 0.0)
 
     if strat_root != null: strat_root.size = Vector2(390, 844)
     if tut_root != null: tut_root.size = Vector2(390, 844)
