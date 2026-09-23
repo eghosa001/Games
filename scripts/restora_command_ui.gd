@@ -35,6 +35,8 @@ var _font_semibold: SystemFont
 var _font_bold: SystemFont
 
 func _ready() -> void:
+    if OS.has_feature("mobile") and DisplayServer.has_feature(DisplayServer.FEATURE_ORIENTATION):
+        DisplayServer.screen_set_orientation(DisplayServer.SCREEN_PORTRAIT)
     parent = get_tree().root.get_node_or_null("Renew")
     _make_fonts()
     _build_root()
