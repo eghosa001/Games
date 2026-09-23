@@ -4,7 +4,7 @@ var failed:=0
 func _init()->void:call_deferred("run")
 func check(ok:bool,label:String)->void:
     if ok:passed+=1;print("PASS: "+label)
-    else:failed+=1;push_error("FAIL: "+label)
+    else:failed += 1;push_error("FAIL: "+label)
 func _key(game:Node,code:Key)->String:
     var ev:=InputEventKey.new();ev.keycode=code;ev.pressed=true;game._input(ev);await process_frame
     return str(game.command_system._state_value("company","message",""))
@@ -35,7 +35,7 @@ func run()->void:
     check(not _has_text(hud.get("mobile_content"),"NEW COMPANY"),"destructive NEW COMPANY absent from routine commands")
     game.queue_free();await process_frame
     print("V51 UX PARITY: %d passed, %d failed" % [passed,failed])
-    quit(1 if failed>0 else 0)
+    quit(1 if failed > 0 else 0)
 func _has_text(node:Node,wanted:String)->bool:
     if node is Label and (node as Label).text.find(wanted)>=0:return true
     if node is Button and (node as Button).text.find(wanted)>=0:return true
