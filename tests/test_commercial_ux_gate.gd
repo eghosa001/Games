@@ -20,6 +20,11 @@ func _run()->void:
     await process_frame;await process_frame
     var hud:=game.get_node_or_null("UI/MainHUD")
     check("Main HUD exists",hud!=null)
+    var ui_source:=FileAccess.get_file_as_string("res://scripts/restora_command_ui.gd")
+    check("production UI has no fixed world upside placeholder",not ui_source.contains("$22K upside"))
+    check("production UI has no fixed morale/equipment placeholder",not ui_source.contains("Morale high") and not ui_source.contains("Line 91"))
+    check("regional detail avoids synthetic demand/pressure ratings",not ui_source.contains("Demand HIGH") and not ui_source.contains("Rival pressure MEDIUM"))
+
     var expected:=["LIVE","OPERATE","EMPIRE","WORLD","MORE"]
     var tabs:Array=hud.get("mode_buttons")
     check("exactly five primary destinations",tabs.size()==5)
