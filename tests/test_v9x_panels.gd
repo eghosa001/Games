@@ -4,7 +4,7 @@ var failed:=0
 func _init()->void:call_deferred("run")
 func check(ok:bool,label:String)->void:
     if ok:passed+=1;print("PASS: "+label)
-    else:failed+=1;push_error("FAIL: "+label)
+    else:failed += 1;push_error("FAIL: "+label)
 func run()->void:
     root.size=Vector2i(390,844)
     var scene:=load("res://scenes/Main.tscn") as PackedScene
@@ -38,4 +38,4 @@ func run()->void:
         check(manager.get_active_screen_name()=="CorporationsPanel","deep corporation screen still opens")
     game.queue_free();await process_frame
     print("V9 SCREENS: %d passed, %d failed" % [passed,failed])
-    quit(1 if failed>0 else 0)
+    quit(1 if failed > 0 else 0)
