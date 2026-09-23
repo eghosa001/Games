@@ -30,6 +30,7 @@ var _refresh_elapsed = 0.0
 var _last_signature = ""
 var _layout_kind = ""
 var _last_progress_level := -1
+var _view_transition: Tween
 
 var _font_regular: SystemFont
 var _font_semibold: SystemFont
@@ -218,6 +219,22 @@ func _rebuild_current() -> void:
         _build_mobile_view()
     _last_progress_level = _company_level()
     _refresh()
+    _animate_view_in()
+
+func _animate_view_in() -> void:
+    if root == null:
+        return
+    if _view_transition != null and _view_transition.is_valid():
+        _view_transition.kill()
+    if _reduce_motion():
+        root.modulate = Color.WHITE
+        return
+    root.modulate = Color(1.0, 1.0, 1.0, 0.86)
+    _view_transition = create_tween()
+    _view_transition.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+    _view_transition.set_trans(Tween.TRANS_QUAD)
+    _view_transition.set_ease(Tween.EASE_OUT)
+    _view_transition.tween_property(root, "modulate", Color.WHITE, 0.14)
 
 func _show_view(view_name: String) -> void:
     active_view = view_name
