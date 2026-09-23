@@ -30,15 +30,15 @@ func _run() -> void:
     var project := FileAccess.get_file_as_string("res://project.godot")
     var scene := FileAccess.get_file_as_string("res://scenes/Main.tscn")
     var screens := FileAccess.get_file_as_string("res://scripts/ui_screen_manager.gd")
-    var hud := FileAccess.get_file_as_string("res://scripts/renew_sims_ui.gd")
+    var hud := FileAccess.get_file_as_string("res://scripts/restora_command_ui.gd")
     var skin := FileAccess.get_file_as_string("res://scripts/premium_ui_skin.gd")
-    var settings := FileAccess.get_file_as_string("res://scripts/settings_ui.gd")
+    var settings := hud
     var audio := FileAccess.get_file_as_string("res://scripts/audio_manager.gd")
 
     check("theme manager is an autoload", project.contains('RestoraThemeManager="*res://scripts/theme_manager.gd"'))
-    check("settings panel exists in main scene", scene.contains('[node name="SettingsPanel"'))
-    check("settings panel is registered with screen manager", screens.contains('"SettingsPanel"'))
-    check("home routes to settings panel", hud.contains('_screen("Save & settings", "SettingsPanel"'))
+    check("settings is integrated in production HUD", hud.contains('func _build_mobile_settings()'))
+    check("obsolete SettingsPanel is not registered", not screens.contains('"SettingsPanel"'))
+    check("MORE routes to integrated settings", hud.contains('["SETTINGS","Theme, audio, purchases, privacy","settings"]'))
     check("premium skin consumes global theme manager", skin.contains('/root/RestoraThemeManager') and skin.contains('get_theme_resource'))
     check("premium skin no longer owns old fixed navy palette", not skin.contains('const SURFACE := Color("101d3d")'))
     check("settings exposes dark light and device modes", settings.contains('["dark", "light", "system"]'))
@@ -69,7 +69,7 @@ func _run() -> void:
                 "DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel",
                 "RegionsPanel", "WorldOpportunitiesPanel", "BusinessOperationsPanel",
                 "ProductionControlPanel", "SupplyChainPanel", "EmpireExpansionPanel",
-                "EmpireIntelligencePanel", "SaveLoadPanel", "SettingsPanel"
+                "EmpireIntelligencePanel", "SaveLoadPanel"
             ]
             var themed := 0
             for screen_name in mounted:
