@@ -9,6 +9,7 @@ func _initialize() -> void:
 
 func _run() -> void:
     var text := FileAccess.get_file_as_string(PRESET_PATH)
+    var project_text := FileAccess.get_file_as_string("res://project.godot")
     check("Android export preset exists", not text.is_empty())
     check("Android platform preset exists", text.contains("platform=\"Android\""))
     check("Play Store preset exists", text.contains("name=\"Android Play Store\""))
@@ -30,6 +31,10 @@ func _run() -> void:
     check("network-state permission stays disabled until a network SDK ships", text.contains("permissions/access_network_state=false"))
     check("Wi-Fi-state permission remains disabled", text.contains("permissions/access_wifi_state=false"))
     check("Android backup is disabled", text.contains("user_data_backup/allow=false"))
+    check("Android handheld orientation is locked to portrait", project_text.contains("window/handheld/orientation=1"))
+    check("mobile base viewport matches approved Figma width", project_text.contains("window/size/viewport_width=390"))
+    check("mobile base viewport matches approved Figma height", project_text.contains("window/size/viewport_height=844"))
+    check("canvas-items stretch is enabled for mobile scaling", project_text.contains('window/stretch/mode="canvas_items"'))
 
     var autosave := FileAccess.get_file_as_string("res://scripts/autosave.gd")
     check("autosave handles Android pause", autosave.contains("NOTIFICATION_APPLICATION_PAUSED"))
@@ -48,7 +53,7 @@ func _run() -> void:
     check("no undeclared analytics/tracking implementation exists", not analytics_present)
 
     print("--- ANDROID RELEASE CONFIG SUMMARY ---")
-    print("Checks: %d | Failures: %d" % [31, failures.size()])
+    print("Checks: %d | Failures: %d" % [35, failures.size()])
     for failure in failures:
         print("FAILED: %s" % failure)
     if failures.size() > 0:
