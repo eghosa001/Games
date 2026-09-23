@@ -32,6 +32,10 @@ func _initialize() -> void:
     call_deferred("_run")
 
 func _run() -> void:
+    if DisplayServer.get_name().to_lower().contains("headless"):
+        print("VISUAL AUDIT SKIP: render verification runs only in the dedicated Xvfb workflow")
+        quit(0)
+        return
     var packed = load("res://scenes/Main.tscn") as PackedScene
     if packed == null:
         _fail("Main scene failed to load")
