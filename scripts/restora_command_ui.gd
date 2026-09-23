@@ -139,7 +139,11 @@ func _layout_responsive() -> void:
         _rebuild_current()
         return
     if _layout_kind == "mobile":
-        _layout_mobile_host()
+        var expected_width = minf(MOBILE_DESIGN_W, get_viewport().get_visible_rect().size.x)
+        if mobile_content != null and not is_equal_approx(mobile_content.custom_minimum_size.x, expected_width):
+            _rebuild_current()
+        else:
+            _layout_mobile_host()
 
 func _layout_class() -> String:
     var size = get_viewport().get_visible_rect().size
