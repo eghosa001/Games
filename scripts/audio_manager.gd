@@ -4,6 +4,9 @@ extends Node
 
 const SAMPLE_RATE: int = 22050
 const MAX_SFX_PLAYERS: int = 12
+const AUDIO_PREFS_PATH := "user://restora_ui.cfg"
+const DEFAULT_MUSIC_LEVEL := 0.72
+const DEFAULT_SFX_LEVEL := 0.84
 const TAU_F: float = TAU
 
 var _music_player: AudioStreamPlayer
@@ -20,9 +23,12 @@ var _music_note: int = 0
 var _music_note_time: float = 0.0
 var _music_seed: float = 0.0
 var _last_tap_ms: int = -1000
+var _music_level := DEFAULT_MUSIC_LEVEL
+var _sfx_level := DEFAULT_SFX_LEVEL
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
+    _load_audio_preferences()
     randomize()
     _music_seed = randf() * 100.0
     _setup_music()
@@ -59,11 +65,46 @@ func _setup_music() -> void:
     stream.mix_rate = SAMPLE_RATE
     stream.buffer_length = 2.0
     _music_player.stream = stream
-    _music_player.volume_db = -23.0
+    _music_player.volume_db = _music_db()
     add_child(_music_player)
     _music_player.play()
     _music_playback = _music_player.get_stream_playback() as AudioStreamGeneratorPlayback
     _feed_music(0.75)
+
+func get_music_level() -> float:
+    return _music_level
+
+func get_sfx_level() -> float:
+    return _sfx_level
+
+func set_music_level(value: float) -> void:
+    _music_level = clampf(value, 0.0, 1.0)
+    if is_instance_valid(_music_player):
+        _music_player.volume_db = _music_db()
+    _save_audio_preferences()
+
+func set_sfx_level(value: float) -> void:
+    _sfx_level = clampf(value, 0.0, 1.0)
+    _save_audio_preferences()
+
+func _music_db() -> float:
+    return -80.0 if _music_level <= 0.001 else -23.0 + linear_to_db(_music_level)
+
+func _sfx_db() -> float:
+    return -80.0 if _sfx_level <= 0.001 else linear_to_db(_sfx_level)
+
+func _load_audio_preferences() -> void:
+    var file := ConfigFile.new()
+    if file.load(AUDIO_PREFS_PATH) == OK:
+        _music_level = clampf(float(file.get_value("audio", "music_level", DEFAULT_MUSIC_LEVEL)), 0.0, 1.0)
+        _sfx_level = clampf(float(file.get_value("audio", "sfx_level", DEFAULT_SFX_LEVEL)), 0.0, 1.0)
+
+func _save_audio_preferences() -> void:
+    var file := ConfigFile.new()
+    file.load(AUDIO_PREFS_PATH)
+    file.set_value("audio", "music_level", _music_level)
+    file.set_value("audio", "sfx_level", _sfx_level)
+    file.save(AUDIO_PREFS_PATH)
 
 func _process(delta: float) -> void:
     _feed_music(delta)
@@ -192,7 +233,7 @@ func _begin_sfx(duration: float) -> AudioStreamGeneratorPlayback:
     var player: AudioStreamPlayer = _sfx_players[_sfx_cursor]
     _sfx_cursor = (_sfx_cursor + 1) % _sfx_players.size()
     player.stream = _sfx_stream(duration)
-    player.volume_db = 0.0
+    player.volume_db = _sfx_db()
     player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
     player.play()
     if not player.is_playing():
