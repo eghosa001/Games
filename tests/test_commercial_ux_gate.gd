@@ -41,6 +41,20 @@ func _run()->void:
     var content:=hud.get("mobile_content") as Control
     check("More exposes nine command tiles",content.find_children("MoreTile*","Panel",false,false).size()==9)
     check("legacy HOME label absent",not _tree_has_text(content,"HOME"))
+
+    hud.open_figma_view("settings");await process_frame
+    content=hud.get("mobile_content") as Control
+    for control_name in ["MusicValue","SfxValue","PremiumView","RestoreButton","AutosaveState","Privacy","MotionToggleHit","RewardsToggleHit"]:
+        var control:=content.find_child(control_name,true,false) as Control
+        check(control_name+" has 48px touch height",control!=null and control.size.y>=48.0)
+    var rewards:=content.find_child("RewardsToggleHit",true,false) as Button
+    check("rewarded offers entry exists",rewards!=null)
+    if rewards!=null: rewards.pressed.emit();await process_frame
+    check("rewarded offers use a dedicated opt-in view",str(hud.get("active_view"))=="rewards")
+    content=hud.get("mobile_content") as Control
+    check("Sponsor Grant offer is explained",content.find_child("Reward_sponsor_grant",true,false)!=null)
+    check("Market Research offer is explained",content.find_child("Reward_market_research",true,false)!=null)
+
     game.queue_free();await process_frame
     print("COMMERCIAL UX: %d checks, %d failures" % [checks,failures.size()])
     quit(1 if not failures.is_empty() else 0)
