@@ -139,7 +139,12 @@ func _layout_responsive() -> void:
         _rebuild_current()
         return
     if _layout_kind == "mobile":
-        var expected_width = minf(MOBILE_DESIGN_W, get_viewport().get_visible_rect().size.x)
+        var size = get_viewport().get_visible_rect().size
+        var canvas_w = minf(MOBILE_DESIGN_W, size.x)
+        var scroll_h = maxf(120.0, size.y - (MOBILE_NAV_H + MOBILE_NAV_BOTTOM))
+        var expected_width = canvas_w
+        if scroll_h < MOBILE_CONTENT_H and is_equal_approx(canvas_w, size.x):
+            expected_width = maxf(240.0, canvas_w - 8.0)
         if mobile_content != null and not is_equal_approx(mobile_content.custom_minimum_size.x, expected_width):
             _rebuild_current()
         else:
@@ -199,11 +204,17 @@ func _build_mobile_host() -> void:
     var size = get_viewport().get_visible_rect().size
     var canvas_w = minf(MOBILE_DESIGN_W, size.x)
     var x0 = floor((size.x - canvas_w) * 0.5)
+    var scroll_h = maxf(120.0, size.y - (MOBILE_NAV_H + MOBILE_NAV_BOTTOM))
+    var content_w = canvas_w
+    # When the canvas consumes the full narrow viewport and vertical scrolling is
+    # required, reserve Godot's 8px scrollbar so the host never grows off-screen.
+    if scroll_h < MOBILE_CONTENT_H and is_equal_approx(canvas_w, size.x):
+        content_w = maxf(240.0, canvas_w - 8.0)
 
     mobile_scroll = ScrollContainer.new()
     mobile_scroll.name = "ProductionScroll"
     mobile_scroll.position = Vector2(x0, 0)
-    mobile_scroll.size = Vector2(canvas_w, maxf(120.0, size.y - (MOBILE_NAV_H + MOBILE_NAV_BOTTOM)))
+    mobile_scroll.size = Vector2(canvas_w, scroll_h)
     mobile_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     mobile_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
     mobile_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -211,8 +222,8 @@ func _build_mobile_host() -> void:
 
     mobile_content = Control.new()
     mobile_content.name = "ProductionContent"
-    mobile_content.custom_minimum_size = Vector2(canvas_w, MOBILE_CONTENT_H)
-    mobile_content.size = Vector2(canvas_w, MOBILE_CONTENT_H)
+    mobile_content.custom_minimum_size = Vector2(content_w, MOBILE_CONTENT_H)
+    mobile_content.size = Vector2(content_w, MOBILE_CONTENT_H)
     mobile_scroll.add_child(mobile_content)
 
     _build_bottom_nav(x0, canvas_w, size.y)
