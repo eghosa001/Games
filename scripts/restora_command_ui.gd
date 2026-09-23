@@ -282,7 +282,7 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
         button.add_theme_stylebox_override("normal", _nav_style(i == active_tab))
         button.add_theme_stylebox_override("hover", _nav_style(i == active_tab, true))
         button.add_theme_stylebox_override("pressed", _nav_style(true))
-        button.pressed.connect(_set_tab.bind(i))
+        button.pressed.connect(_set_tab.bind(i), CONNECT_DEFERRED)
         tabs.add_child(button)
         mode_buttons.append(button)
 
@@ -372,7 +372,7 @@ func _transparent_button(parent_node: Node, name: String, rect: Rect2, callback:
     b.add_theme_stylebox_override("pressed", empty)
     b.add_theme_stylebox_override("focus", empty)
     if callback.is_valid():
-        b.pressed.connect(callback)
+        b.pressed.connect(callback, CONNECT_DEFERRED)
     parent_node.add_child(b)
     return b
 
@@ -803,7 +803,7 @@ func _transparent_text_button(parent_node: Node, name: String, text_value: Strin
     b.add_theme_font_size_override("font_size", 9)
     b.add_theme_color_override("font_color", _color(role))
     b.add_theme_color_override("font_hover_color", _color(role).lightened(0.08))
-    if callback.is_valid(): b.pressed.connect(callback)
+    if callback.is_valid(): b.pressed.connect(callback, CONNECT_DEFERRED)
     parent_node.add_child(b)
     return b
 
