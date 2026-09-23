@@ -18,7 +18,7 @@ const DEEP_SCREENS = [
     "SaveLoadPanel","RenewDiplomacyUI","CustomerSegmentsUI"
 ]
 const OUTPUT_DIR = "res://artifacts/visual-audit"
-const EXPECTED_CAPTURES = 77
+const EXPECTED_CAPTURES = 82
 
 var game: Node
 var hud: Node
@@ -97,6 +97,27 @@ func _run() -> void:
             await _settle(1)
 
     manager.hide_all_screens()
+    # Compact-device regressions for the densest management screens.
+    theme.set_mode("light")
+    for spec in [
+        ["CustomerSegmentsUI", Vector2i(320,480)],
+        ["EmployeePanel", Vector2i(320,480)],
+        ["InfrastructurePanel", Vector2i(320,480)],
+        ["RenewDiplomacyUI", Vector2i(320,480)],
+        ["RenewDiplomacyUI", Vector2i(320,568)]
+    ]:
+        root.size = spec[1]
+        await _settle(2)
+        manager.hide_all_screens()
+        if not manager.show_screen(spec[0]):
+            _fail("Could not open compact screen: " + spec[0])
+            continue
+        skin._run_theme_refresh()
+        skin._refresh_active_screen()
+        await _settle(3)
+        await _capture("compact_%s" % [str(spec[0]).to_lower()], spec[1])
+        manager.hide_all_screens()
+
     theme.set_mode("dark")
     root.size = TABLET_SIZE
     await _settle(3)
@@ -157,6 +178,7 @@ func _write_manifest() -> void:
     file.store_line("RESTORA FIGMA ALL-SCREEN VISUAL AUDIT")
     file.store_line("Primary mobile views: %d x 2 themes" % VIEWS.size())
     file.store_line("Navigable management screens: %d x 2 themes" % DEEP_SCREENS.size())
+    file.store_line("Compact regressions: Customer, Employee, Infrastructure, Diplomacy at 320x480/568")
     file.store_line("Responsive references: tablet LIVE + desktop LIVE dark/light")
     file.store_line("Expected screenshots: %d" % EXPECTED_CAPTURES)
     file.store_line("")
