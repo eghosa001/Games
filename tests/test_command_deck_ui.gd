@@ -1,74 +1,35 @@
 extends SceneTree
-
 var passed := 0
 var failed := 0
-
-func _init() -> void:
-    call_deferred("run")
-
-func check(condition: bool, label: String) -> void:
-    if condition:
-        passed += 1
-        print("PASS: " + label)
-    else:
-        failed += 1
-        push_error("FAIL: " + label)
-
-func _find_named(node: Node, wanted: String) -> Node:
-    if node.name == wanted:
-        return node
-    for child in node.get_children():
-        var found := _find_named(child, wanted)
-        if found != null:
-            return found
-    return null
-
+func _init() -> void: call_deferred("run")
+func check(ok: bool, label: String) -> void:
+    if ok: passed += 1; print("PASS: " + label)
+    else: failed += 1; push_error("FAIL: " + label)
 func run() -> void:
-    var packed = load("res://scenes/Main.tscn")
-    check(packed != null, "command deck Main scene parses")
-    if packed == null:
-        quit(1)
-        return
-
-    var game = packed.instantiate()
-    game.name = "Renew"
-    root.add_child(game)
-    await process_frame
-    await process_frame
-
-    var hud = game.get_node_or_null("UI/MainHUD")
-    check(hud != null, "command deck HUD exists")
-    if hud == null:
-        quit(1)
-        return
-
-    for nav_name in ["Nav_LIVE", "Nav_BUSINESS", "Nav_EMPIRE", "Nav_WORLD"]:
-        check(_find_named(hud, nav_name) != null, "command deck exposes %s" % nav_name)
-
-    var manager = root.get_node_or_null("RenewUIScreenManager")
-    check(manager != null, "command deck screen manager exists")
-
-    var linked_screens := [
-        "DashboardPanel", "PortfolioPanel", "SaveLoadPanel",
-        "ProductionControlPanel", "CustomerSegmentsUI", "ContractPanel", "EmployeePanel", "FinancePanel",
-        "EmpireExpansionPanel", "HeadquartersPanel", "TechnologyPanel", "CorporationsPanel", "AlliancePanel", "SupplyChainPanel",
-        "RegionsPanel", "WorldOpportunitiesPanel", "InfrastructurePanel", "LiveOpsPanel", "NewsPanel"
-    ]
-    for screen_name in linked_screens:
-        var screen = game.get_node_or_null("UI/" + screen_name)
-        if screen == null:
-            screen = game.get_node_or_null(screen_name)
-        check(screen != null, "command deck target exists: %s" % screen_name)
-
+    root.size = Vector2i(390,844)
+    var packed := load("res://scenes/Main.tscn") as PackedScene
+    check(packed != null, "Main scene parses")
+    if packed == null: quit(1); return
+    var game := packed.instantiate(); root.add_child(game); current_scene=game
+    await process_frame; await process_frame
+    var hud := game.get_node_or_null("UI/MainHUD")
+    check(hud != null, "Figma production HUD exists")
+    var expected := ["LIVE","OPERATE","EMPIRE","WORLD","MORE"]
+    var buttons: Array = hud.get("mode_buttons") if hud != null else []
+    check(buttons.size()==5, "five primary Figma destinations")
+    for i in range(mini(buttons.size(),5)):
+        var label := (buttons[i] as Button).get_node_or_null("NavLabel") as Label
+        check(label != null and label.text==expected[i], "destination %d is %s" % [i,expected[i]])
+    var manager := root.get_node_or_null("RenewUIScreenManager")
+    check(manager != null, "screen manager exists")
+    for view in ["live","operate","empire","world","more","finance","portfolio","intelligence","settings","property"]:
+        hud.open_figma_view(view); await process_frame
+        check(str(hud.get("active_view"))==view, "Figma view opens: "+view)
     if manager != null:
-        for screen_name in ["DashboardPanel", "ProductionControlPanel", "EmpireExpansionPanel", "RegionsPanel"]:
-            manager.show_screen(screen_name)
-            await process_frame
-            check(manager.get_active_screen_name() == screen_name, "command deck opens %s" % screen_name)
+        for screen in ["CorporationsPanel","ContractPanel","TechnologyPanel","HeadquartersPanel","HistoryPanel","SaveLoadPanel"]:
+            manager.show_screen(screen); await process_frame
+            check(manager.get_active_screen_name()==screen, "deep workspace opens: "+screen)
             manager.hide_all_screens()
-            await process_frame
-
-    game.queue_free()
-    await process_frame
-    print("\nCOMMAND DECK UI TEST: %d passed, %d failed" % [passed, failed])
-    quit(1 if failed > 0 else 0)
+    game.queue_free(); await process_frame
+    print("COMMAND DECK UI TEST: %d passed, %d failed" % [passed,failed])
+    quit(1 if failed>0 else 0)
