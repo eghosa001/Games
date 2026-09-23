@@ -396,7 +396,7 @@ func _frame_button(parent_node: Node, name: String, text_value: String, rect: Re
     b.add_theme_color_override("font_hover_color", fg)
     b.add_theme_color_override("font_pressed_color", fg)
     if callback.is_valid():
-        b.pressed.connect(callback)
+        b.pressed.connect(callback, CONNECT_DEFERRED)
     parent_node.add_child(b)
     return b
 
