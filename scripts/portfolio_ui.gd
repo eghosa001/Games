@@ -145,6 +145,7 @@ func _layout() -> void:
     panel.size = Vector2(width, minf(height, viewport.y - panel.position.y - 10.0))
     var compact := width < 420.0
     var side := 14.0
+    title_label.text = "PORTFOLIO" if compact else "RESTORATION PORTFOLIO"
     title_label.position = Vector2(side, 14)
     title_label.size = Vector2(width - 170.0, 28)
     title_label.add_theme_font_size_override("font_size", 18 if compact else 20)
