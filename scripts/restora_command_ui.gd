@@ -29,6 +29,7 @@ var hero_action: Button
 var _refresh_elapsed = 0.0
 var _last_signature = ""
 var _layout_kind = ""
+var _last_progress_level := -1
 
 var _font_regular: SystemFont
 var _font_semibold: SystemFont
@@ -53,9 +54,13 @@ func _process(delta: float) -> void:
         return
     _refresh_elapsed = 0.0
     var sig = _state_signature()
+    if _company_level() != _last_progress_level:
+        _rebuild_current()
+        return
     if sig != _last_signature:
         _last_signature = sig
-        _refresh()
+        _last_progress_level = _company_level()
+    _refresh()
 
 func _theme_manager():
     return get_node_or_null("/root/RestoraThemeManager")
@@ -71,6 +76,35 @@ func _audio_manager():
 
 func _monetization():
     return get_node_or_null("/root/RenewMonetizationSystem")
+
+func _progression():
+    return parent.get_node_or_null("Systems/StrategicProgression") if parent != null else null
+
+func _company_level() -> int:
+    var progression = _progression()
+    if progression != null and progression.has_method("get_level"):
+        return int(progression.get_level())
+    return int(_state_value("progression", "level", 1))
+
+func _has_unlock(unlock_id: String) -> bool:
+    if unlock_id.is_empty():
+        return true
+    var progression = _progression()
+    if progression != null and progression.has_method("has_unlock"):
+        return bool(progression.has_unlock(unlock_id))
+    var unlocks = _state_value("progression", "unlocks", [])
+    return unlocks is Array and unlock_id in unlocks
+
+func _unlock_level(unlock_id: String) -> int:
+    var levels := {
+        "finance": 2, "contracts": 2, "employees": 2,
+        "branches": 3, "regions": 3, "supply_chain": 3,
+        "competitors": 4, "alliances": 4, "ownership": 4,
+        "technology": 6, "research": 6, "infrastructure": 6,
+        "headquarters": 8, "world_power": 8,
+        "museum": 9, "legacy": 9
+    }
+    return int(levels.get(unlock_id, 1))
 
 func _make_fonts() -> void:
     _font_regular = SystemFont.new()
@@ -272,6 +306,7 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
     bottom_nav.add_child(tabs)
 
     var labels = ["LIVE", "OPERATE", "EMPIRE", "WORLD", "MORE"]
+    var required_unlocks = ["", "", "branches", "regions", ""]
     for i in range(labels.size()):
         var button = Button.new()
         button.name = "Nav_" + labels[i]
@@ -282,6 +317,12 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
         button.add_theme_stylebox_override("normal", _nav_style(i == active_tab))
         button.add_theme_stylebox_override("hover", _nav_style(i == active_tab, true))
         button.add_theme_stylebox_override("pressed", _nav_style(true))
+        button.add_theme_stylebox_override("focus", _nav_style(true, true))
+        var required_unlock := str(required_unlocks[i])
+        var locked := not required_unlock.is_empty() and not _has_unlock(required_unlock)
+        button.disabled = locked
+        if locked:
+            button.tooltip_text = "Unlocks at Company Level %d" % _unlock_level(required_unlock)
         button.pressed.connect(_set_tab.bind(i), CONNECT_DEFERRED)
         tabs.add_child(button)
         mode_buttons.append(button)
@@ -364,13 +405,18 @@ func _transparent_button(parent_node: Node, name: String, rect: Rect2, callback:
     b.text = ""
     b.position = rect.position
     b.size = rect.size
-    b.focus_mode = Control.FOCUS_NONE
+    b.focus_mode = Control.FOCUS_ALL
     b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
     var empty = StyleBoxEmpty.new()
     b.add_theme_stylebox_override("normal", empty)
     b.add_theme_stylebox_override("hover", empty)
     b.add_theme_stylebox_override("pressed", empty)
-    b.add_theme_stylebox_override("focus", empty)
+    var focus := StyleBoxFlat.new()
+    focus.bg_color = Color(0, 0, 0, 0)
+    focus.border_color = _color("gold")
+    focus.set_border_width_all(2)
+    focus.set_corner_radius_all(16)
+    b.add_theme_stylebox_override("focus", focus)
     if callback.is_valid():
         b.pressed.connect(callback, CONNECT_DEFERRED)
     parent_node.add_child(b)
@@ -382,7 +428,7 @@ func _frame_button(parent_node: Node, name: String, text_value: String, rect: Re
     b.text = text_value
     b.position = rect.position
     b.size = rect.size
-    b.focus_mode = Control.FOCUS_NONE
+    b.focus_mode = Control.FOCUS_ALL
     b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
     b.add_theme_font_override("font", _font(600))
     b.add_theme_font_size_override("font_size", font_size)
@@ -392,6 +438,7 @@ func _frame_button(parent_node: Node, name: String, text_value: String, rect: Re
     b.add_theme_stylebox_override("normal", _style(bg, border, 12))
     b.add_theme_stylebox_override("hover", _style(bg.lightened(0.05), border, 12))
     b.add_theme_stylebox_override("pressed", _style(bg.darkened(0.05), border, 12))
+    b.add_theme_stylebox_override("focus", _style(bg.lightened(0.03), _color("gold"), 12))
     b.add_theme_color_override("font_color", fg)
     b.add_theme_color_override("font_hover_color", fg)
     b.add_theme_color_override("font_pressed_color", fg)
@@ -703,15 +750,15 @@ func _build_mobile_more() -> void:
     _label(company, "Health", "SYSTEMS HEALTHY", Rect2(16,68,160,14), 9, "success", 600)
 
     var tiles = [
-        ["FINANCE","Cash, debt, investors","finance"],
-        ["PORTFOLIO","Assets and performance","portfolio"],
-        ["CORPORATIONS","Rivals and diplomacy","CorporationsPanel"],
-        ["CONTRACTS","Customers and renewals","ContractPanel"],
-        ["TECHNOLOGY","Research and upgrades","TechnologyPanel"],
-        ["HEADQUARTERS","Capacity and policy","HeadquartersPanel"],
-        ["HISTORY","Milestones and museum","HistoryPanel"],
-        ["SAVE / LOAD","Profiles and recovery","SaveLoadPanel"],
-        ["SETTINGS","Theme, audio, purchases, privacy","settings"]
+        ["FINANCE","Cash, debt, investors","finance","finance"],
+        ["PORTFOLIO","Assets and performance","portfolio",""],
+        ["CORPORATIONS","Rivals and diplomacy","CorporationsPanel","competitors"],
+        ["CONTRACTS","Customers and renewals","ContractPanel","contracts"],
+        ["TECHNOLOGY","Research and upgrades","TechnologyPanel","technology"],
+        ["HEADQUARTERS","Capacity and policy","HeadquartersPanel","headquarters"],
+        ["HISTORY","Milestones and museum","HistoryPanel",""],
+        ["SAVE / LOAD","Profiles and recovery","SaveLoadPanel",""],
+        ["SETTINGS","Theme, audio, purchases, privacy","settings",""]
     ]
     var gap = 8.0
     var col_w = (inner_w - gap) * 0.5
@@ -720,14 +767,21 @@ func _build_mobile_more() -> void:
         var row = floori(float(i) / 2.0)
         var x = 18.0 + col * (col_w + gap)
         var y = 196.0 + row * 94.0
-        var p = _panel(mobile_content, "MoreTile%d" % i, Rect2(x,y,col_w,82), "selected" if i == 0 else "surface", "plum" if i == 0 else "border", 16)
-        _label(p, "Head", tiles[i][0], Rect2(14,14,col_w - 28,14), 10, "gold" if i == 0 else "text", 600)
-        _label(p, "Body", tiles[i][1], Rect2(14,38,col_w - 28,32), 9, "muted", 400)
+        var required_unlock := str(tiles[i][3])
+        var locked := not required_unlock.is_empty() and not _has_unlock(required_unlock)
+        var p = _panel(mobile_content, "MoreTile%d" % i, Rect2(x,y,col_w,82), "surface" if locked else ("selected" if i == 0 else "surface"), "border" if locked else ("plum" if i == 0 else "border"), 16)
+        _label(p, "Head", tiles[i][0], Rect2(14,14,col_w - 28,14), 10, "muted" if locked else ("gold" if i == 0 else "text"), 600)
+        var body_text := "Unlocks at Company Level %d" % _unlock_level(required_unlock) if locked else str(tiles[i][1])
+        _label(p, "Body", body_text, Rect2(14,38,col_w - 28,32), 9, "muted", 400)
         var target = str(tiles[i][2])
+        var open_button: Button
         if ["finance","portfolio","settings"].has(target):
-            _transparent_button(p, "Open"+target, Rect2(0,0,col_w,82), _show_view.bind(target))
+            open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,82), _show_view.bind(target))
         else:
-            _transparent_button(p, "Open"+target, Rect2(0,0,col_w,82), _open_screen.bind(target))
+            open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,82), _open_screen.bind(target))
+        open_button.disabled = locked
+        if locked:
+            open_button.tooltip_text = body_text
 
 func _build_mobile_settings() -> void:
     var w = _content_width()
@@ -797,7 +851,7 @@ func _transparent_text_button(parent_node: Node, name: String, text_value: Strin
     b.text = text_value
     b.position = rect.position
     b.size = rect.size
-    b.focus_mode = Control.FOCUS_NONE
+    b.focus_mode = Control.FOCUS_ALL
     b.flat = true
     b.add_theme_font_override("font", _font(600))
     b.add_theme_font_size_override("font_size", 9)
