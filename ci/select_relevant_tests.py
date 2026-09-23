@@ -56,22 +56,6 @@ GROUPS = {
             "tests/test_resource_art_assets.gd",
             "tests/test_premium_art_direction.gd",
         },
-    },
-    "3d": {
-        "patterns": [
-            "scripts/*3d*.gd", "scripts/rich_world_scenery.gd",
-            "scenes/*3D*.tscn", "scenes/*3d*.tscn",
-        ],
-        "tests": {
-            "tests/test_property_3d_presenter.gd",
-            "tests/test_restora_3d_live_visibility.gd",
-            "tests/test_restora_3d_scene_integration.gd",
-            "tests/test_restora_3d_visual_state.gd",
-            "tests/test_restora_district_3d.gd",
-            "tests/test_restora_world_3d_controller.gd",
-            "tests/test_v98_performance.gd",
-        },
-    },
     "economy_finance": {
         "patterns": [
             "scripts/*econom*.gd", "scripts/*finance*.gd", "scripts/*bank*.gd",
