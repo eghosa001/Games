@@ -22,7 +22,7 @@ func _run()->void:
         var b:=buttons[i] as Button
         var l:=b.get_node("NavLabel") as Label
         check(l.text==expected[i],"nav label "+expected[i])
-        check(b.size.y>=44.0,"touch target "+expected[i])
+        check(b.size.y>=48.0,"48px touch target "+expected[i])\n        check(b.focus_mode==Control.FOCUS_ALL,"keyboard focus "+expected[i])
         b.pressed.emit();await process_frame
         check(int(hud.get("active_tab"))==i,"touch switches "+expected[i])
     game.queue_free();await process_frame
