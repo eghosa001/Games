@@ -21,6 +21,7 @@ func _run()->void:
         root.size=target;await process_frame;hud._layout_responsive();await process_frame
         var scroll:=hud.get("mobile_scroll") as Control
         var nav:=hud.get("bottom_nav") as Control
+        print("RESPONSIVE RECT %s scroll=%s min=%s content=%s" % [target, scroll.get_global_rect(), scroll.get_combined_minimum_size(), (hud.get("mobile_content") as Control).get_combined_minimum_size()])
         check("%s mobile scroll contained" % target,_inside(scroll,Vector2(target)))
         check("%s mobile nav contained" % target,_inside(nav,Vector2(target)))
         var buttons:Array=hud.get("mode_buttons")
