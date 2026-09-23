@@ -29,7 +29,7 @@ Release blockers include interactive controls outside the viewport, overlapping 
 ## 3. Interaction contract
 
 - Every visible enabled button has a pressed callback.
-- Primary touch targets are at least 44x44 px.
+- Primary touch targets are at least 44x48 px.
 - Close controls accept real mouse and touch input at their rendered coordinates.
 - ESC/back closes the active modal.
 - Legacy navigation aliases still resolve.
