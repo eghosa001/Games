@@ -295,7 +295,7 @@ func _layout() -> void:
     var size := get_viewport().get_visible_rect().size
     visible_width = size.x
     var narrow := visible_width < 760.0
-    var phone := visible_width < 390.0
+    var phone := visible_width < 430.0
     var width := maxf(304.0, visible_width - 16.0) if narrow else minf(590.0, visible_width - 36.0)
     var height := maxf(470.0, size.y - 78.0) if narrow else minf(500.0, size.y - 100.0)
     panel.position = Vector2(8, 70) if narrow else Vector2(maxf(18.0, (visible_width - width) * 0.5), 82)
@@ -306,22 +306,22 @@ func _layout() -> void:
     var subtitle := panel.get_node_or_null("Subtitle") as Label
     if subtitle != null:
         subtitle.position = Vector2(14, 58)
-        subtitle.size = Vector2(width - 28, 34)
+        subtitle.size = Vector2(width - 28, 42)
         subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         subtitle.add_theme_font_size_override("font_size", 9 if phone else 10)
     close_button.position = Vector2(width - 88, 7)
     close_button.size = Vector2(80, 46)
-    status.position = Vector2(14, 96)
-    status.size = Vector2(width - 28, 64)
+    status.position = Vector2(14, 106)
+    status.size = Vector2(width - 28, 62)
     status.add_theme_font_size_override("font_size", 10 if phone else 11)
-    project.position = Vector2(14, 162)
-    project.size = Vector2(width - 28, 42)
+    project.position = Vector2(14, 172)
+    project.size = Vector2(width - 28, 38)
     project.add_theme_font_size_override("font_size", 9 if phone else 10)
     var buttons: Array[Button] = []
     for child in panel.get_children():
         if child is Button and child != close_button:
             buttons.append(child)
-    var y := 212.0
+    var y := 218.0
     var cols := 2 if narrow else 3
     var bw := (width - 42.0) / float(cols)
     for i in range(buttons.size()):
