@@ -6,19 +6,41 @@ extends Control
 ## command-center screens keep their authored canvas so no content is obscured.
 
 const THEME_PATH := "res://Assets/Themes/EmpireTheme.tres"
-const DEEP := Color("091122")
-const SURFACE := Color("101d3d")
-const SURFACE_2 := Color("17264c")
-const EDGE := Color("5367af")
-const GOLD := Color("f2c65c")
-const GREEN := Color("58d39b")
-const CYAN := Color("55c7e8")
-const BLUE := Color("6f9cff")
-const PURPLE := Color("b78cff")
-const ORANGE := Color("ff9d62")
-const PINK := Color("ed7fbd")
-const TEXT := Color("f7f9ff")
-const MUTED := Color("aebde0")
+
+func _theme_manager():
+    return get_node_or_null("/root/RestoraThemeManager")
+
+func _theme_color(role: String, fallback: Color) -> Color:
+    var manager = _theme_manager()
+    if manager != null and manager.has_method("color"):
+        return manager.color(role)
+    return fallback
+
+func _is_light_mode() -> bool:
+    var manager = _theme_manager()
+    return bool(manager.is_light()) if manager != null and manager.has_method("is_light") else false
+
+func _deep() -> Color: return _theme_color("bg", Color("0b0d10"))
+func _surface() -> Color: return _theme_color("surface", Color("151a1f"))
+func _surface_2() -> Color: return _theme_color("surface_2", Color("20262c"))
+func _edge() -> Color: return _theme_color("border", Color("3c3831"))
+func _gold() -> Color: return _theme_color("gold", Color("c99a4b"))
+func _green() -> Color: return _theme_color("success", Color("7fa88a"))
+func _cyan() -> Color: return _theme_color("world", Color("6b8494"))
+func _blue() -> Color: return _theme_color("tech", Color("657c9d"))
+func _purple() -> Color: return _theme_color("plum", Color("7a405f"))
+func _orange() -> Color: return _theme_color("industry", Color("a96f45"))
+func _pink() -> Color: return _theme_color("people", Color("8f5b72"))
+func _text() -> Color: return _theme_color("text", Color("f2efe8"))
+func _muted() -> Color: return _theme_color("muted", Color("928a80"))
+
+func _on_theme_changed(_mode: String) -> void:
+    var manager = _theme_manager()
+    if manager != null and manager.has_method("get_theme_resource"):
+        _theme = manager.get_theme_resource()
+    _run_theme_refresh()
+    queue_redraw()
+
 const PRIMARY_SECTORS := ["LIVE", "BUSINESS", "EMPIRE", "WORLD"]
 const CONTEXT_RAIL_NAME := "PremiumContextRail"
 
@@ -33,7 +55,10 @@ var _last_active_screen := ""
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_IGNORE
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    _theme = load(THEME_PATH) as Theme
+    var manager = _theme_manager()
+    _theme = manager.get_theme_resource() if manager != null and manager.has_method("get_theme_resource") else load(THEME_PATH) as Theme
+    if manager != null and not manager.theme_changed.is_connected(_on_theme_changed):
+        manager.theme_changed.connect(_on_theme_changed)
     if not get_tree().tree_changed.is_connected(_queue_theme_refresh):
         get_tree().tree_changed.connect(_queue_theme_refresh)
     call_deferred("_install")
@@ -90,6 +115,9 @@ func _align_navigation(main_hud: Node) -> void:
             index += 1
 
 func _apply_theme_to_ui() -> void:
+    var manager = _theme_manager()
+    if manager != null and manager.has_method("get_theme_resource"):
+        _theme = manager.get_theme_resource()
     if _theme == null:
         return
     var game_root := get_tree().root.get_node_or_null("Renew")
@@ -131,22 +159,22 @@ func _style_recursive(node: Node) -> void:
 func _sector_accent(label: String) -> Color:
     var t := label.to_upper()
     if t.contains("FINANCE") or t.contains("LOAN") or t.contains("CASH") or t.contains("PORTFOLIO") or t.contains("CAPITAL"):
-        return GREEN
+        return _green()
     if t.contains("EMPLOYEE") or t.contains("HIRE") or t.contains("PEOPLE") or t.contains("HEADQUARTERS"):
-        return PINK
+        return _pink()
     if t.contains("PRODUCE") or t.contains("PRODUCTION") or t.contains("SUPPLY") or t.contains("INPUT") or t.contains("OPERAT") or t.contains("INFRA") or t.contains("BUSINESS"):
-        return ORANGE
+        return _orange()
     if t.contains("NETWORK") or t.contains("ALLIANCE") or t.contains("RIVAL") or t.contains("RELATION") or t.contains("EMPIRE") or t.contains("CORPORATION"):
-        return PURPLE
+        return _purple()
     if t.contains("WORLD") or t.contains("MARKET") or t.contains("REGION") or t.contains("EXPANSION") or t.contains("DIPLOMACY"):
-        return CYAN
+        return _cyan()
     if t.contains("TECHNOLOGY") or t.contains("RESEARCH") or t.contains("INTELLIGENCE"):
-        return BLUE
+        return _blue()
     if t.contains("NEWS") or t.contains("HISTORY") or t.contains("EVENT"):
-        return GOLD
+        return _gold()
     if t.contains("LIVE") or t.contains("DASHBOARD") or t.contains("PROPERTY"):
-        return GREEN
-    return EDGE
+        return _green()
+    return _edge()
 
 
 func _style_panel(panel: Panel) -> void:
@@ -154,7 +182,7 @@ func _style_panel(panel: Panel) -> void:
         return
     var accent := _sector_accent(panel.name)
     var box := StyleBoxFlat.new()
-    box.bg_color = Color(SURFACE.r, SURFACE.g, SURFACE.b, 0.92)
+    box.bg_color = Color(_surface().r, _surface().g, _surface().b, 0.92)
     box.border_color = Color(accent.r, accent.g, accent.b, 0.46)
     box.set_border_width_all(1)
     box.set_border_width(SIDE_TOP, 2)
@@ -172,7 +200,7 @@ func _style_panel(panel: Panel) -> void:
 func _style_button(button: Button) -> void:
     var accent := _sector_accent(button.text)
     var normal := StyleBoxFlat.new()
-    normal.bg_color = Color(SURFACE_2.r, SURFACE_2.g, SURFACE_2.b, 0.96)
+    normal.bg_color = Color(_surface_2().r, _surface_2().g, _surface_2().b, 0.96)
     normal.border_color = Color(accent.r, accent.g, accent.b, 0.44)
     normal.set_border_width_all(1)
     normal.set_border_width(SIDE_TOP, 2)
@@ -186,33 +214,33 @@ func _style_button(button: Button) -> void:
     normal.shadow_offset = Vector2(0, 4)
 
     var hover := normal.duplicate() as StyleBoxFlat
-    hover.bg_color = SURFACE_2.lerp(accent, 0.22)
+    hover.bg_color = _surface_2().lerp(accent, 0.22)
     hover.border_color = Color(accent.r, accent.g, accent.b, 0.96)
     hover.shadow_color = Color(accent.r, accent.g, accent.b, 0.24)
     hover.shadow_size = 14
     hover.shadow_offset = Vector2(0, 5)
 
     var pressed := normal.duplicate() as StyleBoxFlat
-    pressed.bg_color = SURFACE_2.lerp(accent, 0.34)
+    pressed.bg_color = _surface_2().lerp(accent, 0.34)
     pressed.border_color = accent
     pressed.shadow_color = Color(0, 0, 0, 0.24)
     pressed.shadow_size = 4
     pressed.shadow_offset = Vector2(0, 1)
 
     var disabled := normal.duplicate() as StyleBoxFlat
-    disabled.bg_color = Color("0b1428", 0.72)
-    disabled.border_color = Color("34426f", 0.45)
+    disabled.bg_color = Color(_surface().r, _surface().g, _surface().b, 0.72)
+    disabled.border_color = Color(_edge().r, _edge().g, _edge().b, 0.45)
     disabled.shadow_size = 0
 
     button.add_theme_stylebox_override("normal", normal)
     button.add_theme_stylebox_override("hover", hover)
     button.add_theme_stylebox_override("pressed", pressed)
     button.add_theme_stylebox_override("disabled", disabled)
-    button.add_theme_color_override("font_color", TEXT)
+    button.add_theme_color_override("font_color", _text())
     button.add_theme_color_override("font_hover_color", Color.WHITE)
     button.add_theme_color_override("font_pressed_color", Color.WHITE)
-    button.add_theme_color_override("font_disabled_color", MUTED)
-    button.add_theme_color_override("font_outline_color", Color(0.02, 0.035, 0.08, 0.72))
+    button.add_theme_color_override("font_disabled_color", _muted())
+    button.add_theme_color_override("font_outline_color", Color(_deep().r, _deep().g, _deep().b, 0.72))
     button.add_theme_constant_override("outline_size", 1)
     button.add_theme_font_size_override("font_size", 13)
     button.focus_mode = Control.FOCUS_NONE
@@ -224,19 +252,19 @@ func _style_label(label: Label) -> void:
     var name_upper := label.name.to_upper()
     var text_upper := label.text.to_upper()
     if name_upper.contains("TITLE") or name_upper.contains("HEADER") or (text_upper.begins_with("RESTORA") or text_upper.begins_with("RENEW")):
-        label.add_theme_color_override("font_color", TEXT)
+        label.add_theme_color_override("font_color", _text())
         label.add_theme_font_size_override("font_size", maxi(18, label.get_theme_font_size("font_size")))
         label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.58))
         label.add_theme_constant_override("shadow_offset_y", 2)
     elif name_upper.contains("VALUE") or name_upper.contains("TOTAL") or name_upper.contains("AMOUNT"):
-        label.add_theme_color_override("font_color", Color("ffe28a"))
+        label.add_theme_color_override("font_color", _gold())
     else:
-        label.add_theme_color_override("font_color", Color(TEXT.r, TEXT.g, TEXT.b, 0.93))
+        label.add_theme_color_override("font_color", Color(_text().r, _text().g, _text().b, 0.93))
 
 func _style_progress(progress: ProgressBar) -> void:
     var accent := _sector_accent(progress.name)
     var bg := StyleBoxFlat.new()
-    bg.bg_color = Color("07151a", 0.70)
+    bg.bg_color = Color(_surface_2().r, _surface_2().g, _surface_2().b, 0.70)
     bg.set_corner_radius_all(7)
     var fill := StyleBoxFlat.new()
     fill.bg_color = Color(accent.r, accent.g, accent.b, 0.92)
@@ -245,13 +273,13 @@ func _style_progress(progress: ProgressBar) -> void:
     fill.shadow_size = 4
     progress.add_theme_stylebox_override("background", bg)
     progress.add_theme_stylebox_override("fill", fill)
-    progress.add_theme_color_override("font_color", TEXT)
+    progress.add_theme_color_override("font_color", _text())
 
 
 func _style_line_edit(line: LineEdit) -> void:
     var box := StyleBoxFlat.new()
-    box.bg_color = Color("0c1730", 0.94)
-    box.border_color = Color(EDGE.r, EDGE.g, EDGE.b, 0.76)
+    box.bg_color = Color(_surface().r, _surface().g, _surface().b, 0.94)
+    box.border_color = Color(_edge().r, _edge().g, _edge().b, 0.76)
     box.set_border_width_all(1)
     box.set_border_width(SIDE_TOP, 2)
     box.set_corner_radius_all(14)
@@ -263,8 +291,8 @@ func _style_line_edit(line: LineEdit) -> void:
     box.shadow_size = 8
     box.shadow_offset = Vector2(0, 3)
     line.add_theme_stylebox_override("normal", box)
-    line.add_theme_color_override("font_color", TEXT)
-    line.add_theme_color_override("font_placeholder_color", MUTED)
+    line.add_theme_color_override("font_color", _text())
+    line.add_theme_color_override("font_placeholder_color", _muted())
 
 func _refresh_active_screen() -> void:
     var manager := get_node_or_null("/root/RenewUIScreenManager")
@@ -302,7 +330,7 @@ func _find_active_screen(active_name: String) -> Node:
 func _soften_global_backdrop(active: bool) -> void:
     var backdrop := get_node_or_null("/root/Renew/UI/FocusedScreenBackdrop/Backdrop") as ColorRect
     if backdrop != null:
-        backdrop.color = Color(0.012, 0.028, 0.036, 0.28 if active else 0.0)
+        backdrop.color = Color(_deep().r, _deep().g, _deep().b, (0.12 if _is_light_mode() else 0.28) if active else 0.0)
 
 func _soften_scrims(node: Node) -> void:
     for child in node.get_children():
@@ -385,7 +413,7 @@ func _ensure_context_rail(screen: Node, active_name: String) -> void:
     var eyebrow := Label.new()
     eyebrow.name = "Eyebrow"
     eyebrow.text = "RESTORA // EXECUTIVE NETWORK"
-    eyebrow.add_theme_color_override("font_color", MUTED)
+    eyebrow.add_theme_color_override("font_color", _muted())
     eyebrow.add_theme_font_size_override("font_size", 10)
     rail.add_child(eyebrow)
 
@@ -393,7 +421,7 @@ func _ensure_context_rail(screen: Node, active_name: String) -> void:
     title.name = "ContextTitle"
     title.text = _humanize(active_name)
     title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    title.add_theme_color_override("font_color", TEXT)
+    title.add_theme_color_override("font_color", _text())
     title.add_theme_font_size_override("font_size", 26)
     rail.add_child(title)
 
@@ -408,7 +436,7 @@ func _ensure_context_rail(screen: Node, active_name: String) -> void:
     var pulse_label := Label.new()
     pulse_label.name = "PulseLabel"
     pulse_label.text = "COMPANY PULSE"
-    pulse_label.add_theme_color_override("font_color", MUTED)
+    pulse_label.add_theme_color_override("font_color", _muted())
     pulse_label.add_theme_font_size_override("font_size", 9)
     rail.add_child(pulse_label)
 
@@ -417,7 +445,7 @@ func _ensure_context_rail(screen: Node, active_name: String) -> void:
         var label := Label.new()
         label.name = str(spec[0]) + "Label"
         label.text = str(spec[1])
-        label.add_theme_color_override("font_color", MUTED)
+        label.add_theme_color_override("font_color", _muted())
         label.add_theme_font_size_override("font_size", 9)
         rail.add_child(label)
         var bar := ProgressBar.new()
@@ -431,21 +459,21 @@ func _ensure_context_rail(screen: Node, active_name: String) -> void:
     var metrics := Label.new()
     metrics.name = "ContextMetrics"
     metrics.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    metrics.add_theme_color_override("font_color", TEXT)
+    metrics.add_theme_color_override("font_color", _text())
     metrics.add_theme_font_size_override("font_size", 12)
     rail.add_child(metrics)
 
     var footer := Label.new()
     footer.name = "ContextFooter"
     footer.text = "LIVE MODEL"
-    footer.add_theme_color_override("font_color", MUTED)
+    footer.add_theme_color_override("font_color", _muted())
     footer.add_theme_font_size_override("font_size", 9)
     rail.add_child(footer)
 
 
 func _context_rail_style(accent: Color) -> StyleBoxFlat:
     var box := StyleBoxFlat.new()
-    box.bg_color = Color(DEEP.r, DEEP.g, DEEP.b, 0.96)
+    box.bg_color = Color(_deep().r, _deep().g, _deep().b, 0.96)
     box.border_color = Color(accent.r, accent.g, accent.b, 0.52)
     box.set_border_width_all(1)
     box.set_border_width(SIDE_LEFT, 3)
@@ -548,7 +576,7 @@ func _context_tagline(active_name: String) -> String:
         return "ORGANISATION & TALENT"
     if t.contains("TECHNOLOGY") or t.contains("INTELLIGENCE") or t.contains("HISTORY") or t.contains("NEWS"):
         return "STRATEGIC INTELLIGENCE"
-    return "EXECUTIVE COMMAND SURFACE"
+    return "EXECUTIVE COMMAND _surface()"
 
 func _context_signal(active_name: String) -> String:
     var t := active_name.to_upper()
@@ -588,30 +616,30 @@ func _draw() -> void:
     for i in range(8):
         var alpha := 0.72 - float(i) * 0.065
         var band_h := top_h / 8.0
-        var tint := DEEP.lerp(SURFACE_2, float(i) / 18.0)
+        var tint := _deep().lerp(_surface_2(), float(i) / 18.0)
         draw_rect(Rect2(0, float(i) * band_h, size.x, band_h + 1), Color(tint.r, tint.g, tint.b, maxf(0.14, alpha)), true)
 
     # Specular top rim and dark lower bevel make the HUD read as a physical tray.
-    draw_rect(Rect2(0, 0, size.x, 2), Color(GOLD.r, GOLD.g, GOLD.b, 0.62), true)
+    draw_rect(Rect2(0, 0, size.x, 2), Color(_gold().r, _gold().g, _gold().b, 0.62), true)
     draw_rect(Rect2(0, 2, size.x, 1), Color(1, 1, 1, 0.12), true)
-    draw_line(Vector2(18, top_h - 2), Vector2(size.x - 18, top_h - 2), Color(EDGE.r, EDGE.g, EDGE.b, 0.68), 1.0)
+    draw_line(Vector2(18, top_h - 2), Vector2(size.x - 18, top_h - 2), Color(_edge().r, _edge().g, _edge().b, 0.68), 1.0)
     draw_line(Vector2(18, top_h), Vector2(size.x - 18, top_h), Color(0, 0, 0, 0.36), 2.0)
-    _corner(Vector2(18, top_h + 14), 32.0, GOLD)
-    _corner(Vector2(size.x - 18, top_h + 14), -32.0, CYAN)
+    _corner(Vector2(18, top_h + 14), 32.0, _gold())
+    _corner(Vector2(size.x - 18, top_h + 14), -32.0, _cyan())
 
     # Low-contrast diagonal material detail adds depth without reducing legibility.
     var grid_alpha := 0.035 if mobile else 0.045
     var step := 76.0 if mobile else 92.0
     var x := -size.y
     while x < size.x:
-        draw_line(Vector2(x, top_h), Vector2(x + size.y, size.y), Color(BLUE.r, BLUE.g, BLUE.b, grid_alpha), 1.0)
+        draw_line(Vector2(x, top_h), Vector2(x + size.y, size.y), Color(_blue().r, _blue().g, _blue().b, grid_alpha), 1.0)
         x += step
 
     var pulse_strength := 0.28 + 0.10 * sin(_pulse * 0.85)
-    _halo(Vector2(size.x * 0.20, top_h + 58), 116.0, Color(GREEN.r, GREEN.g, GREEN.b, pulse_strength * 0.09))
-    _halo(Vector2(size.x * 0.80, top_h + 46), 138.0, Color(CYAN.r, CYAN.g, CYAN.b, pulse_strength * 0.08))
+    _halo(Vector2(size.x * 0.20, top_h + 58), 116.0, Color(_green().r, _green().g, _green().b, pulse_strength * 0.09))
+    _halo(Vector2(size.x * 0.80, top_h + 46), 138.0, Color(_cyan().r, _cyan().g, _cyan().b, pulse_strength * 0.08))
     if not mobile:
-        _halo(Vector2(size.x * 0.52, size.y * 0.78), 180.0, Color(PURPLE.r, PURPLE.g, PURPLE.b, 0.018))
+        _halo(Vector2(size.x * 0.52, size.y * 0.78), 180.0, Color(_purple().r, _purple().g, _purple().b, 0.018))
 
 func _corner(origin: Vector2, direction: float, tint: Color) -> void:
     draw_line(origin, origin + Vector2(direction, 0), Color(tint.r, tint.g, tint.b, 0.60), 2.0)
