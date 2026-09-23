@@ -4,7 +4,7 @@ const ICONS:=["home","business","empire","world","property","production","people
 func _initialize()->void:call_deferred("_run")
 func check(label:String,ok:bool)->void:
     if ok:print("PASS: "+label)
-    else:failed+=1;push_error("FAIL: "+label)
+    else:failed += 1;push_error("FAIL: "+label)
 func _run()->void:
     for icon_name in ICONS:
         var path:="res://Assets/Art/Icons/%s.svg" % icon_name
@@ -28,4 +28,4 @@ func _run()->void:
     var tutorial:=FileAccess.get_file_as_string("res://scripts/tutorial_overlay.gd")
     check("onboarding progress remains visible",tutorial.contains("progress_bar") and tutorial.contains("STEP %d/%d"))
     print("PREMIUM ART DIRECTION: %s" % ("PASS" if failed==0 else "FAIL"))
-    quit(1 if failed>0 else 0)
+    quit(1 if failed > 0 else 0)
