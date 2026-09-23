@@ -56,6 +56,7 @@ GROUPS = {
             "tests/test_resource_art_assets.gd",
             "tests/test_premium_art_direction.gd",
         },
+    },
     "economy_finance": {
         "patterns": [
             "scripts/*econom*.gd", "scripts/*finance*.gd", "scripts/*bank*.gd",
