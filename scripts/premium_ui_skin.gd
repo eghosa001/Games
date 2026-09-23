@@ -230,6 +230,10 @@ func _style_panel_container(panel: PanelContainer) -> void:
     box.shadow_color = Color(0, 0, 0, 0.20 if _is_light_mode() else 0.46)
     box.shadow_size = 14
     box.shadow_offset = Vector2(0, 6)
+    box.content_margin_left = 14
+    box.content_margin_right = 14
+    box.content_margin_top = 12
+    box.content_margin_bottom = 12
     panel.add_theme_stylebox_override("panel", box)
 
 
