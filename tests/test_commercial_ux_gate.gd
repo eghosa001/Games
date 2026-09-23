@@ -24,6 +24,7 @@ func _run()->void:
     check("production UI has no fixed world upside placeholder",not ui_source.contains("$22K upside"))
     check("production UI has no fixed morale/equipment placeholder",not ui_source.contains("Morale high") and not ui_source.contains("Line 91"))
     check("regional detail avoids synthetic demand/pressure ratings",not ui_source.contains("Demand HIGH") and not ui_source.contains("Rival pressure MEDIUM"))
+    check("primary view transitions are subtle and reduced-motion aware",ui_source.contains("func _animate_view_in()") and ui_source.contains("if _reduce_motion()"))
 
     var expected:=["LIVE","OPERATE","EMPIRE","WORLD","MORE"]
     var tabs:Array=hud.get("mode_buttons")
