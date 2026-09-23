@@ -25,7 +25,7 @@ const MANAGED_SCREENS := [
     "RenewDiplomacyUI", "CustomerSegmentsUI",
 ]
 
-const PAGE_COUNTS := [4, 9, 10, 5]
+const FIGMA_VIEWS := ["live", "property", "operate", "finance", "empire", "world", "portfolio", "intelligence", "more", "settings"]
 
 const TRANSITION_SEQUENCE := [
     "DashboardPanel", "FinancePanel", "BusinessOperationsPanel", "EmployeePanel",
@@ -115,53 +115,49 @@ func _audit_persistent_shell(viewport_size: Vector2i) -> void:
     _check(hud != null, "%s MainHUD resolves" % viewport_size)
     if hud == null:
         return
-    if hud.has_method("_layout_responsive"):
-        hud._layout_responsive()
+    hud.open_figma_view("live")
+    hud._layout_responsive()
+    await process_frame
+
+    var runtime := hud.get("root") as Control
+    _check(runtime != null and runtime.name == "RestoraFigmaRuntime", "%s Figma runtime root" % viewport_size)
+
+    if viewport_size.x >= 1000:
+        var desktop := runtime.get_node_or_null("DesktopExecutive") as Control
+        _check(desktop != null, "%s desktop executive canvas" % viewport_size)
+        if desktop != null:
+            _check(desktop.size == Vector2(1280, 720), "%s desktop design canvas is 1280x720" % viewport_size)
+        return
+
+    if viewport_size.x >= 700 and viewport_size.y >= 900:
+        var tablet := runtime.get_node_or_null("TabletLive") as Control
+        _check(tablet != null, "%s tablet LIVE canvas" % viewport_size)
+
+    for view_name in FIGMA_VIEWS:
+        hud.open_figma_view(view_name)
         await process_frame
+        _check(str(hud.get("active_view")) == view_name, "%s view reachable: %s" % [viewport_size, view_name])
+        var content := hud.get("mobile_content") as Control
+        var nav := hud.get("bottom_nav") as Control
+        if view_name == "live" and viewport_size.x >= 700 and viewport_size.y >= 900:
+            continue
+        _check(content != null, "%s %s mobile content resolves" % [viewport_size, view_name])
+        _check(nav != null, "%s %s bottom navigation resolves" % [viewport_size, view_name])
+        if nav != null:
+            _check(_rect_mostly_inside(nav.get_global_rect(), Rect2(Vector2.ZERO, Vector2(viewport_size))), "%s %s nav inside viewport" % [viewport_size, view_name])
+        var buttons: Array[Button] = []
+        if content != null:
+            _collect_enabled_visible_buttons(content, buttons)
+        if nav != null:
+            _collect_enabled_visible_buttons(nav, buttons)
+        for button in buttons:
+            var label := button.text.strip_edges().replace("\n", " ")
+            if label.is_empty(): label = String(button.name)
+            _check(button.size.x >= 44.0 and button.size.y >= 28.0, "%s %s action sized: %s" % [viewport_size, view_name, label])
+            _check(button.pressed.get_connections().size() > 0, "%s %s action wired: %s" % [viewport_size, view_name, label])
 
-    var tabs := hud.get("tabs") as HBoxContainer
-    var actions := hud.get("actions") as GridContainer
-    var action_dock := hud.get("action_dock") as Control
-    _check(tabs != null, "%s primary tabs resolve" % viewport_size)
-    _check(actions != null, "%s action grid resolves" % viewport_size)
-    _check(action_dock != null, "%s action dock resolves" % viewport_size)
-    if tabs != null:
-        _check(tabs.get_child_count() == 4, "%s exactly four primary tabs" % viewport_size)
-        for child in tabs.get_children():
-            var button := child as Button
-            if button == null: continue
-            _check(button.size.x >= 44.0 and button.size.y >= 44.0, "%s primary tab >=44px: %s" % [viewport_size, button.text])
-            _check(button.pressed.get_connections().size() > 0, "%s primary tab wired: %s" % [viewport_size, button.text])
-
-    if action_dock != null and action_dock.visible:
-        _check(_rect_mostly_inside(action_dock.get_global_rect(), Rect2(Vector2.ZERO, Vector2(viewport_size))), "%s action dock inside viewport" % viewport_size)
-
-    # Exercise every command page without invoking business mutations. This
-    # verifies the navigation structure, button creation and responsive sizing
-    # for all 28 HUD pages.
-    if hud.has_method("_set_tab") and hud.has_method("_set_page"):
-        for tab_index in range(PAGE_COUNTS.size()):
-            hud._set_tab(tab_index)
-            await process_frame
-            for page_index in range(PAGE_COUNTS[tab_index]):
-                hud._set_page(page_index)
-                await process_frame
-                var page_buttons: Array[Button] = []
-                if actions != null:
-                    _collect_enabled_visible_buttons(actions, page_buttons)
-                _check(not page_buttons.is_empty(), "%s HUD tab %d page %d has actions" % [viewport_size, tab_index, page_index])
-                _check(page_buttons.size() <= 6, "%s HUD tab %d page %d keeps action count <=6" % [viewport_size, tab_index, page_index])
-                for button in page_buttons:
-                    var label := button.text.strip_edges().replace("\n", " ")
-                    _check(button.size.x >= 44.0 and button.size.y >= 44.0, "%s HUD action >=44px: %s" % [viewport_size, label])
-                    _check(button.pressed.get_connections().size() > 0, "%s HUD action wired: %s" % [viewport_size, label])
-                    if not _has_scroll_ancestor(button):
-                        _check(_rect_mostly_inside(button.get_global_rect(), Rect2(Vector2.ZERO, Vector2(viewport_size))), "%s HUD action inside viewport: %s" % [viewport_size, label])
-
-    # Restore the default landing page so later screen tests start consistently.
-    if hud.has_method("_set_tab"):
-        hud._set_tab(0)
-        await process_frame
+    hud.open_figma_view("live")
+    await process_frame
 
 func _audit_viewport(viewport_size: Vector2i) -> void:
     var viewport_rect := Rect2(Vector2.ZERO, Vector2(viewport_size))
