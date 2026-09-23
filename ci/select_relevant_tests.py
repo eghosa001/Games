@@ -184,6 +184,7 @@ EXCLUDED_HEAVY = {
     "tests/test_visual_ui_matrix.gd",
     "tests/test_quality_gate.gd",
     "tests/test_master_game_plan_coverage.gd",
+    "tests/capture_visual_audit.gd",
     "tests/long_running/test_30_60_180_365_day_balance.gd",
 }
 
@@ -218,8 +219,15 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     if code_changed:
         tests.update(SMOKE)
 
-    # Workflow/docs-only edits do not need the game suite.
-    if not tests and any(p.startswith(".github/") or p.startswith("ci/") for p in changed):
+    # Workflow/docs-only edits do not need the game suite. The Figma visual
+    # workflow has its own Godot render gate and must not fan out into legacy
+    # repository-wide test lint during iterative UI work.
+    ci_relevant = [
+        p for p in changed
+        if p.startswith("ci/")
+        or (p.startswith(".github/") and p != ".github/workflows/figma-visual-parity.yml")
+    ]
+    if not tests and ci_relevant:
         tests.add("tests/test_test_quality_integrity.gd")
         groups.append("ci")
 
