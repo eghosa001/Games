@@ -76,6 +76,13 @@ func _audio_manager():
 func _monetization():
     return get_node_or_null("/root/RenewMonetizationSystem")
 
+func _realtime_status() -> Dictionary:
+    var realtime = get_node_or_null("/root/RenewRealTimeEconomySystem")
+    return realtime.status() if realtime != null and realtime.has_method("status") else {}
+
+func _demand_remaining() -> int:
+    return maxi(0, int(_realtime_status().get("consumer_demand_remaining", 0)))
+
 func _progression():
     return parent.get_node_or_null("Systems/StrategicProgression") if parent != null else null
 
@@ -522,7 +529,7 @@ func _build_mobile_operations() -> void:
     var prod = _panel(mobile_content, "ProductionControl", Rect2(18, 204, inner_w, 150), "surface", "border", 18)
     _label(prod, "Head", "PRODUCTION CONTROL", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     _remember("production_rate", _label(prod, "Rate", _production_rate_text(), Rect2(16, 42, inner_w - 32, 18), 13, "text", 600))
-    _label(prod, "Meta", "Demand is healthy. One batch can be completed safely.", Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
+    _label(prod, "Meta", "Customer demand remaining today: %d units." % _demand_remaining(), Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
     var half = (inner_w - 42.0) * 0.5
     if _business_open():
         _frame_button(prod, "ProduceBatch", "PRODUCE BATCH", Rect2(16, 104, half, 34), _produce, false, true, 9)
@@ -544,7 +551,7 @@ func _build_mobile_operations() -> void:
 
 func _build_mobile_finance() -> void:
     var w = _content_width()
-    _header("FINANCE COMMAND", "LIVE LEDGER • HEALTHY", "", "success")
+    _header("FINANCE COMMAND", "LIVE LEDGER • DEBT %s" % _money(_debt()), "", "success" if _debt() == 0 else "gold")
     var inner_w = w - 36.0
     var gap = 6.0
     var tile_w = (inner_w - gap) * 0.5
@@ -679,9 +686,9 @@ func _build_mobile_world() -> void:
     var opp = _panel(mobile_content, "WorldOpportunities", Rect2(18, 480, inner_w, 176), "surface", "border", 18)
     _label(opp, "Head", "WORLD OPPORTUNITIES", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     var items = [
-        ["CITY CONTRACT", "$22K upside", "Ready", "success"],
-        ["FOOD CORRIDOR", "+18% demand", "Route needed", "gold"],
-        ["EAST BRANCH", "Rep 80", "Locked", "muted"]
+        ["CUSTOMER DEMAND", "%d units remain" % _demand_remaining(), "ACTIVE" if _demand_remaining() > 0 else "SATISFIED", "success" if _demand_remaining() > 0 else "muted"],
+        ["EXPANSION ASSETS", "%d unlocked" % _unlocked_asset_count(), "READY" if _unlocked_asset_count() > _owned_asset_count() else "MANAGED", "gold"],
+        ["RIVAL NETWORK", "%d tracked" % _rival_count(), "MONITOR" if _rival_count() > 0 else "QUIET", "warning" if _rival_count() > 0 else "muted"]
     ]
     for i in range(items.size()):
         var y = 46.0 + i * 40.0
@@ -747,8 +754,8 @@ func _build_mobile_more() -> void:
     var inner_w = w - 36.0
     var company = _panel(mobile_content, "CompanyProfile", Rect2(18, 82, inner_w, 94), "surface", "border", 18)
     _label(company, "Name", _company_name(), Rect2(16,14,inner_w - 32,20), 15, "text", 700)
-    _label(company, "Meta", "Reputation %d • Dynasty 1 • Autosave on" % _rep(), Rect2(16,42,inner_w - 32,14), 10, "muted", 400)
-    _label(company, "Health", "SYSTEMS HEALTHY", Rect2(16,68,160,14), 9, "success", 600)
+    _label(company, "Meta", "Reputation %d • Company Level %d • Autosave on" % [_rep(), _company_level()], Rect2(16,42,inner_w - 32,14), 10, "muted", 400)
+    _label(company, "Health", "%d ACTIVE CONTRACT%s" % [_active_contracts(), "" if _active_contracts() == 1 else "S"], Rect2(16,68,180,14), 9, "success", 600)
 
     var tiles = [
         ["FINANCE","Cash, debt, investors","finance","finance"],
@@ -896,7 +903,7 @@ func _build_desktop_live() -> void:
 
     var signals = _panel(canvas, "Signals", Rect2(620,426,304,230), "surface", "border", 18)
     _label(signals, "Head", "SIGNALS", Rect2(18,16,180,16), 10, "gold", 600)
-    _label(signals, "Body", "• Contract demand rising\n• Inputs stable\n• Rival moved east\n• Investor sentiment strong", Rect2(18,50,260,120), 13, "text", 400)
+    _label(signals, "Body", _signal_lines(), Rect2(18,50,260,120), 13, "text", 400)
 
     var quick = _panel(canvas, "QuickActions", Rect2(942,426,304,230), "selected", "plum", 18)
     _label(quick, "Head", "QUICK ACTIONS", Rect2(18,16,180,16), 10, "gold", 600)
@@ -934,10 +941,10 @@ func _build_tablet_live() -> void:
         _desktop_stat(canvas, "Stat%d"%i, Rect2(xs[i],390,180 if i<3 else 182,96), names[i], vals[i])
     var ops = _panel(canvas, "Operations", Rect2(32,508,370,524), "surface", "border", 18)
     _label(ops, "Head", "OPERATIONS", Rect2(20,18,180,18), 12, "gold", 600)
-    _label(ops, "Body", "Production\n%s\n\nContracts\n%d active\n\nPeople\n%d staff • Morale high\n\nEquipment\nLine 91%% • Fleet %d%%" % [_production_rate_text(), _active_contracts(), _employees(), clampi(72+_transport_level()*6,72,96)], Rect2(20,56,330,330), 15, "text", 400)
+    _label(ops, "Body", "Production\n%s\n\nContracts\n%d active\n\nPeople\n%d staff\n\nInventory\n%d inputs • %d goods\n\nFleet\nLevel %d" % [_production_rate_text(), _active_contracts(), _employees(), _inputs(), _goods(), maxi(1,_transport_level())], Rect2(20,56,330,330), 15, "text", 400)
     var sig = _panel(canvas, "SignalsObjectives", Rect2(420,508,382,524), "surface", "border", 18)
     _label(sig, "Head", "SIGNALS + OBJECTIVES", Rect2(20,18,250,18), 12, "gold", 600)
-    _label(sig, "Body", "Regional demand is rising.\nMaterials prices are stable.\nA rival entered East Ward.\n\nNEXT OBJECTIVE\n%s" % _objective_title(), Rect2(20,56,342,330), 15, "text", 400)
+    _label(sig, "Body", "%s\n\nNEXT OBJECTIVE\n%s" % [_signal_lines(), _objective_title()], Rect2(20,56,342,330), 15, "text", 400)
     var nav = _panel(canvas, "Nav", Rect2(32,1054,770,92), "surface", "border", 26)
     _label(nav, "Labels", "LIVE        OPERATE        EMPIRE        WORLD        MORE", Rect2(54,36,660,20), 13, "text", 600, HORIZONTAL_ALIGNMENT_CENTER)
 
@@ -1133,14 +1140,15 @@ func _property_cta() -> void:
     _rebuild_current()
 
 func _production_rate_text() -> String:
-    var units = maxi(0, _goods())
-    var quality = clampi(72 + int(_state_value("business","capacity_level",0))*4,72,94)
-    return "Output %d units/day  •  Quality %d%%" % [maxi(10, units), quality]
+    return "Capacity L%d  •  %d finished goods" % [
+        maxi(1, int(_state_value("businesses","capacity_level",1))),
+        _goods()
+    ]
 
 func _commercial_text() -> String:
     var price = int(parent.player_price) if parent != null and "player_price" in parent else int(_state_value("business","price",42))
-    return "PRICE  %s  •  STAFF  %d  •  CAPACITY  %d%%\nMARKETING  %s\nCONTRACTS  %d live  •  %s" % [
-        _money(price), _employees(), clampi(60 + int(_state_value("business","capacity_level",0))*9,60,96),
+    return "PRICE  %s  •  STAFF  %d  •  CAPACITY L%d\nMARKETING  %s\nCONTRACTS  %d live  •  %s" % [
+        _money(price), _employees(), maxi(1, int(_state_value("businesses","capacity_level",1))),
         "Local campaign active" if int(_state_value("business","marketing_level",0)) > 0 else "Ready",
         _active_contracts(), "renewal due" if _active_contracts() > 0 else "open market"
     ]
@@ -1339,10 +1347,12 @@ func _current_region_name() -> String:
     return names[clampi(idx,0,names.size()-1)]
 
 func _region_detail_text() -> String:
-    return "Infrastructure L%d  •  Demand HIGH\nBranch: %s Trade Office\nRoute efficiency %d%%  •  Rival pressure MEDIUM" % [
+    return "Infrastructure L%d  •  %d region%s active\nBranch: %s Trade Office\nTransport fleet L%d  •  %d rival%s tracked" % [
         maxi(1,int(_state_value("regions","infrastructure_level",1))),
+        _region_presence_count(), "" if _region_presence_count() == 1 else "s",
         _current_region_name().replace(" REGION","").capitalize(),
-        clampi(76 + _transport_level()*5,76,96)
+        maxi(1,_transport_level()),
+        _rival_count(), "" if _rival_count() == 1 else "s"
     ]
 
 func _upgrade_region() -> void:
@@ -1406,9 +1416,8 @@ func _intelligence_cards() -> Array:
     ]
 
 func _signal_lines() -> String:
-    return "• Contract demand %s\n• Materials price stable\n• Rival expansion %s" % [
-        "up" if _rep() >= 40 else "building",
-        "detected" if _rival_count() > 0 else "quiet"
+    return "• Customer demand: %d units remain\n• Finished goods: %d\n• Rivals tracked: %d" % [
+        _demand_remaining(), _goods(), _rival_count()
     ]
 
 func _signal_footer() -> String:
