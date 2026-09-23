@@ -164,7 +164,7 @@ func _layout() -> void:
     var compact := w < 420.0
     var museum_title := panel.find_child("MuseumTitle", true, false) as Label
     if museum_title != null:
-        museum_title.text = "CORPORATE MUSEUM" if compact else "RESTORA CORPORATE MUSEUM"
+        museum_title.text = "MUSEUM" if compact else "RESTORA CORPORATE MUSEUM"
         museum_title.add_theme_font_size_override("font_size", 17 if compact else 21)
         museum_title.custom_minimum_size.x = 0
     if close_button != null: close_button.custom_minimum_size = Vector2(72 if compact else 82, 46)
