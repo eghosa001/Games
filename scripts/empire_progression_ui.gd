@@ -75,6 +75,8 @@ func _layout() -> void:
     var height := maxf(410.0, size.y - 82.0) if narrow else minf(700.0, size.y - 90.0)
     panel.position = Vector2(8, 66) if narrow else Vector2((size.x - width) * 0.5, 54)
     panel.size = Vector2(width, height)
+    title_label.text = "EMPIRE PROGRESS" if narrow else "EMPIRE PROGRESSION"
+    title_label.add_theme_font_size_override("font_size", 18 if narrow else 21)
 
 func _goals() -> Node:
     return game.get_node_or_null("Systems/EmpireGoals") if game != null else null
