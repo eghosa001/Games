@@ -334,6 +334,7 @@ func _style_close_button(button: Button) -> void:
     button.add_theme_stylebox_override("normal", _premium_close_style(surface, border))
     button.add_theme_stylebox_override("hover", _premium_close_style(Color("19332c"), accent))
     button.add_theme_stylebox_override("pressed", _premium_close_style(Color("0b1816"), accent))
+    button.add_theme_stylebox_override("focus", _premium_close_style(Color("19332c"), accent))
     button.add_theme_color_override("font_color", text)
     button.add_theme_color_override("font_hover_color", accent)
     button.add_theme_color_override("font_pressed_color", accent)
@@ -357,7 +358,7 @@ func _ensure_close_button(screen: Node) -> void:
     if existing != null:
         existing.name = CLOSE_BUTTON_NAME
         existing.tooltip_text = "Close"
-        existing.focus_mode = Control.FOCUS_NONE
+        existing.focus_mode = Control.FOCUS_ALL
         existing.mouse_filter = Control.MOUSE_FILTER_STOP
         existing.z_index = 4096
         existing.custom_minimum_size = Vector2(
@@ -373,7 +374,7 @@ func _ensure_close_button(screen: Node) -> void:
     button.name = CLOSE_BUTTON_NAME
     button.text = "CLOSE"
     button.tooltip_text = "Close"
-    button.focus_mode = Control.FOCUS_NONE
+    button.focus_mode = Control.FOCUS_ALL
     button.mouse_filter = Control.MOUSE_FILTER_STOP
     button.z_index = 4096
     button.custom_minimum_size = Vector2(96, 48)
