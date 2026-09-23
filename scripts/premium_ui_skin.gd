@@ -143,8 +143,9 @@ func _apply_theme_recursive(node: Node) -> void:
         return
     if node is Control and node != self:
         var control := node as Control
+        # Preserve each screen's authored type scale. The shared theme supplies
+        # font family, colors and defaults only when a control has no local size.
         control.theme = _theme
-        control.add_theme_font_size_override("font_size", _theme.default_font_size)
     for child in node.get_children():
         _apply_theme_recursive(child)
 
