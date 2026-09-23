@@ -127,7 +127,21 @@ func _apply_theme_to_ui() -> void:
     if ui != null:
         _apply_theme_recursive(ui)
 
+func _is_figma_runtime(node: Node) -> bool:
+    if node == null:
+        return false
+    if node.name == "RestoraFigmaRuntime":
+        return true
+    var current := node.get_parent()
+    while current != null:
+        if current.name == "RestoraFigmaRuntime":
+            return true
+        current = current.get_parent()
+    return false
+
 func _apply_theme_recursive(node: Node) -> void:
+    if _is_figma_runtime(node):
+        return
     if node is Control and node != self:
         var control := node as Control
         control.theme = _theme
@@ -136,7 +150,11 @@ func _apply_theme_recursive(node: Node) -> void:
         _apply_theme_recursive(child)
 
 func _style_recursive(node: Node) -> void:
+    if _is_figma_runtime(node):
+        return
     for child in node.get_children():
+        if _is_figma_runtime(child):
+            continue
         if child == self:
             continue
         if child is Button:
