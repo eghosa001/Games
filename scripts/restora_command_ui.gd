@@ -286,6 +286,7 @@ func _build_mobile_view() -> void:
         "portfolio": _build_mobile_portfolio()
         "intelligence": _build_mobile_intelligence()
         "settings": _build_mobile_settings()
+        "rewards": _build_mobile_rewards()
         "property": _build_mobile_property()
         _: _build_mobile_live()
 
@@ -784,6 +785,9 @@ func _build_mobile_more() -> void:
             open_button.tooltip_text = body_text
 
 func _build_mobile_settings() -> void:
+    if mobile_content != null:
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 790.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, 790.0)
     var w = _content_width()
     var mode = "LIGHT MODE" if _is_light_theme() else "DARK MODE"
     _header("SETTINGS", "PERSONALIZE RESTORA", mode)
@@ -800,36 +804,36 @@ func _build_mobile_settings() -> void:
     _frame_button(appearance, "DeviceTheme", "DEVICE", Rect2(16+b1*2+btn_gap*2,70,b2,54), _set_theme.bind("system"), _theme_mode() == "system")
     _label(appearance, "Help", "Applies across every command screen.", Rect2(16,134,inner_w - 32,14), 9, "muted", 400)
 
-    var audio = _panel(mobile_content, "AudioAccessibility", Rect2(18,258,inner_w,154), "surface", "border", 18)
+    var audio = _panel(mobile_content, "AudioAccessibility", Rect2(18,258,inner_w,174), "surface", "border", 18)
     _label(audio, "Head", "AUDIO & ACCESSIBILITY", Rect2(16,14,220,14), 10, "gold", 600)
     _label(audio, "Music", "MUSIC", Rect2(16,44,180,16), 11, "text", 600)
     _label(audio, "MusicMeta", "Adaptive soundtrack", Rect2(16,64,214,14), 9, "muted", 400)
-    _frame_button(audio, "MusicValue", "%d%%" % int(round(_music_level()*100.0)), Rect2(inner_w-116,40,98,36), _cycle_music)
+    _frame_button(audio, "MusicValue", "%d%%" % int(round(_music_level()*100.0)), Rect2(inner_w-116,36,98,48), _cycle_music)
     _label(audio, "Sfx", "SOUND EFFECTS", Rect2(16,84,180,16), 11, "text", 600)
     _label(audio, "SfxMeta", "UI, restoration, success cues", Rect2(16,104,214,14), 9, "muted", 400)
-    _frame_button(audio, "SfxValue", "%d%%" % int(round(_sfx_level()*100.0)), Rect2(inner_w-116,80,98,36), _cycle_sfx)
-    _label(audio, "Motion", "REDUCE MOTION", Rect2(16,122,190,16), 11, "text", 600)
-    _toggle(audio, "MotionToggle", Vector2(inner_w-68,120), _reduce_motion(), _toggle_motion)
+    _frame_button(audio, "SfxValue", "%d%%" % int(round(_sfx_level()*100.0)), Rect2(inner_w-116,84,98,48), _cycle_sfx)
+    _label(audio, "Motion", "REDUCE MOTION", Rect2(16,140,190,16), 11, "text", 600)
+    _toggle(audio, "MotionToggle", Vector2(inner_w-68,136), _reduce_motion(), _toggle_motion)
 
-    var monet = _panel(mobile_content, "Monetization", Rect2(18,428,inner_w,214), "surface", "border", 18)
+    var monet = _panel(mobile_content, "Monetization", Rect2(18,448,inner_w,230), "surface", "border", 18)
     _label(monet, "Head", "PREMIUM & REWARDS", Rect2(16,14,220,14), 10, "gold", 600)
     _label(monet, "Premium", "PREMIUM", Rect2(16,44,180,16), 11, "text", 600)
     _label(monet, "PremiumMeta", _premium_meta(), Rect2(16,64,214,14), 9, "muted", 400)
-    _frame_button(monet, "PremiumView", "VIEW", Rect2(inner_w-116,40,98,36), _purchase_premium, true)
+    _frame_button(monet, "PremiumView", "VIEW", Rect2(inner_w-116,34,98,48), _purchase_premium, true)
     _label(monet, "Restore", "RESTORE PURCHASES", Rect2(16,86,180,16), 11, "text", 600)
     _label(monet, "RestoreMeta", "Verify Google Play entitlement", Rect2(16,106,214,14), 9, "muted", 400)
-    _frame_button(monet, "RestoreButton", "RESTORE", Rect2(inner_w-116,82,98,36), _restore_premium)
+    _frame_button(monet, "RestoreButton", "RESTORE", Rect2(inner_w-116,82,98,48), _restore_premium)
     _label(monet, "Rewards", "OPTIONAL REWARDED OFFERS", Rect2(16,130,220,16), 11, "text", 600)
     _toggle(monet, "RewardsToggle", Vector2(inner_w-68,128), _rewarded_enabled(), _open_rewards)
     _label(monet, "RewardMeta", "Sponsor Grant + Market Research • max 2/day", Rect2(16,150,inner_w - 32,14), 9, "muted", 400)
     _label(monet, "NoForced", "NO FORCED ADS", Rect2(16,180,130,14), 9, "success", 600)
-    _transparent_text_button(monet, "Privacy", "PRIVACY POLICY", Rect2(inner_w-122,174,106,24), _open_privacy, "plum")
+    _transparent_text_button(monet, "Privacy", "PRIVACY POLICY", Rect2(inner_w-128,174,112,48), _open_privacy, "plum")
 
-    var save = _panel(mobile_content, "SaveData", Rect2(18,658,inner_w,86), "surface", "border", 18)
+    var save = _panel(mobile_content, "SaveData", Rect2(18,694,inner_w,86), "surface", "border", 18)
     _label(save, "Head", "SAVE & DATA", Rect2(16,12,160,14), 10, "gold", 600)
     _label(save, "Auto", "AUTOSAVE", Rect2(16,38,180,16), 11, "text", 600)
     _label(save, "AutoMeta", "Enabled on mobile pause/close", Rect2(16,58,214,14), 9, "muted", 400)
-    _frame_button(save, "AutosaveState", "ON", Rect2(inner_w-116,34,98,36), _save_company)
+    _frame_button(save, "AutosaveState", "ON", Rect2(inner_w-116,30,98,48), _save_company)
 
 func _toggle(parent_node: Node, name: String, pos: Vector2, on: bool, callback: Callable) -> void:
     var track = Panel.new()
@@ -843,7 +847,7 @@ func _toggle(parent_node: Node, name: String, pos: Vector2, on: bool, callback: 
     knob.size = Vector2(22,22)
     knob.add_theme_stylebox_override("panel", _solid_round(_color("surface"), 11))
     track.add_child(knob)
-    _transparent_button(track, name+"Hit", Rect2(0,0,48,28), callback)
+    _transparent_button(track, name+"Hit", Rect2(0,-10,48,48), callback)
 
 func _transparent_text_button(parent_node: Node, name: String, text_value: String, rect: Rect2, callback: Callable, role: String) -> Button:
     var b = Button.new()
@@ -1487,7 +1491,52 @@ func _restore_premium() -> void:
     if m != null and m.has_method("restore_premium"): m.restore_premium()
 
 func _open_rewards() -> void:
-    _open_screen("LiveOpsPanel")
+    _show_view("rewards")
+
+func _build_mobile_rewards() -> void:
+    var w = _content_width()
+    _header("REWARDED OFFERS", "OPTIONAL • NO FORCED ADS")
+    var inner_w = w - 36.0
+    var intro = _panel(mobile_content, "RewardIntro", Rect2(18,82,inner_w,116), "surface", "border", 18)
+    _label(intro, "Head", "YOUR CHOICE", Rect2(16,14,180,14), 10, "gold", 600)
+    _label(intro, "Body", "Sponsored rewards are optional. Core restoration, production and expansion never require an ad.", Rect2(16,40,inner_w-32,58), 11, "text", 400)
+
+    var monet = _monetization()
+    var offers: Array[Dictionary] = []
+    if monet != null and monet.has_method("available_rewarded_offers"):
+        offers = monet.available_rewarded_offers()
+
+    var y := 216.0
+    for offer in offers:
+        var reward_id := str(offer.get("id", ""))
+        var card = _panel(mobile_content, "Reward_" + reward_id, Rect2(18,y,inner_w,146), "surface", "border", 18)
+        _label(card, "Title", str(offer.get("title", "Reward")), Rect2(16,14,inner_w-132,20), 15, "text", 700)
+        _label(card, "Body", str(offer.get("description", "")), Rect2(16,44,inner_w-32,50), 10, "muted", 400)
+        var eligibility := {"ok": false, "reason": "Reward service unavailable."}
+        if monet != null and monet.has_method("can_show_rewarded_offer"):
+            eligibility = monet.can_show_rewarded_offer(reward_id)
+        var available := bool(eligibility.get("ok", false))
+        var button := _frame_button(card, "Claim_" + reward_id, "WATCH" if available else "UNAVAILABLE", Rect2(inner_w-124,96,108,48), _request_rewarded_offer.bind(reward_id), false, available, 9)
+        button.disabled = not available
+        var status_text := "Ready when you choose." if available else str(eligibility.get("reason", "Unavailable."))
+        _label(card, "Status", status_text, Rect2(16,108,inner_w-150,28), 9, "success" if available else "muted", 400)
+        y += 164.0
+
+    if offers.is_empty():
+        var empty = _panel(mobile_content, "NoRewards", Rect2(18,216,inner_w,112), "surface", "border", 18)
+        _label(empty, "Body", "No rewarded offers are configured in this build.", Rect2(16,28,inner_w-32,54), 11, "muted", 400)
+
+    _frame_button(mobile_content, "BackToSettings", "BACK TO SETTINGS", Rect2(18,minf(y + 8.0, 680.0),inner_w,52), _show_view.bind("settings"))
+
+func _request_rewarded_offer(reward_id: String) -> void:
+    var monet = _monetization()
+    if monet == null or not monet.has_method("request_rewarded_offer"):
+        return
+    var result: Dictionary = monet.request_rewarded_offer(reward_id)
+    var state = _game_state()
+    if state != null and not bool(result.get("ok", false)):
+        state.set_value("company", "message", str(result.get("reason", "Reward unavailable.")))
+    _rebuild_current()
 
 func _open_privacy() -> void:
     var m = _monetization()
