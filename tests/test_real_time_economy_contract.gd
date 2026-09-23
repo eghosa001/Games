@@ -39,6 +39,7 @@ func run() -> void:
     check(status.has("daily_revenue") and status.has("daily_expense"), "passive revenue and costs are both exposed")
     check(status.has("consumer_demand_remaining"), "daily active demand budget is exposed")
     check(status.has("calendar"), "real-world calendar status is exposed")
+    check(status.has("return_summary"), "return-session settlement summary is exposed")
 
     var state = root.get_node_or_null("RenewGameState")
     check(state != null, "GameState exists")
@@ -61,6 +62,8 @@ func run() -> void:
     var mobile_source := FileAccess.get_file_as_string("res://scripts/mobile_ui_mobile_scale_fix.gd")
 
     check(source.contains("MAX_OFFLINE_CATCHUP_SECONDS := 86400.0"), "passive offline catch-up is capped at 24 hours")
+    check(source.contains("RETURN_SUMMARY_THRESHOLD_SECONDS := 900.0"), "brief active-session settlements do not create away summaries")
+    check(source.contains("WHILE YOU WERE AWAY:"), "meaningful return settlements are explained to the player")
     check(source.contains("STATE_KEY := \"real_time\""), "passive timestamps use dedicated persistent state")
     check(source.contains("site_cost_ratio"), "resource sites pay risk-adjusted passive operating costs")
     check(source.contains("active_market.sell_goods()"), "active selling is routed through active market")
