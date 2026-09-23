@@ -50,3 +50,7 @@ The current production pass also benchmarks RESTORA against successful Android m
 - Maintain 48 px minimum touch targets and visible keyboard/controller focus for interactive controls.
 - Keep reduced-motion support authoritative across primary and modal transitions.
 - Prefer targeted regression tests during iteration; reserve exhaustive/soak suites for deliberate release validation.
+
+## Building-first runtime direction
+
+As of the September 2026 polish pass, RESTORA no longer mounts or ships a live 3D world presentation. The primary game loop is presented through named buildings, staged restoration art, business operations, finance and deeper management screens. Regions, corporations and expansion remain simulation systems, but they are accessed as decision surfaces rather than as a continuously rendered 3D map. This keeps the mobile experience clearer, faster and easier to scale while preserving strategic depth.
