@@ -121,12 +121,12 @@ func _layout() -> void:
     dimmer.position = Vector2.ZERO; dimmer.size = size
     panel.position = Vector2((size.x - w) / 2.0, maxf(42.0, (size.y - h) / 2.0)) if not narrow else Vector2(margin, maxf(42.0, (size.y - h) / 2.0))
     panel.size = Vector2(w, minf(h, size.y - panel.position.y - 10.0))
-    title_label.position = Vector2(14, 10); title_label.size = Vector2(w - 210.0, 30); title_label.add_theme_font_size_override("font_size", 18 if phone else 21)
-    status_label.position = Vector2(w - 198.0, 14); status_label.size = Vector2(110.0, 20); status_label.add_theme_font_size_override("font_size", 9 if phone else 10)
+    title_label.position = Vector2(14, 10); title_label.size = Vector2(w - 108.0, 30); title_label.add_theme_font_size_override("font_size", 16 if phone else 21)
     close_button.position = Vector2(w - 84.0, 7); close_button.size = Vector2(70.0, 46); close_button.add_theme_font_size_override("font_size", 10)
-    summary_label.position = Vector2(14, 48); summary_label.size = Vector2(w - 28.0, 48); summary_label.add_theme_font_size_override("font_size", 10 if phone else 11)
-    feedback_label.position = Vector2(14, 96); feedback_label.size = Vector2(w - 28.0, 34); feedback_label.add_theme_font_size_override("font_size", 9 if phone else 10)
-    scroll.position = Vector2(12, 136); scroll.size = Vector2(w - 24.0, maxf(160.0, panel.size.y - 148.0)); list.custom_minimum_size.x = maxf(1.0, w - 24.0)
+    status_label.position = Vector2(14, 60); status_label.size = Vector2(w - 28.0, 18); status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT; status_label.add_theme_font_size_override("font_size", 9 if phone else 10)
+    summary_label.position = Vector2(14, 82); summary_label.size = Vector2(w - 28.0, 52); summary_label.add_theme_font_size_override("font_size", 10 if phone else 11)
+    feedback_label.position = Vector2(14, 136); feedback_label.size = Vector2(w - 28.0, 28); feedback_label.add_theme_font_size_override("font_size", 9 if phone else 10)
+    scroll.position = Vector2(12, 170); scroll.size = Vector2(w - 24.0, maxf(160.0, panel.size.y - 182.0)); list.custom_minimum_size.x = maxf(1.0, w - 24.0)
     for card in list.get_children():
         if not card is Panel: continue
         var name := card.get_child(0) as Label; var meta := card.get_child(1) as Label; var button := card.get_child(2) as Button
