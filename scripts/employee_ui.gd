@@ -132,6 +132,7 @@ func _build_ui() -> void:
     root.add_child(_detail_scroll)
     detail_row = HBoxContainer.new()
     detail_row.add_theme_constant_override("separation", 10)
+    detail_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _detail_scroll.add_child(detail_row)
     portrait = TextureRect.new()
     portrait.name = "EmployeePortrait"
@@ -223,8 +224,12 @@ func _layout_responsive() -> void:
     _status.add_theme_font_size_override("font_size", 9 if phone else 10)
     _summary.add_theme_font_size_override("font_size", 9 if phone else 10)
     _feedback.add_theme_font_size_override("font_size", 9 if phone else 10)
-    _list_scroll.custom_minimum_size.y = 52 if phone else (128 if mobile else 0)
-    _detail_scroll.custom_minimum_size.y = 78 if phone else (126 if mobile else 116)
+    _list_scroll.custom_minimum_size.y = 132 if phone else (128 if mobile else 0)
+    _detail_scroll.custom_minimum_size.y = 108 if phone else (126 if mobile else 116)
+    portrait.visible = not phone
+    detail_row.custom_minimum_size.x = maxf(1.0, panel_w - 40.0)
+    detail_label.custom_minimum_size.x = maxf(180.0, panel_w - (48.0 if phone else 138.0))
+    detail_label.add_theme_font_size_override("font_size", 10 if phone else 11)
     _actions.columns = 3 if phone else 2
     for child in _actions.get_children():
         if child is Button:
