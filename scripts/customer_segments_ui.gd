@@ -149,15 +149,16 @@ func _layout_responsive() -> void:
     title_label.size = Vector2(maxf(150.0, panel.size.x - 115.0), 30)
     title_label.add_theme_font_size_override("font_size", 17 if narrow else 20)
     close_button.position = Vector2(panel.size.x - 94.0, 7)
-    market_status.position = Vector2(14, 60)
-    market_status.size = Vector2(panel.size.x - 28.0, 32)
-    market_status.add_theme_font_size_override("font_size", 9 if narrow else 10)
-    summary_label.position = Vector2(14, 96)
-    summary_label.size = Vector2(panel.size.x - 28.0, 54)
-    summary_label.add_theme_font_size_override("font_size", 10 if narrow else 11)
+    var short_phone := narrow and panel.size.y < 560.0
+    market_status.position = Vector2(14, 54 if short_phone else 60)
+    market_status.size = Vector2(panel.size.x - 28.0, 24 if short_phone else 32)
+    market_status.add_theme_font_size_override("font_size", 8 if short_phone else (9 if narrow else 10))
+    summary_label.position = Vector2(14, 80 if short_phone else 96)
+    summary_label.size = Vector2(panel.size.x - 28.0, 44 if short_phone else 54)
+    summary_label.add_theme_font_size_override("font_size", 9 if short_phone else (10 if narrow else 11))
 
-    var content_top := 156.0
-    var detail_h := 206.0 if narrow else 190.0
+    var content_top := 128.0 if short_phone else 156.0
+    var detail_h := 120.0 if short_phone else (206.0 if narrow else 190.0)
     detail_panel.position = Vector2(12, panel.size.y - detail_h - 12.0)
     detail_panel.size = Vector2(panel.size.x - 24.0, detail_h)
     detail_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -165,7 +166,7 @@ func _layout_responsive() -> void:
     detail_label.add_theme_font_size_override("font_size", 10 if narrow else 11)
 
     segment_scroll.position = Vector2(12, content_top)
-    segment_scroll.size = Vector2(panel.size.x - 24.0, maxf(120.0, detail_panel.position.y - content_top - 10.0))
+    segment_scroll.size = Vector2(panel.size.x - 24.0, maxf(46.0 if short_phone else 120.0, detail_panel.position.y - content_top - 10.0))
     segment_list.custom_minimum_size.x = segment_scroll.size.x
     for child in segment_list.get_children(): child.custom_minimum_size.x = segment_scroll.size.x
 
