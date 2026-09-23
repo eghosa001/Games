@@ -18,6 +18,7 @@ var dismissed := false
 var last_step := -1
 var _update_clock: float = 0.0
 var _coordinator_active := false
+var _expanded_by_user := false
 
 func _state():
     return get_node_or_null("/root/RenewGameState")
@@ -218,7 +219,8 @@ func _layout_responsive() -> void:
         collapsed_button.hide()
         return
 
-    if dismissed:
+    var compact_by_default := narrow and not _expanded_by_user
+    if dismissed or compact_by_default:
         panel.hide()
         if tutorial.completed:
             collapsed_button.hide()
@@ -226,7 +228,7 @@ func _layout_responsive() -> void:
         collapsed_button.text = "GUIDE  %d/%d" % [mini(int(tutorial.step) + 1, tutorial.steps.size()), tutorial.steps.size()]
         if narrow:
             collapsed_button.size = Vector2(104.0, 48.0)
-            collapsed_button.position = Vector2(maxf(8.0, w - 116.0), maxf(8.0, h - 130.0))
+            collapsed_button.position = Vector2(maxf(8.0, w - 116.0), maxf(8.0, h - 154.0))
         else:
             collapsed_button.size = Vector2(112.0, 48.0)
             collapsed_button.position = Vector2(maxf(8.0, w - 126.0), maxf(64.0, h - 120.0))
@@ -326,6 +328,7 @@ func _save_tutorial_state() -> void:
 
 func open_tutorial() -> void:
     dismissed = false
+    _expanded_by_user = true
     _save_tutorial_state()
     _refresh()
 
@@ -345,6 +348,7 @@ func reset_tutorial() -> void:
     tutorial.step = 0
     tutorial.completed = false
     dismissed = false
+    _expanded_by_user = false
     _save_tutorial_state()
     _refresh()
 
@@ -353,6 +357,7 @@ func _dismiss_current() -> void:
 
 func _hide_overlay() -> void:
     dismissed = true
+    _expanded_by_user = false
     _save_tutorial_state()
     panel.hide()
     _layout_responsive()

@@ -469,9 +469,9 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
         mode_buttons.append(button)
 
         var icon_alpha := 0.42 if locked else 1.0
-        _add_icon(button, "NavIcon", icon_keys[i], Rect2((button.custom_minimum_size.x - 22.0) * 0.5, 5, 22, 22), "gold" if i == active_tab else "muted", icon_alpha)
+        _add_icon(button, "NavIcon", icon_keys[i], Rect2((button.custom_minimum_size.x - 18.0) * 0.5, 4, 18, 18), "gold" if i == active_tab else "muted", icon_alpha)
 
-        var label = _label(button, "NavLabel", labels[i], Rect2(4, 32, button.custom_minimum_size.x - 8, 18), 9, "text" if i == active_tab else "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
+        var label = _label(button, "NavLabel", labels[i], Rect2(2, 34, button.custom_minimum_size.x - 4, 16), 8, "text" if i == active_tab else "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
         label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
 func _nav_style(active: bool, hover = false) -> StyleBoxFlat:
@@ -730,8 +730,8 @@ func _build_mobile_finance() -> void:
 
 func _build_mobile_property() -> void:
     if mobile_content != null:
-        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 1320.0)
-        mobile_content.size.y = maxf(mobile_content.size.y, 1320.0)
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 1380.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, 1380.0)
 
     var building := _selected_building()
     var building_name := str(building.get("name", "Riverside Warehouse"))
@@ -791,14 +791,14 @@ func _build_mobile_property() -> void:
     cta.add_theme_stylebox_override("normal", _style(_color("gold"), _color("gold"), 16))
     cta.add_theme_stylebox_override("hover", _style(_color("gold").lightened(0.05), _color("gold"), 16))
 
-    _label(mobile_content, "BuildingListHead", "BUILDINGS", Rect2(18, 718, inner_w, 18), 11, "gold", 700)
-    _label(mobile_content, "BuildingListMeta", "Choose a property, inspect it, buy it, then restore it stage by stage.", Rect2(18, 742, inner_w, 34), 10, "muted", 400)
+    _label(mobile_content, "BuildingListHead", "BUILDINGS", Rect2(18, 790, inner_w, 18), 11, "gold", 700)
+    _label(mobile_content, "BuildingListMeta", "Select another building to inspect or restore.", Rect2(18, 814, inner_w, 22), 10, "muted", 400)
 
     var catalog := _building_catalog()
     var selected_index := int(_state_value("properties", "selected_property", 0))
     for i in range(catalog.size()):
         var item: Dictionary = catalog[i]
-        var y := 790.0 + float(i) * 56.0
+        var y := 852.0 + float(i) * 56.0
         var selected := i == selected_index
         var row = _panel(mobile_content, "BuildingRow%d" % i, Rect2(18, y, inner_w, 48), "selected" if selected else "surface", "plum" if selected else "border", 12)
         _label(row, "Name", str(item.get("name", "Property")), Rect2(12, 7, inner_w - 126, 16), 10, "text", 600)
