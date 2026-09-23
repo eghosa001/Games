@@ -159,8 +159,9 @@ func _build_appearance() -> void:
     var row := HBoxContainer.new()
     row.add_theme_constant_override("separation", 8)
     box.add_child(row)
-    for mode in ["dark", "light", "system"]:
-        var label := "DEVICE" if mode == "system" else mode.to_upper()
+    for mode_value in ["dark", "light", "system"]:
+        var mode: String = str(mode_value)
+        var label: String = "DEVICE" if mode == "system" else mode.to_upper()
         var button := _button(label, _set_theme.bind(mode))
         button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
         button.custom_minimum_size.y = 48
@@ -369,11 +370,13 @@ func _open_rewards() -> void:
 
 func _open_privacy() -> void:
     var monetization = _monetization()
-    var url := monetization.privacy_policy_url() if monetization != null and monetization.has_method("privacy_policy_url") else ""
-    if str(url).is_empty():
+    var url: String = ""
+    if monetization != null and monetization.has_method("privacy_policy_url"):
+        url = str(monetization.privacy_policy_url())
+    if url.is_empty():
         feedback.text = "Privacy policy URL is not configured."
         return
-    OS.shell_open(str(url))
+    OS.shell_open(url)
 
 func _save_company() -> void:
     var game = _main()
