@@ -28,6 +28,7 @@ GROUPS = {
         ],
         "tests": {
             "tests/test_command_deck_ui.gd",
+            "tests/test_figma_runtime_parity.gd",
             "tests/test_commercial_ux_gate.gd",
             "tests/test_responsive_ui_shell.gd",
             "tests/test_restora_hud_premium_layout.gd",
