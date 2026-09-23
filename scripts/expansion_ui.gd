@@ -178,6 +178,7 @@ func _layout() -> void:
     var height:=maxf(430.0,size.y-90.0) if narrow else minf(700.0,size.y-120.0)
     panel.position=Vector2(8,70) if narrow else Vector2(maxf(18.0,size.x-width-18.0),90)
     panel.size=Vector2(width,height)
+    title_label.text = "EMPIRE EXPANSION" if phone else "EMPIRE EXPANSION COMMAND"
     title_label.position=Vector2(14,10); title_label.size=Vector2(width-130,30); title_label.add_theme_font_size_override("font_size",17 if phone else 20)
     close_button.position=Vector2(width-92,7); close_button.size=Vector2(82,46)
     status_label.position=Vector2(14,56); status_label.size=Vector2(width-28,18); status_label.add_theme_font_size_override("font_size",9 if phone else 10)
