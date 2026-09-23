@@ -1,4 +1,4 @@
-[gd_scene load_steps=52 format=3]
+[gd_scene load_steps=51 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/empire_controller.gd" type="Script" id="2"]
@@ -53,7 +53,6 @@
 [ext_resource path="res://scripts/progression_system.gd" type="Script" id="61"]
 [ext_resource path="res://scenes/RestoraWorld3D.tscn" type="PackedScene" id="62"]
 [ext_resource path="res://scripts/business_operations_ui.gd" type="Script" id="63"]
-[ext_resource path="res://scripts/settings_ui.gd" type="Script" id="64"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -201,6 +200,3 @@ script=ExtResource("59")
 [node name="SaveLoadPanel" type="CanvasLayer" parent="UI"]
 layer=91
 script=ExtResource("60")
-[node name="SettingsPanel" type="CanvasLayer" parent="UI"]
-layer=92
-script=ExtResource("64")
