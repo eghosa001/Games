@@ -41,7 +41,7 @@ func _run() -> void:
     check("MORE routes to integrated settings", hud.contains('["SETTINGS","Theme, audio, purchases, privacy","settings"]'))
     check("premium skin consumes global theme manager", skin.contains('/root/RestoraThemeManager') and skin.contains('get_theme_resource'))
     check("premium skin no longer owns old fixed navy palette", not skin.contains('const SURFACE := Color("101d3d")'))
-    check("settings exposes dark light and device modes", settings.contains('["dark", "light", "system"]'))
+    check("settings exposes dark light and device modes", settings.contains('_set_theme.bind("dark")') and settings.contains('_set_theme.bind("light")') and settings.contains('_set_theme.bind("system")'))
     check("settings exposes premium purchase", settings.contains("purchase_premium"))
     check("settings exposes purchase restore", settings.contains("restore_premium"))
     check("settings exposes privacy policy", settings.contains("privacy_policy_url"))
