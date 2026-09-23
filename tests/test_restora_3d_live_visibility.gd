@@ -44,14 +44,7 @@ func _run() -> void:
     root.size = Vector2i(1280, 720)
     await process_frame
     var mobile_fix := game.get_node_or_null("UI/MainHUD/MobileScaleFix")
-    check("mobile compatibility node exists", mobile_fix != null)
-    if mobile_fix != null and mobile_fix.has_method("_apply_mobile_compatibility"):
-        mobile_fix.call("_apply_mobile_compatibility")
-        await process_frame
-        for path in LEGACY_RENDERERS:
-            var renderer := game.get_node_or_null(path) as CanvasItem
-            if renderer != null:
-                check("responsive pass keeps 3D renderer hidden: %s" % path, not renderer.visible)
+    check("obsolete mobile compatibility node is removed", mobile_fix == null)
 
     var web_adapter := root.get_node_or_null("RenewWebResponsive")
     check("web responsive adapter exists", web_adapter != null)

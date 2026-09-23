@@ -4,7 +4,7 @@ var failed:=0
 func _initialize()->void:call_deferred("_run")
 func check(ok:bool,label:String)->void:
     if ok:passed+=1;print("PASS: "+label)
-    else:failed+=1;push_error("FAIL: "+label)
+    else:failed += 1;push_error("FAIL: "+label)
 func _run()->void:
     root.size=Vector2i(390,844)
     var p:=load("res://scenes/Main.tscn") as PackedScene
@@ -27,4 +27,4 @@ func _run()->void:
         check(int(hud.get("active_tab"))==i,"touch switches "+expected[i])
     game.queue_free();await process_frame
     print("BOTTOM NAV: %d passed, %d failed" % [passed,failed])
-    quit(1 if failed>0 else 0)
+    quit(1 if failed > 0 else 0)
