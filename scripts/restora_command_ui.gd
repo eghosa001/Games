@@ -459,6 +459,7 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
         button.add_theme_stylebox_override("hover", _nav_style(i == active_tab, true))
         button.add_theme_stylebox_override("pressed", _nav_style(true))
         button.add_theme_stylebox_override("focus", _nav_style(true, true))
+        button.add_theme_stylebox_override("disabled", _nav_disabled_style())
         var required_unlock := str(required_unlocks[i])
         var locked := not required_unlock.is_empty() and not _has_unlock(required_unlock)
         button.disabled = locked
@@ -474,6 +475,8 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
 
         var label = _label(button, "NavLabel", labels[i], Rect2(2, 34, button.custom_minimum_size.x - 4, 16), 8, "text" if i == active_tab else "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
         label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+        if locked:
+            _label(button, "UnlockLevel", "L%d" % _unlock_level(required_unlock), Rect2(button.custom_minimum_size.x - 23, 3, 18, 11), 7, "muted", 700, HORIZONTAL_ALIGNMENT_RIGHT)
         button.focus_mode = Control.FOCUS_ALL
     call_deferred("_ensure_nav_focus_modes")
 
@@ -481,6 +484,13 @@ func _ensure_nav_focus_modes() -> void:
     for button in mode_buttons:
         if button != null and is_instance_valid(button) and not button.disabled:
             button.focus_mode = Control.FOCUS_ALL
+
+func _nav_disabled_style() -> StyleBoxFlat:
+    var style := StyleBoxFlat.new()
+    style.bg_color = Color(0, 0, 0, 0)
+    style.border_color = Color(0, 0, 0, 0)
+    style.set_corner_radius_all(14)
+    return style
 
 func _nav_style(active: bool, hover = false) -> StyleBoxFlat:
     if active:
