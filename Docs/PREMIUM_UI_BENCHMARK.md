@@ -27,3 +27,26 @@ This document defines the production UI target for RESTORA. The goal is not to c
 ## Release acceptance
 
 A visual pass is not complete merely because controls are themed. A release candidate must also pass the repository UI viewport matrix, interaction contracts, overflow checks, empty/error/locked states, and human review of rendered frames. The final question is: **does each screen look authored for RESTORA, or merely functional?** If the answer is merely functional, it is not release-ready.
+
+
+## September 2026 mobile benchmark loop
+
+The current production pass also benchmarks RESTORA against successful Android management/tycoon games and Google's current game-quality guidance:
+
+- **Business Empire: RichMan** — strategic business categories, offline play, simple interaction, optional rewarded advertising. Avoid its repeatedly reported ad-interruption pain point; RESTORA keeps forced ads out of the core loop.
+- **SimCity BuildIt** — layered city/economy decisions, long-form progression, rotating seasons/events, and clear ownership of player choices.
+- **Township** — progressive feature depth, return-session activity, limited-time events, rewards, and offline continuity.
+- **Idle Miner Tycoon** — strong return value and offline progression without requiring forced ads for core play.
+- **Game Dev Tycoon** — progressive management complexity, experimentation, phone/tablet-specific UI, and a complete non-ad-supported progression reference.
+- **Android game quality / Level Up** — 60 FPS target during active gameplay, stable crash/ANR behavior, resizable layouts/insets, visible input focus, and responsive startup feedback.
+
+### Decisions from this pass
+
+- Keep RESTORA's active production/selling loop strategic; passive catch-up remains capped at 24 hours.
+- Explain meaningful away-time operating results when the player returns.
+- Stage Empire/World and advanced management surfaces through the existing company-level unlock model.
+- Use only authoritative simulation values in player-facing live metrics; placeholder percentages/trends are release blockers.
+- Keep monetization opt-in, provider-verified, and separate from the core economy.
+- Maintain 48 px minimum touch targets and visible keyboard/controller focus for interactive controls.
+- Keep reduced-motion support authoritative across primary and modal transitions.
+- Prefer targeted regression tests during iteration; reserve exhaustive/soak suites for deliberate release validation.
