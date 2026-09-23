@@ -57,7 +57,7 @@ func _build_ui() -> void:
     content = VBoxContainer.new(); content.add_theme_constant_override("separation",10); scroll.add_child(content)
 
     var header := HBoxContainer.new(); header.add_theme_constant_override("separation",10); content.add_child(header)
-    var title := _label("PRODUCTION CONTROL CENTER",20,Color("edf6f3")); title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; header.add_child(title)
+    var title := _label("PRODUCTION CONTROL",20,Color("edf6f3")); title.size_flags_horizontal=Control.SIZE_EXPAND_FILL; title.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS; header.add_child(title)
     var close := _button("CLOSE",46)
     close.pressed.connect(func():
         var manager := get_node_or_null("/root/RenewUIScreenManager")
