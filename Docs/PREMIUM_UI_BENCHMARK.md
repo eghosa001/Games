@@ -19,7 +19,7 @@ This document defines the production UI target for RESTORA. The goal is not to c
 6. Semantic color is stable across the game. Gold = primary/valuable decision, teal = positive/operational, cyan = world/information, orange = production/attention, red = danger/negative, purple = empire/network.
 7. Typography uses a clear hierarchy: brand/hero, screen title, section title, metric value, body, caption. All-caps is reserved for short navigation/status labels, not paragraphs.
 8. Hover, pressed, selected, disabled, focus, loading, success, failure, locked, and empty states must all be designed states rather than engine defaults.
-9. Desktop and mobile are different compositions, not merely scaled copies. Phone layouts favor bottom-reachable primary navigation, fewer simultaneous controls, and 44 px or larger touch targets.
+9. Desktop and mobile are different compositions, not merely scaled copies. Phone layouts favor bottom-reachable primary navigation, fewer simultaneous controls, and 48 px or larger touch targets.
 10. Motion is brief and informative. Entry/selection feedback should communicate hierarchy without blocking play.
 11. Raw debug terminology, internal node names, implementation labels, placeholder copy, and development-only controls must never be player-facing in production.
 12. The world remains visually present behind management layers whenever doing so does not reduce readability.
