@@ -179,9 +179,9 @@ func _layout() -> void:
     panel.position=Vector2(8,70) if narrow else Vector2(maxf(18.0,size.x-width-18.0),90)
     panel.size=Vector2(width,height)
     title_label.position=Vector2(14,10); title_label.size=Vector2(width-130,30); title_label.add_theme_font_size_override("font_size",17 if phone else 20)
-    status_label.position=Vector2(14,39); status_label.size=Vector2(width-28,20); status_label.add_theme_font_size_override("font_size",9 if phone else 10)
     close_button.position=Vector2(width-92,7); close_button.size=Vector2(82,46)
-    summary_label.position=Vector2(14,62); summary_label.size=Vector2(width-28,40); summary_label.add_theme_font_size_override("font_size",9 if phone else 11)
+    status_label.position=Vector2(14,56); status_label.size=Vector2(width-28,18); status_label.add_theme_font_size_override("font_size",9 if phone else 10)
+    summary_label.position=Vector2(14,78); summary_label.size=Vector2(width-28,42); summary_label.add_theme_font_size_override("font_size",9 if phone else 11)
     if phone:
         action_row.columns=1
         action_row.position=Vector2(12,height-164); action_row.size=Vector2(width-24,156)
@@ -195,4 +195,4 @@ func _layout() -> void:
     var detail_bottom:=height-(174.0 if phone else 116.0)
     detail_panel.position=Vector2(12,detail_bottom); detail_panel.size=Vector2(width-24,112 if not phone else 148)
     detail_label.position=Vector2(10,8); detail_label.size=Vector2(width-44,detail_panel.size.y-16); detail_label.add_theme_font_size_override("font_size",10 if phone else 11)
-    list_scroll.position=Vector2(12,108); list_scroll.size=Vector2(width-24,maxf(90.0,detail_panel.position.y-116.0)); list.custom_minimum_size.x=width-24
+    list_scroll.position=Vector2(12,126); list_scroll.size=Vector2(width-24,maxf(90.0,detail_panel.position.y-134.0)); list.custom_minimum_size.x=width-24
