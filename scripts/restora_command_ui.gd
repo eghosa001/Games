@@ -484,7 +484,7 @@ func _build_mobile_operations() -> void:
     var commercial = _panel(mobile_content, "CommercialControls", Rect2(18, 370, inner_w, 176), "surface", "border", 18)
     _label(commercial, "Head", "COMMERCIAL CONTROLS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     _remember("commercial_body", _label(commercial, "Body", _commercial_text(), Rect2(16, 44, inner_w - 32, 88), 12, "text", 400))
-    _transparent_button(commercial, "OpenCommercial", Rect2(0, 0, inner_w, 176), _open_screen.bind("CustomerSegmentsUI"))
+    _transparent_button(commercial, "OpenCommercial", Rect2(0, 0, inner_w, 176), _open_commercial_actions)
 
     var equip = _panel(mobile_content, "Equipment", Rect2(18, 562, inner_w, 112), "surface", "border", 18)
     _label(equip, "Head", "EQUIPMENT HEALTH", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
@@ -1110,6 +1110,32 @@ func _open_business_choices() -> void:
 func _choose_business(index: int) -> void:
     if parent != null and parent.has_method("choose_business_purpose"):
         parent.choose_business_purpose(index)
+    _rebuild_current()
+
+func _open_commercial_actions() -> void:
+    if mobile_content == null:
+        return
+    var existing = mobile_content.get_node_or_null("CommercialActionModal")
+    if existing != null:
+        existing.queue_free()
+    var w = _content_width()
+    var panel = _panel(mobile_content, "CommercialActionModal", Rect2(18, 318, w - 36, 250), "selected", "plum", 18)
+    panel.mouse_filter = Control.MOUSE_FILTER_STOP
+    _label(panel, "Head", "COMMERCIAL ACTIONS", Rect2(16, 14, w - 68, 18), 12, "gold", 600)
+    _label(panel, "Help", "Move finished goods, fulfill live contracts, or open customer segments.", Rect2(16, 40, w - 68, 34), 10, "muted", 400)
+    _frame_button(panel, "SellGoods", "SELL GOODS", Rect2(16, 86, w - 68, 42), _sell_goods, false, true, 10)
+    _frame_button(panel, "DeliverContract", "DELIVER CONTRACT", Rect2(16, 138, w - 68, 42), _deliver_contract, false, false, 10)
+    _frame_button(panel, "CustomerSegments", "CUSTOMER SEGMENTS", Rect2(16, 190, w - 68, 36), _open_screen.bind("CustomerSegmentsUI"), false, false, 9)
+    _frame_button(panel, "CloseCommercialActions", "CLOSE", Rect2(w - 106, 14, 54, 28), panel.queue_free, false, false, 8)
+
+func _sell_goods() -> void:
+    if parent != null and parent.has_method("sell_goods"):
+        parent.sell_goods()
+    _rebuild_current()
+
+func _deliver_contract() -> void:
+    if parent != null and parent.has_method("deliver_contract"):
+        parent.deliver_contract()
     _rebuild_current()
 
 func _produce() -> void:
