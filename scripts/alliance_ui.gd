@@ -305,19 +305,20 @@ func _layout() -> void:
     title.add_theme_font_size_override("font_size", 18 if phone else 20)
     var subtitle := panel.get_node_or_null("Subtitle") as Label
     if subtitle != null:
-        subtitle.position = Vector2(14, 38)
-        subtitle.size = Vector2(width - 28, 20)
+        subtitle.position = Vector2(14, 60)
+        subtitle.size = Vector2(width - 28, 18)
+        subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     close_button.position = Vector2(width - 88, 7)
     close_button.size = Vector2(80, 46)
-    status.position = Vector2(14, 62)
-    status.size = Vector2(width - 28, 78)
-    project.position = Vector2(14, 142)
+    status.position = Vector2(14, 82)
+    status.size = Vector2(width - 28, 70)
+    project.position = Vector2(14, 154)
     project.size = Vector2(width - 28, 48)
     var buttons: Array[Button] = []
     for child in panel.get_children():
         if child is Button and child != close_button:
             buttons.append(child)
-    var y := 194.0
+    var y := 208.0
     var cols := 2 if narrow else 3
     var bw := (width - 42.0) / float(cols)
     for i in range(buttons.size()):
