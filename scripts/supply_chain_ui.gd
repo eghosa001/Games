@@ -6,6 +6,8 @@ var root: Control
 var panel: PanelContainer
 var scroll: ScrollContainer
 var content: VBoxContainer
+var title_label: Label
+var close_button: Button
 var status: Label
 var warehouse_label: Label
 var route_label: Label
@@ -66,13 +68,16 @@ func _build() -> void:
     scroll.add_child(content)
     var header := HBoxContainer.new()
     content.add_child(header)
-    var title := _label("SUPPLY CHAIN COMMAND CENTER", 19, Color("edf6f3"))
-    title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    header.add_child(title)
-    var close := _button("CLOSE", 46)
-    close.pressed.connect(_close)
-    header.add_child(close)
+    title_label = _label("SUPPLY CHAIN COMMAND CENTER", 19, Color("edf6f3"))
+    title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+    header.add_child(title_label)
+    close_button = _button("CLOSE", 46)
+    close_button.pressed.connect(_close)
+    header.add_child(close_button)
     status = _label("", 12, Color("a9c5c6"))
+    status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    status.custom_minimum_size.y = 38
     content.add_child(status)
     content.add_child(_section("WAREHOUSE INVENTORY"))
     warehouse_label = _label("", 12, Color("dce9e7"))
@@ -191,8 +196,12 @@ func _layout() -> void:
     scroll.size = panel.size
     content.custom_minimum_size.x = maxf(0.0, panel.size.x - 26.0)
     var phone := size.x < 430.0
-    amount_spin.custom_minimum_size.x = 88.0 if phone else 105.0
-    transport_spin.custom_minimum_size.x = 88.0 if phone else 105.0
+    title_label.text = "SUPPLY CHAIN" if phone else "SUPPLY CHAIN COMMAND CENTER"
+    title_label.add_theme_font_size_override("font_size", 17 if phone else 19)
+    close_button.custom_minimum_size.x = 74 if phone else 92
+    status.add_theme_font_size_override("font_size", 10 if phone else 12)
+    amount_spin.custom_minimum_size.x = 78.0 if phone else 105.0
+    transport_spin.custom_minimum_size.x = 78.0 if phone else 105.0
 
 func _section(text: String) -> Label: return _label(text, 11, Color("d8b76d"))
 func _label(text: String, size: int, color: Color) -> Label:
