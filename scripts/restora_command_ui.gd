@@ -190,10 +190,6 @@ func _set_tab(index: int) -> void:
     var views := ["live", "operate", "empire", "world", "more"]
     _show_view(views[active_tab])
 
-func _set_page(_index: int) -> void:
-    # Compatibility entry point for historical QA callers. The production Figma
-    # shell uses named views instead of nested numbered pages.
-    _refresh()
 
 func _build_mobile_host() -> void:
     var size := get_viewport().get_visible_rect().size
