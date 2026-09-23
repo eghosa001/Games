@@ -1,6 +1,7 @@
 extends SceneTree
 var failed:=0
 const ICONS:=["home","business","empire","world","property","production","people","market","finance","supply","opportunities","intelligence","settings","decisions"]
+const NAV_ICONS:=["home","business","property","finance","more"]
 func _initialize()->void:call_deferred("_run")
 func check(label:String,ok:bool)->void:
     if ok:print("PASS: "+label)
@@ -10,6 +11,10 @@ func _run()->void:
         var path:="res://Assets/Art/Icons/%s.svg" % icon_name
         check("bespoke icon exists: "+icon_name,ResourceLoader.exists(path))
         if ResourceLoader.exists(path):check("bespoke icon loads: "+icon_name,load(path) is Texture2D)
+    for icon_name in NAV_ICONS:
+        var nav_path:="res://Assets/Art/NavIcons/%s.svg" % icon_name
+        check("minimal nav icon exists: "+icon_name,ResourceLoader.exists(nav_path))
+        if ResourceLoader.exists(nav_path):check("minimal nav icon loads: "+icon_name,load(nav_path) is Texture2D)
     var shell:=FileAccess.get_file_as_string("res://scripts/restora_command_ui.gd")
     check("Figma production shell exists",not shell.is_empty())
     check("shell exposes five-destination runtime",shell.contains('["HOME", "BUSINESS", "PROPERTY", "FINANCE", "MORE"]'))
@@ -24,6 +29,7 @@ func _run()->void:
     var main_scene:=FileAccess.get_file_as_string("res://scenes/Main.tscn")
     check("production runtime no longer mounts World3D",not main_scene.contains("RestoraWorld3D.tscn") and not main_scene.contains("name=\"World3D\""))
     check("property presentation uses staged building sheets",shell.contains("building_warehouse_progression.svg") and shell.contains("building_factory_progression.svg") and shell.contains("building_office_progression.svg"))
+    check("navigation uses dedicated minimal icon set",shell.contains("NavIcons/") and shell.contains("NAV_ICON_ROOT"))
     var tutorial:=FileAccess.get_file_as_string("res://scripts/tutorial_overlay.gd")
     check("onboarding progress remains visible",tutorial.contains("progress_bar") and tutorial.contains("STEP %d/%d"))
     print("PREMIUM ART DIRECTION: %s" % ("PASS" if failed==0 else "FAIL"))
