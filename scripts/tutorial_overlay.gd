@@ -2,6 +2,7 @@ extends CanvasLayer
 
 const Tutorial = preload("res://scripts/tutorial.gd")
 
+const UPDATE_INTERVAL: float = 0.10
 var game: Node
 var tutorial = Tutorial.new()
 var overlay_root: Control
@@ -15,6 +16,7 @@ var continue_button: Button
 var collapsed_button: Button
 var dismissed := false
 var last_step := -1
+var _update_clock: float = 0.0
 var _coordinator_active := false
 
 func _state():
@@ -46,15 +48,13 @@ func _enter_tree() -> void:
     if coordinator != null:
         coordinator.set_active_screen("")
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
     if game == null:
         return
-    var screen_name := ""
-    var coordinator = _coordinator()
-    if coordinator != null:
-        screen_name = coordinator.get_active_screen()
-    if screen_name == "":
-        _layout_responsive()
+    _update_clock += delta
+    if _update_clock < UPDATE_INTERVAL:
+        return
+    _update_clock = 0.0
 
     var current_action := String(tutorial.current().get("action", "COMPLETE"))
     if not tutorial.completed and current_action != "COMPLETE":
