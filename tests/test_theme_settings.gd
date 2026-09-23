@@ -38,7 +38,7 @@ func _run() -> void:
     check("theme manager is an autoload", project.contains('RestoraThemeManager="*res://scripts/theme_manager.gd"'))
     check("settings panel exists in main scene", scene.contains('[node name="SettingsPanel"'))
     check("settings panel is registered with screen manager", screens.contains('"SettingsPanel"'))
-    check("home routes to settings panel", hud.contains('_screen("Settings", "SettingsPanel"'))
+    check("home routes to settings panel", hud.contains('_screen("Save & settings", "SettingsPanel"'))
     check("premium skin consumes global theme manager", skin.contains('/root/RestoraThemeManager') and skin.contains('get_theme_resource'))
     check("premium skin no longer owns old fixed navy palette", not skin.contains('const SURFACE := Color("101d3d")'))
     check("settings exposes dark light and device modes", settings.contains('["dark", "light", "system"]'))
