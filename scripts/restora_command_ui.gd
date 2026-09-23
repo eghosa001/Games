@@ -308,7 +308,7 @@ func _solid_round(color: Color, radius: int) -> StyleBoxFlat:
 
 func _panel(parent_node: Node, name: String, rect: Rect2, bg_role := "surface", border_role := "border", radius := 18) -> Panel:
     var p := Panel.new()
-    p.get("name", "REGION") = name
+    p.name = name
     p.position = rect.position
     p.size = rect.size
     p.mouse_filter = Control.MOUSE_FILTER_IGNORE
