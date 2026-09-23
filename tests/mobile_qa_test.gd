@@ -1,7 +1,7 @@
 extends SceneTree
 
 const TARGETS:Array[Vector2i]=[Vector2i(320,480),Vector2i(360,640),Vector2i(390,844),Vector2i(480,800),Vector2i(720,1280),Vector2i(1024,768)]
-const MIN_TOUCH:=44.0
+const MIN_TOUCH:=48.0
 var failures:Array[String]=[]
 var checks:=0
 
@@ -36,7 +36,7 @@ func _run()->void:
             var buttons:Array=hud.get("mode_buttons")
             check("%s five primary destinations" % target,buttons.size()==5)
             for b in buttons:
-                check("%s nav target >=44" % target,(b as Button).size.y>=MIN_TOUCH)
+                check("%s nav target >=48" % target,(b as Button).size.y>=MIN_TOUCH)
         else:
             check("%s desktop executive canvas" % target,hud.get("root").get_node_or_null("DesktopExecutive")!=null)
 
