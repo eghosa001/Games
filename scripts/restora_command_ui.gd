@@ -250,10 +250,11 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
     bottom_nav.add_theme_stylebox_override("panel", _style(_color("surface"), _color("border"), 22))
     root.add_child(bottom_nav)
 
+    var item_w := 72.0 if canvas_w >= MOBILE_DESIGN_W else (bottom_nav.size.x - 4.0) / 5.0
     tabs = HBoxContainer.new()
     tabs.name = "ProductionTabs"
     tabs.position = Vector2(2, 5)
-    tabs.size = Vector2(360.0, 58)
+    tabs.size = Vector2(item_w * 5.0, 58)
     tabs.add_theme_constant_override("separation", 0)
     bottom_nav.add_child(tabs)
 
@@ -262,7 +263,7 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
         var button := Button.new()
         button.name = "Nav_" + labels[i]
         button.text = ""
-        button.custom_minimum_size = Vector2(72.0, 58)
+        button.custom_minimum_size = Vector2(item_w, 58)
         button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
         button.focus_mode = Control.FOCUS_NONE
         button.add_theme_stylebox_override("normal", _nav_style(i == active_tab))
