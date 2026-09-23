@@ -6,7 +6,7 @@
 [ext_resource path="res://scripts/world_missions.gd" type="Script" id="4"]
 [ext_resource path="res://scripts/region_controller.gd" type="Script" id="5"]
 [ext_resource path="res://scripts/branch_controller.gd" type="Script" id="6"]
-[ext_resource path="res://scripts/renew_sims_ui_final.gd" type="Script" id="7"]
+[ext_resource path="res://scripts/restora_command_ui.gd" type="Script" id="7"]
 [ext_resource path="res://scripts/rival_supply_controller.gd" type="Script" id="9"]
 [ext_resource path="res://scripts/supply_chain_controller.gd" type="Script" id="10"]
 [ext_resource path="res://scripts/world_view.gd" type="Script" id="11"]
@@ -36,7 +36,6 @@
 [ext_resource path="res://scripts/property_visual.gd" type="Script" id="34"]
 [ext_resource path="res://scripts/technology_ui.gd" type="Script" id="35"]
 [ext_resource path="res://scripts/employee_ui.gd" type="Script" id="36"]
-[ext_resource path="res://scripts/mobile_ui_mobile_scale_fix.gd" type="Script" id="41"]
 [ext_resource path="res://scripts/premium_ui_skin.gd" type="Script" id="45"]
 [ext_resource path="res://scripts/dashboard_ui.gd" type="Script" id="48"]
 [ext_resource path="res://scripts/finance_ui.gd" type="Script" id="49"]
@@ -44,7 +43,6 @@
 [ext_resource path="res://scripts/corporations_ui.gd" type="Script" id="51"]
 [ext_resource path="res://scripts/property_map.gd" type="Script" id="52"]
 [ext_resource path="res://scripts/regions_ui.gd" type="Script" id="53"]
-[ext_resource path="res://scripts/regions_launcher.gd" type="Script" id="54"]
 [ext_resource path="res://scripts/world_opportunities_ui.gd" type="Script" id="55"]
 [ext_resource path="res://scripts/production_control_ui.gd" type="Script" id="56"]
 [ext_resource path="res://scripts/supply_chain_ui.gd" type="Script" id="57"]
@@ -54,7 +52,9 @@
 [ext_resource path="res://scripts/progression_system.gd" type="Script" id="61"]
 [ext_resource path="res://scenes/RestoraWorld3D.tscn" type="PackedScene" id="62"]
 [ext_resource path="res://scripts/business_operations_ui.gd" type="Script" id="63"]
-[ext_resource path="res://scripts/settings_ui.gd" type="Script" id="64"]
+[ext_resource path="res://scripts/empire_progression_ui.gd" type="Script" id="65"]
+[ext_resource path="res://scripts/empire_identity_ui.gd" type="Script" id="66"]
+[ext_resource path="res://scripts/notifications_center_ui.gd" type="Script" id="67"]
 
 [node name="Renew" type="Node2D"]
 script = ExtResource("1")
@@ -111,10 +111,6 @@ layer=20
 [node name="MainHUD" type="CanvasLayer" parent="UI"]
 script=ExtResource("7")
 layer=20
-[node name="MobileScaleFix" type="Node" parent="UI/MainHUD"]
-script=ExtResource("41")
-[node name="RegionsLauncher" type="Node" parent="UI/MainHUD"]
-script=ExtResource("54")
 [node name="PremiumUISkin" type="Control" parent="UI/MainHUD"]
 layout_mode=3
 anchors_preset=15
@@ -201,9 +197,15 @@ script=ExtResource("58")
 [node name="EmpireIntelligencePanel" type="CanvasLayer" parent="UI"]
 layer=74
 script=ExtResource("59")
+[node name="EmpireProgressionPanel" type="CanvasLayer" parent="UI"]
+layer=77
+script=ExtResource("65")
+[node name="EmpireIdentityPanel" type="CanvasLayer" parent="UI"]
+layer=78
+script=ExtResource("66")
+[node name="NotificationsCenterPanel" type="CanvasLayer" parent="UI"]
+layer=79
+script=ExtResource("67")
 [node name="SaveLoadPanel" type="CanvasLayer" parent="UI"]
 layer=91
 script=ExtResource("60")
-[node name="SettingsPanel" type="CanvasLayer" parent="UI"]
-layer=92
-script=ExtResource("64")
