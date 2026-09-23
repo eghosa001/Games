@@ -10,6 +10,14 @@ const MOBILE_NAV_H = 70.0
 const MOBILE_NAV_BOTTOM = 16.0
 const DESKTOP_BREAKPOINT = 1000.0
 const TABLET_BREAKPOINT = 700.0
+const ART_ROOT = "res://Assets/Art/"
+const RESTORATION_ART = ART_ROOT + "premium_restoration_site.svg"
+const DISTRICT_ART = ART_ROOT + "premium_industrial_district.svg"
+const ICON_ROOT = ART_ROOT + "Icons/"
+const WAREHOUSE_STAGE_ART = ART_ROOT + "building_warehouse_progression.svg"
+const WORKSHOP_STAGE_ART = ART_ROOT + "building_factory_progression.svg"
+const COMMERCIAL_STAGE_ART = ART_ROOT + "building_office_progression.svg"
+const BUILDING_FRAME_SIZE = Vector2(256, 144)
 
 var parent: Node
 var root: Control
@@ -29,6 +37,8 @@ var hero_action: Button
 var _refresh_elapsed = 0.0
 var _last_signature = ""
 var _layout_kind = ""
+var _last_progress_level := -1
+var _view_transition: Tween
 
 var _font_regular: SystemFont
 var _font_semibold: SystemFont
@@ -53,6 +63,9 @@ func _process(delta: float) -> void:
         return
     _refresh_elapsed = 0.0
     var sig = _state_signature()
+    if _company_level() != _last_progress_level:
+        _rebuild_current()
+        return
     if sig != _last_signature:
         _last_signature = sig
         _refresh()
@@ -71,6 +84,116 @@ func _audio_manager():
 
 func _monetization():
     return get_node_or_null("/root/RenewMonetizationSystem")
+
+func _realtime_status() -> Dictionary:
+    var realtime = get_node_or_null("/root/RenewRealTimeEconomySystem")
+    return realtime.status() if realtime != null and realtime.has_method("status") else {}
+
+func _demand_remaining() -> int:
+    return maxi(0, int(_realtime_status().get("consumer_demand_remaining", 0)))
+
+func _property_system():
+    if parent == null:
+        return null
+    var command = parent.get("command_system")
+    if command == null:
+        return null
+    return command.get("property_system")
+
+func _building_catalog() -> Array:
+    var model = _property_system()
+    return model.list_properties() if model != null and model.has_method("list_properties") else []
+
+func _selected_building() -> Dictionary:
+    var model = _property_system()
+    return model.get_selected_property() if model != null and model.has_method("get_selected_property") else {}
+
+func _building_name() -> String:
+    return str(_selected_building().get("name", "Riverside Warehouse"))
+
+func _building_type() -> String:
+    return str(_selected_building().get("type", "Warehouse"))
+
+func _building_progress(building: Dictionary = {}) -> int:
+    var item := building if not building.is_empty() else _selected_building()
+    if item.is_empty():
+        return _restoration()
+    var total := 0
+    for step in ["cleaning", "repair", "painting", "furnishing"]:
+        total += clampi(int(item.get(step, 0)), 0, 100)
+    return int(round(float(total) / 4.0))
+
+func _building_stage_slot(building: Dictionary = {}) -> int:
+    var item := building if not building.is_empty() else _selected_building()
+    if item.is_empty() or not bool(item.get("owned", false)):
+        return 0
+    if int(item.get("cleaning", 0)) < 100:
+        return 0
+    if int(item.get("repair", 0)) < 100:
+        return 1
+    if int(item.get("painting", 0)) < 100:
+        return 2
+    if int(item.get("furnishing", 0)) < 50:
+        return 3
+    if int(item.get("furnishing", 0)) < 100:
+        return 4
+    return 5
+
+func _building_stage_name(building: Dictionary = {}) -> String:
+    return ["ABANDONED", "CLEANED", "REPAIRED", "PAINTED", "FURNISHING", "OPERATIONAL"][_building_stage_slot(building)]
+
+func _building_stage_texture(building: Dictionary = {}) -> Texture2D:
+    var item := building if not building.is_empty() else _selected_building()
+    var kind := str(item.get("type", "Warehouse"))
+    var path := WAREHOUSE_STAGE_ART
+    if kind == "Workshop":
+        path = WORKSHOP_STAGE_ART
+    elif kind == "Commercial Building":
+        path = COMMERCIAL_STAGE_ART
+    var source := _asset_texture(path)
+    if source == null:
+        return null
+    var atlas := AtlasTexture.new()
+    atlas.atlas = source
+    atlas.region = Rect2(0, float(_building_stage_slot(item)) * BUILDING_FRAME_SIZE.y, BUILDING_FRAME_SIZE.x, BUILDING_FRAME_SIZE.y)
+    return atlas
+
+func _select_building(index: int) -> void:
+    var model = _property_system()
+    var catalog := _building_catalog()
+    if model == null or index < 0 or index >= catalog.size():
+        return
+    model.select_property(str(catalog[index].get("id", "")))
+    _rebuild_current()
+
+func _progression():
+    return parent.get_node_or_null("Systems/StrategicProgression") if parent != null else null
+
+func _company_level() -> int:
+    var progression = _progression()
+    if progression != null and progression.has_method("get_level"):
+        return int(progression.get_level())
+    return int(_state_value("progression", "level", 1))
+
+func _has_unlock(unlock_id: String) -> bool:
+    if unlock_id.is_empty():
+        return true
+    var progression = _progression()
+    if progression != null and progression.has_method("has_unlock"):
+        return bool(progression.has_unlock(unlock_id))
+    var unlocks = _state_value("progression", "unlocks", [])
+    return unlocks is Array and unlock_id in unlocks
+
+func _unlock_level(unlock_id: String) -> int:
+    var levels := {
+        "finance": 2, "contracts": 2, "employees": 2,
+        "branches": 3, "regions": 3, "supply_chain": 3,
+        "competitors": 4, "alliances": 4, "ownership": 4,
+        "technology": 6, "research": 6, "infrastructure": 6,
+        "headquarters": 8, "world_power": 8,
+        "museum": 9, "legacy": 9
+    }
+    return int(levels.get(unlock_id, 1))
 
 func _make_fonts() -> void:
     _font_regular = SystemFont.new()
@@ -109,6 +232,37 @@ func _color(role: String) -> Color:
         "warning": return Color("c28a3a")
         "danger": return Color("b85c4a")
         _: return Color("f2efe8")
+
+func _asset_texture(path: String) -> Texture2D:
+    if not ResourceLoader.exists(path):
+        return null
+    return load(path) as Texture2D
+
+func _add_texture(parent_node: Node, name: String, rect: Rect2, texture: Texture2D, alpha := 1.0) -> TextureRect:
+    if texture == null:
+        return null
+    var art := TextureRect.new()
+    art.name = name
+    art.texture = texture
+    art.position = rect.position
+    art.size = rect.size
+    art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    art.modulate = Color(1, 1, 1, alpha)
+    art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    parent_node.add_child(art)
+    return art
+
+func _add_art(parent_node: Node, name: String, rect: Rect2, path: String, alpha := 1.0) -> TextureRect:
+    return _add_texture(parent_node, name, rect, _asset_texture(path), alpha)
+
+func _add_icon(parent_node: Node, name: String, icon_key: String, rect: Rect2, role := "muted", alpha := 1.0) -> TextureRect:
+    var icon := _add_art(parent_node, name, rect, ICON_ROOT + icon_key + ".svg", alpha)
+    if icon != null:
+        var tint := _color(role)
+        icon.modulate = Color(tint.r, tint.g, tint.b, alpha)
+        icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    return icon
 
 func _build_root() -> void:
     root = Control.new()
@@ -168,6 +322,7 @@ func _rebuild_current() -> void:
     background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     background.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(background)
+
     _layout_kind = _layout_class()
     if _layout_kind == "desktop":
         _build_desktop_live()
@@ -176,18 +331,35 @@ func _rebuild_current() -> void:
     else:
         _build_mobile_host()
         _build_mobile_view()
+    _last_progress_level = _company_level()
     _refresh()
+    _animate_view_in()
+
+func _animate_view_in() -> void:
+    if root == null:
+        return
+    if _view_transition != null and _view_transition.is_valid():
+        _view_transition.kill()
+    if _reduce_motion():
+        root.modulate = Color.WHITE
+        return
+    root.modulate = Color(1.0, 1.0, 1.0, 0.86)
+    _view_transition = create_tween()
+    _view_transition.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
+    _view_transition.set_trans(Tween.TRANS_QUAD)
+    _view_transition.set_ease(Tween.EASE_OUT)
+    _view_transition.tween_property(root, "modulate", Color.WHITE, 0.14)
 
 func _show_view(view_name: String) -> void:
     active_view = view_name
     match view_name:
-        "live", "property":
+        "live":
             active_tab = 0
         "operate":
             active_tab = 1
-        "empire", "intelligence":
+        "property", "portfolio", "empire", "intelligence":
             active_tab = 2
-        "world":
+        "finance":
             active_tab = 3
         _:
             active_tab = 4
@@ -198,7 +370,7 @@ func open_figma_view(view_name: String) -> void:
 
 func _set_tab(index: int) -> void:
     active_tab = clampi(index, 0, 4)
-    var views = ["live", "operate", "empire", "world", "more"]
+    var views = ["live", "operate", "property", "finance", "more"]
     _show_view(views[active_tab])
 
 
@@ -252,6 +424,7 @@ func _build_mobile_view() -> void:
         "portfolio": _build_mobile_portfolio()
         "intelligence": _build_mobile_intelligence()
         "settings": _build_mobile_settings()
+        "rewards": _build_mobile_rewards()
         "property": _build_mobile_property()
         _: _build_mobile_live()
 
@@ -271,31 +444,42 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
     tabs.add_theme_constant_override("separation", 0)
     bottom_nav.add_child(tabs)
 
-    var labels = ["LIVE", "OPERATE", "EMPIRE", "WORLD", "MORE"]
+    var labels = ["HOME", "BUSINESS", "PROPERTY", "FINANCE", "MORE"]
+    var icon_keys = ["home", "business", "property", "finance", "settings"]
+    var required_unlocks = ["", "", "", "finance", ""]
     for i in range(labels.size()):
         var button = Button.new()
         button.name = "Nav_" + labels[i]
         button.text = ""
         button.custom_minimum_size = Vector2(item_w, 58)
         button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-        button.focus_mode = Control.FOCUS_NONE
+        button.focus_mode = Control.FOCUS_ALL
         button.add_theme_stylebox_override("normal", _nav_style(i == active_tab))
         button.add_theme_stylebox_override("hover", _nav_style(i == active_tab, true))
         button.add_theme_stylebox_override("pressed", _nav_style(true))
+        button.add_theme_stylebox_override("focus", _nav_style(true, true))
+        var required_unlock := str(required_unlocks[i])
+        var locked := not required_unlock.is_empty() and not _has_unlock(required_unlock)
+        button.disabled = locked
+        if locked:
+            button.tooltip_text = "Unlocks at Company Level %d" % _unlock_level(required_unlock)
+        button.focus_mode = Control.FOCUS_ALL
         button.pressed.connect(_set_tab.bind(i), CONNECT_DEFERRED)
         tabs.add_child(button)
         mode_buttons.append(button)
 
-        var dot = Panel.new()
-        dot.name = "NavDot"
-        dot.position = Vector2((button.custom_minimum_size.x - 12.0) * 0.5, 4)
-        dot.size = Vector2(12, 12)
-        dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-        dot.add_theme_stylebox_override("panel", _solid_round(_color("gold") if i == active_tab else _color("muted"), 6))
-        button.add_child(dot)
+        var icon_alpha := 0.42 if locked else 1.0
+        _add_icon(button, "NavIcon", icon_keys[i], Rect2((button.custom_minimum_size.x - 18.0) * 0.5, 4, 18, 18), "gold" if i == active_tab else "muted", icon_alpha)
 
-        var label = _label(button, "NavLabel", labels[i], Rect2(4, 28, button.custom_minimum_size.x - 8, 18), 9, "text" if i == active_tab else "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
+        var label = _label(button, "NavLabel", labels[i], Rect2(2, 34, button.custom_minimum_size.x - 4, 16), 8, "text" if i == active_tab else "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
         label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+        button.focus_mode = Control.FOCUS_ALL
+    call_deferred("_ensure_nav_focus_modes")
+
+func _ensure_nav_focus_modes() -> void:
+    for button in mode_buttons:
+        if button != null and is_instance_valid(button) and not button.disabled:
+            button.focus_mode = Control.FOCUS_ALL
 
 func _nav_style(active: bool, hover = false) -> StyleBoxFlat:
     if active:
@@ -311,10 +495,15 @@ func _nav_style(active: bool, hover = false) -> StyleBoxFlat:
 
 func _style(bg: Color, border: Color, radius: int, border_width = 1) -> StyleBoxFlat:
     var s = StyleBoxFlat.new()
-    s.bg_color = bg
+    s.bg_color = Color(bg.r, bg.g, bg.b, 0.94 if not _is_light_theme() else 0.96)
     s.border_color = border
     s.set_border_width_all(border_width)
+    if border_width > 0:
+        s.set_border_width(SIDE_TOP, maxi(border_width, 2))
     s.set_corner_radius_all(radius)
+    s.shadow_color = Color(0, 0, 0, 0.26 if not _is_light_theme() else 0.11)
+    s.shadow_size = 9
+    s.shadow_offset = Vector2(0, 4)
     return s
 
 func _solid_round(color: Color, radius: int) -> StyleBoxFlat:
@@ -364,13 +553,19 @@ func _transparent_button(parent_node: Node, name: String, rect: Rect2, callback:
     b.text = ""
     b.position = rect.position
     b.size = rect.size
-    b.focus_mode = Control.FOCUS_NONE
+    b.focus_mode = Control.FOCUS_ALL
     b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
     var empty = StyleBoxEmpty.new()
     b.add_theme_stylebox_override("normal", empty)
     b.add_theme_stylebox_override("hover", empty)
     b.add_theme_stylebox_override("pressed", empty)
-    b.add_theme_stylebox_override("focus", empty)
+    b.add_theme_stylebox_override("disabled", empty)
+    var focus := StyleBoxFlat.new()
+    focus.bg_color = Color(0, 0, 0, 0)
+    focus.border_color = _color("gold")
+    focus.set_border_width_all(2)
+    focus.set_corner_radius_all(16)
+    b.add_theme_stylebox_override("focus", focus)
     if callback.is_valid():
         b.pressed.connect(callback, CONNECT_DEFERRED)
     parent_node.add_child(b)
@@ -382,7 +577,7 @@ func _frame_button(parent_node: Node, name: String, text_value: String, rect: Re
     b.text = text_value
     b.position = rect.position
     b.size = rect.size
-    b.focus_mode = Control.FOCUS_NONE
+    b.focus_mode = Control.FOCUS_ALL
     b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
     b.add_theme_font_override("font", _font(600))
     b.add_theme_font_size_override("font_size", font_size)
@@ -392,6 +587,7 @@ func _frame_button(parent_node: Node, name: String, text_value: String, rect: Re
     b.add_theme_stylebox_override("normal", _style(bg, border, 12))
     b.add_theme_stylebox_override("hover", _style(bg.lightened(0.05), border, 12))
     b.add_theme_stylebox_override("pressed", _style(bg.darkened(0.05), border, 12))
+    b.add_theme_stylebox_override("focus", _style(bg.lightened(0.03), _color("gold"), 12))
     b.add_theme_color_override("font_color", fg)
     b.add_theme_color_override("font_hover_color", fg)
     b.add_theme_color_override("font_pressed_color", fg)
@@ -402,7 +598,10 @@ func _frame_button(parent_node: Node, name: String, text_value: String, rect: Re
 
 func _stat_tile(parent_node: Node, key: String, x: float, y: float, w: float, label_text: String, value_text: String, meta_text: String) -> Panel:
     var p = _panel(parent_node, "Stat_" + key, Rect2(x, y, w, 104), "surface_2", "border", 16)
-    _remember(key + "_label", _label(p, "Label", label_text, Rect2(15, 13, w - 30, 14), 9, "gold", 600))
+    var icon_map := {"cash":"finance","worth":"empire","rep":"people","goods":"production","inputs":"supply","debt":"finance","revenue":"market","equity":"empire","asset_value":"property","daily_income":"finance"}
+    var icon_key := str(icon_map.get(key, "intelligence"))
+    _add_icon(p, "StatIcon", icon_key, Rect2(w - 38, 11, 22, 22), "gold", 0.86)
+    _remember(key + "_label", _label(p, "Label", label_text, Rect2(15, 13, w - 54, 14), 9, "gold", 600))
     _remember(key + "_value", _label(p, "Value", value_text, Rect2(15, 36, w - 30, 32), 24, "text", 700))
     _remember(key + "_meta", _label(p, "Meta", meta_text, Rect2(15, 75, w - 30, 14), 9, "muted", 600))
     return p
@@ -420,9 +619,20 @@ func _header(title: String, subtitle: String, right_text = "", status_role = "go
 
 func _build_mobile_live() -> void:
     var w = _content_width()
-    _header("RESTORA", "LIVE ENTERPRISE", "DAY %d" % _day())
+    _header("RESTORA", "BUILD • RESTORE • OPERATE", "DAY %d" % _day())
     var inner_w = w - 36.0
     var hero = _panel(mobile_content, "ExecutiveHero", Rect2(18, 82, inner_w, 154), "surface", "border", 22)
+    hero.clip_contents = true
+    var hero_texture := _building_stage_texture()
+    if hero_texture != null:
+        _add_texture(hero, "HeroBuildingArt", Rect2(inner_w * 0.48, 0, inner_w * 0.52, 154), hero_texture, 0.90 if not _is_light_theme() else 0.78)
+    var hero_wash := ColorRect.new()
+    hero_wash.position = Vector2(inner_w * 0.34, 0)
+    hero_wash.size = Vector2(inner_w * 0.66, 154)
+    var hero_bg := _color("surface")
+    hero_wash.color = Color(hero_bg.r, hero_bg.g, hero_bg.b, 0.46)
+    hero_wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    hero.add_child(hero_wash)
     var rail = Panel.new()
     rail.position = Vector2(-1, -1)
     rail.size = Vector2(6, 154)
@@ -474,7 +684,7 @@ func _build_mobile_operations() -> void:
     var prod = _panel(mobile_content, "ProductionControl", Rect2(18, 204, inner_w, 150), "surface", "border", 18)
     _label(prod, "Head", "PRODUCTION CONTROL", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     _remember("production_rate", _label(prod, "Rate", _production_rate_text(), Rect2(16, 42, inner_w - 32, 18), 13, "text", 600))
-    _label(prod, "Meta", "Demand is healthy. One batch can be completed safely.", Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
+    _label(prod, "Meta", "Customer demand remaining today: %d units." % _demand_remaining(), Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
     var half = (inner_w - 42.0) * 0.5
     if _business_open():
         _frame_button(prod, "ProduceBatch", "PRODUCE BATCH", Rect2(16, 104, half, 34), _produce, false, true, 9)
@@ -490,13 +700,13 @@ func _build_mobile_operations() -> void:
 
     var equip = _panel(mobile_content, "Equipment", Rect2(18, 562, inner_w, 112), "surface", "border", 18)
     _label(equip, "Head", "EQUIPMENT HEALTH", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
-    _label(equip, "Body", "LINE 91%%   •   FLEET %d%%   •   STORE 88%%" % clampi(72 + _transport_level() * 6, 72, 96), Rect2(16, 46, inner_w - 32, 18), 12, "text", 600)
+    _label(equip, "Body", "Fleet Level %d  •  %d inputs  •  %d finished goods" % [maxi(1,_transport_level()), _inputs(), _goods()], Rect2(16, 46, inner_w - 32, 36), 12, "text", 600)
     _label(equip, "Meta", "No maintenance action required.", Rect2(16, 76, inner_w - 32, 14), 10, "success", 600)
     _transparent_button(equip, "OpenEquipment", Rect2(0, 0, inner_w, 112), _open_screen.bind("ProductionControlPanel"))
 
 func _build_mobile_finance() -> void:
     var w = _content_width()
-    _header("FINANCE COMMAND", "LIVE LEDGER • HEALTHY", "", "success")
+    _header("FINANCE COMMAND", "LIVE LEDGER • DEBT %s" % _money(_debt()), "", "success" if _debt() == 0 else "gold")
     var inner_w = w - 36.0
     var gap = 6.0
     var tile_w = (inner_w - gap) * 0.5
@@ -526,28 +736,44 @@ func _build_mobile_finance() -> void:
     _frame_button(mobile_content, "Investor", "INVESTOR", Rect2(34 + action_w * 2.0, 656, action_w, 48), _request_investor, false, true)
 
 func _build_mobile_property() -> void:
+    if mobile_content != null:
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 1380.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, 1380.0)
+
+    var building := _selected_building()
+    var building_name := str(building.get("name", "Riverside Warehouse"))
+    var building_type := str(building.get("type", "Warehouse"))
+    var building_owned := bool(building.get("owned", _owned()))
+    var building_inspected := bool(building.get("inspected", _inspected()))
+    var progress := _building_progress(building)
     var w = _content_width()
-    _header("PROPERTY RESTORATION", "OLD DOCK WAREHOUSE • %s" % ("OWNED" if _owned() else "AVAILABLE"))
+    _header("PROPERTY", "%s • %s" % [building_name.to_upper(), "OWNED" if building_owned else ("SURVEYED" if building_inspected else "AVAILABLE")])
     var inner_w = w - 36.0
 
-    var visual = _panel(mobile_content, "PropertyVisual", Rect2(18, 82, inner_w, 212), "surface", "border", 22)
-    _label(visual, "Overlay", "STAGE %d / 5" % _stage_index(), Rect2(18, 16, 130, 14), 10, "gold", 600)
-    _label(visual, "Condition", "%d%% CONDITION" % _restoration(), Rect2(inner_w - 128, 16, 110, 14), 10, "success", 600, HORIZONTAL_ALIGNMENT_RIGHT)
-    var floor = Panel.new()
-    floor.position = Vector2(28, 142)
-    floor.size = Vector2(inner_w - 56, 40)
-    floor.add_theme_stylebox_override("panel", _style(_color("surface_2"), _color("surface_2"), 12, 0))
-    visual.add_child(floor)
-    var bx = [46.0, 132.0, 218.0]
-    for i in range(3):
-        var block = Panel.new()
-        block.position = Vector2(minf(bx[i], inner_w - 90), 46 if i == 1 else 60)
-        block.size = Vector2(68, 106 if i == 1 else 92)
-        block.add_theme_stylebox_override("panel", _style(_color("surface_3"), _color("border"), 8))
-        visual.add_child(block)
+    var visual = _panel(mobile_content, "PropertyVisual", Rect2(18, 82, inner_w, 238), "surface", "border", 22)
+    visual.clip_contents = true
+    var stage_texture := _building_stage_texture(building)
+    if stage_texture != null:
+        _add_texture(visual, "BuildingStageArt", Rect2(0, 0, inner_w, 238), stage_texture, 1.0)
+    var top_scrim := ColorRect.new()
+    top_scrim.position = Vector2.ZERO
+    top_scrim.size = Vector2(inner_w, 54)
+    top_scrim.color = Color(0.02, 0.03, 0.03, 0.66)
+    top_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    visual.add_child(top_scrim)
+    var bottom_scrim := ColorRect.new()
+    bottom_scrim.position = Vector2(0, 174)
+    bottom_scrim.size = Vector2(inner_w, 64)
+    bottom_scrim.color = Color(0.02, 0.03, 0.03, 0.72)
+    bottom_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    visual.add_child(bottom_scrim)
+    _label(visual, "Stage", "%s • STAGE %d/6" % [_building_stage_name(building), _building_stage_slot(building) + 1], Rect2(16, 15, inner_w - 150, 16), 10, "gold", 700)
+    _label(visual, "Restoration", "%d%% RESTORED" % progress, Rect2(inner_w - 140, 15, 124, 16), 10, "success", 700, HORIZONTAL_ALIGNMENT_RIGHT)
+    _label(visual, "BuildingName", building_name, Rect2(16, 184, inner_w - 32, 26), 19, "text", 700)
+    _label(visual, "BuildingType", "%s • Market value %s" % [building_type, _money(int(building.get("value", 0)))], Rect2(16, 212, inner_w - 32, 16), 10, "muted", 500)
 
-    var prog = _panel(mobile_content, "RestorationProgress", Rect2(18, 318, inner_w, 116), "surface", "border", 18)
-    _label(prog, "Head", "RESTORATION PROGRESS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
+    var prog = _panel(mobile_content, "RestorationProgress", Rect2(18, 338, inner_w, 116), "surface", "border", 18)
+    _label(prog, "Head", "RESTORATION", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     _label(prog, "Step", _stage_step_text(), Rect2(16, 40, inner_w - 32, 24), 17, "text", 700)
     _label(prog, "Next", _next_stage_text(), Rect2(16, 72, inner_w - 32, 16), 11, "muted", 400)
     var track = Panel.new()
@@ -556,17 +782,37 @@ func _build_mobile_property() -> void:
     track.add_theme_stylebox_override("panel", _solid_round(_color("surface_2"), 5))
     prog.add_child(track)
     var fill = Panel.new()
-    fill.size = Vector2(maxf(4, track.size.x * float(_restoration()) / 100.0), 10)
+    fill.size = Vector2(maxf(4, track.size.x * float(progress) / 100.0), 10)
     fill.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 5))
     track.add_child(fill)
 
-    var benefits = _panel(mobile_content, "Unlocks", Rect2(18, 450, inner_w, 148), "surface", "border", 18)
-    _label(benefits, "Head", "WHAT THIS UNLOCKS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
-    _label(benefits, "Body", "• +20% production reliability\n• New customer contracts\n• Improved district reputation\n• Opens final restoration stages", Rect2(16, 42, inner_w - 32, 90), 12, "text", 400)
+    var details = _panel(mobile_content, "BuildingDetails", Rect2(18, 472, inner_w, 126), "surface", "border", 18)
+    _label(details, "Head", "BUILDING DETAILS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
+    _label(details, "Body", "Condition %d%%  •  Capacity %d\nCompatible: %s" % [
+        int(building.get("condition", 0)),
+        int(building.get("capacity", 0)),
+        ", ".join(building.get("industry_compatibility", []))
+    ], Rect2(16, 42, inner_w - 32, 58), 11, "text", 400)
 
-    var cta = _frame_button(mobile_content, "PropertyCTA", _property_cta_label(), Rect2(18, 618, inner_w, 64), _property_cta, false, true, 11)
+    var cta = _frame_button(mobile_content, "PropertyCTA", _property_cta_label(), Rect2(18, 616, inner_w, 64), _property_cta, false, true, 11)
     cta.add_theme_stylebox_override("normal", _style(_color("gold"), _color("gold"), 16))
     cta.add_theme_stylebox_override("hover", _style(_color("gold").lightened(0.05), _color("gold"), 16))
+
+    _label(mobile_content, "BuildingListHead", "BUILDINGS", Rect2(18, 790, inner_w, 18), 11, "gold", 700)
+    _label(mobile_content, "BuildingListMeta", "Select another building to inspect or restore.", Rect2(18, 814, inner_w, 22), 10, "muted", 400)
+
+    var catalog := _building_catalog()
+    var selected_index := int(_state_value("properties", "selected_property", 0))
+    for i in range(catalog.size()):
+        var item: Dictionary = catalog[i]
+        var y := 852.0 + float(i) * 56.0
+        var selected := i == selected_index
+        var row = _panel(mobile_content, "BuildingRow%d" % i, Rect2(18, y, inner_w, 48), "selected" if selected else "surface", "plum" if selected else "border", 12)
+        _label(row, "Name", str(item.get("name", "Property")), Rect2(12, 7, inner_w - 126, 16), 10, "text", 600)
+        _label(row, "Meta", "%s • %d%% restored" % [str(item.get("type", "Building")), _building_progress(item)], Rect2(12, 25, inner_w - 126, 14), 9, "muted", 400)
+        var state_text := "RESTORED" if _building_stage_slot(item) == 5 else ("OWNED" if bool(item.get("owned", false)) else ("SURVEYED" if bool(item.get("inspected", false)) else "AVAILABLE"))
+        _label(row, "State", state_text, Rect2(inner_w - 110, 16, 92, 14), 8, "success" if bool(item.get("owned", false)) else "gold", 600, HORIZONTAL_ALIGNMENT_RIGHT)
+        _transparent_button(row, "SelectBuilding%d" % i, Rect2(0, 0, inner_w, 48), _select_building.bind(i))
 
 func _build_mobile_empire() -> void:
     var w = _content_width()
@@ -605,6 +851,14 @@ func _build_mobile_world() -> void:
     _header("WORLD NETWORK", "%d REGIONS • %d TRADE ROUTES" % [_region_presence_count(), _trade_route_count()])
     var inner_w = w - 36.0
     var map = _panel(mobile_content, "RegionalMap", Rect2(18, 82, inner_w, 220), "surface", "border", 22)
+    map.clip_contents = true
+    _add_art(map, "RegionalDistrictArt", Rect2(0, 0, inner_w, 220), DISTRICT_ART, 0.88)
+    var map_scrim := ColorRect.new()
+    map_scrim.position = Vector2.ZERO
+    map_scrim.size = Vector2(inner_w, 220)
+    map_scrim.color = Color(0.02, 0.04, 0.045, 0.38 if not _is_light_theme() else 0.28)
+    map_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    map.add_child(map_scrim)
     _label(map, "Head", "REGIONAL FOOTPRINT", Rect2(14, 14, inner_w - 28, 14), 10, "gold", 600)
     _route_bar(map, Vector2(86, 92), 120, -12)
     _route_bar(map, Vector2(198, 74), 94, 29)
@@ -631,9 +885,9 @@ func _build_mobile_world() -> void:
     var opp = _panel(mobile_content, "WorldOpportunities", Rect2(18, 480, inner_w, 176), "surface", "border", 18)
     _label(opp, "Head", "WORLD OPPORTUNITIES", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     var items = [
-        ["CITY CONTRACT", "$22K upside", "Ready", "success"],
-        ["FOOD CORRIDOR", "+18% demand", "Route needed", "gold"],
-        ["EAST BRANCH", "Rep 80", "Locked", "muted"]
+        ["CUSTOMER DEMAND", "%d units remain" % _demand_remaining(), "ACTIVE" if _demand_remaining() > 0 else "SATISFIED", "success" if _demand_remaining() > 0 else "muted"],
+        ["EXPANSION ASSETS", "%d unlocked" % _unlocked_asset_count(), "READY" if _unlocked_asset_count() > _owned_asset_count() else "MANAGED", "gold"],
+        ["RIVAL NETWORK", "%d tracked" % _rival_count(), "MONITOR" if _rival_count() > 0 else "QUIET", "warning" if _rival_count() > 0 else "muted"]
     ]
     for i in range(items.size()):
         var y = 46.0 + i * 40.0
@@ -699,19 +953,19 @@ func _build_mobile_more() -> void:
     var inner_w = w - 36.0
     var company = _panel(mobile_content, "CompanyProfile", Rect2(18, 82, inner_w, 94), "surface", "border", 18)
     _label(company, "Name", _company_name(), Rect2(16,14,inner_w - 32,20), 15, "text", 700)
-    _label(company, "Meta", "Reputation %d • Dynasty 1 • Autosave on" % _rep(), Rect2(16,42,inner_w - 32,14), 10, "muted", 400)
-    _label(company, "Health", "SYSTEMS HEALTHY", Rect2(16,68,160,14), 9, "success", 600)
+    _label(company, "Meta", "Reputation %d • Company Level %d • Autosave on" % [_rep(), _company_level()], Rect2(16,42,inner_w - 32,14), 10, "muted", 400)
+    _label(company, "Health", "%d ACTIVE CONTRACT%s" % [_active_contracts(), "" if _active_contracts() == 1 else "S"], Rect2(16,68,180,14), 9, "success", 600)
 
     var tiles = [
-        ["FINANCE","Cash, debt, investors","finance"],
-        ["PORTFOLIO","Assets and performance","portfolio"],
-        ["CORPORATIONS","Rivals and diplomacy","CorporationsPanel"],
-        ["CONTRACTS","Customers and renewals","ContractPanel"],
-        ["TECHNOLOGY","Research and upgrades","TechnologyPanel"],
-        ["HEADQUARTERS","Capacity and policy","HeadquartersPanel"],
-        ["HISTORY","Milestones and museum","HistoryPanel"],
-        ["SAVE / LOAD","Profiles and recovery","SaveLoadPanel"],
-        ["SETTINGS","Theme, audio, purchases, privacy","settings"]
+        ["REGIONS","Markets and expansion","world","regions"],
+        ["INTELLIGENCE","Company and market signals","intelligence",""],
+        ["CORPORATIONS","Rivals and diplomacy","CorporationsPanel","competitors"],
+        ["CONTRACTS","Customers and renewals","ContractPanel","contracts"],
+        ["TECHNOLOGY","Research and upgrades","TechnologyPanel","technology"],
+        ["HEADQUARTERS","Capacity and policy","HeadquartersPanel","headquarters"],
+        ["HISTORY","Milestones and museum","HistoryPanel",""],
+        ["SAVE / LOAD","Profiles and recovery","SaveLoadPanel",""],
+        ["SETTINGS","Theme, audio, purchases, privacy","settings",""]
     ]
     var gap = 8.0
     var col_w = (inner_w - gap) * 0.5
@@ -720,16 +974,26 @@ func _build_mobile_more() -> void:
         var row = floori(float(i) / 2.0)
         var x = 18.0 + col * (col_w + gap)
         var y = 196.0 + row * 94.0
-        var p = _panel(mobile_content, "MoreTile%d" % i, Rect2(x,y,col_w,82), "selected" if i == 0 else "surface", "plum" if i == 0 else "border", 16)
-        _label(p, "Head", tiles[i][0], Rect2(14,14,col_w - 28,14), 10, "gold" if i == 0 else "text", 600)
-        _label(p, "Body", tiles[i][1], Rect2(14,38,col_w - 28,32), 9, "muted", 400)
+        var required_unlock := str(tiles[i][3])
+        var locked := not required_unlock.is_empty() and not _has_unlock(required_unlock)
+        var p = _panel(mobile_content, "MoreTile%d" % i, Rect2(x,y,col_w,82), "surface" if locked else ("selected" if i == 0 else "surface"), "border" if locked else ("plum" if i == 0 else "border"), 16)
+        _label(p, "Head", tiles[i][0], Rect2(14,14,col_w - 28,14), 10, "muted" if locked else ("gold" if i == 0 else "text"), 600)
+        var body_text := "Unlocks at Company Level %d" % _unlock_level(required_unlock) if locked else str(tiles[i][1])
+        _label(p, "Body", body_text, Rect2(14,38,col_w - 28,32), 9, "muted", 400)
         var target = str(tiles[i][2])
-        if ["finance","portfolio","settings"].has(target):
-            _transparent_button(p, "Open"+target, Rect2(0,0,col_w,82), _show_view.bind(target))
+        var open_button: Button
+        if ["world","intelligence","settings"].has(target):
+            open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,82), _show_view.bind(target))
         else:
-            _transparent_button(p, "Open"+target, Rect2(0,0,col_w,82), _open_screen.bind(target))
+            open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,82), _open_screen.bind(target))
+        open_button.disabled = locked
+        if locked:
+            open_button.tooltip_text = body_text
 
 func _build_mobile_settings() -> void:
+    if mobile_content != null:
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 790.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, 790.0)
     var w = _content_width()
     var mode = "LIGHT MODE" if _is_light_theme() else "DARK MODE"
     _header("SETTINGS", "PERSONALIZE RESTORA", mode)
@@ -746,36 +1010,36 @@ func _build_mobile_settings() -> void:
     _frame_button(appearance, "DeviceTheme", "DEVICE", Rect2(16+b1*2+btn_gap*2,70,b2,54), _set_theme.bind("system"), _theme_mode() == "system")
     _label(appearance, "Help", "Applies across every command screen.", Rect2(16,134,inner_w - 32,14), 9, "muted", 400)
 
-    var audio = _panel(mobile_content, "AudioAccessibility", Rect2(18,258,inner_w,154), "surface", "border", 18)
+    var audio = _panel(mobile_content, "AudioAccessibility", Rect2(18,258,inner_w,174), "surface", "border", 18)
     _label(audio, "Head", "AUDIO & ACCESSIBILITY", Rect2(16,14,220,14), 10, "gold", 600)
     _label(audio, "Music", "MUSIC", Rect2(16,44,180,16), 11, "text", 600)
     _label(audio, "MusicMeta", "Adaptive soundtrack", Rect2(16,64,214,14), 9, "muted", 400)
-    _frame_button(audio, "MusicValue", "%d%%" % int(round(_music_level()*100.0)), Rect2(inner_w-116,40,98,36), _cycle_music)
+    _frame_button(audio, "MusicValue", "%d%%" % int(round(_music_level()*100.0)), Rect2(inner_w-116,36,98,48), _cycle_music)
     _label(audio, "Sfx", "SOUND EFFECTS", Rect2(16,84,180,16), 11, "text", 600)
     _label(audio, "SfxMeta", "UI, restoration, success cues", Rect2(16,104,214,14), 9, "muted", 400)
-    _frame_button(audio, "SfxValue", "%d%%" % int(round(_sfx_level()*100.0)), Rect2(inner_w-116,80,98,36), _cycle_sfx)
-    _label(audio, "Motion", "REDUCE MOTION", Rect2(16,122,190,16), 11, "text", 600)
-    _toggle(audio, "MotionToggle", Vector2(inner_w-68,120), _reduce_motion(), _toggle_motion)
+    _frame_button(audio, "SfxValue", "%d%%" % int(round(_sfx_level()*100.0)), Rect2(inner_w-116,84,98,48), _cycle_sfx)
+    _label(audio, "Motion", "REDUCE MOTION", Rect2(16,140,190,16), 11, "text", 600)
+    _toggle(audio, "MotionToggle", Vector2(inner_w-68,136), _reduce_motion(), _toggle_motion)
 
-    var monet = _panel(mobile_content, "Monetization", Rect2(18,428,inner_w,214), "surface", "border", 18)
+    var monet = _panel(mobile_content, "Monetization", Rect2(18,448,inner_w,230), "surface", "border", 18)
     _label(monet, "Head", "PREMIUM & REWARDS", Rect2(16,14,220,14), 10, "gold", 600)
     _label(monet, "Premium", "PREMIUM", Rect2(16,44,180,16), 11, "text", 600)
     _label(monet, "PremiumMeta", _premium_meta(), Rect2(16,64,214,14), 9, "muted", 400)
-    _frame_button(monet, "PremiumView", "VIEW", Rect2(inner_w-116,40,98,36), _purchase_premium, true)
+    _frame_button(monet, "PremiumView", "VIEW", Rect2(inner_w-116,34,98,48), _purchase_premium, true)
     _label(monet, "Restore", "RESTORE PURCHASES", Rect2(16,86,180,16), 11, "text", 600)
     _label(monet, "RestoreMeta", "Verify Google Play entitlement", Rect2(16,106,214,14), 9, "muted", 400)
-    _frame_button(monet, "RestoreButton", "RESTORE", Rect2(inner_w-116,82,98,36), _restore_premium)
+    _frame_button(monet, "RestoreButton", "RESTORE", Rect2(inner_w-116,82,98,48), _restore_premium)
     _label(monet, "Rewards", "OPTIONAL REWARDED OFFERS", Rect2(16,130,220,16), 11, "text", 600)
     _toggle(monet, "RewardsToggle", Vector2(inner_w-68,128), _rewarded_enabled(), _open_rewards)
     _label(monet, "RewardMeta", "Sponsor Grant + Market Research • max 2/day", Rect2(16,150,inner_w - 32,14), 9, "muted", 400)
     _label(monet, "NoForced", "NO FORCED ADS", Rect2(16,180,130,14), 9, "success", 600)
-    _transparent_text_button(monet, "Privacy", "PRIVACY POLICY", Rect2(inner_w-122,174,106,24), _open_privacy, "plum")
+    _transparent_text_button(monet, "Privacy", "PRIVACY POLICY", Rect2(inner_w-128,174,112,48), _open_privacy, "plum")
 
-    var save = _panel(mobile_content, "SaveData", Rect2(18,658,inner_w,86), "surface", "border", 18)
+    var save = _panel(mobile_content, "SaveData", Rect2(18,694,inner_w,86), "surface", "border", 18)
     _label(save, "Head", "SAVE & DATA", Rect2(16,12,160,14), 10, "gold", 600)
     _label(save, "Auto", "AUTOSAVE", Rect2(16,38,180,16), 11, "text", 600)
     _label(save, "AutoMeta", "Enabled on mobile pause/close", Rect2(16,58,214,14), 9, "muted", 400)
-    _frame_button(save, "AutosaveState", "ON", Rect2(inner_w-116,34,98,36), _save_company)
+    _frame_button(save, "AutosaveState", "ON", Rect2(inner_w-116,30,98,48), _save_company)
 
 func _toggle(parent_node: Node, name: String, pos: Vector2, on: bool, callback: Callable) -> void:
     var track = Panel.new()
@@ -789,7 +1053,7 @@ func _toggle(parent_node: Node, name: String, pos: Vector2, on: bool, callback: 
     knob.size = Vector2(22,22)
     knob.add_theme_stylebox_override("panel", _solid_round(_color("surface"), 11))
     track.add_child(knob)
-    _transparent_button(track, name+"Hit", Rect2(0,0,48,28), callback)
+    _transparent_button(track, name+"Hit", Rect2(0,-10,48,48), callback)
 
 func _transparent_text_button(parent_node: Node, name: String, text_value: String, rect: Rect2, callback: Callable, role: String) -> Button:
     var b = Button.new()
@@ -797,7 +1061,7 @@ func _transparent_text_button(parent_node: Node, name: String, text_value: Strin
     b.text = text_value
     b.position = rect.position
     b.size = rect.size
-    b.focus_mode = Control.FOCUS_NONE
+    b.focus_mode = Control.FOCUS_ALL
     b.flat = true
     b.add_theme_font_override("font", _font(600))
     b.add_theme_font_size_override("font_size", 9)
@@ -821,10 +1085,11 @@ func _build_desktop_live() -> void:
     _label(canvas, "Brand", "RESTORA", Rect2(34,26,240,34), 28, "text", 700)
     _label(canvas, "Mode", "EXECUTIVE COMMAND • DAY %d" % _day(), Rect2(34,62,300,16), 10, "gold", 600)
     var world = _panel(canvas, "WorldPropertyView", Rect2(34,104,560,552), "surface", "border", 24)
-    _label(world, "Head", "WORLD / PROPERTY VIEW", Rect2(21,19,250,16), 11, "gold", 600)
+    _label(world, "Head", "CURRENT BUILDING", Rect2(21,19,250,16), 11, "gold", 600)
     var scene = _panel(world, "Scene", Rect2(21,57,516,316), "surface_2", "border", 20)
-    _label(scene, "Placeholder", "LIVE 3D RESTORATION SCENE", Rect2(131,143,270,22), 15, "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
-    _label(world, "Meta", "Old Dock Warehouse • %d%% restored\nCentral District • Demand HIGH • Rival pressure LOW" % _restoration(), Rect2(21,401,500,54), 14, "text", 400)
+    scene.clip_contents = true
+    _add_texture(scene, "DesktopBuildingArt", Rect2(0,0,516,316), _building_stage_texture(), 1.0)
+    _label(world, "Meta", "%s • %s\n%d%% restored • %s market value" % [_building_name(), _building_type(), _building_progress(), _money(int(_selected_building().get("value", 0)))], Rect2(21,401,500,54), 14, "text", 400)
     _transparent_button(world, "OpenProperty", Rect2(0,0,560,552), _show_view.bind("property"))
 
     _desktop_stat(canvas, "Cash", Rect2(620,104,190,96), "CASH", _money(_cash()))
@@ -838,12 +1103,14 @@ func _build_desktop_live() -> void:
 
     var signals = _panel(canvas, "Signals", Rect2(620,426,304,230), "surface", "border", 18)
     _label(signals, "Head", "SIGNALS", Rect2(18,16,180,16), 10, "gold", 600)
-    _label(signals, "Body", "• Contract demand rising\n• Inputs stable\n• Rival moved east\n• Investor sentiment strong", Rect2(18,50,260,120), 13, "text", 400)
+    _label(signals, "Body", _signal_lines(), Rect2(18,50,260,120), 13, "text", 400)
 
     var quick = _panel(canvas, "QuickActions", Rect2(942,426,304,230), "selected", "plum", 18)
     _label(quick, "Head", "QUICK ACTIONS", Rect2(18,16,180,16), 10, "gold", 600)
-    _label(quick, "Body", "CONTINUE RESTORATION\nOPEN OPERATIONS\nVIEW FINANCE\nEMPIRE EXPANSION", Rect2(18,50,260,130), 13, "text", 600)
-    _transparent_button(quick, "QuickAction", Rect2(0,0,304,230), _show_view.bind("operate"))
+    _frame_button(quick, "OpenBuilding", "PROPERTY", Rect2(18,48,268,38), _show_view.bind("property"))
+    _frame_button(quick, "OpenBusiness", "BUSINESS", Rect2(18,92,268,38), _show_view.bind("operate"))
+    _frame_button(quick, "OpenFinance", "FINANCE", Rect2(18,136,268,38), _show_view.bind("finance"))
+    _frame_button(quick, "OpenMore", "MORE", Rect2(18,180,268,38), _show_view.bind("more"))
 
 func _desktop_stat(parent_node: Node, name: String, rect: Rect2, label_text: String, value_text: String) -> void:
     var p = _panel(parent_node, name, rect, "surface", "border", 16)
@@ -868,7 +1135,8 @@ func _build_tablet_live() -> void:
     _label(hero, "Title", _objective_title(), Rect2(22,52,420,36), 28, "text", 700)
     _label(hero, "Meta", _stage_meta(), Rect2(22,96,360,20), 14, "muted", 400)
     var scene = _panel(hero, "Scene", Rect2(506,22,240,206), "surface_2", "border", 20)
-    _label(scene, "Placeholder", "3D PROPERTY VIEW", Rect2(52,92,150,20), 11, "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
+    scene.clip_contents = true
+    _add_texture(scene, "TabletBuildingArt", Rect2(0,0,240,206), _building_stage_texture(), 1.0)
     var xs = [32.0,228.0,424.0,620.0]
     var names = ["CASH","WORTH","REPUTATION","GOODS"]
     var vals = [_money(_cash()),_money(_worth()),str(_rep()),str(_goods())]
@@ -876,12 +1144,12 @@ func _build_tablet_live() -> void:
         _desktop_stat(canvas, "Stat%d"%i, Rect2(xs[i],390,180 if i<3 else 182,96), names[i], vals[i])
     var ops = _panel(canvas, "Operations", Rect2(32,508,370,524), "surface", "border", 18)
     _label(ops, "Head", "OPERATIONS", Rect2(20,18,180,18), 12, "gold", 600)
-    _label(ops, "Body", "Production\n%s\n\nContracts\n%d active\n\nPeople\n%d staff • Morale high\n\nEquipment\nLine 91%% • Fleet %d%%" % [_production_rate_text(), _active_contracts(), _employees(), clampi(72+_transport_level()*6,72,96)], Rect2(20,56,330,330), 15, "text", 400)
+    _label(ops, "Body", "Production\n%s\n\nContracts\n%d active\n\nPeople\n%d staff\n\nInventory\n%d inputs • %d goods\n\nFleet\nLevel %d" % [_production_rate_text(), _active_contracts(), _employees(), _inputs(), _goods(), maxi(1,_transport_level())], Rect2(20,56,330,330), 15, "text", 400)
     var sig = _panel(canvas, "SignalsObjectives", Rect2(420,508,382,524), "surface", "border", 18)
     _label(sig, "Head", "SIGNALS + OBJECTIVES", Rect2(20,18,250,18), 12, "gold", 600)
-    _label(sig, "Body", "Regional demand is rising.\nMaterials prices are stable.\nA rival entered East Ward.\n\nNEXT OBJECTIVE\n%s" % _objective_title(), Rect2(20,56,342,330), 15, "text", 400)
+    _label(sig, "Body", "%s\n\nNEXT OBJECTIVE\n%s" % [_signal_lines(), _objective_title()], Rect2(20,56,342,330), 15, "text", 400)
     var nav = _panel(canvas, "Nav", Rect2(32,1054,770,92), "surface", "border", 26)
-    _label(nav, "Labels", "LIVE        OPERATE        EMPIRE        WORLD        MORE", Rect2(54,36,660,20), 13, "text", 600, HORIZONTAL_ALIGNMENT_CENTER)
+    _label(nav, "Labels", "HOME        BUSINESS        PROPERTY        FINANCE        MORE", Rect2(54,36,660,20), 13, "text", 600, HORIZONTAL_ALIGNMENT_CENTER)
 
 func _refresh() -> void:
     if root == null:
@@ -1005,9 +1273,9 @@ func _worth() -> int:
     return maxi(value, _cash())
 
 func _objective_title() -> String:
-    if not _inspected(): return "Inspect the warehouse"
-    if not _owned(): return "Acquire the warehouse"
-    if _stage() != "Operational": return "Restore the warehouse"
+    if not _inspected(): return "Inspect " + _building_name()
+    if not _owned(): return "Acquire " + _building_name()
+    if _stage() != "Operational": return "Restore " + _building_name()
     if not _business_open(): return "Open the first business"
     if _goods() <= 0: return "Produce the next batch"
     return "Grow the enterprise"
@@ -1020,7 +1288,7 @@ func _objective_detail() -> String:
     return "Protect liquidity while expanding operations, contracts and regional presence."
 
 func _stage_meta() -> String:
-    return "Stage %d of 5 • Condition %d%%" % [_stage_index(), _restoration()]
+    return "%s • %d%% restored" % [_building_name(), _building_progress()]
 
 func _stage_index() -> int:
     var names = ["Neglected","Cleaned","Repaired","Painted","Operational"]
@@ -1075,14 +1343,15 @@ func _property_cta() -> void:
     _rebuild_current()
 
 func _production_rate_text() -> String:
-    var units = maxi(0, _goods())
-    var quality = clampi(72 + int(_state_value("business","capacity_level",0))*4,72,94)
-    return "Output %d units/day  •  Quality %d%%" % [maxi(10, units), quality]
+    return "Capacity L%d  •  %d finished goods" % [
+        maxi(1, int(_state_value("businesses","capacity_level",1))),
+        _goods()
+    ]
 
 func _commercial_text() -> String:
     var price = int(parent.player_price) if parent != null and "player_price" in parent else int(_state_value("business","price",42))
-    return "PRICE  %s  •  STAFF  %d  •  CAPACITY  %d%%\nMARKETING  %s\nCONTRACTS  %d live  •  %s" % [
-        _money(price), _employees(), clampi(60 + int(_state_value("business","capacity_level",0))*9,60,96),
+    return "PRICE  %s  •  STAFF  %d  •  CAPACITY L%d\nMARKETING  %s\nCONTRACTS  %d live  •  %s" % [
+        _money(price), _employees(), maxi(1, int(_state_value("businesses","capacity_level",1))),
         "Local campaign active" if int(_state_value("business","marketing_level",0)) > 0 else "Ready",
         _active_contracts(), "renewal due" if _active_contracts() > 0 else "open market"
     ]
@@ -1281,10 +1550,12 @@ func _current_region_name() -> String:
     return names[clampi(idx,0,names.size()-1)]
 
 func _region_detail_text() -> String:
-    return "Infrastructure L%d  •  Demand HIGH\nBranch: %s Trade Office\nRoute efficiency %d%%  •  Rival pressure MEDIUM" % [
+    return "Infrastructure L%d  •  %d region%s active\nBranch: %s Trade Office\nTransport fleet L%d  •  %d rival%s tracked" % [
         maxi(1,int(_state_value("regions","infrastructure_level",1))),
+        _region_presence_count(), "" if _region_presence_count() == 1 else "s",
         _current_region_name().replace(" REGION","").capitalize(),
-        clampi(76 + _transport_level()*5,76,96)
+        maxi(1,_transport_level()),
+        _rival_count(), "" if _rival_count() == 1 else "s"
     ]
 
 func _upgrade_region() -> void:
@@ -1348,9 +1619,8 @@ func _intelligence_cards() -> Array:
     ]
 
 func _signal_lines() -> String:
-    return "• Contract demand %s\n• Materials price stable\n• Rival expansion %s" % [
-        "up" if _rep() >= 40 else "building",
-        "detected" if _rival_count() > 0 else "quiet"
+    return "• Customer demand: %d units remain\n• Finished goods: %d\n• Rivals tracked: %d" % [
+        _demand_remaining(), _goods(), _rival_count()
     ]
 
 func _signal_footer() -> String:
@@ -1433,7 +1703,52 @@ func _restore_premium() -> void:
     if m != null and m.has_method("restore_premium"): m.restore_premium()
 
 func _open_rewards() -> void:
-    _open_screen("LiveOpsPanel")
+    _show_view("rewards")
+
+func _build_mobile_rewards() -> void:
+    var w = _content_width()
+    _header("REWARDED OFFERS", "OPTIONAL • NO FORCED ADS")
+    var inner_w = w - 36.0
+    var intro = _panel(mobile_content, "RewardIntro", Rect2(18,82,inner_w,116), "surface", "border", 18)
+    _label(intro, "Head", "YOUR CHOICE", Rect2(16,14,180,14), 10, "gold", 600)
+    _label(intro, "Body", "Sponsored rewards are optional. Core restoration, production and expansion never require an ad.", Rect2(16,40,inner_w-32,58), 11, "text", 400)
+
+    var monet = _monetization()
+    var offers: Array[Dictionary] = []
+    if monet != null and monet.has_method("available_rewarded_offers"):
+        offers = monet.available_rewarded_offers()
+
+    var y := 216.0
+    for offer in offers:
+        var reward_id := str(offer.get("id", ""))
+        var card = _panel(mobile_content, "Reward_" + reward_id, Rect2(18,y,inner_w,146), "surface", "border", 18)
+        _label(card, "Title", str(offer.get("title", "Reward")), Rect2(16,14,inner_w-132,20), 15, "text", 700)
+        _label(card, "Body", str(offer.get("description", "")), Rect2(16,44,inner_w-32,50), 10, "muted", 400)
+        var eligibility := {"ok": false, "reason": "Reward service unavailable."}
+        if monet != null and monet.has_method("can_show_rewarded_offer"):
+            eligibility = monet.can_show_rewarded_offer(reward_id)
+        var available := bool(eligibility.get("ok", false))
+        var button := _frame_button(card, "Claim_" + reward_id, "WATCH" if available else "UNAVAILABLE", Rect2(inner_w-124,96,108,48), _request_rewarded_offer.bind(reward_id), false, available, 9)
+        button.disabled = not available
+        var status_text := "Ready when you choose." if available else str(eligibility.get("reason", "Unavailable."))
+        _label(card, "Status", status_text, Rect2(16,108,inner_w-150,28), 9, "success" if available else "muted", 400)
+        y += 164.0
+
+    if offers.is_empty():
+        var empty = _panel(mobile_content, "NoRewards", Rect2(18,216,inner_w,112), "surface", "border", 18)
+        _label(empty, "Body", "No rewarded offers are configured in this build.", Rect2(16,28,inner_w-32,54), 11, "muted", 400)
+
+    _frame_button(mobile_content, "BackToSettings", "BACK TO SETTINGS", Rect2(18,minf(y + 8.0, 680.0),inner_w,52), _show_view.bind("settings"))
+
+func _request_rewarded_offer(reward_id: String) -> void:
+    var monet = _monetization()
+    if monet == null or not monet.has_method("request_rewarded_offer"):
+        return
+    var result: Dictionary = monet.request_rewarded_offer(reward_id)
+    var state = _game_state()
+    if state != null and not bool(result.get("ok", false)):
+        state.set_value("company", "message", str(result.get("reason", "Reward unavailable.")))
+    _rebuild_current()
 
 func _open_privacy() -> void:
     var m = _monetization()

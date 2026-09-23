@@ -10,7 +10,9 @@ func check(label:String, ok:bool)->void:
 func _inside(c:Control,size:Vector2i)->bool:
     return c!=null and Rect2(Vector2.ZERO,Vector2(size)).encloses(c.get_global_rect())
 func _run()->void:
-    # Exercise explicit logical viewport sizes; project Android scaling is tested separately.\n    root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED\n    root.size=Vector2i(390,844)
+    # Exercise explicit logical viewport sizes; project Android scaling is tested separately.
+    root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
+    root.size=Vector2i(390,844)
     var p:=load("res://scenes/Main.tscn") as PackedScene
     check("Main scene loads",p!=null)
     if p==null: quit(1); return
@@ -18,15 +20,21 @@ func _run()->void:
     await process_frame;await process_frame
     var hud:=game.get_node_or_null("UI/MainHUD")
     check("Main HUD exists",hud!=null)
-    var expected:=["LIVE","OPERATE","EMPIRE","WORLD","MORE"]
+    var ui_source:=FileAccess.get_file_as_string("res://scripts/restora_command_ui.gd")
+    check("production UI has no fixed world upside placeholder",not ui_source.contains("$22K upside"))
+    check("production UI has no fixed morale/equipment placeholder",not ui_source.contains("Morale high") and not ui_source.contains("Line 91"))
+    check("regional detail avoids synthetic demand/pressure ratings",not ui_source.contains("Demand HIGH") and not ui_source.contains("Rival pressure MEDIUM"))
+    check("primary view transitions are subtle and reduced-motion aware",ui_source.contains("func _animate_view_in()") and ui_source.contains("if _reduce_motion()"))
+
+    var expected:=["HOME","BUSINESS","PROPERTY","FINANCE","MORE"]
     var tabs:Array=hud.get("mode_buttons")
     check("exactly five primary destinations",tabs.size()==5)
     for i in range(mini(5,tabs.size())):
         var b:=tabs[i] as Button
         var l:=b.get_node_or_null("NavLabel") as Label
         check("destination label "+expected[i],l!=null and l.text==expected[i])
-        check("destination touch target "+expected[i],b.size.y>=44.0)
-    for view in ["live","operate","empire","world","more"]:
+        check("destination touch target "+expected[i],b.size.y>=48.0)
+    for view in ["live","operate","property","finance","more"]:
         hud.open_figma_view(view);await process_frame
         check(view+" is directly reachable",str(hud.get("active_view"))==view)
     for target in VIEWPORTS:
@@ -38,7 +46,22 @@ func _run()->void:
     root.size=Vector2i(390,844);hud.open_figma_view("more");await process_frame
     var content:=hud.get("mobile_content") as Control
     check("More exposes nine command tiles",content.find_children("MoreTile*","Panel",false,false).size()==9)
+    check("3D world is not mounted in production",game.get_node_or_null("World3D")==null)
     check("legacy HOME label absent",not _tree_has_text(content,"HOME"))
+
+    hud.open_figma_view("settings");await process_frame
+    content=hud.get("mobile_content") as Control
+    for control_name in ["MusicValue","SfxValue","PremiumView","RestoreButton","AutosaveState","Privacy","MotionToggleHit","RewardsToggleHit"]:
+        var control:=content.find_child(control_name,true,false) as Control
+        check(control_name+" has 48px touch height",control!=null and control.size.y>=48.0)
+    var rewards:=content.find_child("RewardsToggleHit",true,false) as Button
+    check("rewarded offers entry exists",rewards!=null)
+    if rewards!=null: rewards.pressed.emit();await process_frame
+    check("rewarded offers use a dedicated opt-in view",str(hud.get("active_view"))=="rewards")
+    content=hud.get("mobile_content") as Control
+    check("Sponsor Grant offer is explained",content.find_child("Reward_sponsor_grant",true,false)!=null)
+    check("Market Research offer is explained",content.find_child("Reward_market_research",true,false)!=null)
+
     game.queue_free();await process_frame
     print("COMMERCIAL UX: %d checks, %d failures" % [checks,failures.size()])
     quit(1 if not failures.is_empty() else 0)

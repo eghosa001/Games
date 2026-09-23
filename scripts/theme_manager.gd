@@ -51,43 +51,43 @@ func color(role: String) -> Color:
     var light := is_light()
     match role:
         "bg":
-            return Color("e8e2d8") if light else Color("0b0d10")
+            return Color("e8eeea") if light else Color("0b0d10")
         "surface":
-            return Color("f6f1e8") if light else Color("151a1f")
+            return Color("f8faf7") if light else Color("151a1f")
         "surface_2":
-            return Color("ddd4c6") if light else Color("20262c")
+            return Color("dce5df") if light else Color("20262c")
         "surface_3":
-            return Color("eee8de") if light else Color("292f35")
+            return Color("eef3ef") if light else Color("292f35")
         "selected":
-            return Color("efe4ea") if light else Color("32202a")
+            return Color("ece5e7") if light else Color("32202a")
         "border":
-            return Color("b7aa98") if light else Color("3c3831")
+            return Color("b8c2bc") if light else Color("3c3831")
         "text":
-            return Color("292a28") if light else Color("f2efe8")
+            return Color("202a27") if light else Color("f2efe8")
         "muted":
-            return Color("71685d") if light else Color("928a80")
+            return Color("66716b") if light else Color("928a80")
         "gold", "brass":
-            return Color("98672a") if light else Color("c99a4b")
+            return Color("9d6b24") if light else Color("c99a4b")
         "plum":
-            return Color("66374f") if light else Color("7a405f")
+            return Color("674356") if light else Color("7a405f")
         "success":
-            return Color("557663") if light else Color("7fa88a")
+            return Color("4d745f") if light else Color("7fa88a")
         "warning":
-            return Color("8b5e24") if light else Color("c28a3a")
+            return Color("8e6224") if light else Color("c28a3a")
         "danger":
-            return Color("8c4337") if light else Color("b85c4a")
+            return Color("93483b") if light else Color("b85c4a")
         "info", "world":
-            return Color("4e6675") if light else Color("6b8494")
+            return Color("4c6977") if light else Color("6b8494")
         "tech":
-            return Color("516785") if light else Color("657c9d")
+            return Color("536b89") if light else Color("657c9d")
         "industry":
-            return Color("8b573a") if light else Color("a96f45")
+            return Color("8d5b40") if light else Color("a96f45")
         "people":
-            return Color("72465a") if light else Color("8f5b72")
+            return Color("735064") if light else Color("8f5b72")
         "scrim":
             return Color(0.22, 0.19, 0.16, 0.34) if light else Color(0.018, 0.021, 0.026, 0.72)
         _:
-            return Color("292a28") if light else Color("f2efe8")
+            return Color("202a27") if light else Color("f2efe8")
 
 func _resolve_mode() -> String:
     if _mode != "system":

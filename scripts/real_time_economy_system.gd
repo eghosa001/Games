@@ -7,6 +7,7 @@ extends Node
 const ActiveMarketSystem = preload("res://scripts/active_market_system.gd")
 const WorldCalendarSystem = preload("res://scripts/world_calendar_system.gd")
 const SETTLEMENT_INTERVAL_SECONDS := 300.0
+const RETURN_SUMMARY_THRESHOLD_SECONDS := 900.0
 const MAX_OFFLINE_CATCHUP_SECONDS := 86400.0
 const SECONDS_PER_REAL_DAY := 86400.0
 const STATE_DOMAIN := "analytics"
@@ -97,6 +98,26 @@ func passive_hourly_run_rate() -> Dictionary:
     var daily := passive_daily_run_rate()
     return {"revenue": float(daily.get("revenue", 0.0)) / 24.0, "expense": float(daily.get("expense", 0.0)) / 24.0, "net": float(daily.get("net", 0.0)) / 24.0, "businesses": int(daily.get("businesses", 0)), "resource_sites": int(daily.get("resource_sites", 0))}
 
+func _record_return_summary(clock: Dictionary, settled: int, elapsed: float, rate: Dictionary) -> void:
+    if elapsed < RETURN_SUMMARY_THRESHOLD_SECONDS or settled == 0:
+        return
+    var direction := "earned" if settled > 0 else "cost"
+    var amount := abs(settled)
+    var hours := elapsed / 3600.0
+    var message := "WHILE YOU WERE AWAY: Passive operations %s $%s over %.1f h." % [direction, String.num_int64(amount), hours]
+    clock["last_return_summary"] = {
+        "amount": settled,
+        "elapsed_seconds": elapsed,
+        "daily_net": float(rate.get("net", 0.0)),
+        "businesses": int(rate.get("businesses", 0)),
+        "resource_sites": int(rate.get("resource_sites", 0)),
+        "message": message,
+        "created_unix": Time.get_unix_time_from_system()
+    }
+    var state = _state()
+    if state != null:
+        state.set_value("company", "message", message)
+
 func reconcile_passive_income(force: bool = false) -> Dictionary:
     _ensure_clock_initialized()
     var now := Time.get_unix_time_from_system(); var last := float(_get_time_value("last_passive_settlement_unix", now)); var elapsed := maxf(0.0, now - last)
@@ -114,8 +135,10 @@ func reconcile_passive_income(force: bool = false) -> Dictionary:
             _sync_finance()
             return {"ok": false, "settled": 0, "elapsed": billable_seconds, "message": str(result.get("message", "Passive operating deficit could not be paid."))}
         _sync_finance()
-    var clock := _clock_state(); clock["passive_fractional_carry"] = new_carry; clock["last_passive_settlement_unix"] = now; clock["last_passive_amount"] = settled; clock["last_passive_elapsed_seconds"] = billable_seconds; clock["passive_daily_net"] = daily_net; _save_clock(clock)
-    return {"ok": true, "settled": settled, "elapsed": billable_seconds, "daily_net": daily_net, "hourly_net": daily_net / 24.0, "businesses": int(rate.get("businesses", 0)), "resource_sites": int(rate.get("resource_sites", 0))}
+    var clock := _clock_state(); clock["passive_fractional_carry"] = new_carry; clock["last_passive_settlement_unix"] = now; clock["last_passive_amount"] = settled; clock["last_passive_elapsed_seconds"] = billable_seconds; clock["passive_daily_net"] = daily_net
+    _record_return_summary(clock, settled, billable_seconds, rate)
+    _save_clock(clock)
+    return {"ok": true, "settled": settled, "elapsed": billable_seconds, "daily_net": daily_net, "hourly_net": daily_net / 24.0, "businesses": int(rate.get("businesses", 0)), "resource_sites": int(rate.get("resource_sites", 0)), "return_summary": clock.get("last_return_summary", {})}
 
 func sell_goods() -> Dictionary:
     return active_market.sell_goods() if active_market != null else {"ok": false, "message": "Active market unavailable."}
@@ -134,4 +157,4 @@ func status() -> Dictionary:
     var calendar_state: Dictionary = {}
     if world_calendar != null:
         calendar_state = world_calendar.status()
-    return {"daily_revenue": float(rate.get("revenue", 0.0)), "daily_expense": float(rate.get("expense", 0.0)), "daily_net": float(rate.get("net", 0.0)), "hourly_net": float(rate.get("net", 0.0)) / 24.0, "businesses": int(rate.get("businesses", 0)), "resource_sites": int(rate.get("resource_sites", 0)), "seconds_since_settlement": maxf(0.0, now - last), "settlement_interval_seconds": SETTLEMENT_INTERVAL_SECONDS, "offline_cap_seconds": MAX_OFFLINE_CATCHUP_SECONDS, "consumer_demand_remaining": int(demand.get("remaining", 0)), "calendar": calendar_state}
+    return {"daily_revenue": float(rate.get("revenue", 0.0)), "daily_expense": float(rate.get("expense", 0.0)), "daily_net": float(rate.get("net", 0.0)), "hourly_net": float(rate.get("net", 0.0)) / 24.0, "businesses": int(rate.get("businesses", 0)), "resource_sites": int(rate.get("resource_sites", 0)), "seconds_since_settlement": maxf(0.0, now - last), "settlement_interval_seconds": SETTLEMENT_INTERVAL_SECONDS, "offline_cap_seconds": MAX_OFFLINE_CATCHUP_SECONDS, "return_summary": _clock_state().get("last_return_summary", {}), "consumer_demand_remaining": int(demand.get("remaining", 0)), "calendar": calendar_state}

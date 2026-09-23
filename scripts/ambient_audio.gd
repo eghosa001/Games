@@ -2,7 +2,7 @@ extends Node
 ## RENEW premium world soundscape.
 ## Procedural ambience adds a quiet sense of place without external audio assets.
 
-const SAMPLE_RATE: int = 22050
+const SAMPLE_RATE: int = 11025
 const BUFFER_SECONDS: float = 2.0
 const TAU_F: float = TAU
 
@@ -45,7 +45,7 @@ func _exit_tree() -> void:
 
 func _process(delta: float) -> void:
     _last_state_refresh += delta
-    if _last_state_refresh >= 0.15:
+    if _last_state_refresh >= 0.25:
         _last_state_refresh = 0.0
         _refresh_state()
     _feed(delta)

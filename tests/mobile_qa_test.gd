@@ -1,7 +1,7 @@
 extends SceneTree
 
 const TARGETS:Array[Vector2i]=[Vector2i(320,480),Vector2i(360,640),Vector2i(390,844),Vector2i(480,800),Vector2i(720,1280),Vector2i(1024,768)]
-const MIN_TOUCH:=44.0
+const MIN_TOUCH:=48.0
 var failures:Array[String]=[]
 var checks:=0
 
@@ -16,7 +16,9 @@ func _inside(c:Control,target:Vector2i)->bool:
     return c!=null and Rect2(Vector2.ZERO,Vector2(target)).encloses(c.get_global_rect())
 
 func _run()->void:
-    # Exercise explicit logical viewport sizes; project Android scaling is tested separately.\n    root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED\n    root.size=Vector2i(390,844)
+    # Exercise explicit logical viewport sizes; project Android scaling is tested separately.
+    root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
+    root.size=Vector2i(390,844)
     var packed:=load("res://scenes/Main.tscn") as PackedScene
     check("Main scene loads",packed!=null)
     if packed==null:_finish();return
@@ -28,7 +30,8 @@ func _run()->void:
 
     for target in TARGETS:
         root.size=target;await process_frame;hud._layout_responsive();await process_frame
-        if target.x<1000:
+        var layout_kind:=str(hud.get("_layout_kind"))
+        if layout_kind=="mobile":
             var nav:=hud.get("bottom_nav") as Control
             var scroll:=hud.get("mobile_scroll") as Control
             check("%s bottom nav contained" % target,_inside(nav,target))
@@ -36,7 +39,9 @@ func _run()->void:
             var buttons:Array=hud.get("mode_buttons")
             check("%s five primary destinations" % target,buttons.size()==5)
             for b in buttons:
-                check("%s nav target >=44" % target,(b as Button).size.y>=MIN_TOUCH)
+                check("%s nav target >=48" % target,(b as Button).size.y>=MIN_TOUCH)
+        elif layout_kind=="tablet":
+            check("%s tablet executive canvas" % target,hud.get("root").get_node_or_null("TabletLive")!=null)
         else:
             check("%s desktop executive canvas" % target,hud.get("root").get_node_or_null("DesktopExecutive")!=null)
 
@@ -76,7 +81,7 @@ func _exercise_opening_flow(game:Node,hud:Node)->void:
     if produce!=null:produce.pressed.emit();await process_frame
 
 func _exercise_primary_views(hud:Node)->void:
-    var expected:=["live","operate","empire","world","more"]
+    var expected:=["live","operate","property","finance","more"]
     for i in range(5):
         hud._set_tab(i);await process_frame
         check("tab %d opens %s" % [i,expected[i]],str(hud.get("active_view"))==expected[i])

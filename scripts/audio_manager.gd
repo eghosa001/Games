@@ -8,6 +8,8 @@ const AUDIO_PREFS_PATH := "user://restora_ui.cfg"
 const DEFAULT_MUSIC_LEVEL := 0.72
 const DEFAULT_SFX_LEVEL := 0.84
 const TAU_F: float = TAU
+const MUSIC_SCALE_STEPS: Array[int] = [0, 2, 4, 7, 9, 7, 4, 2]
+const STATE_WATCH_INTERVAL: float = 0.10
 
 var _music_player: AudioStreamPlayer
 var _music_playback: AudioStreamGeneratorPlayback
@@ -25,6 +27,7 @@ var _music_seed: float = 0.0
 var _last_tap_ms: int = -1000
 var _music_level := DEFAULT_MUSIC_LEVEL
 var _sfx_level := DEFAULT_SFX_LEVEL
+var _state_watch_clock: float = 0.0
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -108,7 +111,10 @@ func _save_audio_preferences() -> void:
 
 func _process(delta: float) -> void:
     _feed_music(delta)
-    _watch_game_state()
+    _state_watch_clock += delta
+    if _state_watch_clock >= STATE_WATCH_INTERVAL:
+        _state_watch_clock = 0.0
+        _watch_game_state()
 
 func _feed_music(delta: float) -> void:
     if _music_player == null:
@@ -123,6 +129,7 @@ func _feed_music(delta: float) -> void:
     var frames: int = _music_playback.get_frames_available()
     var target: int = int(SAMPLE_RATE * clampf(delta, 0.04, 0.12))
     var count: int = mini(frames, target)
+    var root: float = _adaptive_root()
     for i: int in range(count):
         var t: float = _music_phase / float(SAMPLE_RATE)
         _music_time += 1.0 / float(SAMPLE_RATE)
@@ -130,9 +137,7 @@ func _feed_music(delta: float) -> void:
         if _music_note_time >= 0.72:
             _music_note_time = 0.0
             _music_note = (_music_note + 1) % 8
-        var root: float = _adaptive_root()
-        var scale_steps: Array[int] = [0, 2, 4, 7, 9, 7, 4, 2]
-        var semitone: float = float(scale_steps[_music_note])
+        var semitone: float = float(MUSIC_SCALE_STEPS[_music_note])
         var melody_freq: float = root * pow(2.0, semitone / 12.0)
         var melody_pos: float = _music_note_time / 0.72
         var attack: float = clampf(melody_pos / 0.10, 0.0, 1.0)

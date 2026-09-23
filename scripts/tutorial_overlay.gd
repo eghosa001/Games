@@ -2,6 +2,7 @@ extends CanvasLayer
 
 const Tutorial = preload("res://scripts/tutorial.gd")
 
+const UPDATE_INTERVAL: float = 0.10
 var game: Node
 var tutorial = Tutorial.new()
 var overlay_root: Control
@@ -15,7 +16,9 @@ var continue_button: Button
 var collapsed_button: Button
 var dismissed := false
 var last_step := -1
+var _update_clock: float = 0.0
 var _coordinator_active := false
+var _expanded_by_user := false
 
 func _state():
     return get_node_or_null("/root/RenewGameState")
@@ -46,15 +49,9 @@ func _enter_tree() -> void:
     if coordinator != null:
         coordinator.set_active_screen("")
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
     if game == null:
         return
-    var screen_name := ""
-    var coordinator = _coordinator()
-    if coordinator != null:
-        screen_name = coordinator.get_active_screen()
-    if screen_name == "":
-        _layout_responsive()
 
     var current_action := String(tutorial.current().get("action", "COMPLETE"))
     if not tutorial.completed and current_action != "COMPLETE":
@@ -63,7 +60,14 @@ func _process(_delta: float) -> void:
         if int(tutorial.step) != old_step:
             _save_tutorial_state()
             game.message = "TUTORIAL: %s" % String(tutorial.current().get("title", "Next step"))
-    _refresh()
+            _update_clock = 0.0
+            _refresh()
+            return
+
+    _update_clock += delta
+    if _update_clock >= UPDATE_INTERVAL:
+        _update_clock = 0.0
+        _layout_responsive()
 
 func _build() -> void:
     overlay_root = Control.new()
@@ -114,8 +118,8 @@ func _build() -> void:
     continue_button = Button.new()
     continue_button.name = "TutorialHideButton"
     continue_button.text = "GOT IT"
-    continue_button.custom_minimum_size = Vector2(96, 44)
-    continue_button.focus_mode = Control.FOCUS_NONE
+    continue_button.custom_minimum_size = Vector2(96, 48)
+    continue_button.focus_mode = Control.FOCUS_ALL
     continue_button.mouse_filter = Control.MOUSE_FILTER_STOP
     continue_button.pressed.connect(_hide_overlay)
     panel.add_child(continue_button)
@@ -123,8 +127,8 @@ func _build() -> void:
     collapsed_button = Button.new()
     collapsed_button.name = "TutorialGuideChip"
     collapsed_button.text = "GUIDE"
-    collapsed_button.custom_minimum_size = Vector2(96, 38)
-    collapsed_button.focus_mode = Control.FOCUS_NONE
+    collapsed_button.custom_minimum_size = Vector2(104, 48)
+    collapsed_button.focus_mode = Control.FOCUS_ALL
     collapsed_button.mouse_filter = Control.MOUSE_FILTER_STOP
     collapsed_button.pressed.connect(open_tutorial)
     collapsed_button.hide()
@@ -215,17 +219,18 @@ func _layout_responsive() -> void:
         collapsed_button.hide()
         return
 
-    if dismissed:
+    var compact_by_default := narrow and not _expanded_by_user
+    if dismissed or compact_by_default:
         panel.hide()
         if tutorial.completed:
             collapsed_button.hide()
             return
         collapsed_button.text = "GUIDE  %d/%d" % [mini(int(tutorial.step) + 1, tutorial.steps.size()), tutorial.steps.size()]
         if narrow:
-            collapsed_button.size = Vector2(104.0, 38.0)
-            collapsed_button.position = Vector2(maxf(8.0, w - 116.0), maxf(8.0, h - 130.0))
+            collapsed_button.size = Vector2(104.0, 48.0)
+            collapsed_button.position = Vector2(maxf(8.0, w - 116.0), maxf(8.0, h - 154.0))
         else:
-            collapsed_button.size = Vector2(112.0, 38.0)
+            collapsed_button.size = Vector2(112.0, 48.0)
             collapsed_button.position = Vector2(maxf(8.0, w - 126.0), maxf(64.0, h - 120.0))
         collapsed_button.show()
         return
@@ -247,7 +252,7 @@ func _layout_responsive() -> void:
         body_label.add_theme_font_size_override("font_size", 11)
         hint_label.hide()
         continue_button.position = Vector2(panel.size.x - 108.0, 8)
-        continue_button.size = Vector2(94, 40)
+        continue_button.size = Vector2(94, 48)
     elif w >= 1000.0:
         panel.position = Vector2(w - 445.0, 116.0)
         panel.size = Vector2(430.0, 136.0)
@@ -261,7 +266,7 @@ func _layout_responsive() -> void:
         body_label.size = Vector2(panel.size.x - 36.0, 48)
         hint_label.hide()
         continue_button.position = Vector2(panel.size.x - 116.0, 12)
-        continue_button.size = Vector2(98, 42)
+        continue_button.size = Vector2(98, 48)
     else:
         panel.position = Vector2(w - 430.0, 104.0)
         panel.size = Vector2(414.0, 136.0)
@@ -275,7 +280,7 @@ func _layout_responsive() -> void:
         body_label.size = Vector2(panel.size.x - 36.0, 48)
         hint_label.hide()
         continue_button.position = Vector2(panel.size.x - 116.0, 12)
-        continue_button.size = Vector2(98, 42)
+        continue_button.size = Vector2(98, 48)
 
     collapsed_button.hide()
     panel.show()
@@ -323,6 +328,7 @@ func _save_tutorial_state() -> void:
 
 func open_tutorial() -> void:
     dismissed = false
+    _expanded_by_user = true
     _save_tutorial_state()
     _refresh()
 
@@ -342,6 +348,7 @@ func reset_tutorial() -> void:
     tutorial.step = 0
     tutorial.completed = false
     dismissed = false
+    _expanded_by_user = false
     _save_tutorial_state()
     _refresh()
 
@@ -350,6 +357,7 @@ func _dismiss_current() -> void:
 
 func _hide_overlay() -> void:
     dismissed = true
+    _expanded_by_user = false
     _save_tutorial_state()
     panel.hide()
     _layout_responsive()

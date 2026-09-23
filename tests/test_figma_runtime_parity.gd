@@ -53,7 +53,7 @@ func _run() -> void:
     var nav := hud.get("bottom_nav") as Control
     _rect(nav, Vector2(12, 758), Vector2(366, 70), "bottom nav")
     var buttons: Array = hud.get("mode_buttons")
-    var expected := ["LIVE", "OPERATE", "EMPIRE", "WORLD", "MORE"]
+    var expected := ["HOME", "BUSINESS", "PROPERTY", "FINANCE", "MORE"]
     for i in range(5):
         var button := buttons[i] as Button
         check("nav %d touch target" % i, button != null and button.size.y >= 44)
@@ -85,9 +85,11 @@ func _run() -> void:
     hud.open_figma_view("property")
     await process_frame
     content = hud.get("mobile_content") as Control
-    _rect(_child(content, "PropertyVisual"), Vector2(18,82), Vector2(354,212), "PROPERTY visual")
-    _rect(_child(content, "RestorationProgress"), Vector2(18,318), Vector2(354,116), "PROPERTY progress")
-    _rect(_child(content, "Unlocks"), Vector2(18,450), Vector2(354,148), "PROPERTY unlocks")
+    _rect(_child(content, "PropertyVisual"), Vector2(18,82), Vector2(354,238), "PROPERTY visual")
+    check("PROPERTY uses staged building art", _child(content, "PropertyVisual").get_node_or_null("BuildingStageArt") != null)
+    _rect(_child(content, "RestorationProgress"), Vector2(18,338), Vector2(354,116), "PROPERTY progress")
+    _rect(_child(content, "BuildingDetails"), Vector2(18,472), Vector2(354,126), "PROPERTY details")
+    check("PROPERTY exposes nine named buildings", content.find_children("BuildingRow*", "Panel", false, false).size() == 9)
 
     hud.open_figma_view("empire")
     await process_frame
@@ -100,6 +102,7 @@ func _run() -> void:
     await process_frame
     content = hud.get("mobile_content") as Control
     _rect(_child(content, "RegionalMap"), Vector2(18,82), Vector2(354,220), "WORLD map")
+    check("WORLD uses authored district art", _child(content, "RegionalMap").get_node_or_null("RegionalDistrictArt") != null)
     _rect(_child(content, "RegionDetail"), Vector2(18,320), Vector2(354,142), "WORLD detail")
     _rect(_child(content, "WorldOpportunities"), Vector2(18,480), Vector2(354,176), "WORLD opportunities")
 
@@ -113,16 +116,16 @@ func _run() -> void:
     await process_frame
     content = hud.get("mobile_content") as Control
     _rect(_child(content, "Appearance"), Vector2(18,82), Vector2(354,160), "SETTINGS appearance")
-    _rect(_child(content, "AudioAccessibility"), Vector2(18,258), Vector2(354,154), "SETTINGS audio")
-    _rect(_child(content, "Monetization"), Vector2(18,428), Vector2(354,214), "SETTINGS monetization")
-    _rect(_child(content, "SaveData"), Vector2(18,658), Vector2(354,86), "SETTINGS save")
+    _rect(_child(content, "AudioAccessibility"), Vector2(18,258), Vector2(354,174), "SETTINGS audio")
+    _rect(_child(content, "Monetization"), Vector2(18,448), Vector2(354,230), "SETTINGS monetization")
+    _rect(_child(content, "SaveData"), Vector2(18,694), Vector2(354,86), "SETTINGS save")
 
     var theme := get_root().get_node_or_null("RestoraThemeManager")
     check("theme manager exists", theme != null)
     if theme != null:
         theme.set_mode("light")
         await process_frame
-        check("light limestone background", theme.color("bg").to_html(false) == "e8e2d8")
+        check("light cool-stone background", theme.color("bg").to_html(false) == "e8eeea")
         theme.set_mode("dark")
         await process_frame
         check("dark graphite background", theme.color("bg").to_html(false) == "0b0d10")

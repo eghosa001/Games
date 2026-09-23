@@ -2,7 +2,9 @@
 
 config/name="Restora"
 config/icon="res://Assets/restora_icon.svg"
-boot_splash/show_image=false
+boot_splash/show_image=true
+boot_splash/image="res://Assets/restora_icon.svg"
+boot_splash/fullsize=false
 boot_splash/bg_color=Color(0.0431373, 0.0509804, 0.0627451, 1)
 run/main_scene="res://scenes/Main.tscn"
 

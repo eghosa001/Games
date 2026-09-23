@@ -9,7 +9,9 @@ func check(label:String,ok:bool)->void:
 func _inside(c:Control,size:Vector2)->bool:
     return c!=null and Rect2(Vector2.ZERO,size).encloses(c.get_global_rect())
 func _run()->void:
-    # Exercise explicit logical viewport sizes; project Android scaling is tested separately.\n    root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED\n    var packed:=load("res://scenes/Main.tscn") as PackedScene
+    # Exercise explicit logical viewport sizes; project Android scaling is tested separately.
+    root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
+    var packed:=load("res://scenes/Main.tscn") as PackedScene
     check("Main scene loads",packed!=null)
     if packed==null:quit(1);return
     root.size=Vector2i(390,844)
@@ -26,7 +28,7 @@ func _run()->void:
         var buttons:Array=hud.get("mode_buttons")
         check("%s five tabs" % target,buttons.size()==5)
         for b in buttons:
-            check("%s tab touch >=44" % target,(b as Button).size.y>=44.0)
+            check("%s tab touch >=48" % target,(b as Button).size.y>=48.0)
     root.size=Vector2i(1280,720);await process_frame;hud._layout_responsive();await process_frame
     check("desktop uses executive Figma canvas",hud.get("root").get_node_or_null("DesktopExecutive")!=null)
     check("desktop has no legacy action dock",hud.get("root").find_child("ActionDock",true,false)==null)

@@ -37,7 +37,8 @@ func _run() -> void:
     check("mobile base viewport matches approved Figma width", project_text.contains("window/size/viewport_width=390"))
     check("mobile base viewport matches approved Figma height", project_text.contains("window/size/viewport_height=844"))
     check("canvas-items stretch is enabled for mobile scaling", project_text.contains('window/stretch/mode="canvas_items"'))
-    check("Godot engine boot image is disabled", project_text.contains("boot_splash/show_image=false"))
+    check("branded boot image is enabled", project_text.contains("boot_splash/show_image=true"))
+    check("RESTORA icon is used for startup feedback", project_text.contains("boot_splash/image=\"res://Assets/restora_icon.svg\""))
     check("RESTORA boot background is configured", project_text.contains("boot_splash/bg_color=Color("))
 
     var autosave := FileAccess.get_file_as_string("res://scripts/autosave.gd")
