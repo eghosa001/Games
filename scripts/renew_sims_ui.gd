@@ -741,7 +741,7 @@ func _refresh() -> void:
                 _screen("Active company", "BusinessOperationsPanel", "Open the touch-first operating company workspace")
             else:
                 _action(hero_action.text, _primary_move().get("call", Callable()), "Continue the current objective", true)
-            _screen("Settings", "SettingsPanel", "Theme, audio, premium, privacy and company controls")
+            _screen("Save & settings", "SettingsPanel", "Theme, audio, premium, privacy and company controls")
         1:
             if str(parent.stage) == "Operational" and not bool(parent.business_open):
                 _group("Choose the company", "One restored site can support different business models. Pick deliberately.")
