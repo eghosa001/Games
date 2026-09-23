@@ -32,4 +32,4 @@ func run() -> void:
             manager.hide_all_screens()
     game.queue_free(); await process_frame
     print("COMMAND DECK UI TEST: %d passed, %d failed" % [passed,failed])
-    quit(1 if failed>0 else 0)
+    quit(1 if failed > 0 else 0)
