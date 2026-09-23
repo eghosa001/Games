@@ -67,9 +67,9 @@ func _run() -> void:
         return
 
     var status: Dictionary = overlay.tutorial_status()
-    check(not bool(status.get("dismissed", true)), "Fresh game starts with tutorial visible")
+    check(not bool(status.get("dismissed", true)), "Fresh game keeps tutorial active")
     check(_step(overlay) == 0, "Tutorial begins at Inspect")
-    check(overlay.panel.visible, "Tutorial card is visible on phone")
+    check(not overlay.panel.visible and overlay.collapsed_button.visible, "Phone tutorial starts as a compact GUIDE chip")
 
     overlay.hide_tutorial()
     await _wait(2)
@@ -78,6 +78,7 @@ func _run() -> void:
     overlay.open_tutorial()
     await _wait(2)
     check(not bool((overlay.tutorial_status() as Dictionary).get("dismissed", true)), "GUIDE can reopen tutorial")
+    check(overlay.panel.visible, "GUIDE opens the full tutorial on demand")
 
     hud.open_figma_view("property")
     await _wait(2)

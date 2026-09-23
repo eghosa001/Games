@@ -473,6 +473,7 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
 
         var label = _label(button, "NavLabel", labels[i], Rect2(2, 34, button.custom_minimum_size.x - 4, 16), 8, "text" if i == active_tab else "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
         label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+        button.focus_mode = Control.FOCUS_ALL
 
 func _nav_style(active: bool, hover = false) -> StyleBoxFlat:
     if active:
