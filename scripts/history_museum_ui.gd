@@ -61,7 +61,7 @@ func _build_ui() -> void:
     panel.add_child(margin)
     var root := VBoxContainer.new(); root.add_theme_constant_override("separation", 9); margin.add_child(root)
     var header := HBoxContainer.new(); root.add_child(header)
-    var title := Label.new(); title.text = "RESTORA CORPORATE MUSEUM"; title.add_theme_font_size_override("font_size", 21); title.add_theme_color_override("font_color", TEXT); header.add_child(title)
+    var title := Label.new(); title.name = "MuseumTitle"; title.text = "RESTORA CORPORATE MUSEUM"; title.add_theme_font_size_override("font_size", 21); title.add_theme_color_override("font_color", TEXT); title.size_flags_horizontal = Control.SIZE_EXPAND_FILL; title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS; header.add_child(title)
     var spacer := Control.new(); spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL; header.add_child(spacer)
     close_button = Button.new(); close_button.name = "CloseButton"; close_button.text = "CLOSE"; close_button.custom_minimum_size = Vector2(78, 46); close_button.focus_mode = Control.FOCUS_NONE; close_button.add_theme_font_size_override("font_size", 10); close_button.pressed.connect(close_screen); header.add_child(close_button)
     var status := Label.new(); status.text = "CORPORATE MEMORY  •  HISTORY & LEGACY"; status.add_theme_font_size_override("font_size", 9); status.add_theme_color_override("font_color", ACCENT); root.add_child(status)
@@ -162,6 +162,10 @@ func _layout() -> void:
     var size := get_viewport().get_visible_rect().size; var phone := size.x < 430.0; var margin := 8.0 if phone else 14.0; var w := minf(720.0, maxf(280.0, size.x - margin * 2.0)); var top := 36.0 if phone else 46.0; var h := minf(720.0, maxf(360.0, size.y - top - 10.0))
     dimmer.position = Vector2.ZERO; dimmer.size = size; panel.position = Vector2((size.x - w) / 2.0, top); panel.size = Vector2(w, minf(h, size.y - top - 10.0))
     var compact := w < 420.0
+    var museum_title := panel.find_child("MuseumTitle", true, false) as Label
+    if museum_title != null:
+        museum_title.add_theme_font_size_override("font_size", 17 if compact else 21)
+        museum_title.custom_minimum_size.x = 0
     if close_button != null: close_button.custom_minimum_size = Vector2(72 if compact else 82, 46)
     if summary_label != null: summary_label.add_theme_font_size_override("font_size", 10 if compact else 11)
     for child in tabs.get_children():
