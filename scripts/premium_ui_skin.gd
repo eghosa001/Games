@@ -143,6 +143,8 @@ func _style_recursive(node: Node) -> void:
             _style_button(child as Button)
         elif child is Panel:
             _style_panel(child as Panel)
+        elif child is PanelContainer:
+            _style_panel_container(child as PanelContainer)
         elif child is Label:
             _style_label(child as Label)
         elif child is ProgressBar:
@@ -194,6 +196,20 @@ func _style_panel(panel: Panel) -> void:
     box.content_margin_right = 16
     box.content_margin_top = 14
     box.content_margin_bottom = 14
+    panel.add_theme_stylebox_override("panel", box)
+
+
+func _style_panel_container(panel: PanelContainer) -> void:
+    var accent := _sector_accent(panel.name)
+    var box := StyleBoxFlat.new()
+    box.bg_color = Color(_surface().r, _surface().g, _surface().b, 0.94)
+    box.border_color = Color(accent.r, accent.g, accent.b, 0.42)
+    box.set_border_width_all(1)
+    box.set_border_width(SIDE_TOP, 2)
+    box.set_corner_radius_all(18)
+    box.shadow_color = Color(0, 0, 0, 0.20 if _is_light_mode() else 0.46)
+    box.shadow_size = 14
+    box.shadow_offset = Vector2(0, 6)
     panel.add_theme_stylebox_override("panel", box)
 
 
