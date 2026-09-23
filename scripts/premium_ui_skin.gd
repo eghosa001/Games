@@ -1,5 +1,7 @@
 extends Control
 
+const WORLD_ART_TEXTURE: Texture2D = preload("res://Assets/Art/premium_industrial_district.svg")
+
 ## Unified premium presentation layer for RESTORA.
 ## It does not own gameplay state. It restyles existing controls and only adds an
 ## executive context rail when the active screen is genuinely modal/narrow; wide
@@ -301,17 +303,19 @@ func _style_label(label: Label) -> void:
         label.add_theme_color_override("font_color", _text())
         if _font_bold != null:
             label.add_theme_font_override("font", _font_bold)
-        label.add_theme_font_size_override("font_size", maxi(18, label.get_theme_font_size("font_size")))
+        label.add_theme_font_size_override("font_size", maxi(20, label.get_theme_font_size("font_size")))
         label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.58))
         label.add_theme_constant_override("shadow_offset_y", 2)
     elif name_upper.contains("VALUE") or name_upper.contains("TOTAL") or name_upper.contains("AMOUNT"):
         if _font_semibold != null:
             label.add_theme_font_override("font", _font_semibold)
         label.add_theme_color_override("font_color", _gold())
+        label.add_theme_font_size_override("font_size", maxi(14, label.get_theme_font_size("font_size")))
     else:
         if _font_regular != null:
             label.add_theme_font_override("font", _font_regular)
         label.add_theme_color_override("font_color", Color(_text().r, _text().g, _text().b, 0.93))
+        label.add_theme_font_size_override("font_size", maxi(11, label.get_theme_font_size("font_size")))
 
 func _style_progress(progress: ProgressBar) -> void:
     var accent := _sector_accent(progress.name)
@@ -679,8 +683,15 @@ func _draw() -> void:
     _corner(Vector2(18, top_h + 14), 32.0, _gold())
     _corner(Vector2(size.x - 18, top_h + 14), -32.0, _cyan())
 
+    # Keep the simulated industrial world visible behind management panels.
+    var world_rect := Rect2(0, top_h, size.x, maxf(0.0, size.y - top_h))
+    if WORLD_ART_TEXTURE != null and world_rect.size.y > 1.0:
+        draw_texture_rect(WORLD_ART_TEXTURE, world_rect, false, Color(1, 1, 1, 0.075 if _is_light_mode() else 0.11))
+        var world_wash := _surface() if _is_light_mode() else _deep()
+        draw_rect(world_rect, Color(world_wash.r, world_wash.g, world_wash.b, 0.68 if _is_light_mode() else 0.64), true)
+
     # Low-contrast diagonal material detail adds depth without reducing legibility.
-    var grid_alpha := 0.035 if mobile else 0.045
+    var grid_alpha := 0.028 if mobile else 0.038
     var step := 76.0 if mobile else 92.0
     var x := -size.y
     while x < size.x:

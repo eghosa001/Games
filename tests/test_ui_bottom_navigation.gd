@@ -41,7 +41,10 @@ func _run() -> void:
         var label := button.get_node("NavLabel") as Label
         check(label.text == expected[i], "nav label " + expected[i])
         check(button.size.y >= 48.0, "48px touch target " + expected[i])
-        check(button.focus_mode == Control.FOCUS_ALL, "keyboard focus " + expected[i])
+        if not button.disabled:
+            check(button.focus_mode == Control.FOCUS_ALL, "keyboard focus " + expected[i])
+        else:
+            check(not button.tooltip_text.is_empty(), "locked navigation explains unlock " + expected[i])
 
     check(not (buttons[0] as Button).disabled and not (buttons[1] as Button).disabled and not (buttons[4] as Button).disabled, "core navigation is available from Level 1")
     check((buttons[2] as Button).disabled and (buttons[3] as Button).disabled, "Empire and World wait for Level 3")

@@ -10,6 +10,10 @@ const MOBILE_NAV_H = 70.0
 const MOBILE_NAV_BOTTOM = 16.0
 const DESKTOP_BREAKPOINT = 1000.0
 const TABLET_BREAKPOINT = 700.0
+const ART_ROOT = "res://Assets/Art/"
+const RESTORATION_ART = ART_ROOT + "premium_restoration_site.svg"
+const DISTRICT_ART = ART_ROOT + "premium_industrial_district.svg"
+const ICON_ROOT = ART_ROOT + "Icons/"
 
 var parent: Node
 var root: Control
@@ -151,6 +155,35 @@ func _color(role: String) -> Color:
         "danger": return Color("b85c4a")
         _: return Color("f2efe8")
 
+func _asset_texture(path: String) -> Texture2D:
+    if not ResourceLoader.exists(path):
+        return null
+    return load(path) as Texture2D
+
+func _add_art(parent_node: Node, name: String, rect: Rect2, path: String, alpha := 1.0) -> TextureRect:
+    var texture := _asset_texture(path)
+    if texture == null:
+        return null
+    var art := TextureRect.new()
+    art.name = name
+    art.texture = texture
+    art.position = rect.position
+    art.size = rect.size
+    art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    art.modulate = Color(1, 1, 1, alpha)
+    art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    parent_node.add_child(art)
+    return art
+
+func _add_icon(parent_node: Node, name: String, icon_key: String, rect: Rect2, role := "muted", alpha := 1.0) -> TextureRect:
+    var icon := _add_art(parent_node, name, rect, ICON_ROOT + icon_key + ".svg", alpha)
+    if icon != null:
+        var tint := _color(role)
+        icon.modulate = Color(tint.r, tint.g, tint.b, alpha)
+        icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    return icon
+
 func _build_root() -> void:
     root = Control.new()
     root.name = "RestoraFigmaRuntime"
@@ -209,6 +242,19 @@ func _rebuild_current() -> void:
     background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     background.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(background)
+
+    var viewport_size := get_viewport().get_visible_rect().size
+    var backdrop_alpha := 0.26 if not _is_light_theme() else 0.16
+    _add_art(root, "WorldBackdropArt", Rect2(Vector2.ZERO, viewport_size), DISTRICT_ART, backdrop_alpha)
+    var backdrop_scrim := ColorRect.new()
+    backdrop_scrim.name = "WorldBackdropScrim"
+    backdrop_scrim.position = Vector2.ZERO
+    backdrop_scrim.size = viewport_size
+    var bg := _color("bg")
+    backdrop_scrim.color = Color(bg.r, bg.g, bg.b, 0.70 if not _is_light_theme() else 0.74)
+    backdrop_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    root.add_child(backdrop_scrim)
+
     _layout_kind = _layout_class()
     if _layout_kind == "desktop":
         _build_desktop_live()
@@ -331,6 +377,7 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
     bottom_nav.add_child(tabs)
 
     var labels = ["LIVE", "OPERATE", "EMPIRE", "WORLD", "MORE"]
+    var icon_keys = ["home", "business", "empire", "world", "settings"]
     var required_unlocks = ["", "", "branches", "regions", ""]
     for i in range(labels.size()):
         var button = Button.new()
@@ -348,19 +395,15 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
         button.disabled = locked
         if locked:
             button.tooltip_text = "Unlocks at Company Level %d" % _unlock_level(required_unlock)
+        button.focus_mode = Control.FOCUS_ALL
         button.pressed.connect(_set_tab.bind(i), CONNECT_DEFERRED)
         tabs.add_child(button)
         mode_buttons.append(button)
 
-        var dot = Panel.new()
-        dot.name = "NavDot"
-        dot.position = Vector2((button.custom_minimum_size.x - 12.0) * 0.5, 4)
-        dot.size = Vector2(12, 12)
-        dot.mouse_filter = Control.MOUSE_FILTER_IGNORE
-        dot.add_theme_stylebox_override("panel", _solid_round(_color("gold") if i == active_tab else _color("muted"), 6))
-        button.add_child(dot)
+        var icon_alpha := 0.42 if locked else 1.0
+        _add_icon(button, "NavIcon", icon_keys[i], Rect2((button.custom_minimum_size.x - 22.0) * 0.5, 5, 22, 22), "gold" if i == active_tab else "muted", icon_alpha)
 
-        var label = _label(button, "NavLabel", labels[i], Rect2(4, 28, button.custom_minimum_size.x - 8, 18), 9, "text" if i == active_tab else "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
+        var label = _label(button, "NavLabel", labels[i], Rect2(4, 32, button.custom_minimum_size.x - 8, 18), 9, "text" if i == active_tab else "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
         label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
 func _nav_style(active: bool, hover = false) -> StyleBoxFlat:
@@ -377,10 +420,15 @@ func _nav_style(active: bool, hover = false) -> StyleBoxFlat:
 
 func _style(bg: Color, border: Color, radius: int, border_width = 1) -> StyleBoxFlat:
     var s = StyleBoxFlat.new()
-    s.bg_color = bg
+    s.bg_color = Color(bg.r, bg.g, bg.b, 0.94 if not _is_light_theme() else 0.96)
     s.border_color = border
     s.set_border_width_all(border_width)
+    if border_width > 0:
+        s.set_border_width(SIDE_TOP, maxi(border_width, 2))
     s.set_corner_radius_all(radius)
+    s.shadow_color = Color(0, 0, 0, 0.26 if not _is_light_theme() else 0.11)
+    s.shadow_size = 9
+    s.shadow_offset = Vector2(0, 4)
     return s
 
 func _solid_round(color: Color, radius: int) -> StyleBoxFlat:
@@ -436,6 +484,7 @@ func _transparent_button(parent_node: Node, name: String, rect: Rect2, callback:
     b.add_theme_stylebox_override("normal", empty)
     b.add_theme_stylebox_override("hover", empty)
     b.add_theme_stylebox_override("pressed", empty)
+    b.add_theme_stylebox_override("disabled", empty)
     var focus := StyleBoxFlat.new()
     focus.bg_color = Color(0, 0, 0, 0)
     focus.border_color = _color("gold")
@@ -474,7 +523,10 @@ func _frame_button(parent_node: Node, name: String, text_value: String, rect: Re
 
 func _stat_tile(parent_node: Node, key: String, x: float, y: float, w: float, label_text: String, value_text: String, meta_text: String) -> Panel:
     var p = _panel(parent_node, "Stat_" + key, Rect2(x, y, w, 104), "surface_2", "border", 16)
-    _remember(key + "_label", _label(p, "Label", label_text, Rect2(15, 13, w - 30, 14), 9, "gold", 600))
+    var icon_map := {"cash":"finance","worth":"empire","rep":"people","goods":"production","inputs":"supply","debt":"finance","revenue":"market","equity":"empire","asset_value":"property","daily_income":"finance"}
+    var icon_key := str(icon_map.get(key, "intelligence"))
+    _add_icon(p, "StatIcon", icon_key, Rect2(w - 38, 11, 22, 22), "gold", 0.86)
+    _remember(key + "_label", _label(p, "Label", label_text, Rect2(15, 13, w - 54, 14), 9, "gold", 600))
     _remember(key + "_value", _label(p, "Value", value_text, Rect2(15, 36, w - 30, 32), 24, "text", 700))
     _remember(key + "_meta", _label(p, "Meta", meta_text, Rect2(15, 75, w - 30, 14), 9, "muted", 600))
     return p
@@ -495,6 +547,15 @@ func _build_mobile_live() -> void:
     _header("RESTORA", "LIVE ENTERPRISE", "DAY %d" % _day())
     var inner_w = w - 36.0
     var hero = _panel(mobile_content, "ExecutiveHero", Rect2(18, 82, inner_w, 154), "surface", "border", 22)
+    hero.clip_contents = true
+    _add_art(hero, "HeroRestorationArt", Rect2(inner_w * 0.46, 0, inner_w * 0.54, 154), RESTORATION_ART, 0.54 if not _is_light_theme() else 0.42)
+    var hero_wash := ColorRect.new()
+    hero_wash.position = Vector2(inner_w * 0.34, 0)
+    hero_wash.size = Vector2(inner_w * 0.66, 154)
+    var hero_bg := _color("surface")
+    hero_wash.color = Color(hero_bg.r, hero_bg.g, hero_bg.b, 0.46)
+    hero_wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    hero.add_child(hero_wash)
     var rail = Panel.new()
     rail.position = Vector2(-1, -1)
     rail.size = Vector2(6, 154)
@@ -562,7 +623,7 @@ func _build_mobile_operations() -> void:
 
     var equip = _panel(mobile_content, "Equipment", Rect2(18, 562, inner_w, 112), "surface", "border", 18)
     _label(equip, "Head", "EQUIPMENT HEALTH", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
-    _label(equip, "Body", "LINE 91%%   •   FLEET %d%%   •   STORE 88%%" % clampi(72 + _transport_level() * 6, 72, 96), Rect2(16, 46, inner_w - 32, 18), 12, "text", 600)
+    _label(equip, "Body", "Fleet Level %d  •  %d inputs  •  %d finished goods" % [maxi(1,_transport_level()), _inputs(), _goods()], Rect2(16, 46, inner_w - 32, 36), 12, "text", 600)
     _label(equip, "Meta", "No maintenance action required.", Rect2(16, 76, inner_w - 32, 14), 10, "success", 600)
     _transparent_button(equip, "OpenEquipment", Rect2(0, 0, inner_w, 112), _open_screen.bind("ProductionControlPanel"))
 
@@ -603,20 +664,16 @@ func _build_mobile_property() -> void:
     var inner_w = w - 36.0
 
     var visual = _panel(mobile_content, "PropertyVisual", Rect2(18, 82, inner_w, 212), "surface", "border", 22)
+    visual.clip_contents = true
+    _add_art(visual, "RestorationSceneArt", Rect2(0, 0, inner_w, 212), RESTORATION_ART, 0.94)
+    var visual_scrim := ColorRect.new()
+    visual_scrim.position = Vector2.ZERO
+    visual_scrim.size = Vector2(inner_w, 54)
+    visual_scrim.color = Color(0.02, 0.03, 0.03, 0.58)
+    visual_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    visual.add_child(visual_scrim)
     _label(visual, "Overlay", "STAGE %d / 5" % _stage_index(), Rect2(18, 16, 130, 14), 10, "gold", 600)
     _label(visual, "Condition", "%d%% CONDITION" % _restoration(), Rect2(inner_w - 128, 16, 110, 14), 10, "success", 600, HORIZONTAL_ALIGNMENT_RIGHT)
-    var floor = Panel.new()
-    floor.position = Vector2(28, 142)
-    floor.size = Vector2(inner_w - 56, 40)
-    floor.add_theme_stylebox_override("panel", _style(_color("surface_2"), _color("surface_2"), 12, 0))
-    visual.add_child(floor)
-    var bx = [46.0, 132.0, 218.0]
-    for i in range(3):
-        var block = Panel.new()
-        block.position = Vector2(minf(bx[i], inner_w - 90), 46 if i == 1 else 60)
-        block.size = Vector2(68, 106 if i == 1 else 92)
-        block.add_theme_stylebox_override("panel", _style(_color("surface_3"), _color("border"), 8))
-        visual.add_child(block)
 
     var prog = _panel(mobile_content, "RestorationProgress", Rect2(18, 318, inner_w, 116), "surface", "border", 18)
     _label(prog, "Head", "RESTORATION PROGRESS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
@@ -677,6 +734,14 @@ func _build_mobile_world() -> void:
     _header("WORLD NETWORK", "%d REGIONS • %d TRADE ROUTES" % [_region_presence_count(), _trade_route_count()])
     var inner_w = w - 36.0
     var map = _panel(mobile_content, "RegionalMap", Rect2(18, 82, inner_w, 220), "surface", "border", 22)
+    map.clip_contents = true
+    _add_art(map, "RegionalDistrictArt", Rect2(0, 0, inner_w, 220), DISTRICT_ART, 0.88)
+    var map_scrim := ColorRect.new()
+    map_scrim.position = Vector2.ZERO
+    map_scrim.size = Vector2(inner_w, 220)
+    map_scrim.color = Color(0.02, 0.04, 0.045, 0.38 if not _is_light_theme() else 0.28)
+    map_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    map.add_child(map_scrim)
     _label(map, "Head", "REGIONAL FOOTPRINT", Rect2(14, 14, inner_w - 28, 14), 10, "gold", 600)
     _route_bar(map, Vector2(86, 92), 120, -12)
     _route_bar(map, Vector2(198, 74), 94, 29)
@@ -905,8 +970,9 @@ func _build_desktop_live() -> void:
     var world = _panel(canvas, "WorldPropertyView", Rect2(34,104,560,552), "surface", "border", 24)
     _label(world, "Head", "WORLD / PROPERTY VIEW", Rect2(21,19,250,16), 11, "gold", 600)
     var scene = _panel(world, "Scene", Rect2(21,57,516,316), "surface_2", "border", 20)
-    _label(scene, "Placeholder", "LIVE 3D RESTORATION SCENE", Rect2(131,143,270,22), 15, "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
-    _label(world, "Meta", "Old Dock Warehouse • %d%% restored\nCentral District • Demand HIGH • Rival pressure LOW" % _restoration(), Rect2(21,401,500,54), 14, "text", 400)
+    scene.clip_contents = true
+    _add_art(scene, "DesktopRestorationArt", Rect2(0,0,516,316), RESTORATION_ART, 1.0)
+    _label(world, "Meta", "Old Dock Warehouse • %d%% restored\nCentral District • %d customer demand • %d rivals tracked" % [_restoration(), _demand_remaining(), _rival_count()], Rect2(21,401,500,54), 14, "text", 400)
     _transparent_button(world, "OpenProperty", Rect2(0,0,560,552), _show_view.bind("property"))
 
     _desktop_stat(canvas, "Cash", Rect2(620,104,190,96), "CASH", _money(_cash()))
@@ -950,7 +1016,8 @@ func _build_tablet_live() -> void:
     _label(hero, "Title", _objective_title(), Rect2(22,52,420,36), 28, "text", 700)
     _label(hero, "Meta", _stage_meta(), Rect2(22,96,360,20), 14, "muted", 400)
     var scene = _panel(hero, "Scene", Rect2(506,22,240,206), "surface_2", "border", 20)
-    _label(scene, "Placeholder", "3D PROPERTY VIEW", Rect2(52,92,150,20), 11, "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
+    scene.clip_contents = true
+    _add_art(scene, "TabletRestorationArt", Rect2(0,0,240,206), RESTORATION_ART, 1.0)
     var xs = [32.0,228.0,424.0,620.0]
     var names = ["CASH","WORTH","REPUTATION","GOODS"]
     var vals = [_money(_cash()),_money(_worth()),str(_rep()),str(_goods())]

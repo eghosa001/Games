@@ -30,7 +30,8 @@ func _run()->void:
 
     for target in TARGETS:
         root.size=target;await process_frame;hud._layout_responsive();await process_frame
-        if target.x<1000:
+        var layout_kind:=str(hud.get("_layout_kind"))
+        if layout_kind=="mobile":
             var nav:=hud.get("bottom_nav") as Control
             var scroll:=hud.get("mobile_scroll") as Control
             check("%s bottom nav contained" % target,_inside(nav,target))
@@ -39,6 +40,8 @@ func _run()->void:
             check("%s five primary destinations" % target,buttons.size()==5)
             for b in buttons:
                 check("%s nav target >=48" % target,(b as Button).size.y>=MIN_TOUCH)
+        elif layout_kind=="tablet":
+            check("%s tablet executive canvas" % target,hud.get("root").get_node_or_null("TabletLive")!=null)
         else:
             check("%s desktop executive canvas" % target,hud.get("root").get_node_or_null("DesktopExecutive")!=null)
 
