@@ -682,38 +682,55 @@ func _build_mobile_live() -> void:
     _remember("signal_footer", _label(signals, "Footer", _signal_footer(), Rect2(15, 153, inner_w - 30, 18), 9, "success", 600))
 
 func _build_mobile_operations() -> void:
+    var property_ready := _stage() == "Operational"
+    var business_ready := _business_open()
     var w = _content_width()
-    _header("BUSINESS OPERATIONS", "RESTORA GOODS • %s" % ("OPERATING" if _business_open() else "PAUSED"), "", "success")
+    var status_text := "OPERATING" if business_ready else ("READY TO OPEN" if property_ready else "RESTORATION REQUIRED")
+    _header("BUSINESS OPERATIONS", "%s • %s" % [_building_name().to_upper(), status_text], "", "success" if business_ready else "gold")
     var day_chip = _panel(mobile_content, "DayChip", Rect2(w - 98, 20, 80, 34), "surface_2", "gold", 17)
     _label(day_chip, "Day", "DAY %d" % _day(), Rect2(12, 10, 56, 14), 9, "gold", 600, HORIZONTAL_ALIGNMENT_CENTER)
     var inner_w = w - 36.0
     var gap = 6.0
     var tile_w = (inner_w - gap) * 0.5
     _stat_tile(mobile_content, "inputs", 18, 82, tile_w, "INPUTS", str(_inputs()), "READY" if _inputs() > 0 else "LOW")
-    _stat_tile(mobile_content, "goods", 18 + tile_w + gap, 82, tile_w, "GOODS", str(_goods()), "READY")
+    _stat_tile(mobile_content, "goods", 18 + tile_w + gap, 82, tile_w, "GOODS", str(_goods()), "READY" if _goods() > 0 else "EMPTY")
 
     var prod = _panel(mobile_content, "ProductionControl", Rect2(18, 204, inner_w, 150), "surface", "border", 18)
     _label(prod, "Head", "PRODUCTION CONTROL", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
-    _remember("production_rate", _label(prod, "Rate", _production_rate_text(), Rect2(16, 42, inner_w - 32, 18), 13, "text", 600))
-    _label(prod, "Meta", "Customer demand remaining today: %d units." % _demand_remaining(), Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
     var half = (inner_w - 42.0) * 0.5
-    if _business_open():
+    if not property_ready:
+        _remember("production_rate", _label(prod, "Rate", "RESTORE %s FIRST" % _building_name().to_upper(), Rect2(16, 42, inner_w - 32, 18), 13, "text", 600))
+        _label(prod, "Meta", "Business selection unlocks when this property reaches Operational.", Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
+        _frame_button(prod, "ContinueRestoration", "CONTINUE RESTORATION", Rect2(16, 104, inner_w - 32, 34), _show_view.bind("property"), false, true, 9)
+    elif business_ready:
+        _remember("production_rate", _label(prod, "Rate", _production_rate_text(), Rect2(16, 42, inner_w - 32, 18), 13, "text", 600))
+        _label(prod, "Meta", "Customer demand remaining today: %d units." % _demand_remaining(), Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
         _frame_button(prod, "ProduceBatch", "PRODUCE BATCH", Rect2(16, 104, half, 34), _produce, false, true, 9)
         _frame_button(prod, "BuyInputs", "BUY INPUTS", Rect2(26 + half, 104, half, 34), _buy_inputs, false, false, 9)
     else:
+        _remember("production_rate", _label(prod, "Rate", "%s IS READY FOR A BUSINESS" % _building_name().to_upper(), Rect2(16, 42, inner_w - 32, 18), 13, "text", 600))
+        _label(prod, "Meta", "Choose what this restored property will operate before buying inputs.", Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
         _frame_button(prod, "ChooseBusiness", "CHOOSE BUSINESS", Rect2(16, 104, half, 34), _open_business_choices, false, true, 9)
         _frame_button(prod, "BackProperty", "VIEW PROPERTY", Rect2(26 + half, 104, half, 34), _show_view.bind("property"), false, false, 9)
 
     var commercial = _panel(mobile_content, "CommercialControls", Rect2(18, 370, inner_w, 176), "surface", "border", 18)
     _label(commercial, "Head", "COMMERCIAL CONTROLS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
-    _remember("commercial_body", _label(commercial, "Body", _commercial_text(), Rect2(16, 44, inner_w - 32, 88), 12, "text", 400))
-    _transparent_button(commercial, "OpenCommercial", Rect2(0, 0, inner_w, 176), _open_commercial_actions)
+    if business_ready:
+        _remember("commercial_body", _label(commercial, "Body", _commercial_text(), Rect2(16, 44, inner_w - 32, 88), 12, "text", 400))
+        _transparent_button(commercial, "OpenCommercial", Rect2(0, 0, inner_w, 176), _open_commercial_actions)
+    else:
+        var commercial_lock := "Restore the property first." if not property_ready else "Choose a business to unlock pricing, staff, marketing and contracts."
+        _remember("commercial_body", _label(commercial, "Body", "LOCKED\n" + commercial_lock, Rect2(16, 44, inner_w - 32, 88), 12, "muted", 500))
 
     var equip = _panel(mobile_content, "Equipment", Rect2(18, 562, inner_w, 112), "surface", "border", 18)
     _label(equip, "Head", "EQUIPMENT HEALTH", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
-    _label(equip, "Body", "Fleet Level %d  •  %d inputs  •  %d finished goods" % [maxi(1,_transport_level()), _inputs(), _goods()], Rect2(16, 46, inner_w - 32, 36), 12, "text", 600)
-    _label(equip, "Meta", "No maintenance action required.", Rect2(16, 76, inner_w - 32, 14), 10, "success", 600)
-    _transparent_button(equip, "OpenEquipment", Rect2(0, 0, inner_w, 112), _open_screen.bind("ProductionControlPanel"))
+    if business_ready:
+        _label(equip, "Body", "Fleet Level %d  •  %d inputs  •  %d finished goods" % [maxi(1,_transport_level()), _inputs(), _goods()], Rect2(16, 46, inner_w - 32, 36), 12, "text", 600)
+        _label(equip, "Meta", "No maintenance action required.", Rect2(16, 76, inner_w - 32, 14), 10, "success", 600)
+        _transparent_button(equip, "OpenEquipment", Rect2(0, 0, inner_w, 112), _open_screen.bind("ProductionControlPanel"))
+    else:
+        _label(equip, "Body", "Equipment unlocks with the first operating business.", Rect2(16, 46, inner_w - 32, 36), 12, "muted", 500)
+        _label(equip, "Meta", "No equipment action required yet.", Rect2(16, 76, inner_w - 32, 14), 10, "muted", 600)
 
 func _build_mobile_finance() -> void:
     var w = _content_width()
