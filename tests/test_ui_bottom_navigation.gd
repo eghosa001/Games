@@ -34,7 +34,7 @@ func _run() -> void:
     check(nav.size == Vector2(366, 70), "bottom navigation matches phone size")
 
     var buttons: Array = hud.get("mode_buttons")
-    var expected := ["LIVE", "OPERATE", "EMPIRE", "WORLD", "MORE"]
+    var expected := ["HOME", "BUSINESS", "PROPERTY", "FINANCE", "MORE"]
     check(buttons.size() == 5, "five navigation items")
     for i in range(5):
         var button := buttons[i] as Button
@@ -46,25 +46,25 @@ func _run() -> void:
         else:
             check(not button.tooltip_text.is_empty(), "locked navigation explains unlock " + expected[i])
 
-    check(not (buttons[0] as Button).disabled and not (buttons[1] as Button).disabled and not (buttons[4] as Button).disabled, "core navigation is available from Level 1")
-    check((buttons[2] as Button).disabled and (buttons[3] as Button).disabled, "Empire and World wait for Level 3")
+    check(not (buttons[0] as Button).disabled and not (buttons[1] as Button).disabled and not (buttons[2] as Button).disabled and not (buttons[4] as Button).disabled, "home, business, property and more are available from Level 1")
+    check((buttons[3] as Button).disabled, "Finance waits for Company Level 2")
 
     var progression = game.get_node("Systems/StrategicProgression")
-    state.set_value("progression", "xp", 250)
-    state.set_value("progression", "level", 3)
+    state.set_value("progression", "xp", 100)
+    state.set_value("progression", "level", 2)
     state.set_value("progression", "unlocks", [])
     progression._backfill_semantic_unlocks()
     hud._rebuild_current()
     await process_frame
 
     buttons = hud.get("mode_buttons")
-    check(not (buttons[2] as Button).disabled and not (buttons[3] as Button).disabled, "Level 3 unlocks Empire and World navigation")
+    check(not (buttons[3] as Button).disabled, "Level 2 unlocks Finance navigation")
     (buttons[2] as Button).pressed.emit()
     await process_frame
-    check(int(hud.get("active_tab")) == 2, "unlocked Empire navigation works")
+    check(int(hud.get("active_tab")) == 2 and str(hud.get("active_view")) == "property", "Property navigation opens the building restoration screen")
     (buttons[3] as Button).pressed.emit()
     await process_frame
-    check(int(hud.get("active_tab")) == 3, "unlocked World navigation works")
+    check(int(hud.get("active_tab")) == 3 and str(hud.get("active_view")) == "finance", "Finance navigation opens the ledger")
 
     game.queue_free()
     await process_frame
