@@ -252,8 +252,8 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
 
     tabs = HBoxContainer.new()
     tabs.name = "ProductionTabs"
-    tabs.position = Vector2(3, 6)
-    tabs.size = Vector2(bottom_nav.size.x - 6.0, 58)
+    tabs.position = Vector2(2, 5)
+    tabs.size = Vector2(360.0, 58)
     tabs.add_theme_constant_override("separation", 0)
     bottom_nav.add_child(tabs)
 
@@ -262,8 +262,8 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
         var button := Button.new()
         button.name = "Nav_" + labels[i]
         button.text = ""
-        button.custom_minimum_size = Vector2((bottom_nav.size.x - 6.0) / 5.0, 58)
-        button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        button.custom_minimum_size = Vector2(72.0, 58)
+        button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
         button.focus_mode = Control.FOCUS_NONE
         button.add_theme_stylebox_override("normal", _nav_style(i == active_tab))
         button.add_theme_stylebox_override("hover", _nav_style(i == active_tab, true))
@@ -392,10 +392,10 @@ func _stat_tile(parent_node: Node, key: String, x: float, y: float, w: float, la
 func _content_width() -> float:
     return mobile_content.size.x if mobile_content != null and mobile_content.size.x > 0.0 else minf(MOBILE_DESIGN_W, get_viewport().get_visible_rect().size.x)
 
-func _header(title: String, subtitle: String, right_text := "") -> void:
+func _header(title: String, subtitle: String, right_text := "", status_role := "gold") -> void:
     var w := _content_width()
     _remember("title", _label(mobile_content, "Title", title, Rect2(18, 18, w - 120, 34), 24 if title == "RESTORA" else 21, "text", 700))
-    status_label = _label(mobile_content, "Status", subtitle, Rect2(18, 48 if title != "RESTORA" else 52, w - 130, 16), 9, "gold", 600)
+    status_label = _label(mobile_content, "Status", subtitle, Rect2(18, 48 if title != "RESTORA" else 52, w - 130, 16), 9, status_role, 600)
     _remember("status", status_label)
     if not right_text.is_empty():
         _remember("right_status", _label(mobile_content, "RightStatus", right_text, Rect2(w - 104, 24, 84, 18), 9 if title != "RESTORA" else 11, "plum" if active_view == "settings" else "text", 600, HORIZONTAL_ALIGNMENT_RIGHT))
@@ -444,7 +444,9 @@ func _build_mobile_live() -> void:
 
 func _build_mobile_operations() -> void:
     var w := _content_width()
-    _header("BUSINESS OPERATIONS", "RESTORA GOODS • %s" % ("OPERATING" if _business_open() else "PAUSED"), "DAY %d" % _day())
+    _header("BUSINESS OPERATIONS", "RESTORA GOODS • %s" % ("OPERATING" if _business_open() else "PAUSED"), "", "success")
+    var day_chip := _panel(mobile_content, "DayChip", Rect2(w - 98, 20, 80, 34), "surface_2", "gold", 17)
+    _label(day_chip, "Day", "DAY %d" % _day(), Rect2(12, 10, 56, 14), 9, "gold", 600, HORIZONTAL_ALIGNMENT_CENTER)
     var inner_w := w - 36.0
     var gap := 6.0
     var tile_w := (inner_w - gap) * 0.5
@@ -472,7 +474,7 @@ func _build_mobile_operations() -> void:
 
 func _build_mobile_finance() -> void:
     var w := _content_width()
-    _header("FINANCE COMMAND", "LIVE LEDGER • HEALTHY")
+    _header("FINANCE COMMAND", "LIVE LEDGER • HEALTHY", "", "success")
     var inner_w := w - 36.0
     var gap := 6.0
     var tile_w := (inner_w - gap) * 0.5
