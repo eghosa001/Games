@@ -297,10 +297,10 @@ func _load_tutorial_state() -> void:
         dismissed = false
         return
     tutorial.load_snapshot({
-        "step": int(state.get_value("tutorial", "step", 0)),
-        "completed": bool(state.get_value("tutorial", "completed", false))
+        "step": int(state.get_value("progression", "tutorial_step", 0)),
+        "completed": bool(state.get_value("progression", "tutorial_completed", false))
     })
-    dismissed = bool(state.get_value("tutorial", "dismissed", false))
+    dismissed = bool(state.get_value("progression", "tutorial_dismissed", false))
     if tutorial.completed:
         dismissed = true
 
@@ -308,9 +308,9 @@ func _save_tutorial_state() -> void:
     var state = _state()
     if state == null:
         return
-    state.set_value("tutorial", "step", int(tutorial.step))
-    state.set_value("tutorial", "completed", bool(tutorial.completed))
-    state.set_value("tutorial", "dismissed", dismissed)
+    state.set_value("progression", "tutorial_step", int(tutorial.step))
+    state.set_value("progression", "tutorial_completed", bool(tutorial.completed))
+    state.set_value("progression", "tutorial_dismissed", dismissed)
 
 func open_tutorial() -> void:
     dismissed = false
