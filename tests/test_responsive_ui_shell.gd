@@ -26,7 +26,7 @@ func _run()->void:
         var buttons:Array=hud.get("mode_buttons")
         check("%s five tabs" % target,buttons.size()==5)
         for b in buttons:
-            check("%s tab touch >=44" % target,(b as Button).size.y>=44.0)
+            check("%s tab touch >=48" % target,(b as Button).size.y>=48.0)
     root.size=Vector2i(1280,720);await process_frame;hud._layout_responsive();await process_frame
     check("desktop uses executive Figma canvas",hud.get("root").get_node_or_null("DesktopExecutive")!=null)
     check("desktop has no legacy action dock",hud.get("root").find_child("ActionDock",true,false)==null)
