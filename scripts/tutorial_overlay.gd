@@ -205,6 +205,15 @@ func _layout_responsive() -> void:
     if w <= 1.0 or h <= 1.0:
         return
     var narrow := w < 700.0
+    var coordinator = _coordinator()
+    if coordinator != null and coordinator.has_method("get_active_screen") and str(coordinator.get_active_screen()) != "":
+        panel.hide()
+        collapsed_button.hide()
+        return
+    if _coordinator_active:
+        panel.hide()
+        collapsed_button.hide()
+        return
 
     if dismissed:
         panel.hide()
