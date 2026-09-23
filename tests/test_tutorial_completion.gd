@@ -58,6 +58,8 @@ func _run() -> void:
     check(hud != null, "Figma HUD is available")
     check(overlay != null, "Tutorial overlay is mounted")
     check(state != null, "Canonical GameState is available")
+    var tutorial_overlay_source := FileAccess.get_file_as_string("res://scripts/tutorial_overlay.gd")
+    check(tutorial_overlay_source.contains("const UPDATE_INTERVAL: float = 0.10"), "Tutorial refresh work is throttled")
     if hud == null or overlay == null or state == null:
         game.queue_free()
         await process_frame
