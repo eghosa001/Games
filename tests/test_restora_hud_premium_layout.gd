@@ -3,7 +3,7 @@ var failed:=0
 func _initialize()->void:call_deferred("_run")
 func check(label:String,ok:bool)->void:
     if ok:print("PASS: "+label)
-    else:failed+=1;push_error("FAIL: "+label)
+    else:failed += 1;push_error("FAIL: "+label)
 func _run()->void:
     root.size=Vector2i(390,844)
     var p:=load("res://scenes/Main.tscn") as PackedScene
@@ -31,4 +31,4 @@ func _run()->void:
     check("desktop world panel",desktop!=null and desktop.get_node_or_null("WorldPropertyView")!=null)
     check("desktop quick actions",desktop!=null and desktop.get_node_or_null("QuickActions")!=null)
     game.queue_free();await process_frame
-    quit(1 if failed>0 else 0)
+    quit(1 if failed > 0 else 0)
