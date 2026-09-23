@@ -141,28 +141,37 @@ func _jv_status_line(treaty_id: String) -> String:
 func _layout() -> void:
     if panel == null: return
     var size := get_viewport().get_visible_rect().size; visible_width = size.x; var narrow := size.x < 760.0; var phone := size.x < 430.0
-    var width := maxf(304.0,size.x-16.0) if narrow else minf(560.0,size.x-36.0); var height := maxf(500.0,size.y-78.0) if narrow else minf(680.0,size.y-100.0)
-    panel.position = Vector2(8,70) if narrow else Vector2(maxf(18.0,(size.x-width)*0.5),76); panel.size = Vector2(width,height)
-    var title := panel.get_node_or_null("Title") as Label; if title != null: title.position=Vector2(14,10); title.size=Vector2(width-108,30); title.add_theme_font_size_override("font_size",18 if phone else 20)
+    var short_phone := narrow and size.y < 560.0
+    var width := maxf(304.0,size.x-16.0) if narrow else minf(560.0,size.x-36.0)
+    var panel_y := 34.0 if short_phone else (70.0 if narrow else 76.0)
+    var height := (size.y - panel_y - 8.0) if narrow else minf(680.0,size.y-100.0)
+    panel.position = Vector2(8,panel_y) if narrow else Vector2(maxf(18.0,(size.x-width)*0.5),76); panel.size = Vector2(width,height)
+    var title := panel.get_node_or_null("Title") as Label; if title != null: title.position=Vector2(14,10); title.size=Vector2(width-108,30); title.add_theme_font_size_override("font_size",17 if short_phone else (18 if phone else 20))
     var subtitle := panel.get_node_or_null("Subtitle") as Label
     if subtitle != null:
-        subtitle.position=Vector2(14,58); subtitle.size=Vector2(width-28,42)
+        subtitle.position=Vector2(14,44 if short_phone else 58); subtitle.size=Vector2(width-28,26 if short_phone else 42)
         subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        subtitle.add_theme_font_size_override("font_size", 9 if phone else 10)
-    var close := panel.get_node_or_null("CloseButton") as Button; if close != null: close.position=Vector2(width-88,7); close.size=Vector2(80,46)
-    rival_label.position=Vector2(14,104); rival_label.size=Vector2(width-28,24); rival_label.add_theme_font_size_override("font_size",10 if phone else 12)
+        subtitle.add_theme_font_size_override("font_size", 8 if short_phone else (9 if phone else 10))
+    var close := panel.get_node_or_null("CloseButton") as Button; if close != null: close.position=Vector2(width-88,7); close.size=Vector2(80,40 if short_phone else 46)
+    rival_label.position=Vector2(14,74 if short_phone else 104); rival_label.size=Vector2(width-28,18 if short_phone else 24); rival_label.add_theme_font_size_override("font_size",9 if short_phone else (10 if phone else 12))
     var prev := panel.get_node_or_null("PreviousRival") as Button; var next := panel.get_node_or_null("NextRival") as Button; var nav_w: float=(width-35.0)*0.5
-    if prev != null: prev.position=Vector2(14,134); prev.size=Vector2(nav_w,44)
-    if next != null: next.position=Vector2(21+nav_w,134); next.size=Vector2(nav_w,44)
-    treaty_scroll.position=Vector2(14,186); treaty_scroll.size=Vector2(width-28,maxf(150.0,height-398.0)); treaty_list.custom_minimum_size.x=width-28
+    var nav_y := 96.0 if short_phone else 134.0
+    var nav_h := 40.0 if short_phone else 44.0
+    if prev != null: prev.position=Vector2(14,nav_y); prev.size=Vector2(nav_w,nav_h)
+    if next != null: next.position=Vector2(21+nav_w,nav_y); next.size=Vector2(nav_w,nav_h)
+    var treaty_y := 142.0 if short_phone else 186.0
+    var actions_y := height-(164.0 if short_phone else 198.0)
+    treaty_scroll.position=Vector2(14,treaty_y); treaty_scroll.size=Vector2(width-28,maxf(58.0,actions_y-treaty_y-8.0)); treaty_list.custom_minimum_size.x=width-28
     for child in treaty_list.get_children():
-        if child is Button: child.custom_minimum_size=Vector2(width-28,44); child.add_theme_font_size_override("font_size",9 if phone else 10)
-    var actions_title := panel.get_node_or_null("ActionsTitle") as Label; var actions_y := height-198.0
+        if child is Button: child.custom_minimum_size=Vector2(width-28,40 if short_phone else 44); child.add_theme_font_size_override("font_size",8 if short_phone else (9 if phone else 10))
+    var actions_title := panel.get_node_or_null("ActionsTitle") as Label
     if actions_title != null: actions_title.position=Vector2(14,actions_y); actions_title.size=Vector2(width-28,18)
     var names := ["AcceptIncoming","SendGift","CancelTreaty","RefreshTreatyLedger"]; var bw: float=(width-35.0)*0.5
     for i in range(names.size()):
         var b := panel.get_node_or_null(names[i]) as Button
         if b != null:
-            b.custom_minimum_size=Vector2(0,44); b.clip_text=true
-            b.position=Vector2(14+(i%2)*(bw+7),actions_y+24+(i/2)*50); b.size=Vector2(bw,44); b.add_theme_font_size_override("font_size",9 if phone else 10)
-    summary.position=Vector2(14,height-72); summary.size=Vector2(width-28,62)
+            var action_h := 40.0 if short_phone else 44.0
+            var action_gap := 44.0 if short_phone else 50.0
+            b.custom_minimum_size=Vector2(0,action_h); b.clip_text=true
+            b.position=Vector2(14+(i%2)*(bw+7),actions_y+20+(i/2)*action_gap); b.size=Vector2(bw,action_h); b.add_theme_font_size_override("font_size",8 if short_phone else (9 if phone else 10))
+    summary.position=Vector2(14,height-(50.0 if short_phone else 72.0)); summary.size=Vector2(width-28,44 if short_phone else 62)
