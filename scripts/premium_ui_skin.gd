@@ -41,10 +41,8 @@ func _on_theme_changed(_mode: String) -> void:
     _run_theme_refresh()
     queue_redraw()
 
-const PRIMARY_SECTORS := ["LIVE", "BUSINESS", "EMPIRE", "WORLD"]
 const CONTEXT_RAIL_NAME := "PremiumContextRail"
 
-var hud_root: Control
 var _theme: Theme
 var _theme_refresh_queued := false
 var _pulse := 0.0
@@ -75,15 +73,7 @@ func _process(delta: float) -> void:
         _refresh_active_screen()
 
 func _install() -> void:
-    var main_hud := get_node_or_null("/root/Renew/UI/MainHUD")
-    if main_hud != null:
-        hud_root = main_hud.get("root") as Control
-        _align_navigation(main_hud)
-    if hud_root == null and get_parent() is Control:
-        hud_root = get_parent() as Control
     _apply_theme_to_ui()
-    if hud_root != null:
-        _style_recursive(hud_root)
     _refresh_active_screen()
     queue_redraw()
 
@@ -95,24 +85,8 @@ func _queue_theme_refresh() -> void:
 
 func _run_theme_refresh() -> void:
     _theme_refresh_queued = false
-    var main_hud := get_node_or_null("/root/Renew/UI/MainHUD")
-    if main_hud != null:
-        _align_navigation(main_hud)
     _apply_theme_to_ui()
-    if hud_root != null and is_instance_valid(hud_root):
-        _style_recursive(hud_root)
     _refresh_active_screen()
-
-func _align_navigation(main_hud: Node) -> void:
-    var left_rail := main_hud.get("left_rail") as Panel
-    if left_rail == null or left_rail.get_child_count() == 0:
-        return
-    var stack := left_rail.get_child(0)
-    var index := 0
-    for child in stack.get_children():
-        if child is Button and index < PRIMARY_SECTORS.size():
-            (child as Button).text = PRIMARY_SECTORS[index]
-            index += 1
 
 func _apply_theme_to_ui() -> void:
     var manager = _theme_manager()
