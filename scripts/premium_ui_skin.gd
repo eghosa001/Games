@@ -592,7 +592,7 @@ func _context_tagline(active_name: String) -> String:
         return "ORGANISATION & TALENT"
     if t.contains("TECHNOLOGY") or t.contains("INTELLIGENCE") or t.contains("HISTORY") or t.contains("NEWS"):
         return "STRATEGIC INTELLIGENCE"
-    return "EXECUTIVE COMMAND _surface()"
+    return "EXECUTIVE COMMAND SURFACE"
 
 func _context_signal(active_name: String) -> String:
     var t := active_name.to_upper()
