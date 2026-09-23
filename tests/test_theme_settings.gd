@@ -48,6 +48,48 @@ func _run() -> void:
     check("audio exposes persistent music level", audio.contains("func set_music_level"))
     check("audio exposes persistent SFX level", audio.contains("func set_sfx_level"))
 
+    var live_manager := get_root().get_node_or_null("RestoraThemeManager")
+    var scene_resource := load("res://scenes/Main.tscn") as PackedScene
+    var game := scene_resource.instantiate() if scene_resource != null else null
+    check("main scene instantiates for theme propagation", game != null)
+    if game != null:
+        get_root().add_child(game)
+        await process_frame
+        await process_frame
+        if live_manager != null:
+            live_manager.set_mode("light")
+            await process_frame
+            await process_frame
+            var expected_theme: Theme = live_manager.get_theme_resource()
+            var ui := game.get_node_or_null("UI")
+            var mounted := [
+                "TechnologyPanel", "HistoryPanel", "NewsPanel", "AlliancePanel",
+                "HeadquartersPanel", "CollectionPanel", "LiveOpsPanel", "CustomerSegmentsUI",
+                "RenewDiplomacyUI", "InfrastructurePanel", "ContractPanel", "EmployeePanel",
+                "DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel",
+                "RegionsPanel", "WorldOpportunitiesPanel", "BusinessOperationsPanel",
+                "ProductionControlPanel", "SupplyChainPanel", "EmpireExpansionPanel",
+                "EmpireIntelligencePanel", "SaveLoadPanel", "SettingsPanel"
+            ]
+            var themed := 0
+            for screen_name in mounted:
+                var screen = ui.get_node_or_null(screen_name) if ui != null else null
+                if screen == null:
+                    continue
+                var controls: Array[Node] = screen.find_children("*", "Control", true, false)
+                var has_theme := screen is Control and (screen as Control).theme == expected_theme
+                if not has_theme:
+                    for candidate in controls:
+                        if candidate is Control and (candidate as Control).theme == expected_theme:
+                            has_theme = true
+                            break
+                if has_theme:
+                    themed += 1
+            check("all mounted primary screens inherit light theme", themed == mounted.size())
+            live_manager.set_mode("dark")
+        game.queue_free()
+        await process_frame
+
     print("--- THEME & SETTINGS SUMMARY ---")
     print("Checks: %d | Failures: %d" % [checks, failed])
     quit(1 if failed > 0 else 0)
