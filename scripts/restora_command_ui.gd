@@ -322,6 +322,10 @@ func _label(parent_node: Node, name: String, text_value: String, rect: Rect2, si
     l.text = text_value
     l.position = rect.position
     l.size = rect.size
+    # System font metrics can exceed Figma's nominal text box height on Linux/Android.
+    # Keep the authored x/width intact while giving display text enough vertical room.
+    if size_px >= 15:
+        l.size.y = maxf(l.size.y, float(size_px) + 10.0)
     l.mouse_filter = Control.MOUSE_FILTER_IGNORE
     l.add_theme_font_override("font", _font(weight))
     l.add_theme_font_size_override("font_size", size_px)
@@ -329,7 +333,7 @@ func _label(parent_node: Node, name: String, text_value: String, rect: Rect2, si
     l.horizontal_alignment = align
     l.vertical_alignment = VERTICAL_ALIGNMENT_TOP
     l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+    l.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
     parent_node.add_child(l)
     return l
 
@@ -453,7 +457,7 @@ func _build_mobile_operations() -> void:
     var prod = _panel(mobile_content, "ProductionControl", Rect2(18, 204, inner_w, 150), "surface", "border", 18)
     _label(prod, "Head", "PRODUCTION CONTROL", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     _remember("production_rate", _label(prod, "Rate", _production_rate_text(), Rect2(16, 42, inner_w - 32, 18), 13, "text", 600))
-    _label(prod, "Meta", "Demand is healthy. One production batch can be completed safely.", Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
+    _label(prod, "Meta", "Demand is healthy. One batch can be completed safely.", Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
     var half = (inner_w - 42.0) * 0.5
     if _business_open():
         _frame_button(prod, "ProduceBatch", "PRODUCE BATCH", Rect2(16, 104, half, 34), _produce, false, true, 9)
@@ -469,7 +473,7 @@ func _build_mobile_operations() -> void:
 
     var equip = _panel(mobile_content, "Equipment", Rect2(18, 562, inner_w, 112), "surface", "border", 18)
     _label(equip, "Head", "EQUIPMENT HEALTH", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
-    _label(equip, "Body", "LINE 91%   •   FLEET %d%%   •   STORE 88%%" % clampi(72 + _transport_level() * 6, 72, 96), Rect2(16, 46, inner_w - 32, 18), 12, "text", 600)
+    _label(equip, "Body", "LINE 91%%   •   FLEET %d%%   •   STORE 88%%" % clampi(72 + _transport_level() * 6, 72, 96), Rect2(16, 46, inner_w - 32, 18), 12, "text", 600)
     _label(equip, "Meta", "No maintenance action required.", Rect2(16, 76, inner_w - 32, 14), 10, "success", 600)
     _transparent_button(equip, "OpenEquipment", Rect2(0, 0, inner_w, 112), _open_screen.bind("ProductionControlPanel"))
 
@@ -755,7 +759,6 @@ func _build_mobile_settings() -> void:
     _label(save, "Auto", "AUTOSAVE", Rect2(16,38,180,16), 11, "text", 600)
     _label(save, "AutoMeta", "Enabled on mobile pause/close", Rect2(16,58,214,14), 9, "muted", 400)
     _frame_button(save, "AutosaveState", "ON", Rect2(inner_w-116,34,98,36), _save_company)
-    _transparent_text_button(save, "CompanyControls", "SAVE  •  LOAD  •  NEW DYNASTY", Rect2(16,62,inner_w-32,20), _open_screen.bind("SaveLoadPanel"), "muted")
 
 func _toggle(parent_node: Node, name: String, pos: Vector2, on: bool, callback: Callable) -> void:
     var track = Panel.new()
