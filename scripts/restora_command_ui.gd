@@ -59,8 +59,7 @@ func _process(delta: float) -> void:
         return
     if sig != _last_signature:
         _last_signature = sig
-        _last_progress_level = _company_level()
-    _refresh()
+        _refresh()
 
 func _theme_manager():
     return get_node_or_null("/root/RestoraThemeManager")
@@ -210,6 +209,7 @@ func _rebuild_current() -> void:
     else:
         _build_mobile_host()
         _build_mobile_view()
+    _last_progress_level = _company_level()
     _refresh()
 
 func _show_view(view_name: String) -> void:
@@ -313,7 +313,7 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
         button.text = ""
         button.custom_minimum_size = Vector2(item_w, 58)
         button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-        button.focus_mode = Control.FOCUS_NONE
+        button.focus_mode = Control.FOCUS_ALL
         button.add_theme_stylebox_override("normal", _nav_style(i == active_tab))
         button.add_theme_stylebox_override("hover", _nav_style(i == active_tab, true))
         button.add_theme_stylebox_override("pressed", _nav_style(true))
