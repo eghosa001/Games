@@ -311,7 +311,7 @@ func _solid_round(color: Color, radius: int) -> StyleBoxFlat:
 
 func _panel(parent_node: Node, name: String, rect: Rect2, bg_role := "surface", border_role := "border", radius := 18) -> Panel:
     var p := Panel.new()
-    p.name = name
+    p.get("name", "REGION") = name
     p.position = rect.position
     p.size = rect.size
     p.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -593,11 +593,11 @@ func _build_mobile_world() -> void:
     ]
     for p in pts:
         var dot := Panel.new()
-        dot.position = Vector2(minf(float(p.x), inner_w - 40), float(p.y))
+        dot.position = Vector2(minf(float(p.get("x", 0.0)), inner_w - 40), float(p.get("y", 0.0)))
         dot.size = Vector2(22,22)
-        dot.add_theme_stylebox_override("panel", _solid_round(_color(str(p.role)), 11))
+        dot.add_theme_stylebox_override("panel", _solid_round(_color(str(p.get("role", "muted"))), 11))
         map.add_child(dot)
-        _label(map, "Region" + str(p.name), str(p.name), Rect2(dot.position.x - 18, dot.position.y + 28, 64, 14), 8, str(p.role), 600, HORIZONTAL_ALIGNMENT_CENTER)
+        _label(map, "Region" + str(p.get("name", "REGION")), str(p.get("name", "REGION")), Rect2(dot.position.x - 18, dot.position.y + 28, 64, 14), 8, str(p.get("role", "muted")), 600, HORIZONTAL_ALIGNMENT_CENTER)
 
     var region := _panel(mobile_content, "RegionDetail", Rect2(18, 320, inner_w, 142), "surface", "border", 18)
     _label(region, "Head", _current_region_name(), Rect2(16, 14, inner_w - 140, 20), 15, "text", 700)
@@ -693,7 +693,7 @@ func _build_mobile_more() -> void:
     var col_w := (inner_w - gap) * 0.5
     for i in range(tiles.size()):
         var col := i % 2
-        var row := i / 2
+        var row := floori(float(i) / 2.0)
         var x := 18.0 + col * (col_w + gap)
         var y := 196.0 + row * 94.0
         var p := _panel(mobile_content, "MoreTile%d" % i, Rect2(x,y,col_w,82), "selected" if i == 0 else "surface", "plum" if i == 0 else "border", 16)
