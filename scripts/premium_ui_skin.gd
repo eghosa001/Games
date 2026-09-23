@@ -44,6 +44,9 @@ func _on_theme_changed(_mode: String) -> void:
 const CONTEXT_RAIL_NAME := "PremiumContextRail"
 
 var _theme: Theme
+var _font_regular: SystemFont
+var _font_semibold: SystemFont
+var _font_bold: SystemFont
 var _theme_refresh_queued := false
 var _pulse := 0.0
 var _redraw_clock := 0.0
@@ -52,6 +55,7 @@ var _last_active_screen := ""
 
 func _ready() -> void:
     mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _make_fonts()
     set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     var manager = _theme_manager()
     _theme = manager.get_theme_resource() if manager != null and manager.has_method("get_theme_resource") else load(THEME_PATH) as Theme
@@ -60,6 +64,17 @@ func _ready() -> void:
     if not get_tree().tree_changed.is_connected(_queue_theme_refresh):
         get_tree().tree_changed.connect(_queue_theme_refresh)
     call_deferred("_install")
+
+func _make_fonts() -> void:
+    _font_regular = SystemFont.new()
+    _font_regular.font_names = PackedStringArray(["Inter", "Roboto", "Noto Sans", "Arial"])
+    _font_regular.font_weight = 400
+    _font_semibold = SystemFont.new()
+    _font_semibold.font_names = PackedStringArray(["Inter", "Roboto", "Noto Sans", "Arial"])
+    _font_semibold.font_weight = 600
+    _font_bold = SystemFont.new()
+    _font_bold.font_names = PackedStringArray(["Inter", "Roboto", "Noto Sans", "Arial"])
+    _font_bold.font_weight = 700
 
 func _process(delta: float) -> void:
     _pulse += delta
@@ -74,6 +89,7 @@ func _process(delta: float) -> void:
 
 func _install() -> void:
     _apply_theme_to_ui()
+    _style_all_ui()
     _refresh_active_screen()
     queue_redraw()
 
@@ -86,6 +102,7 @@ func _queue_theme_refresh() -> void:
 func _run_theme_refresh() -> void:
     _theme_refresh_queued = false
     _apply_theme_to_ui()
+    _style_all_ui()
     _refresh_active_screen()
 
 func _apply_theme_to_ui() -> void:
@@ -100,6 +117,14 @@ func _apply_theme_to_ui() -> void:
     var ui := game_root.get_node_or_null("UI")
     if ui != null:
         _apply_theme_recursive(ui)
+
+func _style_all_ui() -> void:
+    var game_root = get_tree().root.get_node_or_null("Renew")
+    if game_root == null:
+        return
+    var ui = game_root.get_node_or_null("UI")
+    if ui != null:
+        _style_recursive(ui)
 
 func _is_figma_runtime(node: Node) -> bool:
     if node == null:
@@ -144,11 +169,14 @@ func _style_recursive(node: Node) -> void:
         elif child is LineEdit:
             _style_line_edit(child as LineEdit)
         elif child is ColorRect:
-            var rect := child as ColorRect
-            if rect.name != "PremiumChromeBackground":
-                rect.color = Color(rect.color.r, rect.color.g, rect.color.b, minf(rect.color.a, 0.13))
-        if child is Control:
-            _style_recursive(child)
+            _style_color_rect(child as ColorRect)
+        _style_recursive(child)
+
+func _style_color_rect(rect: ColorRect) -> void:
+    var name_lower = rect.name.to_lower()
+    if name_lower.contains("scrim") or name_lower.contains("dimmer") or name_lower.contains("backdrop"):
+        var alpha = 0.20 if _is_light_mode() else 0.46
+        rect.color = Color(_deep().r, _deep().g, _deep().b, alpha)
 
 func _sector_accent(label: String) -> Color:
     var t := label.to_upper()
@@ -250,6 +278,8 @@ func _style_button(button: Button) -> void:
     button.add_theme_color_override("font_disabled_color", _muted())
     button.add_theme_color_override("font_outline_color", Color(_deep().r, _deep().g, _deep().b, 0.72))
     button.add_theme_constant_override("outline_size", 1)
+    if _font_semibold != null:
+        button.add_theme_font_override("font", _font_semibold)
     button.add_theme_font_size_override("font_size", 13)
     button.focus_mode = Control.FOCUS_NONE
     button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -261,12 +291,18 @@ func _style_label(label: Label) -> void:
     var text_upper := label.text.to_upper()
     if name_upper.contains("TITLE") or name_upper.contains("HEADER") or (text_upper.begins_with("RESTORA") or text_upper.begins_with("RENEW")):
         label.add_theme_color_override("font_color", _text())
+        if _font_bold != null:
+            label.add_theme_font_override("font", _font_bold)
         label.add_theme_font_size_override("font_size", maxi(18, label.get_theme_font_size("font_size")))
         label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.58))
         label.add_theme_constant_override("shadow_offset_y", 2)
     elif name_upper.contains("VALUE") or name_upper.contains("TOTAL") or name_upper.contains("AMOUNT"):
+        if _font_semibold != null:
+            label.add_theme_font_override("font", _font_semibold)
         label.add_theme_color_override("font_color", _gold())
     else:
+        if _font_regular != null:
+            label.add_theme_font_override("font", _font_regular)
         label.add_theme_color_override("font_color", Color(_text().r, _text().g, _text().b, 0.93))
 
 func _style_progress(progress: ProgressBar) -> void:
