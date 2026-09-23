@@ -56,7 +56,7 @@ jobs:
           test -s artifacts/visual-audit/manifest.txt
           count=$(find artifacts/visual-audit -maxdepth 1 -name '*.png' | wc -l)
           echo "Captured $count parity screenshots"
-          test "$count" -eq 77
+          test "$count" -eq 82
 
       - name: Upload parity screenshots
         if: always()
