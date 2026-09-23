@@ -83,6 +83,7 @@ func _build_ui() -> void:
     panel.add_child(close_button)
 
     market_status = Label.new()
+    market_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     market_status.add_theme_font_size_override("font_size", 10)
     market_status.add_theme_color_override("font_color", ACCENT)
     panel.add_child(market_status)
@@ -146,18 +147,22 @@ func _layout_responsive() -> void:
 
     title_label.position = Vector2(14, 10)
     title_label.size = Vector2(maxf(150.0, panel.size.x - 115.0), 30)
+    title_label.add_theme_font_size_override("font_size", 17 if narrow else 20)
     close_button.position = Vector2(panel.size.x - 94.0, 7)
-    market_status.position = Vector2(14, 42)
-    market_status.size = Vector2(panel.size.x - 28.0, 20)
-    summary_label.position = Vector2(14, 64)
-    summary_label.size = Vector2(panel.size.x - 28.0, 44)
+    market_status.position = Vector2(14, 60)
+    market_status.size = Vector2(panel.size.x - 28.0, 32)
+    market_status.add_theme_font_size_override("font_size", 9 if narrow else 10)
+    summary_label.position = Vector2(14, 96)
+    summary_label.size = Vector2(panel.size.x - 28.0, 54)
+    summary_label.add_theme_font_size_override("font_size", 10 if narrow else 11)
 
-    var content_top := 112.0
-    var detail_h := 174.0 if narrow else 185.0
+    var content_top := 156.0
+    var detail_h := 206.0 if narrow else 190.0
     detail_panel.position = Vector2(12, panel.size.y - detail_h - 12.0)
     detail_panel.size = Vector2(panel.size.x - 24.0, detail_h)
     detail_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    detail_label.custom_minimum_size = Vector2(maxf(0.0, detail_panel.size.x - 24.0), 0)
+    detail_label.custom_minimum_size = Vector2(maxf(0.0, detail_panel.size.x - 30.0), 0)
+    detail_label.add_theme_font_size_override("font_size", 10 if narrow else 11)
 
     segment_scroll.position = Vector2(12, content_top)
     segment_scroll.size = Vector2(panel.size.x - 24.0, maxf(120.0, detail_panel.position.y - content_top - 10.0))
