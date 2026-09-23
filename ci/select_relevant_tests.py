@@ -20,6 +20,17 @@ SMOKE = {
 }
 
 GROUPS = {
+    "tutorial": {
+        "patterns": [
+            "scripts/tutorial.gd", "scripts/tutorial_overlay.gd",
+            "scripts/game_state.gd", "scripts/restora_command_ui.gd",
+        ],
+        "tests": {
+            "tests/test_tutorial_completion.gd",
+            "tests/mobile_qa_test.gd",
+            "tests/release/test_full_new_game_flow.gd",
+        },
+    },
     "ui": {
         "patterns": [
             "scripts/*_ui.gd", "scripts/ui_*.gd", "scripts/*theme*.gd",
