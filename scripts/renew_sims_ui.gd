@@ -44,25 +44,25 @@ var light_theme := false
 var _refresh_accumulator := 0.0
 var _transition_serial := 0
 
-const LIGHT_BG := Color("f3f6f4")
-const LIGHT_SURFACE := Color("ffffff")
-const LIGHT_CARD := Color("edf3f0")
-const LIGHT_CARD_2 := Color("f8faf9")
-const LIGHT_TEXT := Color("14201d")
-const LIGHT_MUTED := Color("65756f")
-const LIGHT_BORDER := Color("d8e3de")
-const LIGHT_ACCENT := Color("0f766e")
-const LIGHT_GOLD := Color("a36d18")
-const DARK_BG := Color("06100f")
-const DARK_SURFACE := Color("0b1816")
-const DARK_CARD := Color("10241f")
-const DARK_CARD_2 := Color("0d1b19")
-const DARK_TEXT := Color("eef9f5")
-const DARK_MUTED := Color("91a69f")
-const DARK_BORDER := Color("1f3934")
-const DARK_ACCENT := Color("5eead4")
-const DARK_GOLD := Color("e5b95f")
-const WARN := Color("f0b24a")
+const LIGHT_BG := Color("e8e2d8")
+const LIGHT_SURFACE := Color("f6f1e8")
+const LIGHT_CARD := Color("ddd4c6")
+const LIGHT_CARD_2 := Color("eee8de")
+const LIGHT_TEXT := Color("292a28")
+const LIGHT_MUTED := Color("71685d")
+const LIGHT_BORDER := Color("b7aa98")
+const LIGHT_ACCENT := Color("66374f")
+const LIGHT_GOLD := Color("98672a")
+const DARK_BG := Color("0b0d10")
+const DARK_SURFACE := Color("151a1f")
+const DARK_CARD := Color("20262c")
+const DARK_CARD_2 := Color("292f35")
+const DARK_TEXT := Color("f2efe8")
+const DARK_MUTED := Color("928a80")
+const DARK_BORDER := Color("3c3831")
+const DARK_ACCENT := Color("7a405f")
+const DARK_GOLD := Color("c99a4b")
+const WARN := Color("c28a3a")
 const ICON_ROOT := "res://Assets/Art/Icons/"
 const ACTION_ICON_MAP := {
     "HOME": "home",
@@ -91,9 +91,24 @@ const ACTION_ICON_MAP := {
     "ALERTS": "decisions",
 }
 
+func _theme_manager():
+    return get_node_or_null("/root/RestoraThemeManager")
+
+func _on_global_theme_changed(_mode: String) -> void:
+    var manager = _theme_manager()
+    if manager != null:
+        light_theme = bool(manager.is_light())
+    _apply_theme()
+
 func _ready() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
-    light_theme = bool(ProjectSettings.get_setting("renew/ui/light_theme", false))
+    var manager = _theme_manager()
+    if manager != null:
+        light_theme = bool(manager.is_light())
+        if not manager.theme_changed.is_connected(_on_global_theme_changed):
+            manager.theme_changed.connect(_on_global_theme_changed)
+    else:
+        light_theme = bool(ProjectSettings.get_setting("renew/ui/light_theme", false))
     _build_ui()
     call_deferred("_initialize")
 
@@ -459,6 +474,10 @@ func _style_active_tab() -> void:
             button.add_theme_color_override("font_color", muted)
 
 func _toggle_theme() -> void:
+    var manager = _theme_manager()
+    if manager != null:
+        manager.toggle()
+        return
     light_theme = not light_theme
     ProjectSettings.set_setting("renew/ui/light_theme", light_theme)
     _apply_theme()
@@ -722,7 +741,7 @@ func _refresh() -> void:
                 _screen("Active company", "BusinessOperationsPanel", "Open the touch-first operating company workspace")
             else:
                 _action(hero_action.text, _primary_move().get("call", Callable()), "Continue the current objective", true)
-            _screen("Save & settings", "SaveLoadPanel", "Save, load and company controls")
+            _screen("Save & settings", "SettingsPanel", "Theme, audio, premium, privacy and company controls")
         1:
             if str(parent.stage) == "Operational" and not bool(parent.business_open):
                 _group("Choose the company", "One restored site can support different business models. Pick deliberately.")

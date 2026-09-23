@@ -3,7 +3,7 @@ extends Node
 ## Guarantees one active screen, premium close affordance, Escape/Android-back
 ## dismissal, tap-outside dismissal, safe cleanup and focused presentation.
 
-const SCREEN_NAMES := ["ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel", "InfrastructurePanel", "DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel", "RegionsPanel", "WorldOpportunitiesPanel", "BusinessOperationsPanel", "ProductionControlPanel", "SupplyChainPanel", "EmpireExpansionPanel", "EmpireIntelligencePanel", "EmpireProgressionPanel", "EmpireIdentityPanel", "NotificationsCenterPanel", "SaveLoadPanel"]
+const SCREEN_NAMES := ["ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel", "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel", "NewsPanel", "InfrastructurePanel", "DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel", "RegionsPanel", "WorldOpportunitiesPanel", "BusinessOperationsPanel", "ProductionControlPanel", "SupplyChainPanel", "EmpireExpansionPanel", "EmpireIntelligencePanel", "EmpireProgressionPanel", "EmpireIdentityPanel", "NotificationsCenterPanel", "SaveLoadPanel", "SettingsPanel"]
 const ROOT_SCREEN_NAMES := ["RenewDiplomacyUI", "CustomerSegmentsUI"]
 const SCREEN_ALIASES := {"MarketPanel": "CustomerSegmentsUI"}
 const CLOSE_BUTTON_NAME := "UniversalCloseButton"
@@ -140,6 +140,12 @@ func _set_node_visible(node: Node, value: bool) -> void:
         node.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
         _set_direct_canvas_children_visible(node, value)
 
+func _theme_scrim_color() -> Color:
+    var manager := get_node_or_null("/root/RestoraThemeManager")
+    if manager != null and manager.has_method("color"):
+        return manager.color("scrim")
+    return Color(0.018, 0.028, 0.075, 0.76)
+
 func _ensure_modal_backdrop() -> void:
     if _modal_layer != null and is_instance_valid(_modal_layer) and _modal_backdrop != null and is_instance_valid(_modal_backdrop):
         return
@@ -155,7 +161,7 @@ func _ensure_modal_backdrop() -> void:
     _modal_backdrop = ColorRect.new()
     _modal_backdrop.name = "Backdrop"
     _modal_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    _modal_backdrop.color = Color(0.018, 0.028, 0.075, 0.76)
+    _modal_backdrop.color = _theme_scrim_color()
     _modal_backdrop.mouse_filter = Control.MOUSE_FILTER_STOP
     _modal_backdrop.visible = false
     _modal_backdrop.gui_input.connect(_on_backdrop_input)
@@ -173,6 +179,8 @@ func _on_backdrop_input(event: InputEvent) -> void:
 
 func _set_modal_backdrop(value: bool) -> void:
     _ensure_modal_backdrop()
+    if _modal_backdrop != null:
+        _modal_backdrop.color = _theme_scrim_color()
     if _modal_backdrop == null: return
     if _backdrop_tween != null and _backdrop_tween.is_valid(): _backdrop_tween.kill()
     if value:
