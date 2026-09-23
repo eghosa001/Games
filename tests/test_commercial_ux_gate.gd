@@ -10,7 +10,7 @@ func check(label:String, ok:bool)->void:
 func _inside(c:Control,size:Vector2i)->bool:
     return c!=null and Rect2(Vector2.ZERO,Vector2(size)).encloses(c.get_global_rect())
 func _run()->void:
-    root.size=Vector2i(390,844)
+    # Exercise explicit logical viewport sizes; project Android scaling is tested separately.\n    root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED\n    root.size=Vector2i(390,844)
     var p:=load("res://scenes/Main.tscn") as PackedScene
     check("Main scene loads",p!=null)
     if p==null: quit(1); return
