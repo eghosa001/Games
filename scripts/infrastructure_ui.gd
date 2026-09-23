@@ -356,17 +356,30 @@ func _layout() -> void:
     metrics_label.position = Vector2(14, 134)
     metrics_label.size = Vector2(w - 28.0, 48)
     metrics_label.add_theme_font_size_override("font_size", 10 if phone else 11)
-    var button_y := 188.0
+    var short_phone := phone and size.y < 620.0
+    var button_y := 160.0 if short_phone else 188.0
     if phone:
-        type_button.position = Vector2(14, button_y)
-        type_button.size = Vector2(w - 28.0, 44)
-        build_button.position = Vector2(14, button_y + 50)
-        build_button.size = Vector2(w - 28.0, 44)
-        upgrade_button.position = Vector2(14, button_y + 100)
-        upgrade_button.size = Vector2((w - 34.0) / 2.0, 44)
-        repair_button.position = Vector2(20 + (w - 34.0) / 2.0, button_y + 100)
-        repair_button.size = Vector2((w - 34.0) / 2.0, 44)
-        scroll.position = Vector2(12, button_y + 154)
+        if short_phone:
+            var half := (w - 34.0) / 2.0
+            type_button.position = Vector2(14, button_y)
+            type_button.size = Vector2(half, 44)
+            build_button.position = Vector2(20 + half, button_y)
+            build_button.size = Vector2(half, 44)
+            upgrade_button.position = Vector2(14, button_y + 50)
+            upgrade_button.size = Vector2(half, 44)
+            repair_button.position = Vector2(20 + half, button_y + 50)
+            repair_button.size = Vector2(half, 44)
+            scroll.position = Vector2(12, button_y + 102)
+        else:
+            type_button.position = Vector2(14, button_y)
+            type_button.size = Vector2(w - 28.0, 44)
+            build_button.position = Vector2(14, button_y + 50)
+            build_button.size = Vector2(w - 28.0, 44)
+            upgrade_button.position = Vector2(14, button_y + 100)
+            upgrade_button.size = Vector2((w - 34.0) / 2.0, 44)
+            repair_button.position = Vector2(20 + (w - 34.0) / 2.0, button_y + 100)
+            repair_button.size = Vector2((w - 34.0) / 2.0, 44)
+            scroll.position = Vector2(12, button_y + 154)
     else:
         type_button.position = Vector2(14, button_y)
         type_button.size = Vector2((w - 34.0) / 2.0, 46)
@@ -377,7 +390,7 @@ func _layout() -> void:
         repair_button.position = Vector2(20 + (w - 34.0) / 2.0, button_y + 52)
         repair_button.size = Vector2((w - 34.0) / 2.0, 46)
         scroll.position = Vector2(12, button_y + 106)
-    scroll.size = Vector2(w - 24.0, maxf(150.0, panel.size.y - scroll.position.y - 12.0))
+    scroll.size = Vector2(w - 24.0, maxf(72.0 if short_phone else 150.0, panel.size.y - scroll.position.y - 12.0))
     list.custom_minimum_size.x = maxf(1.0, w - 24.0)
     for card in list.get_children():
         if card is Panel:
