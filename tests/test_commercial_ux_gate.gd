@@ -26,7 +26,7 @@ func _run()->void:
     check("regional detail avoids synthetic demand/pressure ratings",not ui_source.contains("Demand HIGH") and not ui_source.contains("Rival pressure MEDIUM"))
     check("primary view transitions are subtle and reduced-motion aware",ui_source.contains("func _animate_view_in()") and ui_source.contains("if _reduce_motion()"))
 
-    var expected:=["LIVE","OPERATE","EMPIRE","WORLD","MORE"]
+    var expected:=["HOME","BUSINESS","PROPERTY","FINANCE","MORE"]
     var tabs:Array=hud.get("mode_buttons")
     check("exactly five primary destinations",tabs.size()==5)
     for i in range(mini(5,tabs.size())):
@@ -34,7 +34,7 @@ func _run()->void:
         var l:=b.get_node_or_null("NavLabel") as Label
         check("destination label "+expected[i],l!=null and l.text==expected[i])
         check("destination touch target "+expected[i],b.size.y>=48.0)
-    for view in ["live","operate","empire","world","more"]:
+    for view in ["live","operate","property","finance","more"]:
         hud.open_figma_view(view);await process_frame
         check(view+" is directly reachable",str(hud.get("active_view"))==view)
     for target in VIEWPORTS:
@@ -46,6 +46,7 @@ func _run()->void:
     root.size=Vector2i(390,844);hud.open_figma_view("more");await process_frame
     var content:=hud.get("mobile_content") as Control
     check("More exposes nine command tiles",content.find_children("MoreTile*","Panel",false,false).size()==9)
+    check("3D world is not mounted in production",game.get_node_or_null("World3D")==null)
     check("legacy HOME label absent",not _tree_has_text(content,"HOME"))
 
     hud.open_figma_view("settings");await process_frame

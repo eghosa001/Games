@@ -81,7 +81,7 @@ func _exercise_opening_flow(game:Node,hud:Node)->void:
     if produce!=null:produce.pressed.emit();await process_frame
 
 func _exercise_primary_views(hud:Node)->void:
-    var expected:=["live","operate","empire","world","more"]
+    var expected:=["live","operate","property","finance","more"]
     for i in range(5):
         hud._set_tab(i);await process_frame
         check("tab %d opens %s" % [i,expected[i]],str(hud.get("active_view"))==expected[i])

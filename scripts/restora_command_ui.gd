@@ -14,6 +14,10 @@ const ART_ROOT = "res://Assets/Art/"
 const RESTORATION_ART = ART_ROOT + "premium_restoration_site.svg"
 const DISTRICT_ART = ART_ROOT + "premium_industrial_district.svg"
 const ICON_ROOT = ART_ROOT + "Icons/"
+const WAREHOUSE_STAGE_ART = ART_ROOT + "building_warehouse_progression.svg"
+const WORKSHOP_STAGE_ART = ART_ROOT + "building_factory_progression.svg"
+const COMMERCIAL_STAGE_ART = ART_ROOT + "building_office_progression.svg"
+const BUILDING_FRAME_SIZE = Vector2(256, 144)
 
 var parent: Node
 var root: Control
@@ -88,6 +92,80 @@ func _realtime_status() -> Dictionary:
 func _demand_remaining() -> int:
     return maxi(0, int(_realtime_status().get("consumer_demand_remaining", 0)))
 
+func _property_system():
+    if parent == null:
+        return null
+    var command = parent.get("command_system")
+    if command == null:
+        return null
+    return command.get("property_system")
+
+func _building_catalog() -> Array:
+    var model = _property_system()
+    return model.list_properties() if model != null and model.has_method("list_properties") else []
+
+func _selected_building() -> Dictionary:
+    var model = _property_system()
+    return model.get_selected_property() if model != null and model.has_method("get_selected_property") else {}
+
+func _building_name() -> String:
+    return str(_selected_building().get("name", "Riverside Warehouse"))
+
+func _building_type() -> String:
+    return str(_selected_building().get("type", "Warehouse"))
+
+func _building_progress(building: Dictionary = {}) -> int:
+    var item := building if not building.is_empty() else _selected_building()
+    if item.is_empty():
+        return _restoration()
+    var total := 0
+    for step in ["cleaning", "repair", "painting", "furnishing"]:
+        total += clampi(int(item.get(step, 0)), 0, 100)
+    return int(round(float(total) / 4.0))
+
+func _building_stage_slot(building: Dictionary = {}) -> int:
+    var item := building if not building.is_empty() else _selected_building()
+    if item.is_empty() or not bool(item.get("owned", false)):
+        return 0
+    if int(item.get("cleaning", 0)) < 100:
+        return 0
+    if int(item.get("repair", 0)) < 100:
+        return 1
+    if int(item.get("painting", 0)) < 100:
+        return 2
+    if int(item.get("furnishing", 0)) < 50:
+        return 3
+    if int(item.get("furnishing", 0)) < 100:
+        return 4
+    return 5
+
+func _building_stage_name(building: Dictionary = {}) -> String:
+    return ["ABANDONED", "CLEANED", "REPAIRED", "PAINTED", "FURNISHING", "OPERATIONAL"][_building_stage_slot(building)]
+
+func _building_stage_texture(building: Dictionary = {}) -> Texture2D:
+    var item := building if not building.is_empty() else _selected_building()
+    var kind := str(item.get("type", "Warehouse"))
+    var path := WAREHOUSE_STAGE_ART
+    if kind == "Workshop":
+        path = WORKSHOP_STAGE_ART
+    elif kind == "Commercial Building":
+        path = COMMERCIAL_STAGE_ART
+    var source := _asset_texture(path)
+    if source == null:
+        return null
+    var atlas := AtlasTexture.new()
+    atlas.atlas = source
+    atlas.region = Rect2(0, float(_building_stage_slot(item)) * BUILDING_FRAME_SIZE.y, BUILDING_FRAME_SIZE.x, BUILDING_FRAME_SIZE.y)
+    return atlas
+
+func _select_building(index: int) -> void:
+    var model = _property_system()
+    var catalog := _building_catalog()
+    if model == null or index < 0 or index >= catalog.size():
+        return
+    model.select_property(str(catalog[index].get("id", "")))
+    _rebuild_current()
+
 func _progression():
     return parent.get_node_or_null("Systems/StrategicProgression") if parent != null else null
 
@@ -160,8 +238,7 @@ func _asset_texture(path: String) -> Texture2D:
         return null
     return load(path) as Texture2D
 
-func _add_art(parent_node: Node, name: String, rect: Rect2, path: String, alpha := 1.0) -> TextureRect:
-    var texture := _asset_texture(path)
+func _add_texture(parent_node: Node, name: String, rect: Rect2, texture: Texture2D, alpha := 1.0) -> TextureRect:
     if texture == null:
         return null
     var art := TextureRect.new()
@@ -175,6 +252,9 @@ func _add_art(parent_node: Node, name: String, rect: Rect2, path: String, alpha 
     art.mouse_filter = Control.MOUSE_FILTER_IGNORE
     parent_node.add_child(art)
     return art
+
+func _add_art(parent_node: Node, name: String, rect: Rect2, path: String, alpha := 1.0) -> TextureRect:
+    return _add_texture(parent_node, name, rect, _asset_texture(path), alpha)
 
 func _add_icon(parent_node: Node, name: String, icon_key: String, rect: Rect2, role := "muted", alpha := 1.0) -> TextureRect:
     var icon := _add_art(parent_node, name, rect, ICON_ROOT + icon_key + ".svg", alpha)
@@ -243,18 +323,6 @@ func _rebuild_current() -> void:
     background.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(background)
 
-    var viewport_size := get_viewport().get_visible_rect().size
-    var backdrop_alpha := 0.26 if not _is_light_theme() else 0.16
-    _add_art(root, "WorldBackdropArt", Rect2(Vector2.ZERO, viewport_size), DISTRICT_ART, backdrop_alpha)
-    var backdrop_scrim := ColorRect.new()
-    backdrop_scrim.name = "WorldBackdropScrim"
-    backdrop_scrim.position = Vector2.ZERO
-    backdrop_scrim.size = viewport_size
-    var bg := _color("bg")
-    backdrop_scrim.color = Color(bg.r, bg.g, bg.b, 0.70 if not _is_light_theme() else 0.74)
-    backdrop_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    root.add_child(backdrop_scrim)
-
     _layout_kind = _layout_class()
     if _layout_kind == "desktop":
         _build_desktop_live()
@@ -285,13 +353,13 @@ func _animate_view_in() -> void:
 func _show_view(view_name: String) -> void:
     active_view = view_name
     match view_name:
-        "live", "property":
+        "live":
             active_tab = 0
         "operate":
             active_tab = 1
-        "empire", "intelligence":
+        "property", "portfolio", "empire", "intelligence":
             active_tab = 2
-        "world":
+        "finance":
             active_tab = 3
         _:
             active_tab = 4
@@ -302,7 +370,7 @@ func open_figma_view(view_name: String) -> void:
 
 func _set_tab(index: int) -> void:
     active_tab = clampi(index, 0, 4)
-    var views = ["live", "operate", "empire", "world", "more"]
+    var views = ["live", "operate", "property", "finance", "more"]
     _show_view(views[active_tab])
 
 
@@ -376,9 +444,9 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
     tabs.add_theme_constant_override("separation", 0)
     bottom_nav.add_child(tabs)
 
-    var labels = ["LIVE", "OPERATE", "EMPIRE", "WORLD", "MORE"]
-    var icon_keys = ["home", "business", "empire", "world", "settings"]
-    var required_unlocks = ["", "", "branches", "regions", ""]
+    var labels = ["HOME", "BUSINESS", "PROPERTY", "FINANCE", "MORE"]
+    var icon_keys = ["home", "business", "property", "finance", "settings"]
+    var required_unlocks = ["", "", "", "finance", ""]
     for i in range(labels.size()):
         var button = Button.new()
         button.name = "Nav_" + labels[i]
@@ -544,11 +612,13 @@ func _header(title: String, subtitle: String, right_text = "", status_role = "go
 
 func _build_mobile_live() -> void:
     var w = _content_width()
-    _header("RESTORA", "LIVE ENTERPRISE", "DAY %d" % _day())
+    _header("RESTORA", "BUILD • RESTORE • OPERATE", "DAY %d" % _day())
     var inner_w = w - 36.0
     var hero = _panel(mobile_content, "ExecutiveHero", Rect2(18, 82, inner_w, 154), "surface", "border", 22)
     hero.clip_contents = true
-    _add_art(hero, "HeroRestorationArt", Rect2(inner_w * 0.46, 0, inner_w * 0.54, 154), RESTORATION_ART, 0.54 if not _is_light_theme() else 0.42)
+    var hero_texture := _building_stage_texture()
+    if hero_texture != null:
+        _add_texture(hero, "HeroBuildingArt", Rect2(inner_w * 0.48, 0, inner_w * 0.52, 154), hero_texture, 0.90 if not _is_light_theme() else 0.78)
     var hero_wash := ColorRect.new()
     hero_wash.position = Vector2(inner_w * 0.34, 0)
     hero_wash.size = Vector2(inner_w * 0.66, 154)
@@ -659,24 +729,44 @@ func _build_mobile_finance() -> void:
     _frame_button(mobile_content, "Investor", "INVESTOR", Rect2(34 + action_w * 2.0, 656, action_w, 48), _request_investor, false, true)
 
 func _build_mobile_property() -> void:
+    if mobile_content != null:
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 1320.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, 1320.0)
+
+    var building := _selected_building()
+    var building_name := str(building.get("name", "Riverside Warehouse"))
+    var building_type := str(building.get("type", "Warehouse"))
+    var building_owned := bool(building.get("owned", _owned()))
+    var building_inspected := bool(building.get("inspected", _inspected()))
+    var progress := _building_progress(building)
     var w = _content_width()
-    _header("PROPERTY RESTORATION", "OLD DOCK WAREHOUSE • %s" % ("OWNED" if _owned() else "AVAILABLE"))
+    _header("PROPERTY", "%s • %s" % [building_name.to_upper(), "OWNED" if building_owned else ("SURVEYED" if building_inspected else "AVAILABLE")])
     var inner_w = w - 36.0
 
-    var visual = _panel(mobile_content, "PropertyVisual", Rect2(18, 82, inner_w, 212), "surface", "border", 22)
+    var visual = _panel(mobile_content, "PropertyVisual", Rect2(18, 82, inner_w, 238), "surface", "border", 22)
     visual.clip_contents = true
-    _add_art(visual, "RestorationSceneArt", Rect2(0, 0, inner_w, 212), RESTORATION_ART, 0.94)
-    var visual_scrim := ColorRect.new()
-    visual_scrim.position = Vector2.ZERO
-    visual_scrim.size = Vector2(inner_w, 54)
-    visual_scrim.color = Color(0.02, 0.03, 0.03, 0.58)
-    visual_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    visual.add_child(visual_scrim)
-    _label(visual, "Overlay", "STAGE %d / 5" % _stage_index(), Rect2(18, 16, 130, 14), 10, "gold", 600)
-    _label(visual, "Condition", "%d%% CONDITION" % _restoration(), Rect2(inner_w - 128, 16, 110, 14), 10, "success", 600, HORIZONTAL_ALIGNMENT_RIGHT)
+    var stage_texture := _building_stage_texture(building)
+    if stage_texture != null:
+        _add_texture(visual, "BuildingStageArt", Rect2(0, 0, inner_w, 238), stage_texture, 1.0)
+    var top_scrim := ColorRect.new()
+    top_scrim.position = Vector2.ZERO
+    top_scrim.size = Vector2(inner_w, 54)
+    top_scrim.color = Color(0.02, 0.03, 0.03, 0.66)
+    top_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    visual.add_child(top_scrim)
+    var bottom_scrim := ColorRect.new()
+    bottom_scrim.position = Vector2(0, 174)
+    bottom_scrim.size = Vector2(inner_w, 64)
+    bottom_scrim.color = Color(0.02, 0.03, 0.03, 0.72)
+    bottom_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    visual.add_child(bottom_scrim)
+    _label(visual, "Stage", "%s • STAGE %d/6" % [_building_stage_name(building), _building_stage_slot(building) + 1], Rect2(16, 15, inner_w - 150, 16), 10, "gold", 700)
+    _label(visual, "Restoration", "%d%% RESTORED" % progress, Rect2(inner_w - 140, 15, 124, 16), 10, "success", 700, HORIZONTAL_ALIGNMENT_RIGHT)
+    _label(visual, "BuildingName", building_name, Rect2(16, 184, inner_w - 32, 26), 19, "text", 700)
+    _label(visual, "BuildingType", "%s • Market value %s" % [building_type, _money(int(building.get("value", 0)))], Rect2(16, 212, inner_w - 32, 16), 10, "muted", 500)
 
-    var prog = _panel(mobile_content, "RestorationProgress", Rect2(18, 318, inner_w, 116), "surface", "border", 18)
-    _label(prog, "Head", "RESTORATION PROGRESS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
+    var prog = _panel(mobile_content, "RestorationProgress", Rect2(18, 338, inner_w, 116), "surface", "border", 18)
+    _label(prog, "Head", "RESTORATION", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     _label(prog, "Step", _stage_step_text(), Rect2(16, 40, inner_w - 32, 24), 17, "text", 700)
     _label(prog, "Next", _next_stage_text(), Rect2(16, 72, inner_w - 32, 16), 11, "muted", 400)
     var track = Panel.new()
@@ -685,17 +775,37 @@ func _build_mobile_property() -> void:
     track.add_theme_stylebox_override("panel", _solid_round(_color("surface_2"), 5))
     prog.add_child(track)
     var fill = Panel.new()
-    fill.size = Vector2(maxf(4, track.size.x * float(_restoration()) / 100.0), 10)
+    fill.size = Vector2(maxf(4, track.size.x * float(progress) / 100.0), 10)
     fill.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 5))
     track.add_child(fill)
 
-    var benefits = _panel(mobile_content, "Unlocks", Rect2(18, 450, inner_w, 148), "surface", "border", 18)
-    _label(benefits, "Head", "WHAT THIS UNLOCKS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
-    _label(benefits, "Body", "• +20% production reliability\n• New customer contracts\n• Improved district reputation\n• Opens final restoration stages", Rect2(16, 42, inner_w - 32, 90), 12, "text", 400)
+    var details = _panel(mobile_content, "BuildingDetails", Rect2(18, 472, inner_w, 126), "surface", "border", 18)
+    _label(details, "Head", "BUILDING DETAILS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
+    _label(details, "Body", "Condition %d%%  •  Capacity %d\nCompatible: %s" % [
+        int(building.get("condition", 0)),
+        int(building.get("capacity", 0)),
+        ", ".join(building.get("industry_compatibility", []))
+    ], Rect2(16, 42, inner_w - 32, 58), 11, "text", 400)
 
-    var cta = _frame_button(mobile_content, "PropertyCTA", _property_cta_label(), Rect2(18, 618, inner_w, 64), _property_cta, false, true, 11)
+    var cta = _frame_button(mobile_content, "PropertyCTA", _property_cta_label(), Rect2(18, 616, inner_w, 64), _property_cta, false, true, 11)
     cta.add_theme_stylebox_override("normal", _style(_color("gold"), _color("gold"), 16))
     cta.add_theme_stylebox_override("hover", _style(_color("gold").lightened(0.05), _color("gold"), 16))
+
+    _label(mobile_content, "BuildingListHead", "BUILDINGS", Rect2(18, 718, inner_w, 18), 11, "gold", 700)
+    _label(mobile_content, "BuildingListMeta", "Choose a property, inspect it, buy it, then restore it stage by stage.", Rect2(18, 742, inner_w, 34), 10, "muted", 400)
+
+    var catalog := _building_catalog()
+    var selected_index := int(_state_value("properties", "selected_property", 0))
+    for i in range(catalog.size()):
+        var item: Dictionary = catalog[i]
+        var y := 790.0 + float(i) * 56.0
+        var selected := i == selected_index
+        var row = _panel(mobile_content, "BuildingRow%d" % i, Rect2(18, y, inner_w, 48), "selected" if selected else "surface", "plum" if selected else "border", 12)
+        _label(row, "Name", str(item.get("name", "Property")), Rect2(12, 7, inner_w - 126, 16), 10, "text", 600)
+        _label(row, "Meta", "%s • %d%% restored" % [str(item.get("type", "Building")), _building_progress(item)], Rect2(12, 25, inner_w - 126, 14), 9, "muted", 400)
+        var state_text := "RESTORED" if _building_stage_slot(item) == 5 else ("OWNED" if bool(item.get("owned", false)) else ("SURVEYED" if bool(item.get("inspected", false)) else "AVAILABLE"))
+        _label(row, "State", state_text, Rect2(inner_w - 110, 16, 92, 14), 8, "success" if bool(item.get("owned", false)) else "gold", 600, HORIZONTAL_ALIGNMENT_RIGHT)
+        _transparent_button(row, "SelectBuilding%d" % i, Rect2(0, 0, inner_w, 48), _select_building.bind(i))
 
 func _build_mobile_empire() -> void:
     var w = _content_width()
@@ -840,8 +950,8 @@ func _build_mobile_more() -> void:
     _label(company, "Health", "%d ACTIVE CONTRACT%s" % [_active_contracts(), "" if _active_contracts() == 1 else "S"], Rect2(16,68,180,14), 9, "success", 600)
 
     var tiles = [
-        ["FINANCE","Cash, debt, investors","finance","finance"],
-        ["PORTFOLIO","Assets and performance","portfolio",""],
+        ["REGIONS","Markets and expansion","world","regions"],
+        ["INTELLIGENCE","Company and market signals","intelligence",""],
         ["CORPORATIONS","Rivals and diplomacy","CorporationsPanel","competitors"],
         ["CONTRACTS","Customers and renewals","ContractPanel","contracts"],
         ["TECHNOLOGY","Research and upgrades","TechnologyPanel","technology"],
@@ -865,7 +975,7 @@ func _build_mobile_more() -> void:
         _label(p, "Body", body_text, Rect2(14,38,col_w - 28,32), 9, "muted", 400)
         var target = str(tiles[i][2])
         var open_button: Button
-        if ["finance","portfolio","settings"].has(target):
+        if ["world","intelligence","settings"].has(target):
             open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,82), _show_view.bind(target))
         else:
             open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,82), _open_screen.bind(target))
@@ -968,11 +1078,11 @@ func _build_desktop_live() -> void:
     _label(canvas, "Brand", "RESTORA", Rect2(34,26,240,34), 28, "text", 700)
     _label(canvas, "Mode", "EXECUTIVE COMMAND • DAY %d" % _day(), Rect2(34,62,300,16), 10, "gold", 600)
     var world = _panel(canvas, "WorldPropertyView", Rect2(34,104,560,552), "surface", "border", 24)
-    _label(world, "Head", "WORLD / PROPERTY VIEW", Rect2(21,19,250,16), 11, "gold", 600)
+    _label(world, "Head", "CURRENT BUILDING", Rect2(21,19,250,16), 11, "gold", 600)
     var scene = _panel(world, "Scene", Rect2(21,57,516,316), "surface_2", "border", 20)
     scene.clip_contents = true
-    _add_art(scene, "DesktopRestorationArt", Rect2(0,0,516,316), RESTORATION_ART, 1.0)
-    _label(world, "Meta", "Old Dock Warehouse • %d%% restored\nCentral District • %d customer demand • %d rivals tracked" % [_restoration(), _demand_remaining(), _rival_count()], Rect2(21,401,500,54), 14, "text", 400)
+    _add_texture(scene, "DesktopBuildingArt", Rect2(0,0,516,316), _building_stage_texture(), 1.0)
+    _label(world, "Meta", "%s • %s\n%d%% restored • %s market value" % [_building_name(), _building_type(), _building_progress(), _money(int(_selected_building().get("value", 0)))], Rect2(21,401,500,54), 14, "text", 400)
     _transparent_button(world, "OpenProperty", Rect2(0,0,560,552), _show_view.bind("property"))
 
     _desktop_stat(canvas, "Cash", Rect2(620,104,190,96), "CASH", _money(_cash()))
@@ -990,8 +1100,10 @@ func _build_desktop_live() -> void:
 
     var quick = _panel(canvas, "QuickActions", Rect2(942,426,304,230), "selected", "plum", 18)
     _label(quick, "Head", "QUICK ACTIONS", Rect2(18,16,180,16), 10, "gold", 600)
-    _label(quick, "Body", "CONTINUE RESTORATION\nOPEN OPERATIONS\nVIEW FINANCE\nEMPIRE EXPANSION", Rect2(18,50,260,130), 13, "text", 600)
-    _transparent_button(quick, "QuickAction", Rect2(0,0,304,230), _show_view.bind("operate"))
+    _frame_button(quick, "OpenBuilding", "PROPERTY", Rect2(18,48,268,38), _show_view.bind("property"))
+    _frame_button(quick, "OpenBusiness", "BUSINESS", Rect2(18,92,268,38), _show_view.bind("operate"))
+    _frame_button(quick, "OpenFinance", "FINANCE", Rect2(18,136,268,38), _show_view.bind("finance"))
+    _frame_button(quick, "OpenMore", "MORE", Rect2(18,180,268,38), _show_view.bind("more"))
 
 func _desktop_stat(parent_node: Node, name: String, rect: Rect2, label_text: String, value_text: String) -> void:
     var p = _panel(parent_node, name, rect, "surface", "border", 16)
@@ -1017,7 +1129,7 @@ func _build_tablet_live() -> void:
     _label(hero, "Meta", _stage_meta(), Rect2(22,96,360,20), 14, "muted", 400)
     var scene = _panel(hero, "Scene", Rect2(506,22,240,206), "surface_2", "border", 20)
     scene.clip_contents = true
-    _add_art(scene, "TabletRestorationArt", Rect2(0,0,240,206), RESTORATION_ART, 1.0)
+    _add_texture(scene, "TabletBuildingArt", Rect2(0,0,240,206), _building_stage_texture(), 1.0)
     var xs = [32.0,228.0,424.0,620.0]
     var names = ["CASH","WORTH","REPUTATION","GOODS"]
     var vals = [_money(_cash()),_money(_worth()),str(_rep()),str(_goods())]
@@ -1030,7 +1142,7 @@ func _build_tablet_live() -> void:
     _label(sig, "Head", "SIGNALS + OBJECTIVES", Rect2(20,18,250,18), 12, "gold", 600)
     _label(sig, "Body", "%s\n\nNEXT OBJECTIVE\n%s" % [_signal_lines(), _objective_title()], Rect2(20,56,342,330), 15, "text", 400)
     var nav = _panel(canvas, "Nav", Rect2(32,1054,770,92), "surface", "border", 26)
-    _label(nav, "Labels", "LIVE        OPERATE        EMPIRE        WORLD        MORE", Rect2(54,36,660,20), 13, "text", 600, HORIZONTAL_ALIGNMENT_CENTER)
+    _label(nav, "Labels", "HOME        BUSINESS        PROPERTY        FINANCE        MORE", Rect2(54,36,660,20), 13, "text", 600, HORIZONTAL_ALIGNMENT_CENTER)
 
 func _refresh() -> void:
     if root == null:
@@ -1154,9 +1266,9 @@ func _worth() -> int:
     return maxi(value, _cash())
 
 func _objective_title() -> String:
-    if not _inspected(): return "Inspect the warehouse"
-    if not _owned(): return "Acquire the warehouse"
-    if _stage() != "Operational": return "Restore the warehouse"
+    if not _inspected(): return "Inspect " + _building_name()
+    if not _owned(): return "Acquire " + _building_name()
+    if _stage() != "Operational": return "Restore " + _building_name()
     if not _business_open(): return "Open the first business"
     if _goods() <= 0: return "Produce the next batch"
     return "Grow the enterprise"
@@ -1169,7 +1281,7 @@ func _objective_detail() -> String:
     return "Protect liquidity while expanding operations, contracts and regional presence."
 
 func _stage_meta() -> String:
-    return "Stage %d of 5 • Condition %d%%" % [_stage_index(), _restoration()]
+    return "%s • %d%% restored" % [_building_name(), _building_progress()]
 
 func _stage_index() -> int:
     var names = ["Neglected","Cleaned","Repaired","Painted","Operational"]

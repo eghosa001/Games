@@ -14,7 +14,7 @@ func run() -> void:
     await process_frame; await process_frame
     var hud := game.get_node_or_null("UI/MainHUD")
     check(hud != null, "Figma production HUD exists")
-    var expected := ["LIVE","OPERATE","EMPIRE","WORLD","MORE"]
+    var expected := ["HOME","BUSINESS","PROPERTY","FINANCE","MORE"]
     var buttons: Array = hud.get("mode_buttons") if hud != null else []
     check(buttons.size()==5, "five primary Figma destinations")
     for i in range(mini(buttons.size(),5)):
@@ -22,7 +22,7 @@ func run() -> void:
         check(label != null and label.text==expected[i], "destination %d is %s" % [i,expected[i]])
     var manager := root.get_node_or_null("RenewUIScreenManager")
     check(manager != null, "screen manager exists")
-    for view in ["live","operate","empire","world","more","finance","portfolio","intelligence","settings","property"]:
+    for view in ["live","operate","property","finance","more","portfolio","intelligence","settings","world","empire"]:
         hud.open_figma_view(view); await process_frame
         check(str(hud.get("active_view"))==view, "Figma view opens: "+view)
     if manager != null:

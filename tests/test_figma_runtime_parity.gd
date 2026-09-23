@@ -53,7 +53,7 @@ func _run() -> void:
     var nav := hud.get("bottom_nav") as Control
     _rect(nav, Vector2(12, 758), Vector2(366, 70), "bottom nav")
     var buttons: Array = hud.get("mode_buttons")
-    var expected := ["LIVE", "OPERATE", "EMPIRE", "WORLD", "MORE"]
+    var expected := ["HOME", "BUSINESS", "PROPERTY", "FINANCE", "MORE"]
     for i in range(5):
         var button := buttons[i] as Button
         check("nav %d touch target" % i, button != null and button.size.y >= 44)
@@ -85,10 +85,11 @@ func _run() -> void:
     hud.open_figma_view("property")
     await process_frame
     content = hud.get("mobile_content") as Control
-    _rect(_child(content, "PropertyVisual"), Vector2(18,82), Vector2(354,212), "PROPERTY visual")
-    check("PROPERTY uses authored restoration art", _child(content, "PropertyVisual").get_node_or_null("RestorationSceneArt") != null)
-    _rect(_child(content, "RestorationProgress"), Vector2(18,318), Vector2(354,116), "PROPERTY progress")
-    _rect(_child(content, "Unlocks"), Vector2(18,450), Vector2(354,148), "PROPERTY unlocks")
+    _rect(_child(content, "PropertyVisual"), Vector2(18,82), Vector2(354,238), "PROPERTY visual")
+    check("PROPERTY uses staged building art", _child(content, "PropertyVisual").get_node_or_null("BuildingStageArt") != null)
+    _rect(_child(content, "RestorationProgress"), Vector2(18,338), Vector2(354,116), "PROPERTY progress")
+    _rect(_child(content, "BuildingDetails"), Vector2(18,472), Vector2(354,126), "PROPERTY details")
+    check("PROPERTY exposes nine named buildings", content.find_children("BuildingRow*", "Panel", false, false).size() == 9)
 
     hud.open_figma_view("empire")
     await process_frame

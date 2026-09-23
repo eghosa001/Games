@@ -1,6 +1,5 @@
 extends Control
 
-const WORLD_ART_TEXTURE: Texture2D = preload("res://Assets/Art/premium_industrial_district.svg")
 
 ## Unified premium presentation layer for RESTORA.
 ## It does not own gameplay state. It restyles existing controls and only adds an
@@ -682,13 +681,6 @@ func _draw() -> void:
     draw_line(Vector2(18, top_h), Vector2(size.x - 18, top_h), Color(0, 0, 0, 0.36), 2.0)
     _corner(Vector2(18, top_h + 14), 32.0, _gold())
     _corner(Vector2(size.x - 18, top_h + 14), -32.0, _cyan())
-
-    # Keep the simulated industrial world visible behind management panels.
-    var world_rect := Rect2(0, top_h, size.x, maxf(0.0, size.y - top_h))
-    if WORLD_ART_TEXTURE != null and world_rect.size.y > 1.0:
-        draw_texture_rect(WORLD_ART_TEXTURE, world_rect, false, Color(1, 1, 1, 0.075 if _is_light_mode() else 0.11))
-        var world_wash := _surface() if _is_light_mode() else _deep()
-        draw_rect(world_rect, Color(world_wash.r, world_wash.g, world_wash.b, 0.68 if _is_light_mode() else 0.64), true)
 
     # Low-contrast diagonal material detail adds depth without reducing legibility.
     var grid_alpha := 0.028 if mobile else 0.038
