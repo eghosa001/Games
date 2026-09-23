@@ -224,16 +224,18 @@ func _layout_responsive() -> void:
     _status.add_theme_font_size_override("font_size", 9 if phone else 10)
     _summary.add_theme_font_size_override("font_size", 9 if phone else 10)
     _feedback.add_theme_font_size_override("font_size", 9 if phone else 10)
-    _list_scroll.custom_minimum_size.y = 132 if phone else (128 if mobile else 0)
-    _detail_scroll.custom_minimum_size.y = 108 if phone else (126 if mobile else 116)
+    var very_short := phone and size.y < 520.0
+    var short_phone := phone and size.y < 620.0
+    _list_scroll.custom_minimum_size.y = 48 if very_short else (64 if short_phone else (132 if phone else (128 if mobile else 0)))
+    _detail_scroll.custom_minimum_size.y = 60 if very_short else (76 if short_phone else (108 if phone else (126 if mobile else 116)))
     portrait.visible = not phone
     detail_row.custom_minimum_size.x = maxf(1.0, panel_w - 40.0)
     detail_label.custom_minimum_size.x = maxf(180.0, panel_w - (48.0 if phone else 138.0))
-    detail_label.add_theme_font_size_override("font_size", 10 if phone else 11)
+    detail_label.add_theme_font_size_override("font_size", 9 if very_short else (10 if phone else 11))
     _actions.columns = 3 if phone else 2
     for child in _actions.get_children():
         if child is Button:
-            child.custom_minimum_size = Vector2(0, 44 if phone else 46)
+            child.custom_minimum_size = Vector2(0, 38 if very_short else (42 if short_phone else (44 if phone else 46)))
             child.add_theme_font_size_override("font_size", 8 if phone else 10)
             child.clip_text = true
 
