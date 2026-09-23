@@ -458,8 +458,12 @@ func _build_mobile_operations() -> void:
     _remember("production_rate", _label(prod, "Rate", _production_rate_text(), Rect2(16, 42, inner_w - 32, 18), 13, "text", 600))
     _label(prod, "Meta", "Demand is healthy. One production batch can be completed safely.", Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
     var half := (inner_w - 42.0) * 0.5
-    _frame_button(prod, "ProduceBatch", "PRODUCE BATCH", Rect2(16, 104, half, 34), _produce, false, true, 9)
-    _frame_button(prod, "BuyInputs", "BUY INPUTS", Rect2(26 + half, 104, half, 34), _buy_inputs, false, false, 9)
+    if _business_open():
+        _frame_button(prod, "ProduceBatch", "PRODUCE BATCH", Rect2(16, 104, half, 34), _produce, false, true, 9)
+        _frame_button(prod, "BuyInputs", "BUY INPUTS", Rect2(26 + half, 104, half, 34), _buy_inputs, false, false, 9)
+    else:
+        _frame_button(prod, "ChooseBusiness", "CHOOSE BUSINESS", Rect2(16, 104, half, 34), _open_business_choices, false, true, 9)
+        _frame_button(prod, "BackProperty", "VIEW PROPERTY", Rect2(26 + half, 104, half, 34), _show_view.bind("property"), false, false, 9)
 
     var commercial := _panel(mobile_content, "CommercialControls", Rect2(18, 370, inner_w, 176), "surface", "border", 18)
     _label(commercial, "Head", "COMMERCIAL CONTROLS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
@@ -1065,6 +1069,33 @@ func _commercial_text() -> String:
         "Local campaign active" if int(_state_value("business","marketing_level",0)) > 0 else "Ready",
         _active_contracts(), "renewal due" if _active_contracts() > 0 else "open market"
     ]
+
+func _open_business_choices() -> void:
+    if parent == null or not parent.has_method("get_business_purposes"):
+        return
+    var purposes: Array = parent.get_business_purposes()
+    if purposes.is_empty():
+        return
+    var old := mobile_content.get_node_or_null("BusinessChoiceModal") if mobile_content != null else null
+    if old != null:
+        old.queue_free()
+    var w := _content_width()
+    var panel := _panel(mobile_content, "BusinessChoiceModal", Rect2(18, 188, w - 36, 278), "selected", "plum", 18)
+    panel.mouse_filter = Control.MOUSE_FILTER_STOP
+    _label(panel, "Head", "CHOOSE BUSINESS", Rect2(16, 14, w - 68, 18), 12, "gold", 600)
+    _label(panel, "Help", "Choose what this restored property will become.", Rect2(16, 40, w - 68, 32), 10, "muted", 400)
+    var y := 82.0
+    for i in range(mini(3, purposes.size())):
+        var purpose: Dictionary = purposes[i] if purposes[i] is Dictionary else {}
+        var name := str(purpose.get("name", "BUSINESS")).to_upper()
+        _frame_button(panel, "Purpose%d" % i, name, Rect2(16, y, w - 68, 46), _choose_business.bind(i), i == 0, false, 10)
+        y += 56.0
+    _frame_button(panel, "CancelPurpose", "CANCEL", Rect2(16, 238, w - 68, 30), panel.queue_free, false, false, 9)
+
+func _choose_business(index: int) -> void:
+    if parent != null and parent.has_method("choose_business_purpose"):
+        parent.choose_business_purpose(index)
+    _rebuild_current()
 
 func _produce() -> void:
     if parent != null and parent.has_method("produce_goods"):
