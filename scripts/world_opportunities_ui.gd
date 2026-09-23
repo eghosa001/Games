@@ -39,6 +39,7 @@ func _ready() -> void:
 
 func _build() -> void:
     scrim = ColorRect.new()
+    scrim.name = "WorldOpportunityScrim"
     scrim.color = Color(0.01, 0.04, 0.06, 0.80)
     scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     scrim.mouse_filter = Control.MOUSE_FILTER_STOP

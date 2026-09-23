@@ -144,6 +144,10 @@ func _button_style(bg: Color, border: Color, radius := 13) -> StyleBoxFlat:
 
 func _build_theme() -> Theme:
     var theme := Theme.new()
+    var body_font := SystemFont.new()
+    body_font.font_names = PackedStringArray(["Inter", "Roboto", "Noto Sans", "Arial"])
+    body_font.font_weight = 400
+    theme.default_font = body_font
     theme.default_font_size = 14
     var text := color("text")
     var muted := color("muted")
@@ -192,5 +196,21 @@ func _build_theme() -> Theme:
     theme.set_stylebox("background", "ProgressBar", progress_bg)
     theme.set_stylebox("fill", "ProgressBar", progress_fill)
     theme.set_color("font_color", "ProgressBar", text)
+
+    # Premium scroll treatment keeps every long management screen inside the
+    # same Figma material system instead of falling back to Godot defaults.
+    var scroll_track := StyleBoxFlat.new()
+    scroll_track.bg_color = Color(surface_2.r, surface_2.g, surface_2.b, 0.34)
+    scroll_track.set_corner_radius_all(5)
+    var scroll_grabber := StyleBoxFlat.new()
+    scroll_grabber.bg_color = Color(gold.r, gold.g, gold.b, 0.72)
+    scroll_grabber.set_corner_radius_all(5)
+    var scroll_hover := scroll_grabber.duplicate() as StyleBoxFlat
+    scroll_hover.bg_color = gold
+    for scrollbar_type in ["VScrollBar", "HScrollBar"]:
+        theme.set_stylebox("scroll", scrollbar_type, scroll_track)
+        theme.set_stylebox("grabber", scrollbar_type, scroll_grabber)
+        theme.set_stylebox("grabber_highlight", scrollbar_type, scroll_hover)
+        theme.set_stylebox("grabber_pressed", scrollbar_type, scroll_hover)
 
     return theme
