@@ -14,6 +14,7 @@ const ART_ROOT = "res://Assets/Art/"
 const RESTORATION_ART = ART_ROOT + "premium_restoration_site.svg"
 const DISTRICT_ART = ART_ROOT + "premium_industrial_district.svg"
 const ICON_ROOT = ART_ROOT + "Icons/"
+const NAV_ICON_ROOT = ART_ROOT + "NavIcons/"
 const WAREHOUSE_STAGE_ART = ART_ROOT + "building_warehouse_progression.svg"
 const WORKSHOP_STAGE_ART = ART_ROOT + "building_factory_progression.svg"
 const COMMERCIAL_STAGE_ART = ART_ROOT + "building_office_progression.svg"
@@ -256,8 +257,8 @@ func _add_texture(parent_node: Node, name: String, rect: Rect2, texture: Texture
 func _add_art(parent_node: Node, name: String, rect: Rect2, path: String, alpha := 1.0) -> TextureRect:
     return _add_texture(parent_node, name, rect, _asset_texture(path), alpha)
 
-func _add_icon(parent_node: Node, name: String, icon_key: String, rect: Rect2, role := "muted", alpha := 1.0) -> TextureRect:
-    var icon := _add_art(parent_node, name, rect, ICON_ROOT + icon_key + ".svg", alpha)
+func _add_icon(parent_node: Node, name: String, icon_key: String, rect: Rect2, role := "muted", alpha := 1.0, icon_root := ICON_ROOT) -> TextureRect:
+    var icon := _add_art(parent_node, name, rect, icon_root + icon_key + ".svg", alpha)
     if icon != null:
         var tint := _color(role)
         icon.modulate = Color(tint.r, tint.g, tint.b, alpha)
@@ -445,7 +446,7 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
     bottom_nav.add_child(tabs)
 
     var labels = ["HOME", "BUSINESS", "PROPERTY", "FINANCE", "MORE"]
-    var icon_keys = ["home", "business", "property", "finance", "settings"]
+    var icon_keys = ["home", "business", "property", "finance", "more"]
     var required_unlocks = ["", "", "", "finance", ""]
     for i in range(labels.size()):
         var button = Button.new()
@@ -458,6 +459,7 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
         button.add_theme_stylebox_override("hover", _nav_style(i == active_tab, true))
         button.add_theme_stylebox_override("pressed", _nav_style(true))
         button.add_theme_stylebox_override("focus", _nav_style(true, true))
+        button.add_theme_stylebox_override("disabled", _nav_disabled_style())
         var required_unlock := str(required_unlocks[i])
         var locked := not required_unlock.is_empty() and not _has_unlock(required_unlock)
         button.disabled = locked
@@ -469,10 +471,12 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
         mode_buttons.append(button)
 
         var icon_alpha := 0.42 if locked else 1.0
-        _add_icon(button, "NavIcon", icon_keys[i], Rect2((button.custom_minimum_size.x - 18.0) * 0.5, 4, 18, 18), "gold" if i == active_tab else "muted", icon_alpha)
+        _add_icon(button, "NavIcon", icon_keys[i], Rect2((button.custom_minimum_size.x - 20.0) * 0.5, 5, 20, 20), "gold" if i == active_tab else "muted", icon_alpha, NAV_ICON_ROOT)
 
         var label = _label(button, "NavLabel", labels[i], Rect2(2, 34, button.custom_minimum_size.x - 4, 16), 8, "text" if i == active_tab else "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
         label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+        if locked:
+            _label(button, "UnlockLevel", "L%d" % _unlock_level(required_unlock), Rect2(button.custom_minimum_size.x - 23, 3, 18, 11), 7, "muted", 700, HORIZONTAL_ALIGNMENT_RIGHT)
         button.focus_mode = Control.FOCUS_ALL
     call_deferred("_ensure_nav_focus_modes")
 
@@ -480,6 +484,13 @@ func _ensure_nav_focus_modes() -> void:
     for button in mode_buttons:
         if button != null and is_instance_valid(button) and not button.disabled:
             button.focus_mode = Control.FOCUS_ALL
+
+func _nav_disabled_style() -> StyleBoxFlat:
+    var style := StyleBoxFlat.new()
+    style.bg_color = Color(0, 0, 0, 0)
+    style.border_color = Color(0, 0, 0, 0)
+    style.set_corner_radius_all(14)
+    return style
 
 func _nav_style(active: bool, hover = false) -> StyleBoxFlat:
     if active:
@@ -758,13 +769,13 @@ func _build_mobile_property() -> void:
     var top_scrim := ColorRect.new()
     top_scrim.position = Vector2.ZERO
     top_scrim.size = Vector2(inner_w, 54)
-    top_scrim.color = Color(0.02, 0.03, 0.03, 0.66)
+    top_scrim.color = Color(1, 1, 1, 0.78) if _is_light_theme() else Color(0.02, 0.03, 0.03, 0.66)
     top_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
     visual.add_child(top_scrim)
     var bottom_scrim := ColorRect.new()
     bottom_scrim.position = Vector2(0, 174)
     bottom_scrim.size = Vector2(inner_w, 64)
-    bottom_scrim.color = Color(0.02, 0.03, 0.03, 0.72)
+    bottom_scrim.color = Color(1, 1, 1, 0.86) if _is_light_theme() else Color(0.02, 0.03, 0.03, 0.72)
     bottom_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
     visual.add_child(bottom_scrim)
     _label(visual, "Stage", "%s • STAGE %d/6" % [_building_stage_name(building), _building_stage_slot(building) + 1], Rect2(16, 15, inner_w - 150, 16), 10, "gold", 700)

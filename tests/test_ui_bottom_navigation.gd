@@ -45,6 +45,8 @@ func _run() -> void:
             check(button.focus_mode == Control.FOCUS_ALL, "keyboard focus " + expected[i])
         else:
             check(not button.tooltip_text.is_empty(), "locked navigation explains unlock " + expected[i])
+            check(button.has_theme_stylebox_override("disabled"), "locked navigation has authored disabled style " + expected[i])
+            check(button.get_node_or_null("UnlockLevel") != null, "locked navigation shows unlock level " + expected[i])
 
     check(not (buttons[0] as Button).disabled and not (buttons[1] as Button).disabled and not (buttons[2] as Button).disabled and not (buttons[4] as Button).disabled, "home, business, property and more are available from Level 1")
     check((buttons[3] as Button).disabled, "Finance waits for Company Level 2")

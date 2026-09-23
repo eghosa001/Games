@@ -219,7 +219,7 @@ func _layout_responsive() -> void:
         collapsed_button.hide()
         return
 
-    var compact_by_default := narrow and not _expanded_by_user
+    var compact_by_default := not _expanded_by_user
     if dismissed or compact_by_default:
         panel.hide()
         if tutorial.completed:
@@ -229,6 +229,9 @@ func _layout_responsive() -> void:
         if narrow:
             collapsed_button.size = Vector2(104.0, 48.0)
             collapsed_button.position = Vector2(maxf(8.0, w - 116.0), maxf(8.0, h - 154.0))
+        elif w >= 1000.0:
+            collapsed_button.size = Vector2(112.0, 44.0)
+            collapsed_button.position = Vector2(maxf(8.0, w - 128.0), 24.0)
         else:
             collapsed_button.size = Vector2(112.0, 48.0)
             collapsed_button.position = Vector2(maxf(8.0, w - 126.0), maxf(64.0, h - 120.0))
