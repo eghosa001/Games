@@ -25,7 +25,7 @@ func _run()->void:
         var b:=tabs[i] as Button
         var l:=b.get_node_or_null("NavLabel") as Label
         check("destination label "+expected[i],l!=null and l.text==expected[i])
-        check("destination touch target "+expected[i],b.size.y>=44.0)
+        check("destination touch target "+expected[i],b.size.y>=48.0)
     for view in ["live","operate","empire","world","more"]:
         hud.open_figma_view(view);await process_frame
         check(view+" is directly reachable",str(hud.get("active_view"))==view)
