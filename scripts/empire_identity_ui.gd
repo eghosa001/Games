@@ -113,8 +113,13 @@ func _layout() -> void:
     var size := get_viewport().get_visible_rect().size; var narrow := size.x < 760.0; dimmer.position = Vector2.ZERO; dimmer.size = size
     var width := maxf(304.0, size.x - 16.0) if narrow else minf(660.0, size.x - 36.0); var height := maxf(430.0, size.y - 90.0) if narrow else minf(720.0, size.y - 110.0)
     panel.position = Vector2(8, 70) if narrow else Vector2(maxf(18.0, (size.x - width) * 0.5), 82); panel.size = Vector2(width, height)
-    title_label.position = Vector2(14, 10); title_label.size = Vector2(width - 130, 30); summary_label.position = Vector2(14, 40); summary_label.size = Vector2(width - 28, 20); power_label.position = Vector2(14, 61); power_label.size = Vector2(width - 28, 36); close_button.position = Vector2(width - 94, 7); close_button.size = Vector2(86, 46); scroll.position = Vector2(12, 100); scroll.size = Vector2(width - 24, height - 108); content.custom_minimum_size.x = width - 24
+    title_label.text = "COMPANY IDENTITY" if narrow else "COMPANY IDENTITY & STANDING"
+    title_label.position = Vector2(14, 10); title_label.size = Vector2(width - 118, 30); title_label.add_theme_font_size_override("font_size", 18 if narrow else 20)
+    close_button.position = Vector2(width - 94, 7); close_button.size = Vector2(86, 46)
+    summary_label.position = Vector2(14, 56); summary_label.size = Vector2(width - 28, 20)
+    power_label.position = Vector2(14, 78); power_label.size = Vector2(width - 28, 38)
+    scroll.position = Vector2(12, 120); scroll.size = Vector2(width - 24, height - 128); content.custom_minimum_size.x = width - 24
     for child in content.get_children():
-        child.custom_minimum_size.y = 94 if narrow else 86
+        child.custom_minimum_size.y = 102 if narrow else 86
         for sub in child.get_children():
             if sub is Label: sub.size.x = width - 48
