@@ -268,10 +268,18 @@ func _style_button(button: Button) -> void:
     disabled.border_color = Color(_edge().r, _edge().g, _edge().b, 0.45)
     disabled.shadow_size = 0
 
+    var focus := normal.duplicate() as StyleBoxFlat
+    focus.border_color = accent
+    focus.set_border_width_all(2)
+    focus.shadow_color = Color(accent.r, accent.g, accent.b, 0.30)
+    focus.shadow_size = 12
+    focus.shadow_offset = Vector2(0, 2)
+
     button.add_theme_stylebox_override("normal", normal)
     button.add_theme_stylebox_override("hover", hover)
     button.add_theme_stylebox_override("pressed", pressed)
     button.add_theme_stylebox_override("disabled", disabled)
+    button.add_theme_stylebox_override("focus", focus)
     button.add_theme_color_override("font_color", _text())
     button.add_theme_color_override("font_hover_color", Color.WHITE)
     button.add_theme_color_override("font_pressed_color", Color.WHITE)
@@ -281,7 +289,7 @@ func _style_button(button: Button) -> void:
     if _font_semibold != null:
         button.add_theme_font_override("font", _font_semibold)
     button.add_theme_font_size_override("font_size", 13)
-    button.focus_mode = Control.FOCUS_NONE
+    button.focus_mode = Control.FOCUS_ALL
     button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
     button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 48.0)
 
