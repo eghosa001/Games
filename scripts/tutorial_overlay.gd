@@ -365,5 +365,6 @@ func _set_coordinator_active(value: bool) -> void:
 func _on_screen_changed(open: bool) -> void:
     if open:
         panel.hide()
+        collapsed_button.hide()
     elif not _coordinator_active:
         _layout_responsive()
