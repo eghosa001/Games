@@ -25,6 +25,8 @@ func _run() -> void:
     check("adaptive icon foreground is configured", text.contains("launcher_icons/adaptive_foreground_432x432=\"res://Assets/restora_icon_foreground.svg\""))
     check("adaptive icon background is configured", text.contains("launcher_icons/adaptive_background_432x432=\"res://Assets/restora_icon_background.svg\""))
     check("Android 13 themed monochrome icon is configured", text.contains("launcher_icons/adaptive_monochrome_432x432=\"res://Assets/restora_icon_monochrome.svg\""))
+    var icon_source := FileAccess.get_file_as_string("res://Assets/restora_icon.svg")
+    check("launcher icon is branded RESTORA monogram", icon_source.contains("#C99A4B") and icon_source.contains("#7A405F") and not icon_source.contains("188 300l42 42"))
     check("release version code exists", text.contains("version/code=1"))
     check("release semantic version exists", text.contains("version/name=\"1.0.0\""))
     check("internet permission stays disabled until a network SDK ships", text.contains("permissions/internet=false"))
@@ -35,6 +37,8 @@ func _run() -> void:
     check("mobile base viewport matches approved Figma width", project_text.contains("window/size/viewport_width=390"))
     check("mobile base viewport matches approved Figma height", project_text.contains("window/size/viewport_height=844"))
     check("canvas-items stretch is enabled for mobile scaling", project_text.contains('window/stretch/mode="canvas_items"'))
+    check("Godot engine boot image is disabled", project_text.contains("boot_splash/show_image=false"))
+    check("RESTORA boot background is configured", project_text.contains("boot_splash/bg_color=Color("))
 
     var autosave := FileAccess.get_file_as_string("res://scripts/autosave.gd")
     check("autosave handles Android pause", autosave.contains("NOTIFICATION_APPLICATION_PAUSED"))
@@ -53,7 +57,7 @@ func _run() -> void:
     check("no undeclared analytics/tracking implementation exists", not analytics_present)
 
     print("--- ANDROID RELEASE CONFIG SUMMARY ---")
-    print("Checks: %d | Failures: %d" % [35, failures.size()])
+    print("Checks: %d | Failures: %d" % [38, failures.size()])
     for failure in failures:
         print("FAILED: %s" % failure)
     if failures.size() > 0:
