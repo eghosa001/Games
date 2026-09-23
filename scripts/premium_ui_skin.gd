@@ -1,6 +1,6 @@
 extends Control
 
-## Unified premium presentation layer for RESTORA.
+## Unified Figma-derived premium presentation layer for RESTORA.
 ## It does not own gameplay state. It restyles existing controls and only adds an
 ## executive context rail when the active screen is genuinely modal/narrow; wide
 ## command-center screens keep their authored canvas so no content is obscured.
