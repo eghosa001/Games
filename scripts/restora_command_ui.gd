@@ -1290,6 +1290,14 @@ func _worth() -> int:
             value += int(a.get("value",a.get("cost",0)))
     return maxi(value, _cash())
 
+func _acquisition_cost() -> int:
+    var model = _property_system()
+    if model != null and model.has_method("acquisition_cost"):
+        return int(model.acquisition_cost())
+    if parent != null and parent.has_method("_acquisition_cost"):
+        return int(parent._acquisition_cost())
+    return 5000
+
 func _objective_title() -> String:
     if not _inspected(): return "Inspect " + _building_name()
     if not _owned(): return "Acquire " + _building_name()
@@ -1299,6 +1307,10 @@ func _objective_title() -> String:
     return "Grow the enterprise"
 
 func _objective_detail() -> String:
+    if not _inspected():
+        return "Survey the selected building before committing capital."
+    if not _owned():
+        return "Acquire the selected property for %s while preserving operating liquidity." % _money(_acquisition_cost())
     if _stage() != "Operational":
         return "Complete the next restoration stage while protecting available cash."
     if not _business_open():
@@ -1324,7 +1336,7 @@ func _stage_step_text() -> String:
 
 func _next_stage_text() -> String:
     if not _inspected(): return "NEXT  •  Inspect property condition"
-    if not _owned(): return "NEXT  •  Acquire the property"
+    if not _owned(): return "NEXT  •  Acquire property  •  %s" % _money(_acquisition_cost())
     if _stage() == "Operational": return "NEXT  •  Begin operating the asset"
     var cost = 0
     if parent != null and parent.has_method("_next_cost"):
@@ -1341,7 +1353,7 @@ func _next_stage_name() -> String:
 
 func _property_cta_label() -> String:
     if not _inspected(): return "INSPECT PROPERTY"
-    if not _owned(): return "ACQUIRE PROPERTY"
+    if not _owned(): return "ACQUIRE  •  %s" % _money(_acquisition_cost())
     if _stage() != "Operational":
         var cost = int(parent._next_cost()) if parent != null and parent.has_method("_next_cost") else 0
         return "RESTORE NEXT STAGE  •  %s" % _money(cost)
