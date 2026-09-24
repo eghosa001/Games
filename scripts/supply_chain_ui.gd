@@ -3,7 +3,7 @@ extends CanvasLayer
 ## SupplyChainController / SupplyChain model.
 
 var root: Control
-var panel: PanelContainer
+var panel: Panel
 var scroll: ScrollContainer
 var content: VBoxContainer
 var title_label: Label
@@ -56,7 +56,7 @@ func _build() -> void:
     scrim.color = Color(0.02, 0.07, 0.08, 0.84)
     scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     root.add_child(scrim)
-    panel = PanelContainer.new()
+    panel = Panel.new()
     panel.add_theme_stylebox_override("panel", _box(Color("0b1f25"), Color("42666b"), 14))
     root.add_child(panel)
     scroll = ScrollContainer.new()
@@ -203,7 +203,15 @@ func _layout() -> void:
     if size.x < 700.0:
         panel.position = Vector2(8, 8)
         panel.size = Vector2(size.x - 16, size.y - 16)
-    content.custom_minimum_size.x = maxf(0.0, panel.size.x - 40.0)
+    # Panel is intentionally non-container: scroll content must never grow the
+    # modal beyond the viewport on narrow phones.
+    var inset := 12.0
+    scroll.position = Vector2(inset, inset)
+    scroll.size = Vector2(
+        maxf(0.0, panel.size.x - inset * 2.0),
+        maxf(0.0, panel.size.y - inset * 2.0)
+    )
+    content.custom_minimum_size.x = maxf(0.0, scroll.size.x - 16.0)
     var phone := size.x < 430.0
     amount_spin.custom_minimum_size.x = 72.0 if phone else 105.0
     transport_spin.custom_minimum_size.x = 72.0 if phone else 105.0
