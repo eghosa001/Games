@@ -26,6 +26,13 @@ func _run()->void:
     check("regional detail avoids synthetic demand/pressure ratings",not ui_source.contains("Demand HIGH") and not ui_source.contains("Rival pressure MEDIUM"))
     check("primary view transitions are subtle and reduced-motion aware",ui_source.contains("func _animate_view_in()") and ui_source.contains("if _reduce_motion()"))
 
+    hud.open_figma_view("operate");await process_frame
+    var fresh_business_content:=hud.get("mobile_content") as Control
+    check("fresh BUSINESS routes to restoration first",fresh_business_content.find_child("ContinueRestoration",true,false)!=null)
+    check("fresh BUSINESS does not offer premature business selection",fresh_business_content.find_child("ChooseBusiness",true,false)==null)
+    check("fresh BUSINESS keeps commercial controls locked",fresh_business_content.find_child("OpenCommercial",true,false)==null)
+    check("fresh BUSINESS keeps equipment controls locked",fresh_business_content.find_child("OpenEquipment",true,false)==null)
+
     var expected:=["HOME","BUSINESS","PROPERTY","FINANCE","MORE"]
     var tabs:Array=hud.get("mode_buttons")
     check("exactly five primary destinations",tabs.size()==5)
