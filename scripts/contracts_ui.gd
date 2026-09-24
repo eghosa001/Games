@@ -361,7 +361,7 @@ func _layout() -> void:
     for child in offer_grid.get_children():
         child.custom_minimum_size = Vector2(offer_button_width, 46.0)
         if child is Button:
-            child.add_theme_font_size_override("font_size", 9 if phone else 10)
+            child.add_theme_font_size_override("font_size", 8 if phone else 10)
             child.clip_text = true
 
     var detail_height := 130.0 if phone else 180.0
