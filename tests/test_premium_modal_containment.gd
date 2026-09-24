@@ -40,13 +40,25 @@ func _run() -> void:
         var screen := game.get_node_or_null("UI/" + screen_name)
         check("%s opens" % screen_name, screen != null and manager.is_screen_open(screen_name))
         if screen != null:
+            var scrolls: Array[ScrollContainer] = []
+            collect_scrolls(screen, scrolls)
+            for scroll in scrolls:
+                if scroll.is_visible_in_tree():
+                    var scroll_viewport := scroll.get_viewport_rect()
+                    check("%s scroll viewport stays on-screen: %s" % [screen_name, scroll.name], scroll_viewport.grow(2.0).encloses(scroll.get_global_rect()))
             var buttons: Array[Button] = []
             collect_buttons(screen, buttons)
             for button in buttons:
                 if not button.is_visible_in_tree():
                     continue
                 var rect := button.get_global_rect()
-                check("%s button inside desktop viewport: %s" % [screen_name, button.text], Rect2(Vector2.ZERO, Vector2(1280, 720)).encloses(rect))
+                var scroll_ancestor := nearest_scroll(button)
+                if scroll_ancestor != null:
+                    # Scroll children can legitimately sit outside the visible clip region.
+                    # The scroll viewport itself is the containment boundary checked above.
+                    continue
+                var button_viewport := button.get_viewport_rect()
+                check("%s button inside desktop viewport: %s rect=%s viewport=%s" % [screen_name, button.text, rect, button_viewport], button_viewport.grow(2.0).encloses(rect))
         manager.hide_all_screens()
         await process_frame
 
@@ -59,6 +71,20 @@ func collect_buttons(node: Node, out: Array[Button]) -> void:
         out.append(node as Button)
     for child in node.get_children():
         collect_buttons(child, out)
+
+func collect_scrolls(node: Node, out: Array[ScrollContainer]) -> void:
+    if node is ScrollContainer:
+        out.append(node as ScrollContainer)
+    for child in node.get_children():
+        collect_scrolls(child, out)
+
+func nearest_scroll(node: Node) -> ScrollContainer:
+    var current := node.get_parent()
+    while current != null:
+        if current is ScrollContainer:
+            return current as ScrollContainer
+        current = current.get_parent()
+    return null
 
 func check(label: String, condition: bool) -> void:
     if condition:

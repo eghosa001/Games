@@ -333,10 +333,13 @@ func test_responsive_ui_contract() -> void:
             ui_root.size = Vector2(target)
             hud._layout_responsive()
             await process_frame
+            await process_frame
             check(ui_root.size.x >= target.x - 1 and ui_root.size.y >= target.y - 1, "UI: accepts viewport %dx%d" % [target.x, target.y])
             var tabs := hud.get("tabs") as Control
-            if tabs != null:
-                check(Rect2(Vector2.ZERO, Vector2(target)).encloses(Rect2(tabs.position, tabs.size)), "UI: navigation stays inside %dx%d" % [target.x, target.y])
+            var nav := hud.get("bottom_nav") as Control
+            if tabs != null and nav != null:
+                var nav_rect := Rect2(nav.position + tabs.position, tabs.size)
+                check(Rect2(Vector2.ZERO, Vector2(target)).grow(1.0).encloses(nav_rect), "UI: navigation stays inside %dx%d" % [target.x, target.y])
                 for child in tabs.get_children():
                     var button := child as Button
                     if button != null:

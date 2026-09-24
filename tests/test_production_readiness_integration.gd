@@ -1,8 +1,8 @@
 extends SceneTree
 
 ## RESTORA production-readiness integration gate.
-## This gate is intentionally cross-system: economic authority must remain in
-## GameState/domain systems while the hybrid 3D world stays presentation-only.
+## This gate is intentionally cross-system: economic authority remains in
+## GameState/domain systems while the building-first UI stays presentation-only.
 ## It does not fabricate soft-launch metrics.
 
 const REQUIRED_AUTOLOADS := {
@@ -98,11 +98,12 @@ func test_2d_runtime_contract() -> void:
             check(FileAccess.file_exists(path), "Service source exists: " + path)
             check(services.get_service(service_name) != null, "Scene service is live: " + service_name)
 
-    var world_3d := game.get_node_or_null("World3D")
-    check(world_3d is Node3D, "Hybrid 3D presentation root is active")
+    check(game.get_node_or_null("World3D") == null, "Retired live 3D world is absent from production")
     check(game.get_script() != null and str(game.get_script().resource_path) == "res://scripts/main.gd", "Authoritative Main gameplay boundary remains domain-driven")
-    var controller_source := FileAccess.get_file_as_string("res://scripts/restora_world_3d_controller.gd")
-    check(controller_source.contains("snapshot_from_game_state") and not controller_source.contains("set_value("), "3D controller reads snapshots without authoring simulation state")
+    var scene_source := FileAccess.get_file_as_string("res://scenes/Main.tscn")
+    var command_ui_source := FileAccess.get_file_as_string("res://scripts/restora_command_ui.gd")
+    check(not scene_source.contains("RestoraWorld3D") and not scene_source.contains('name="World3D"'), "Main scene stays building-first")
+    check(command_ui_source.contains("building_warehouse_progression.svg") and command_ui_source.contains("_building_stage_texture"), "Building presentation reads staged property state without owning simulation")
 
 func test_persistence_contract() -> void:
     var save_source := FileAccess.get_file_as_string("res://scripts/save_system.gd")
