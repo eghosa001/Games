@@ -82,6 +82,7 @@ func _build_ui() -> void:
 
     var root := VBoxContainer.new()
     root.add_theme_constant_override("separation", 8)
+    root.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     margin.add_child(root)
 
     var header := HBoxContainer.new()
@@ -123,6 +124,7 @@ func _build_ui() -> void:
     employee_list = VBoxContainer.new()
     employee_list.add_theme_constant_override("separation", 6)
     employee_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    employee_list.custom_minimum_size.x = 0
     _list_scroll.add_child(employee_list)
 
     _detail_scroll = ScrollContainer.new()
@@ -150,6 +152,7 @@ func _build_ui() -> void:
 
     _actions = GridContainer.new()
     _actions.columns = 2
+    _actions.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _actions.add_theme_constant_override("h_separation", 6)
     _actions.add_theme_constant_override("v_separation", 6)
     root.add_child(_actions)
@@ -190,6 +193,7 @@ func _add_action(parent_node: GridContainer, text: String, action: String) -> vo
     button.text = text
     button.custom_minimum_size = Vector2(0, 46)
     button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    button.clip_text = true
     button.focus_mode = Control.FOCUS_NONE
     button.tooltip_text = _action_hint(action)
     parent_node.add_child(button)
@@ -268,8 +272,10 @@ func _rebuild_list(roster: Array) -> void:
         if not assignment.is_empty():
             button.text += "  •  " + assignment
         button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-        button.custom_minimum_size.y = 52
+        button.custom_minimum_size = Vector2(0, 52)
         button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        button.clip_text = true
+        button.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
         button.focus_mode = Control.FOCUS_NONE
         button.add_theme_font_size_override("font_size", 11)
         button.add_theme_color_override("font_color", TEXT if selected else MUTED)
