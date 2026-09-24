@@ -200,6 +200,15 @@ func _apply_theme() -> void:
 func _on_theme_changed(_mode: String) -> void:
     _apply_theme()
 
+func _main_hud_view() -> String:
+    var hud := get_node_or_null("/root/Renew/UI/MainHUD")
+    if hud != null:
+        return str(hud.get("active_view"))
+    return "live"
+
+func _compact_guide_allowed() -> bool:
+    return _main_hud_view() in ["live", "property", "operate"]
+
 func _layout_responsive() -> void:
     if overlay_root == null or panel == null:
         return
@@ -227,6 +236,9 @@ func _layout_responsive() -> void:
             return
         collapsed_button.text = "GUIDE  %d/%d" % [mini(int(tutorial.step) + 1, tutorial.steps.size()), tutorial.steps.size()]
         if narrow:
+            if not _compact_guide_allowed():
+                collapsed_button.hide()
+                return
             collapsed_button.size = Vector2(104.0, 48.0)
             collapsed_button.position = Vector2(maxf(8.0, w - 116.0), maxf(8.0, h - 154.0))
         elif w >= 1000.0:
