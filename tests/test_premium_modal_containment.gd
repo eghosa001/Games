@@ -104,7 +104,7 @@ func _run() -> void:
                     var font := button.get_theme_font("font")
                     var font_size := button.get_theme_font_size("font_size")
                     var text_width := font.get_string_size(button.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-                    check("Contract offer label fits: %s" % button.text, text_width <= button.size.x - 20.0)
+                    check("Contract offer label fits: %s" % button.text, text_width <= button.size.x - 28.0)
             if screen_name == "ContractPanel":
                 var grid := screen.get("offer_grid") as GridContainer
                 check("Contract phone offers use two readable columns", grid != null and grid.columns == 2)
