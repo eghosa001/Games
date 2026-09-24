@@ -114,8 +114,11 @@ func _layout_responsive() -> void:
             for child in filters.get_children():
                 if child is Button:
                     var button := child as Button
-                    button.custom_minimum_size.x = 72.0 if button.text == "ALL" else 126.0
-                    button.add_theme_font_size_override("font_size", 9)
+                    var font_size := 9
+                    button.add_theme_font_size_override("font_size", font_size)
+                    var font := button.get_theme_font("font")
+                    var text_width := font.get_string_size(button.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+                    button.custom_minimum_size.x = maxf(72.0, ceilf(text_width + 24.0))
     else:
         panel.position = Vector2(70, 40); panel.size = Vector2(minf(1120, w - 140), minf(720, h - 80))
 
