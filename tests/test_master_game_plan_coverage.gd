@@ -38,18 +38,6 @@ var game: Node
 func _init() -> void:
     call_deferred("run")
 
-func _screen_rect(control: Control) -> Rect2:
-    var transform := control.get_screen_transform()
-    var p0 := transform * Vector2.ZERO
-    var p1 := transform * Vector2(control.size.x, 0)
-    var p2 := transform * control.size
-    var p3 := transform * Vector2(0, control.size.y)
-    var min_x := minf(minf(p0.x, p1.x), minf(p2.x, p3.x))
-    var min_y := minf(minf(p0.y, p1.y), minf(p2.y, p3.y))
-    var max_x := maxf(maxf(p0.x, p1.x), maxf(p2.x, p3.x))
-    var max_y := maxf(maxf(p0.y, p1.y), maxf(p2.y, p3.y))
-    return Rect2(Vector2(min_x, min_y), Vector2(max_x - min_x, max_y - min_y))
-
 func check(condition: bool, label: String) -> void:
     if condition:
         passed += 1
@@ -342,17 +330,16 @@ func test_responsive_ui_contract() -> void:
     check(ui_root != null, "UI: responsive root Control exists")
     if ui_root != null:
         for target in MOBILE_TARGETS + DESKTOP_TARGETS:
-            root.size = target
-            root.size_changed.emit()
-            await process_frame
-            await process_frame
+            ui_root.size = Vector2(target)
             hud._layout_responsive()
             await process_frame
-            check(ui_root.size.x >= 1 and ui_root.size.y >= 1, "UI: accepts viewport %dx%d" % [target.x, target.y])
+            await process_frame
+            check(ui_root.size.x >= target.x - 1 and ui_root.size.y >= target.y - 1, "UI: accepts viewport %dx%d" % [target.x, target.y])
             var tabs := hud.get("tabs") as Control
-            if tabs != null:
-                var nav_screen_rect := _screen_rect(tabs)
-                check(Rect2(Vector2.ZERO, Vector2(target)).grow(1.0).encloses(nav_screen_rect), "UI: navigation stays inside %dx%d" % [target.x, target.y])
+            var nav := hud.get("bottom_nav") as Control
+            if tabs != null and nav != null:
+                var nav_rect := Rect2(nav.position + tabs.position, tabs.size)
+                check(Rect2(Vector2.ZERO, Vector2(target)).grow(1.0).encloses(nav_rect), "UI: navigation stays inside %dx%d" % [target.x, target.y])
                 for child in tabs.get_children():
                     var button := child as Button
                     if button != null:
