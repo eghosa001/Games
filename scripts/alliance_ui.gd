@@ -84,6 +84,9 @@ func _build() -> void:
     var subtitle := Label.new()
     subtitle.name = "Subtitle"
     subtitle.text = "Alliance strategy  •  shared capital  •  corporate diplomacy"
+    subtitle.autowrap_mode = TextServer.AUTOWRAP_OFF
+    subtitle.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+    subtitle.clip_text = true
     subtitle.add_theme_font_size_override("font_size", 10)
     subtitle.add_theme_color_override("font_color", MUTED)
     panel.add_child(subtitle)
@@ -306,7 +309,7 @@ func _layout() -> void:
     var subtitle := panel.get_node_or_null("Subtitle") as Label
     if subtitle != null:
         subtitle.position = Vector2(14, 38)
-        subtitle.size = Vector2(width - 28, 20)
+        subtitle.size = Vector2(maxf(120.0, width - 116.0), 20)
     close_button.position = Vector2(width - 88, 7)
     close_button.size = Vector2(80, 46)
     status.position = Vector2(14, 62)
