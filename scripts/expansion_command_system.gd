@@ -16,9 +16,19 @@ func _ready() -> void:
         add_child(expansion)
 
 func initialize() -> void:
+    restore_from_state_mirror()
     var reputation: Variant = int(state_adapter.get_value("player", "reputation", 0))
     expansion.unlock_from_reputation(reputation)
     districts.update_unlocks(reputation)
+    sync_state_mirror()
+
+func sync_state_mirror() -> void:
+    state_adapter.set_value("branches", "expansion", capture_state())
+
+func restore_from_state_mirror() -> void:
+    var snapshot = state_adapter.get_value("branches", "expansion", {})
+    if snapshot is Dictionary and not snapshot.is_empty():
+        restore_state(snapshot)
 
 func capture_state() -> Dictionary:
     return {
@@ -48,6 +58,7 @@ func restore_state(snapshot: Dictionary) -> void:
     expansion.management_overhead = int(snapshot.get("management_overhead", expansion.management_overhead))
     expansion.selected_index = int(snapshot.get("selected_index", expansion.selected_index))
     expansion._normalize_all()
+    sync_state_mirror()
 
 func select_expansion(index: int) -> void:
     if index < 0 or index >= expansion.properties.size(): return
@@ -102,6 +113,7 @@ func buy_expansion() -> void:
     state_adapter.set_value("player", "reputation", reputation + int(result.get("rep", 0)))
     state_adapter.log_message("EXPANSION: %s (-$%s)." % [result.get("name", "Asset"), state_adapter.money(int(result["cost"]))])
     state_adapter.message(result["message"])
+    sync_state_mirror()
 
 func upgrade_expansion() -> void:
     var selected: Variant = int(state_adapter.get_value("branches", "selected_expansion", 0))
@@ -121,3 +133,4 @@ func upgrade_expansion() -> void:
     state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + int(result.get("rep", 0)))
     state_adapter.log_message("EMPIRE UPGRADE: %s." % result.get("name", "Asset"))
     state_adapter.message(result["message"])
+    sync_state_mirror()
