@@ -67,8 +67,26 @@ func _build_ui() -> void:
     summary = Label.new(); summary.add_theme_font_size_override("font_size", 11); summary.add_theme_color_override("font_color", MUTED); summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; root.add_child(summary)
     filter_scroll = ScrollContainer.new(); filter_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; filter_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; filter_scroll.custom_minimum_size.y = 48; root.add_child(filter_scroll)
     var filters := HBoxContainer.new(); filters.name = "Filters"; filters.add_theme_constant_override("separation", 6); filter_scroll.add_child(filters)
+    var phone_labels := {
+        "all": "ALL",
+        "historic_properties": "HISTORIC",
+        "rare_machinery": "MACHINERY",
+        "landmark_businesses": "LANDMARKS",
+        "unique_technologies": "TECH",
+        "special_contracts": "CONTRACTS",
+        "famous_employees": "EMPLOYEES",
+        "world_event_artifacts": "ARTIFACTS"
+    }
     for type in TYPES:
-        var b := Button.new(); b.text = "ALL" if type == "all" else type.replace("_", " ").to_upper(); b.custom_minimum_size = Vector2(110 if type == "all" else 150, 44); b.focus_mode = Control.FOCUS_NONE; b.pressed.connect(_select.bind(type)); filters.add_child(b)
+        var full_label: String = "ALL" if type == "all" else str(type).replace("_", " ").to_upper()
+        var b := Button.new()
+        b.text = full_label
+        b.set_meta("full_label", full_label)
+        b.set_meta("phone_label", str(phone_labels.get(type, full_label)))
+        b.custom_minimum_size = Vector2(110 if type == "all" else 150, 44)
+        b.focus_mode = Control.FOCUS_NONE
+        b.pressed.connect(_select.bind(type))
+        filters.add_child(b)
     var divider := HSeparator.new(); divider.add_theme_constant_override("separation", 0); root.add_child(divider)
     var scroll := ScrollContainer.new(); scroll.name = "ArchiveScroll"; scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL; scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; root.add_child(scroll)
     content = VBoxContainer.new(); content.add_theme_constant_override("separation", 8); content.size_flags_horizontal = Control.SIZE_EXPAND_FILL; scroll.add_child(content)
@@ -107,10 +125,28 @@ func _make_item_card(item: Dictionary) -> Control:
 func _layout_responsive() -> void:
     if panel == null: return
     var viewport := get_viewport().get_visible_rect().size; var w := maxf(320.0, viewport.x); var h := maxf(480.0, viewport.y); var mobile := w < 760.0
+    var filters := panel.find_child("Filters", true, false) as HBoxContainer
     if mobile:
         panel.position = Vector2(8, 8); panel.size = Vector2(w - 16, h - 16)
+        if filters != null:
+            for child in filters.get_children():
+                if child is Button:
+                    var button := child as Button
+                    button.text = str(button.get_meta("phone_label", button.text))
+                    var font_size := 9
+                    button.add_theme_font_size_override("font_size", font_size)
+                    var font := button.get_theme_font("font")
+                    var text_width := font.get_string_size(button.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+                    button.custom_minimum_size.x = maxf(72.0, ceilf(text_width + 24.0))
     else:
         panel.position = Vector2(70, 40); panel.size = Vector2(minf(1120, w - 140), minf(720, h - 80))
+        if filters != null:
+            for child in filters.get_children():
+                if child is Button:
+                    var button := child as Button
+                    button.text = str(button.get_meta("full_label", button.text))
+                    button.remove_theme_font_size_override("font_size")
+                    button.custom_minimum_size.x = 110.0 if button.text == "ALL" else 150.0
 
 func _style(bg: Color, border: Color, radius: int) -> StyleBoxFlat:
     var style := StyleBoxFlat.new(); style.bg_color = bg; style.border_color = border; style.set_border_width_all(1); style.set_corner_radius_all(radius); style.content_margin_left = 14; style.content_margin_right = 14; style.content_margin_top = 12; style.content_margin_bottom = 12; return style

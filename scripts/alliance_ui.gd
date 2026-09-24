@@ -164,6 +164,12 @@ func _build() -> void:
 func _add_button(text: String, callback: Callable) -> void:
     var b := Button.new()
     b.text = text
+    b.set_meta("full_label", text)
+    var phone_label := text
+    match text:
+        "CREATE ALLIANCE  •  $1,000": phone_label = "CREATE  •  $1K"
+        "CONTRIBUTE  •  $1,000": phone_label = "CONTRIBUTE  •  $1K"
+    b.set_meta("phone_label", phone_label)
     b.focus_mode = Control.FOCUS_NONE
     b.custom_minimum_size = Vector2(0, 44)
     b.pressed.connect(callback)
@@ -298,7 +304,7 @@ func _layout() -> void:
     var size := get_viewport().get_visible_rect().size
     visible_width = size.x
     var narrow := visible_width < 760.0
-    var phone := visible_width < 390.0
+    var phone := visible_width < 430.0
     var width := maxf(304.0, visible_width - 16.0) if narrow else minf(590.0, visible_width - 36.0)
     var height := maxf(470.0, size.y - 78.0) if narrow else minf(500.0, size.y - 100.0)
     panel.position = Vector2(8, 70) if narrow else Vector2(maxf(18.0, (visible_width - width) * 0.5), 82)
@@ -308,8 +314,10 @@ func _layout() -> void:
     title.add_theme_font_size_override("font_size", 18 if phone else 20)
     var subtitle := panel.get_node_or_null("Subtitle") as Label
     if subtitle != null:
+        subtitle.text = "CAPITAL  •  PARTNERS" if phone else "Alliance strategy  •  shared capital  •  corporate diplomacy"
         subtitle.position = Vector2(14, 38)
         subtitle.size = Vector2(maxf(120.0, width - 116.0), 20)
+        subtitle.add_theme_font_size_override("font_size", 9 if phone else 10)
     close_button.position = Vector2(width - 88, 7)
     close_button.size = Vector2(80, 46)
     status.position = Vector2(14, 62)
@@ -324,6 +332,7 @@ func _layout() -> void:
     var cols := 2 if narrow else 3
     var bw := (width - 42.0) / float(cols)
     for i in range(buttons.size()):
+        buttons[i].text = str(buttons[i].get_meta("phone_label", buttons[i].text)) if phone else str(buttons[i].get_meta("full_label", buttons[i].text))
         buttons[i].position = Vector2(14 + (i % cols) * (bw + 7), y + floori(i / cols) * 50)
         buttons[i].custom_minimum_size = Vector2(0, 44)
         buttons[i].clip_text = true

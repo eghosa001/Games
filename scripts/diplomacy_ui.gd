@@ -140,11 +140,18 @@ func _jv_status_line(treaty_id: String) -> String:
 
 func _layout() -> void:
     if panel == null: return
-    var size := get_viewport().get_visible_rect().size; visible_width = size.x; var narrow := size.x < 760.0; var phone := size.x < 390.0
+    var size := get_viewport().get_visible_rect().size; visible_width = size.x; var narrow := size.x < 760.0; var phone := size.x < 430.0
     var width := maxf(304.0,size.x-16.0) if narrow else minf(560.0,size.x-36.0); var height := maxf(500.0,size.y-78.0) if narrow else minf(680.0,size.y-100.0)
     panel.position = Vector2(8,70) if narrow else Vector2(maxf(18.0,(size.x-width)*0.5),76); panel.size = Vector2(width,height)
     var title := panel.get_node_or_null("Title") as Label; if title != null: title.position=Vector2(14,10); title.size=Vector2(width-108,30); title.add_theme_font_size_override("font_size",18 if phone else 20)
-    var subtitle := panel.get_node_or_null("Subtitle") as Label; if subtitle != null: subtitle.position=Vector2(14,38); subtitle.size=Vector2(width-28,20)
+    var subtitle := panel.get_node_or_null("Subtitle") as Label
+    if subtitle != null:
+        subtitle.text = "TRUST  •  TREATIES" if phone else "Treaties • trust • long-term corporate relations"
+        subtitle.position = Vector2(14,38)
+        subtitle.size = Vector2(width-116 if phone else width-28,20)
+        subtitle.clip_text = true
+        subtitle.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+        subtitle.add_theme_font_size_override("font_size",9 if phone else 10)
     var close := panel.get_node_or_null("CloseButton") as Button; if close != null: close.position=Vector2(width-88,7); close.size=Vector2(80,46)
     rival_label.position=Vector2(14,62); rival_label.size=Vector2(width-28,34)
     var prev := panel.get_node_or_null("PreviousRival") as Button; var next := panel.get_node_or_null("NextRival") as Button; var nav_w: float=(width-35.0)*0.5
@@ -156,9 +163,12 @@ func _layout() -> void:
     var actions_title := panel.get_node_or_null("ActionsTitle") as Label; var actions_y := height-198.0
     if actions_title != null: actions_title.position=Vector2(14,actions_y); actions_title.size=Vector2(width-28,18)
     var names := ["AcceptIncoming","SendGift","CancelTreaty","RefreshTreatyLedger"]; var bw: float=(width-35.0)*0.5
+    var phone_labels := ["ACCEPT TREATY", "SEND GIFT", "CANCEL TREATY", "REFRESH LEDGER"]
+    var desktop_labels := ["ACCEPT INCOMING TREATY", "SEND ENVOY GIFT", "CANCEL ACTIVE TREATY", "REFRESH TREATY LEDGER"]
     for i in range(names.size()):
         var b := panel.get_node_or_null(names[i]) as Button
         if b != null:
+            b.text = phone_labels[i] if phone else desktop_labels[i]
             b.custom_minimum_size=Vector2(0,44); b.clip_text=true
             b.position=Vector2(14+(i%2)*(bw+7),actions_y+24+(i/2)*50); b.size=Vector2(bw,44); b.add_theme_font_size_override("font_size",9 if phone else 10)
     summary.position=Vector2(14,height-72); summary.size=Vector2(width-28,62)
