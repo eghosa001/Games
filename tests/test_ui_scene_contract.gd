@@ -30,6 +30,10 @@ func run() -> void:
     check(game.get_node_or_null("World/WorldView") == null or game.get_node("World/WorldView").is_inside_tree(), "World view enters scene tree")
     check(game.get_node_or_null("UI/StrategyHUD") == null or game.get_node("UI/StrategyHUD").is_inside_tree(), "Strategy HUD enters scene tree")
     check(game.get_node_or_null("UI/MainHUD") == null or game.get_node("UI/MainHUD").is_inside_tree(), "Mobile UI enters scene tree")
+    var infrastructure := game.get_node_or_null("UI/InfrastructurePanel")
+    check(infrastructure is CanvasLayer, "Infrastructure uses focused CanvasLayer")
+    if infrastructure is CanvasLayer:
+        check((infrastructure as CanvasLayer).layer > 50, "Infrastructure renders above focused-screen backdrop")
 
     print("UI SCENE CONTRACT RESULT: %d passed, %d failed" % [passed, failed])
     game.queue_free()
