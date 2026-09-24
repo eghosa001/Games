@@ -643,10 +643,12 @@ func _build_mobile_live() -> void:
     if hero_texture != null:
         _add_texture(hero, "HeroBuildingArt", Rect2(inner_w * 0.48, 0, inner_w * 0.52, 154), hero_texture, 0.90 if not _is_light_theme() else 0.78)
     var hero_wash := ColorRect.new()
-    hero_wash.position = Vector2(inner_w * 0.34, 0)
-    hero_wash.size = Vector2(inner_w * 0.66, 154)
+    hero_wash.name = "HeroContrastWash"
+    hero_wash.position = Vector2(inner_w * 0.30, 0)
+    hero_wash.size = Vector2(inner_w * 0.70, 154)
     var hero_bg := _color("surface")
-    hero_wash.color = Color(hero_bg.r, hero_bg.g, hero_bg.b, 0.46)
+    var wash_alpha := 0.56 if _is_light_theme() else 0.62
+    hero_wash.color = Color(hero_bg.r, hero_bg.g, hero_bg.b, wash_alpha)
     hero_wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
     hero.add_child(hero_wash)
     var rail = Panel.new()
