@@ -1592,9 +1592,8 @@ func _portfolio_rows() -> Array:
             out.append({"name":str(a.get("name","ASSET")).to_upper(),"state":_asset_state(a),"meta":"%s • %s/day" % [_money(int(a.get("value",0))),_money(int(a.get("income",0)))],"role":_asset_state_role(a)})
         if out.size() >= 6: break
     while out.size() < 6:
-        var resource_names = ["MATERIALS SITE","FOOD SITE","FUEL SITE"]
-        var idx = out.size() % resource_names.size()
-        out.append({"name":resource_names[idx],"state":"IDLE","meta":"Awaiting acquisition","role":"muted"})
+        var slot_number := out.size() + 1
+        out.append({"name":"ASSET SLOT %d" % slot_number,"state":"OPEN","meta":"Acquire an asset to fill this slot","role":"muted"})
     return out
 
 func _portfolio_balance_text() -> String:
@@ -1619,6 +1618,12 @@ func _power_total() -> int:
         return int(round(float(power.get("total",0.0))))
     return clampi(int((_rep()+_region_presence_count()*10+_owned_asset_count()*8)/2.0),0,100)
 
+func _compact_card_text(value: String, limit := 56) -> String:
+    var clean := value.replace("\n", " ").strip_edges()
+    if clean.length() <= limit:
+        return clean
+    return clean.left(maxi(1, limit - 1)).strip_edges() + "…"
+
 func _intelligence_cards() -> Array:
     var objective = _objective_title()
     var goal_body = _objective_detail()
@@ -1633,7 +1638,7 @@ func _intelligence_cards() -> Array:
         {"head":"MILESTONES","title":"%d / %d achieved" % [claimed,total],"body":"Next milestone tracks the company's next major strategic achievement."},
         {"head":"WORLD POWER","title":"%d / 100" % _power_total(),"body":"Economic • Industrial • Logistics • Diplomacy"},
         {"head":"GLOBAL RANKING","title":"Valuation network","body":"Track RESTORA against the live corporate field."},
-        {"head":"LATEST NOTICE","title":str(parent.message) if parent != null and "message" in parent and not str(parent.message).is_empty() else "Systems stable","body":"Current company signals are synchronized with the live simulation."}
+        {"head":"LATEST NOTICE","title":_compact_card_text(str(parent.message), 56) if parent != null and "message" in parent and not str(parent.message).is_empty() else "Systems stable","body":"Current company signals are synchronized with the live simulation."}
     ]
 
 func _signal_lines() -> String:
