@@ -61,8 +61,11 @@ func run() -> void:
         var expansion:=game.get_node_or_null("UI/EmpireExpansionPanel")
         var expansion_summary:=expansion.get("summary_label") as Label if expansion!=null else null
         var expansion_list:=expansion.get("list") as VBoxContainer if expansion!=null else null
+        var expansion_detail:=expansion.get("detail_panel") as Control if expansion!=null else null
+        var expansion_actions:=expansion.get("action_row") as Control if expansion!=null else null
         check(expansion_summary!=null and not expansion_summary.text.strip_edges().is_empty(), "Empire Expansion summary populates on open")
         check(expansion_list!=null and expansion_list.get_child_count()>0, "Empire Expansion asset rows populate on open")
+        check(expansion_detail!=null and expansion_actions!=null and expansion_detail.get_global_rect().end.y <= expansion_actions.get_global_rect().position.y, "Empire Expansion detail stays above phone actions")
         manager.hide_all_screens()
     game.queue_free(); await process_frame
     print("COMMAND DECK UI TEST: %d passed, %d failed" % [passed,failed])
