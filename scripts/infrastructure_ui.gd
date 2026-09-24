@@ -1,4 +1,4 @@
-extends Control
+extends CanvasLayer
 
 const SURFACE := Color("0d2028")
 const SURFACE_2 := Color("102831")
@@ -41,7 +41,7 @@ func _resolve_system():
 func _ready() -> void:
     system = _resolve_system()
     parent = get_tree().current_scene
-    z_index = 57
+    layer = 64
     _build_ui()
     _layout()
     _refresh()
@@ -341,21 +341,22 @@ func _layout() -> void:
     panel.position = Vector2((size.x - w) / 2.0, maxf(34.0, (size.y - h) / 2.0)) if not narrow else Vector2(margin, maxf(34.0, (size.y - h) / 2.0))
     panel.size = Vector2(w, minf(h, size.y - panel.position.y - 8.0))
     title_label.position = Vector2(14, 10)
-    title_label.size = Vector2(w - 210.0, 30)
-    title_label.add_theme_font_size_override("font_size", 18 if phone else 21)
+    title_label.size = Vector2(w - 112.0 if phone else w - 210.0, 30)
+    title_label.add_theme_font_size_override("font_size", 16 if phone else 21)
+    status_label.visible = not phone
     status_label.position = Vector2(w - 196.0, 14)
     status_label.size = Vector2(112, 20)
-    status_label.add_theme_font_size_override("font_size", 9 if phone else 10)
+    status_label.add_theme_font_size_override("font_size", 10)
     close_button.position = Vector2(w - 84.0, 7)
     close_button.size = Vector2(70, 46)
     close_button.add_theme_font_size_override("font_size", 10)
     summary_label.position = Vector2(14, 50)
-    summary_label.size = Vector2(w - 28.0, 42)
+    summary_label.size = Vector2(w - 28.0, 72.0 if phone else 42.0)
     summary_label.add_theme_font_size_override("font_size", 10 if phone else 11)
-    metrics_label.position = Vector2(14, 91)
-    metrics_label.size = Vector2(w - 28.0, 48)
-    metrics_label.add_theme_font_size_override("font_size", 10 if phone else 11)
-    var button_y := 143.0
+    metrics_label.position = Vector2(14, 128.0 if phone else 91.0)
+    metrics_label.size = Vector2(w - 28.0, 60.0 if phone else 48.0)
+    metrics_label.add_theme_font_size_override("font_size", 9 if phone else 11)
+    var button_y := 196.0 if phone else 143.0
     if phone:
         type_button.position = Vector2(14, button_y)
         type_button.size = Vector2(w - 28.0, 44)

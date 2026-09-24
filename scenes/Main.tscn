@@ -160,7 +160,8 @@ layer=56
 [node name="RenewDiplomacyUI" type="CanvasLayer" parent="UI"]
 script=ExtResource("46")
 layer=64
-[node name="InfrastructurePanel" type="Control" parent="UI"]
+[node name="InfrastructurePanel" type="CanvasLayer" parent="UI"]
+layer=64
 script=ExtResource("47")
 [node name="ContractPanel" type="CanvasLayer" parent="UI"]
 script=ExtResource("33")
