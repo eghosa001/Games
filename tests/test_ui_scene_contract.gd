@@ -15,6 +15,8 @@ func check(ok: bool, label: String) -> void:
         push_error("FAIL: " + label)
 
 func run() -> void:
+    root.size = Vector2i(390, 844)
+    root.size_changed.emit()
     var scene := load("res://scenes/Main.tscn")
     check(scene != null, "Main scene resource exists")
     if scene == null:
