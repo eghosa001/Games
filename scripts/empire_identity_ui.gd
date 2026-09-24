@@ -119,9 +119,11 @@ func _layout() -> void:
     summary_label.autowrap_mode = TextServer.AUTOWRAP_OFF if phone else TextServer.AUTOWRAP_WORD_SMART
     summary_label.clip_text = phone
     summary_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-    var summary_h := 20.0
+    var summary_font := summary_label.get_theme_font("font")
+    var summary_font_size := summary_label.get_theme_font_size("font_size")
+    var summary_h := maxf(20.0, summary_font.get_height(summary_font_size))
     summary_label.size = Vector2(width - 28, summary_h)
-    power_label.position = Vector2(14, summary_label.position.y + summary_h + (6.0 if phone else 1.0)); power_label.add_theme_font_size_override("font_size", 10 if phone else 11)
+    power_label.position = Vector2(14, summary_label.position.y + summary_h + (8.0 if phone else 1.0)); power_label.add_theme_font_size_override("font_size", 10 if phone else 11)
     var power_h := 44.0 if phone else 36.0
     power_label.size = Vector2(width - 28, power_h)
     close_button.position = Vector2(width - 94, 7); close_button.size = Vector2(86, 46)
