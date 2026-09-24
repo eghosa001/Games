@@ -62,6 +62,59 @@ func _run() -> void:
         manager.hide_all_screens()
         await process_frame
 
+    root.size = Vector2i(390, 844)
+    root.size_changed.emit()
+    for _frame in range(3):
+        await process_frame
+
+    for screen_name in ["ContractPanel", "SupplyChainPanel"]:
+        manager.show_screen(screen_name)
+        await process_frame
+        if skin.has_method("_refresh_active_screen"):
+            skin.call("_refresh_active_screen")
+        await process_frame
+        var screen := game.get_node_or_null("UI/" + screen_name)
+        check("%s opens on phone" % screen_name, screen != null and manager.is_screen_open(screen_name))
+        if screen != null:
+            var viewport_rect := Rect2(Vector2.ZERO, Vector2(root.size)).grow(2.0)
+            if screen_name == "SupplyChainPanel":
+                var supply_panel := screen.get("panel") as Control
+                var panel_inside := supply_panel != null and supply_panel.position.x >= -2.0 and supply_panel.position.y >= -2.0 and supply_panel.position.x + supply_panel.size.x <= float(root.size.x) + 2.0 and supply_panel.position.y + supply_panel.size.y <= float(root.size.y) + 2.0
+                check("SupplyChainPanel phone modal stays in viewport", panel_inside)
+            else:
+                var scrolls: Array[ScrollContainer] = []
+                collect_scrolls(screen, scrolls)
+                for scroll in scrolls:
+                    if not scroll.is_visible_in_tree():
+                        continue
+                    check("%s phone scroll stays in viewport: %s" % [screen_name, scroll.name], viewport_rect.encloses(scroll.get_global_rect()))
+            var buttons: Array[Button] = []
+            collect_buttons(screen, buttons)
+            for button in buttons:
+                if not button.is_visible_in_tree():
+                    continue
+                var rect := button.get_global_rect()
+                var scroll_ancestor := nearest_scroll(button)
+                if scroll_ancestor != null:
+                    var clip := scroll_ancestor.get_global_rect()
+                    check("%s phone scroll button horizontally contained: %s" % [screen_name, button.text], rect.position.x >= clip.position.x - 2.0 and rect.end.x <= clip.end.x + 2.0)
+                else:
+                    check("%s phone button contained: %s" % [screen_name, button.text], button.get_viewport_rect().grow(2.0).encloses(rect))
+                if screen_name == "ContractPanel" and button.text in ["STANDARD", "EXCLUSIVE +25%", "CONSTRUCTION +10%", "GOVERNMENT +15%", "EXPORT +35%"]:
+                    var font := button.get_theme_font("font")
+                    var font_size := button.get_theme_font_size("font_size")
+                    var text_width := font.get_string_size(button.text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+                    check("Contract offer label fits: %s" % button.text, text_width <= button.size.x - 28.0)
+            if screen_name == "ContractPanel":
+                var grid := screen.get("offer_grid") as GridContainer
+                check("Contract phone offers use two readable columns", grid != null and grid.columns == 2)
+            elif screen_name == "SupplyChainPanel":
+                var supply_scroll := screen.get("scroll") as ScrollContainer
+                var supply_content := screen.get("content") as VBoxContainer
+                check("Supply Chain phone content does not force horizontal overflow", supply_scroll != null and supply_content != null and supply_content.size.x <= supply_scroll.size.x + 2.0)
+        manager.hide_all_screens()
+        await process_frame
+
     game.queue_free()
     await process_frame
     quit(1 if failed > 0 else 0)

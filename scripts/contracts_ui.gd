@@ -60,10 +60,10 @@ func _style(bg: Color, border: Color, radius := 10) -> StyleBoxFlat:
     style.set_corner_radius_all(radius)
     return style
 
-func _button_style(bg: Color) -> StyleBoxFlat:
+func _button_style(bg: Color, horizontal_margin := 10.0) -> StyleBoxFlat:
     var style := _style(bg, BORDER, 8)
-    style.content_margin_left = 10
-    style.content_margin_right = 10
+    style.content_margin_left = horizontal_margin
+    style.content_margin_right = horizontal_margin
     style.content_margin_top = 6
     style.content_margin_bottom = 6
     return style
@@ -151,6 +151,11 @@ func _make_action(text: String, callback: Callable) -> Button:
 
 func _add_offer(text: String, method_name: String) -> void:
     var button := _make_action(text, Callable(self, "_sign_offer").bind(method_name))
+    # Offer labels are longer than the generic action row; keep full contract
+    # type/bonus copy visible without reducing every screen action's padding.
+    button.add_theme_stylebox_override("normal", _button_style(SURFACE_2, 6.0))
+    button.add_theme_stylebox_override("hover", _button_style(Color("17343d"), 6.0))
+    button.add_theme_stylebox_override("pressed", _button_style(Color("1b3d46"), 6.0))
     button.tooltip_text = "Open the authoritative %s commercial contract flow." % text.to_lower()
     offer_grid.add_child(button)
 
@@ -343,21 +348,24 @@ func _layout() -> void:
     summary_label.size = Vector2(width - 28.0, 34)
     summary_label.add_theme_font_size_override("font_size", 9 if phone else 11)
 
-    var offer_height := 172.0 if phone else 146.0
-    offer_panel.position = Vector2(12, 92)
-    offer_panel.size = Vector2(width - 24.0, offer_height)
-    offer_title.position = Vector2(10, 8)
-    offer_title.size = Vector2(width - 44.0, 22)
+    var offer_height := 230.0 if phone else 146.0
+    var offer_outer_margin := 8.0 if phone else 12.0
+    var offer_inner_margin := 6.0 if phone else 10.0
+    offer_panel.position = Vector2(offer_outer_margin, 92)
+    offer_panel.size = Vector2(width - offer_outer_margin * 2.0, offer_height)
+    var offer_content_width := offer_panel.size.x - offer_inner_margin * 2.0
+    offer_title.position = Vector2(offer_inner_margin, 8)
+    offer_title.size = Vector2(offer_content_width, 22)
     offer_title.add_theme_font_size_override("font_size", 11 if phone else 13)
-    offer_detail.position = Vector2(10, 31)
-    offer_detail.size = Vector2(width - 44.0, 35)
+    offer_detail.position = Vector2(offer_inner_margin, 31)
+    offer_detail.size = Vector2(offer_content_width, 35)
     offer_detail.add_theme_font_size_override("font_size", 8 if phone else 10)
-    offer_grid.columns = 3 if phone else 2
-    offer_grid.position = Vector2(10, 69)
-    offer_grid.size = Vector2(width - 44.0, offer_height - 78.0)
-    var offer_columns := 3 if phone else 2
+    offer_grid.columns = 2
+    offer_grid.position = Vector2(offer_inner_margin, 69)
+    offer_grid.size = Vector2(offer_content_width, offer_height - 78.0)
+    var offer_columns := 2
     var offer_gap_total := float(offer_columns - 1) * 7.0
-    var offer_button_width := maxf(72.0, (width - 44.0 - offer_gap_total) / float(offer_columns))
+    var offer_button_width := maxf(72.0, (offer_content_width - offer_gap_total) / float(offer_columns))
     for child in offer_grid.get_children():
         child.custom_minimum_size = Vector2(offer_button_width, 46.0)
         if child is Button:
