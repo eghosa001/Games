@@ -34,6 +34,19 @@ func _wait(frames := 3) -> void:
 func _step(overlay: Node) -> int:
     return int((overlay.tutorial_status() as Dictionary).get("step", -1))
 
+func _poll_tutorial(overlay: Node) -> void:
+    overlay.set("_update_clock", 0.0)
+    await process_frame
+    overlay.set("_update_clock", 0.0)
+    overlay._process(0.11)
+    await process_frame
+
+func _wait_for_step(overlay: Node, target: int, max_polls := 6) -> void:
+    for _i in range(max_polls):
+        if _step(overlay) >= target:
+            return
+        await _poll_tutorial(overlay)
+
 func _run() -> void:
     root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
     root.size = Vector2i(390, 844)
@@ -59,7 +72,7 @@ func _run() -> void:
     check(overlay != null, "Tutorial overlay is mounted")
     check(state != null, "Canonical GameState is available")
     var tutorial_overlay_source := FileAccess.get_file_as_string("res://scripts/tutorial_overlay.gd")
-    check(tutorial_overlay_source.contains("const UPDATE_INTERVAL: float = 0.10"), "Tutorial refresh work is throttled")
+    check(tutorial_overlay_source.contains("const UPDATE_INTERVAL: float = 0.10") and tutorial_overlay_source.contains("_update_clock < UPDATE_INTERVAL"), "Tutorial action polling is actually throttled")
     if hud == null or overlay == null or state == null:
         game.queue_free()
         await process_frame
@@ -86,14 +99,19 @@ func _run() -> void:
     check(property_cta != null, "Inspect action is reachable")
     if property_cta != null:
         property_cta.pressed.emit()
-    await _wait(4)
+    overlay.set("_update_clock", 0.0)
+    await process_frame
+    overlay.set("_update_clock", 0.0)
+    overlay._process(0.05)
+    check(_step(overlay) == 0, "Tutorial does not poll before the configured interval")
+    await _wait_for_step(overlay, 1)
     check(_step(overlay) == 1, "Inspect advances tutorial to Acquire")
 
     property_cta = _find_button(hud.get("mobile_content"), "ACQUIRE PROPERTY")
     check(property_cta != null, "Acquire action is reachable")
     if property_cta != null:
         property_cta.pressed.emit()
-    await _wait(4)
+    await _wait_for_step(overlay, 2)
     check(_step(overlay) == 2, "Acquire advances tutorial to Restore")
 
     var restore_guard := 0
@@ -103,9 +121,10 @@ func _run() -> void:
         if property_cta == null:
             break
         property_cta.pressed.emit()
-        await _wait(4)
+        await _poll_tutorial(overlay)
         restore_guard += 1
     check(str(state.get_value("properties", "stage", "")) == "Operational", "Restoration can reach Operational")
+    await _wait_for_step(overlay, 3)
     check(_step(overlay) == 3, "Operational property advances tutorial to Open Business")
 
     var open_ops := _find_button(hud.get("mobile_content"), "OPEN OPERATIONS")
@@ -124,7 +143,7 @@ func _run() -> void:
     check(purpose != null, "First business purpose is reachable")
     if purpose != null:
         purpose.pressed.emit()
-    await _wait(5)
+    await _wait_for_step(overlay, 4)
     check(bool(state.get_value("businesses", "business_open", false)), "Business opens")
     check(_step(overlay) == 4, "Open Business advances tutorial to Buy Inputs")
 
@@ -132,14 +151,14 @@ func _run() -> void:
     check(buy != null, "Buy Inputs action is reachable")
     if buy != null:
         buy.pressed.emit()
-    await _wait(5)
+    await _wait_for_step(overlay, 5)
     check(_step(overlay) == 5, "Buying inputs advances tutorial to Produce")
 
     var produce := _find_button(hud.get("mobile_content"), "PRODUCE BATCH")
     check(produce != null, "Produce action is reachable")
     if produce != null:
         produce.pressed.emit()
-    await _wait(5)
+    await _wait_for_step(overlay, 6)
     check(int(state.get_value("production", "finished_goods", 0)) > 0, "Production creates finished goods")
     check(_step(overlay) == 6, "Producing advances tutorial to Sell Goods")
 
@@ -152,7 +171,7 @@ func _run() -> void:
     check(sell != null, "Sell Goods action is reachable")
     if sell != null:
         sell.pressed.emit()
-    await _wait(6)
+    await _wait_for_step(overlay, 7)
 
     status = overlay.tutorial_status()
     check(int(state.get_value("economy", "last_sales", 0)) > 0, "First sale succeeds")
