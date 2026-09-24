@@ -111,10 +111,13 @@ func _select(index: int) -> void:
 func _update_detail() -> void:
     var r: Dictionary = controller.regions.current(); var unlocked := bool(r.get("unlocked", false)); var presence := int(r.get("player_presence", 0))
     detail_label.text = "%s  •  TIER %d  •  %s\nPopulation %s  |  Demand %.2fx  |  Market %.2fx  |  Wage %.2fx\nLogistics %.2fx  |  Competition %.2fx  |  Local REP %.0f  |  Presence %d\n%s" % [str(r.get("name", "Region")), int(r.get("tier", 1)), "UNLOCKED" if unlocked else "LOCKED", String.num_int64(int(r.get("population", 0))), float(r.get("demand", 1.0)), float(r.get("market_level", 1.0)), float(r.get("regional_wage", 1.0)), float(r.get("logistics", 1.0)), float(r.get("competition", 1.0)), float(r.get("local_reputation", 0.0)), presence, str(r.get("special", "Regional market"))]
-    var territory_count := controller.regions.regions.size()
-    var operating_count := controller.regions.player_presence.count(1)
+    var territory_count: int = int(controller.regions.regions.size())
+    var operating_count: int = int(controller.regions.player_presence.count(1))
     var phone := get_viewport().get_visible_rect().size.x < 430.0
-    summary_label.text = ("%d TERRITORIES  •  %d OPERATING" if phone else "REGIONAL MARKETS  •  %d TERRITORIES  •  %d OPERATING") % ([territory_count, operating_count] if phone else [territory_count, operating_count])
+    if phone:
+        summary_label.text = "%d TERRITORIES  •  %d OPERATING" % [territory_count, operating_count]
+    else:
+        summary_label.text = "REGIONAL MARKETS  •  %d TERRITORIES  •  %d OPERATING" % [territory_count, operating_count]
     if not unlocked: feedback_label.text = "%s unlocks at %d reputation." % [str(r.get("name", "This region")), int(r.get("rep", 0))]
 
 func _next() -> void:
