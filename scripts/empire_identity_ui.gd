@@ -116,16 +116,10 @@ func _layout() -> void:
     panel.position = Vector2(8, 70) if narrow else Vector2(maxf(18.0, (size.x - width) * 0.5), 82); panel.size = Vector2(width, height)
     title_label.position = Vector2(14, 10); title_label.size = Vector2(width - (112 if phone else 130), 30); title_label.add_theme_font_size_override("font_size", 17 if phone else 20)
     summary_label.position = Vector2(14, 58 if phone else 40); summary_label.add_theme_font_size_override("font_size", 9 if phone else 10)
-    var summary_h := 20.0
-    if phone:
-        summary_label.size = Vector2(width - 28, 1)
-        summary_h = maxf(36.0, summary_label.get_combined_minimum_size().y)
+    var summary_h := 38.0 if phone else 20.0
     summary_label.size = Vector2(width - 28, summary_h)
     power_label.position = Vector2(14, summary_label.position.y + summary_h + (6.0 if phone else 1.0)); power_label.add_theme_font_size_override("font_size", 10 if phone else 11)
-    var power_h := 36.0
-    if phone:
-        power_label.size = Vector2(width - 28, 1)
-        power_h = maxf(42.0, power_label.get_combined_minimum_size().y)
+    var power_h := 44.0 if phone else 36.0
     power_label.size = Vector2(width - 28, power_h)
     close_button.position = Vector2(width - 94, 7); close_button.size = Vector2(86, 46)
     var scroll_y := power_label.position.y + power_h + (6.0 if phone else 3.0)
