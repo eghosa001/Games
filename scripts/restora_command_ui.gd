@@ -57,6 +57,15 @@ func _ready() -> void:
     if not get_viewport().size_changed.is_connected(_layout_responsive):
         get_viewport().size_changed.connect(_layout_responsive)
     _show_view("live")
+    call_deferred("_bind_runtime_after_parent_ready")
+
+func _bind_runtime_after_parent_ready() -> void:
+    # Child CanvasLayers become ready before Main finishes constructing the
+    # command systems. Rebuild once the authoritative property model exists so
+    # desktop/tablet labels and staged art never freeze on fallback values.
+    if _property_system() != null:
+        _last_signature = ""
+        _rebuild_current()
 
 func _process(delta: float) -> void:
     _refresh_elapsed += delta
@@ -1106,22 +1115,22 @@ func _build_desktop_live() -> void:
     _label(world, "Head", "CURRENT BUILDING", Rect2(21,19,250,16), 11, "gold", 600)
     var scene = _panel(world, "Scene", Rect2(21,57,516,316), "surface_2", "border", 20)
     scene.clip_contents = true
-    _add_texture(scene, "DesktopBuildingArt", Rect2(0,0,516,316), _building_stage_texture(), 1.0)
-    _label(world, "Meta", "%s • %s\n%d%% restored • %s market value" % [_building_name(), _building_type(), _building_progress(), _money(int(_selected_building().get("value", 0)))], Rect2(21,401,500,54), 14, "text", 400)
+    _remember("desktop_building_art", _add_texture(scene, "DesktopBuildingArt", Rect2(0,0,516,316), _building_stage_texture(), 1.0))
+    _remember("desktop_property_meta", _label(world, "Meta", "%s • %s\n%d%% restored • %s market value" % [_building_name(), _building_type(), _building_progress(), _money(int(_selected_building().get("value", 0)))], Rect2(21,401,500,54), 14, "text", 400))
     _transparent_button(world, "OpenProperty", Rect2(0,0,560,552), _show_view.bind("property"))
 
-    _desktop_stat(canvas, "Cash", Rect2(620,104,190,96), "CASH", _money(_cash()))
-    _desktop_stat(canvas, "Worth", Rect2(824,104,190,96), "WORTH", _money(_worth()))
-    _desktop_stat(canvas, "Rep", Rect2(1028,104,218,96), "REP", str(_rep()))
+    _desktop_stat(canvas, "Cash", Rect2(620,104,190,96), "CASH", _money(_cash()), "cash")
+    _desktop_stat(canvas, "Worth", Rect2(824,104,190,96), "WORTH", _money(_worth()), "worth")
+    _desktop_stat(canvas, "Rep", Rect2(1028,104,218,96), "REP", str(_rep()), "rep")
 
     var objective = _panel(canvas, "Objective", Rect2(620,220,626,184), "surface", "border", 18)
     _label(objective, "Head", "NEXT OBJECTIVE", Rect2(18,16,200,16), 10, "gold", 600)
-    _label(objective, "Title", _objective_title(), Rect2(18,44,440,28), 22, "text", 700)
-    _label(objective, "Body", _objective_detail(), Rect2(18,84,560,48), 13, "muted", 400)
+    _remember("desktop_objective_title", _label(objective, "Title", _objective_title(), Rect2(18,44,440,28), 22, "text", 700))
+    _remember("desktop_objective_body", _label(objective, "Body", _objective_detail(), Rect2(18,84,560,48), 13, "muted", 400))
 
     var signals = _panel(canvas, "Signals", Rect2(620,426,304,230), "surface", "border", 18)
     _label(signals, "Head", "SIGNALS", Rect2(18,16,180,16), 10, "gold", 600)
-    _label(signals, "Body", _signal_lines(), Rect2(18,50,260,120), 13, "text", 400)
+    _remember("desktop_signals", _label(signals, "Body", _signal_lines(), Rect2(18,50,260,120), 13, "text", 400))
 
     var quick = _panel(canvas, "QuickActions", Rect2(942,426,304,230), "selected", "plum", 18)
     _label(quick, "Head", "QUICK ACTIONS", Rect2(18,16,180,16), 10, "gold", 600)
@@ -1130,10 +1139,12 @@ func _build_desktop_live() -> void:
     _frame_button(quick, "OpenFinance", "FINANCE", Rect2(18,136,268,38), _show_view.bind("finance"))
     _frame_button(quick, "OpenMore", "MORE", Rect2(18,180,268,38), _show_view.bind("more"))
 
-func _desktop_stat(parent_node: Node, name: String, rect: Rect2, label_text: String, value_text: String) -> void:
+func _desktop_stat(parent_node: Node, name: String, rect: Rect2, label_text: String, value_text: String, ref_key := "") -> void:
     var p = _panel(parent_node, name, rect, "surface", "border", 16)
     _label(p, "Label", label_text, Rect2(14,12,rect.size.x-28,14), 9, "gold", 600)
-    _label(p, "Value", value_text, Rect2(14,36,rect.size.x-28,30), 23, "text", 700)
+    var value_label := _label(p, "Value", value_text, Rect2(14,36,rect.size.x-28,30), 23, "text", 700)
+    if not ref_key.is_empty():
+        _remember(ref_key + "_value", value_label)
     _label(p, "Meta", "LIVE", Rect2(14,72,rect.size.x-28,14), 9, "muted", 600)
 
 func _build_tablet_live() -> void:
@@ -1150,22 +1161,22 @@ func _build_tablet_live() -> void:
     _label(canvas, "Mode", "TABLET • LIVE COMMAND", Rect2(32,68,300,16), 10, "gold", 600)
     var hero = _panel(canvas, "Hero", Rect2(32,112,770,250), "surface", "border", 24)
     _label(hero, "Head", "NEXT MOVE", Rect2(22,20,180,16), 10, "gold", 600)
-    _label(hero, "Title", _objective_title(), Rect2(22,52,420,36), 28, "text", 700)
-    _label(hero, "Meta", _stage_meta(), Rect2(22,96,360,20), 14, "muted", 400)
+    _remember("tablet_objective_title", _label(hero, "Title", _objective_title(), Rect2(22,52,420,36), 28, "text", 700))
+    _remember("tablet_stage_meta", _label(hero, "Meta", _stage_meta(), Rect2(22,96,360,20), 14, "muted", 400))
     var scene = _panel(hero, "Scene", Rect2(506,22,240,206), "surface_2", "border", 20)
     scene.clip_contents = true
-    _add_texture(scene, "TabletBuildingArt", Rect2(0,0,240,206), _building_stage_texture(), 1.0)
+    _remember("tablet_building_art", _add_texture(scene, "TabletBuildingArt", Rect2(0,0,240,206), _building_stage_texture(), 1.0))
     var xs = [32.0,228.0,424.0,620.0]
     var names = ["CASH","WORTH","REPUTATION","GOODS"]
     var vals = [_money(_cash()),_money(_worth()),str(_rep()),str(_goods())]
     for i in range(4):
-        _desktop_stat(canvas, "Stat%d"%i, Rect2(xs[i],390,180 if i<3 else 182,96), names[i], vals[i])
+        _desktop_stat(canvas, "Stat%d"%i, Rect2(xs[i],390,180 if i<3 else 182,96), names[i], vals[i], ["cash","worth","rep","goods"][i])
     var ops = _panel(canvas, "Operations", Rect2(32,508,370,524), "surface", "border", 18)
     _label(ops, "Head", "OPERATIONS", Rect2(20,18,180,18), 12, "gold", 600)
-    _label(ops, "Body", "Production\n%s\n\nContracts\n%d active\n\nPeople\n%d staff\n\nInventory\n%d inputs • %d goods\n\nFleet\nLevel %d" % [_production_rate_text(), _active_contracts(), _employees(), _inputs(), _goods(), maxi(1,_transport_level())], Rect2(20,56,330,330), 15, "text", 400)
+    _remember("tablet_operations", _label(ops, "Body", "Production\n%s\n\nContracts\n%d active\n\nPeople\n%d staff\n\nInventory\n%d inputs • %d goods\n\nFleet\nLevel %d" % [_production_rate_text(), _active_contracts(), _employees(), _inputs(), _goods(), maxi(1,_transport_level())], Rect2(20,56,330,330), 15, "text", 400))
     var sig = _panel(canvas, "SignalsObjectives", Rect2(420,508,382,524), "surface", "border", 18)
     _label(sig, "Head", "SIGNALS + OBJECTIVES", Rect2(20,18,250,18), 12, "gold", 600)
-    _label(sig, "Body", "%s\n\nNEXT OBJECTIVE\n%s" % [_signal_lines(), _objective_title()], Rect2(20,56,342,330), 15, "text", 400)
+    _remember("tablet_signals", _label(sig, "Body", "%s\n\nNEXT OBJECTIVE\n%s" % [_signal_lines(), _objective_title()], Rect2(20,56,342,330), 15, "text", 400))
     var nav = _panel(canvas, "Nav", Rect2(32,1054,770,92), "surface", "border", 26)
     _label(nav, "Labels", "HOME        BUSINESS        PROPERTY        FINANCE        MORE", Rect2(54,36,660,20), 13, "text", 600, HORIZONTAL_ALIGNMENT_CENTER)
 
@@ -1186,6 +1197,18 @@ func _refresh() -> void:
             _set_ref_text("goods_value", str(_goods()))
             _set_ref_text("signals", _signal_lines())
             _set_ref_text("signal_footer", _signal_footer())
+            _set_ref_text("desktop_property_meta", "%s • %s\n%d%% restored • %s market value" % [_building_name(), _building_type(), _building_progress(), _money(int(_selected_building().get("value", 0)))])
+            _set_ref_text("desktop_objective_title", _objective_title())
+            _set_ref_text("desktop_objective_body", _objective_detail())
+            _set_ref_text("desktop_signals", _signal_lines())
+            _set_ref_text("tablet_objective_title", _objective_title())
+            _set_ref_text("tablet_stage_meta", _stage_meta())
+            _set_ref_text("tablet_operations", "Production\n%s\n\nContracts\n%d active\n\nPeople\n%d staff\n\nInventory\n%d inputs • %d goods\n\nFleet\nLevel %d" % [_production_rate_text(), _active_contracts(), _employees(), _inputs(), _goods(), maxi(1,_transport_level())])
+            _set_ref_text("tablet_signals", "%s\n\nNEXT OBJECTIVE\n%s" % [_signal_lines(), _objective_title()])
+            for art_key in ["desktop_building_art", "tablet_building_art"]:
+                var art = refs.get(art_key) as TextureRect
+                if art != null:
+                    art.texture = _building_stage_texture()
             var fill = refs.get("progress_fill") as Control
             if fill != null and fill.get_parent() is Control:
                 fill.size.x = maxf(4.0, (fill.get_parent() as Control).size.x * float(_restoration()) / 100.0)
@@ -1284,7 +1307,16 @@ func _money(value: int) -> String:
 
 func _worth() -> int:
     var value = _cash()
-    value += int(_state_value("properties","value",0))
+    var model = _property_system()
+    if model != null and model.has_method("list_properties"):
+        for property in model.list_properties():
+            if property is Dictionary and bool(property.get("owned", false)):
+                if model.has_method("sale_value"):
+                    value += int(model.sale_value(property))
+                else:
+                    value += int(property.get("value", 0))
+    else:
+        value += int(_state_value("properties","value",0))
     for a in _expansion_assets():
         if bool(a.get("owned",false)):
             value += int(a.get("value",a.get("cost",0)))
