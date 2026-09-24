@@ -17,6 +17,8 @@ func _run()->void:
     var content:=hud.get("mobile_content") as Control
     var hero:=content.get_node_or_null("ExecutiveHero") as Control
     check("hero exact size",hero!=null and hero.position==Vector2(18,82) and hero.size==Vector2(354,154))
+    var hero_wash:=hero.get_node_or_null("HeroContrastWash") as ColorRect if hero!=null else null
+    check("hero art contrast wash",hero_wash!=null and hero_wash.color.a>=0.55 and hero_wash.position.x<=108.0)
     var signals:=content.get_node_or_null("Signals") as Control
     check("signals exact size",signals!=null and signals.position==Vector2(18,494) and signals.size==Vector2(354,192))
     var nav:=hud.get("bottom_nav") as Control
@@ -30,5 +32,8 @@ func _run()->void:
     check("desktop exact Figma canvas exists",desktop!=null and desktop.size==Vector2(1280,720))
     check("desktop world panel",desktop!=null and desktop.get_node_or_null("WorldPropertyView")!=null)
     check("desktop quick actions",desktop!=null and desktop.get_node_or_null("QuickActions")!=null)
+    var strategy:=game.get_node_or_null("UI/StrategyHUD")
+    var strategy_panel:=strategy.get("panel") as Panel if strategy!=null else null
+    check("duplicate strategy overlay stays hidden",strategy_panel!=null and not strategy_panel.visible)
     game.queue_free();await process_frame
     quit(1 if failed > 0 else 0)

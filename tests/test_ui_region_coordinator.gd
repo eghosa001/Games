@@ -1,8 +1,8 @@
 extends SceneTree
 
-## Verifies that the UIRegionCoordinator correctly suppresses overlapping
-## floating panels (StrategyHUD, TutorialOverlay) and hides them when any
-## primary screen is open.
+## Verifies that the UIRegionCoordinator keeps the retired StrategyHUD
+## registered but non-rendering, while the TutorialOverlay remains responsive
+## and is hidden when a primary screen is open.
 var passed := 0
 var failed := 0
 
@@ -57,7 +57,7 @@ func run() -> void:
     tutorial._layout_responsive()
     coordinator.set_active_screen("")
     await process_frame
-    check("wide desktop strategy panel is visible", strat_panel.visible and strat_panel.position.x >= 0.0)
+    check("wide desktop strategy overlay stays retired", not strat_panel.visible and strategy._get_rect() == Rect2())
     check("desktop tutorial defaults to compact guide", not tut_panel.visible and tut_chip != null and tut_chip.visible)
     check("compact guide remains inside the viewport", tut_chip != null and tut_chip.position.x >= 0.0 and tut_chip.position.y >= 0.0)
 
@@ -85,17 +85,11 @@ func run() -> void:
         smgr.hide_all_screens()
     coordinator.set_active_screen("")
     await process_frame
-    check("floating strategy visible after screen closes", strat_panel.visible)
+    check("retired strategy remains hidden after screen closes", not strat_panel.visible)
 
     var action_dock := hud.get("action_dock") as Control
     if action_dock != null:
-        var dock_rect := action_dock.get_global_rect()
-        var strat_rect := strat_panel.get_global_rect()
-        var overlaps := dock_rect != Rect2() and strat_rect != Rect2() and dock_rect.intersects(strat_rect)
-        if overlaps:
-            check("coordinator hides floater overlapping dock", not strat_panel.visible)
-        else:
-            check("strategy does not overlap dock at desktop size", strat_panel.visible)
+        check("retired strategy cannot overlap the command dock", not strat_panel.visible and strategy._get_rect() == Rect2())
 
     game.free()
     await process_frame
