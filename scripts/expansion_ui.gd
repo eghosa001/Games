@@ -212,7 +212,8 @@ func _layout() -> void:
         b.custom_minimum_size=Vector2(0,46)
         b.size_flags_horizontal=Control.SIZE_EXPAND_FILL
         b.add_theme_font_size_override("font_size",9 if phone else 10)
-    var detail_bottom:=height-(174.0 if phone else 116.0)
-    detail_panel.position=Vector2(12,detail_bottom); detail_panel.size=Vector2(width-24,112 if not phone else 148)
+    var detail_height:=148.0 if phone else 112.0
+    var detail_y:=action_row.position.y-detail_height-8.0 if phone else height-116.0
+    detail_panel.position=Vector2(12,detail_y); detail_panel.size=Vector2(width-24,detail_height)
     detail_label.position=Vector2(10,8); detail_label.size=Vector2(width-44,detail_panel.size.y-16); detail_label.add_theme_font_size_override("font_size",10 if phone else 11)
     list_scroll.position=Vector2(12,108); list_scroll.size=Vector2(width-24,maxf(90.0,detail_panel.position.y-116.0)); list.custom_minimum_size.x=width-24
