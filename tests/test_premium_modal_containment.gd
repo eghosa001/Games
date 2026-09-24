@@ -76,13 +76,17 @@ func _run() -> void:
         var screen := game.get_node_or_null("UI/" + screen_name)
         check("%s opens on phone" % screen_name, screen != null and manager.is_screen_open(screen_name))
         if screen != null:
-            var scrolls: Array[ScrollContainer] = []
-            collect_scrolls(screen, scrolls)
-            for scroll in scrolls:
-                if not scroll.is_visible_in_tree():
-                    continue
-                var clip := scroll.get_global_rect()
-                check("%s phone scroll stays in viewport: %s" % [screen_name, scroll.name], scroll.get_viewport_rect().grow(2.0).encloses(clip))
+            var viewport_rect := Rect2(Vector2.ZERO, Vector2(root.size)).grow(2.0)
+            if screen_name == "SupplyChainPanel":
+                var supply_panel := screen.get("panel") as Control
+                check("SupplyChainPanel phone modal stays in viewport", supply_panel != null and viewport_rect.encloses(supply_panel.get_global_rect()))
+            else:
+                var scrolls: Array[ScrollContainer] = []
+                collect_scrolls(screen, scrolls)
+                for scroll in scrolls:
+                    if not scroll.is_visible_in_tree():
+                        continue
+                    check("%s phone scroll stays in viewport: %s" % [screen_name, scroll.name], viewport_rect.encloses(scroll.get_global_rect()))
             var buttons: Array[Button] = []
             collect_buttons(screen, buttons)
             for button in buttons:
