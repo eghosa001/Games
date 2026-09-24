@@ -40,12 +40,12 @@ func _run() -> void:
         var screen := game.get_node_or_null("UI/" + screen_name)
         check("%s opens" % screen_name, screen != null and manager.is_screen_open(screen_name))
         if screen != null:
-            var viewport_rect := Rect2(Vector2.ZERO, Vector2(root.size))
             var scrolls: Array[ScrollContainer] = []
             collect_scrolls(screen, scrolls)
             for scroll in scrolls:
                 if scroll.is_visible_in_tree():
-                    check("%s scroll viewport stays on-screen: %s" % [screen_name, scroll.name], viewport_rect.grow(2.0).encloses(scroll.get_global_rect()))
+                    var scroll_viewport := scroll.get_viewport_rect()
+                    check("%s scroll viewport stays on-screen: %s" % [screen_name, scroll.name], scroll_viewport.grow(2.0).encloses(scroll.get_global_rect()))
             var buttons: Array[Button] = []
             collect_buttons(screen, buttons)
             for button in buttons:
@@ -57,7 +57,8 @@ func _run() -> void:
                     # Scroll children can legitimately sit outside the visible clip region.
                     # The scroll viewport itself is the containment boundary checked above.
                     continue
-                check("%s button inside desktop viewport: %s rect=%s viewport=%s" % [screen_name, button.text, rect, viewport_rect], viewport_rect.grow(2.0).encloses(rect))
+                var button_viewport := button.get_viewport_rect()
+                check("%s button inside desktop viewport: %s rect=%s viewport=%s" % [screen_name, button.text, rect, button_viewport], button_viewport.grow(2.0).encloses(rect))
         manager.hide_all_screens()
         await process_frame
 
