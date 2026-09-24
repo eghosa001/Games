@@ -1,4 +1,4 @@
-extends Control
+extends CanvasLayer
 
 const SURFACE := Color("0d2028")
 const SURFACE_2 := Color("102831")
@@ -41,7 +41,7 @@ func _resolve_system():
 func _ready() -> void:
     system = _resolve_system()
     parent = get_tree().current_scene
-    z_index = 57
+    layer = 64
     _build_ui()
     _layout()
     _refresh()
