@@ -27,16 +27,17 @@ var close_button: Button
 var demand_model := DemandModel.new()
 var selected_segment: Variant = "standard"
 var refresh_clock := 0.0
+var _last_render_signature := ""
 
 func _ready() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
     _build_ui()
-    _refresh()
+    _refresh(true)
     visible = false
 
 func open_screen() -> void:
     visible = true
-    _refresh()
+    _refresh(true)
     _layout_responsive()
 
 func close_screen() -> void:
@@ -47,7 +48,7 @@ func _process(delta: float) -> void:
     refresh_clock -= delta
     if refresh_clock <= 0.0:
         refresh_clock = 0.35
-        _refresh()
+        _refresh(false)
 
 func _build_ui() -> void:
     root = Control.new()
@@ -177,7 +178,7 @@ func _layout_responsive() -> void:
     segment_list.custom_minimum_size.x = segment_scroll.size.x
     for child in segment_list.get_children(): child.custom_minimum_size.x = segment_scroll.size.x
 
-func _refresh() -> void:
+func _refresh(force := false) -> void:
     if parent == null or panel == null: return
     var state = parent.get_node_or_null("/root/RenewGameState")
     if state == null: return
@@ -229,10 +230,18 @@ func _refresh() -> void:
     var demand_result: Dictionary = demand_model.calculate(product, float(player_price), float(rival_price), reputation, quality, marketing, 0, employee_productivity, district_multiplier, district_pressure, alliance_sales, deal_sales)
     if not bool(demand_result.get("ok", false)): return
 
+    var phone := get_viewport().get_visible_rect().size.x < 430.0
+    var signature := "%s|%d|%d|%d|%d|%d|%.4f|%.4f|%.4f|%.4f|%.4f|%d" % [
+        str(product), player_price, rival_price, reputation, marketing, quality,
+        employee_productivity, district_multiplier, district_pressure, alliance_sales, deal_sales, int(phone)
+    ]
+    if not force and signature == _last_render_signature:
+        return
+    _last_render_signature = signature
+
     var total := int(demand_result.get("demand", 0))
     var price_delta := player_price - rival_price
     var price_signal := "PRICE ADVANTAGE" if price_delta < 0 else ("PRICE PARITY" if abs(price_delta) <= 5 else "PRICE PREMIUM")
-    var phone := get_viewport().get_visible_rect().size.x < 430.0
     market_status.text = ("%s  •  QUALITY %d  •  %s\nMARKETING LVL %d" % [product.to_upper(), quality, price_signal, marketing]) if phone else ("LIVE MARKET  •  %s  •  QUALITY %d  •  MARKETING LVL %d  •  %s" % [product.to_upper(), quality, marketing, price_signal])
     summary_label.text = "Your %d vs rival %d  •  Estimated demand %d  •  Reputation %d\nSegment intelligence converts price, quality, reputation and market modifiers into actionable positioning." % [player_price, rival_price, total, reputation]
 
