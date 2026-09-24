@@ -6,6 +6,7 @@ on:
       - 'scripts/restora_command_ui.gd'
       - 'scripts/theme_manager.gd'
       - 'scripts/premium_ui_skin.gd'
+      - 'scripts/*_ui.gd'
       - 'scenes/Main.tscn'
       - 'tests/capture_visual_audit.gd'
       - '.github/workflows/figma-visual-parity.yml'
