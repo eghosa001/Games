@@ -62,8 +62,13 @@ func _layout() -> void:
     if panel == null: return
     var size := get_viewport().get_visible_rect().size; var w := maxf(size.x, 320.0); var h := maxf(size.y, 480.0); var narrow := w < 720.0; var phone := w < 430.0
     var margin := 8.0 if phone else (10.0 if narrow else 28.0); panel.position = Vector2(margin, margin + 8.0); panel.size = Vector2(w - margin * 2.0, h - margin * 2.0 - 8.0)
-    title_label.position = Vector2(14, 10); title_label.size = Vector2(panel.size.x - 110, 28); summary_label.position = Vector2(14, 38); summary_label.size = Vector2(panel.size.x - 110, 18); close_button.position = Vector2(panel.size.x - 88, 10); close_button.size = Vector2(76, 44)
-    region_scroll.position = Vector2(12, 62); region_scroll.size = Vector2(panel.size.x - 24, panel.size.y * (0.35 if phone else (0.43 if narrow else 0.44))); region_grid.columns = 1 if narrow else 2
+    title_label.position = Vector2(14, 10); title_label.size = Vector2(panel.size.x - 110, 28); close_button.position = Vector2(panel.size.x - 88, 10); close_button.size = Vector2(76, 44)
+    summary_label.position = Vector2(14, 60 if phone else 38)
+    summary_label.size = Vector2(panel.size.x - 28 if phone else panel.size.x - 110, 36 if phone else 18)
+    summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if phone else TextServer.AUTOWRAP_OFF
+    summary_label.clip_text = not phone
+    summary_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+    region_scroll.position = Vector2(12, 104 if phone else 62); region_scroll.size = Vector2(panel.size.x - 24, panel.size.y * (0.35 if phone else (0.43 if narrow else 0.44))); region_grid.columns = 1 if narrow else 2
     detail_label.position = Vector2(14, region_scroll.position.y + region_scroll.size.y + 8); detail_label.size = Vector2(panel.size.x - 28, 86 if phone else (74 if narrow else 66))
     action_grid.position = Vector2(12, detail_label.position.y + detail_label.size.y + 6); action_grid.size = Vector2(panel.size.x - 24, 104 if phone else 54); action_grid.columns = 2 if narrow else 3
     for child in action_grid.get_children():
@@ -106,7 +111,13 @@ func _select(index: int) -> void:
 func _update_detail() -> void:
     var r: Dictionary = controller.regions.current(); var unlocked := bool(r.get("unlocked", false)); var presence := int(r.get("player_presence", 0))
     detail_label.text = "%s  •  TIER %d  •  %s\nPopulation %s  |  Demand %.2fx  |  Market %.2fx  |  Wage %.2fx\nLogistics %.2fx  |  Competition %.2fx  |  Local REP %.0f  |  Presence %d\n%s" % [str(r.get("name", "Region")), int(r.get("tier", 1)), "UNLOCKED" if unlocked else "LOCKED", String.num_int64(int(r.get("population", 0))), float(r.get("demand", 1.0)), float(r.get("market_level", 1.0)), float(r.get("regional_wage", 1.0)), float(r.get("logistics", 1.0)), float(r.get("competition", 1.0)), float(r.get("local_reputation", 0.0)), presence, str(r.get("special", "Regional market"))]
-    summary_label.text = "REGIONAL MARKETS  •  %d TERRITORIES  •  %d OPERATING" % [controller.regions.regions.size(), controller.regions.player_presence.count(1)]
+    var territory_count: int = int(controller.regions.regions.size())
+    var operating_count: int = int(controller.regions.player_presence.count(1))
+    var phone := get_viewport().get_visible_rect().size.x < 430.0
+    if phone:
+        summary_label.text = "%d TERRITORIES  •  %d OPERATING" % [territory_count, operating_count]
+    else:
+        summary_label.text = "REGIONAL MARKETS  •  %d TERRITORIES  •  %d OPERATING" % [territory_count, operating_count]
     if not unlocked: feedback_label.text = "%s unlocks at %d reputation." % [str(r.get("name", "This region")), int(r.get("rep", 0))]
 
 func _next() -> void:
