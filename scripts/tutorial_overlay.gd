@@ -53,6 +53,11 @@ func _process(delta: float) -> void:
     if game == null:
         return
 
+    _update_clock += delta
+    if _update_clock < UPDATE_INTERVAL:
+        return
+    _update_clock = fmod(_update_clock, UPDATE_INTERVAL)
+
     var current_action := String(tutorial.current().get("action", "COMPLETE"))
     if not tutorial.completed and current_action != "COMPLETE":
         var old_step := int(tutorial.step)
@@ -60,14 +65,10 @@ func _process(delta: float) -> void:
         if int(tutorial.step) != old_step:
             _save_tutorial_state()
             game.message = "TUTORIAL: %s" % String(tutorial.current().get("title", "Next step"))
-            _update_clock = 0.0
             _refresh()
             return
 
-    _update_clock += delta
-    if _update_clock >= UPDATE_INTERVAL:
-        _update_clock = 0.0
-        _layout_responsive()
+    _layout_responsive()
 
 func _build() -> void:
     overlay_root = Control.new()
