@@ -98,7 +98,8 @@ func _run() -> void:
     if tutorial_overlay != null and tutorial_overlay.has_method("_layout_responsive"):
         tutorial_overlay.call("_layout_responsive")
     check("PROPERTY keeps compact Guide chip available", guide_chip != null and guide_chip.visible)
-    check("PROPERTY Guide chip stays above bottom navigation", guide_chip != null and nav != null and guide_chip.get_global_rect().end.y <= nav.get_global_rect().position.y + 0.6)
+    var property_nav := hud.get("bottom_nav") as Control
+    check("PROPERTY Guide chip stays above bottom navigation", guide_chip != null and property_nav != null and guide_chip.get_global_rect().end.y <= property_nav.get_global_rect().position.y + 0.6)
 
     hud.open_figma_view("empire")
     await process_frame
