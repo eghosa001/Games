@@ -34,10 +34,19 @@ func _log(text: String) -> void:
     if logs.size() > 100: logs.pop_front()
     _write("company", "log_lines", logs)
 func _next_cost() -> int:
-    if stage == "Operational": return 0
+    if command_system != null and command_system.property_system != null and command_system.property_system.has_method("next_restoration_cost"):
+        return int(command_system.property_system.next_restoration_cost())
+    if stage == "Operational":
+        return 0
     for index in range(stages.size()):
-        if stages[index][0] == stage and index + 1 < stages.size(): return int(stages[index + 1][2])
+        if stages[index][0] == stage and index + 1 < stages.size():
+            return int(stages[index + 1][2])
     return 0
+
+func _acquisition_cost() -> int:
+    if command_system != null and command_system.property_system != null and command_system.property_system.has_method("acquisition_cost"):
+        return int(command_system.property_system.acquisition_cost())
+    return 5000
 var cash: int:
     get:
         var finance = _finance()
