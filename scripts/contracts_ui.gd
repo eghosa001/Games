@@ -60,10 +60,10 @@ func _style(bg: Color, border: Color, radius := 10) -> StyleBoxFlat:
     style.set_corner_radius_all(radius)
     return style
 
-func _button_style(bg: Color) -> StyleBoxFlat:
+func _button_style(bg: Color, horizontal_margin := 10.0) -> StyleBoxFlat:
     var style := _style(bg, BORDER, 8)
-    style.content_margin_left = 10
-    style.content_margin_right = 10
+    style.content_margin_left = horizontal_margin
+    style.content_margin_right = horizontal_margin
     style.content_margin_top = 6
     style.content_margin_bottom = 6
     return style
@@ -151,6 +151,11 @@ func _make_action(text: String, callback: Callable) -> Button:
 
 func _add_offer(text: String, method_name: String) -> void:
     var button := _make_action(text, Callable(self, "_sign_offer").bind(method_name))
+    # Offer labels are longer than the generic action row; keep full contract
+    # type/bonus copy visible without reducing every screen action's padding.
+    button.add_theme_stylebox_override("normal", _button_style(SURFACE_2, 6.0))
+    button.add_theme_stylebox_override("hover", _button_style(Color("17343d"), 6.0))
+    button.add_theme_stylebox_override("pressed", _button_style(Color("1b3d46"), 6.0))
     button.tooltip_text = "Open the authoritative %s commercial contract flow." % text.to_lower()
     offer_grid.add_child(button)
 
