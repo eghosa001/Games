@@ -56,7 +56,7 @@ func _run() -> void:
     var expected := ["HOME", "BUSINESS", "PROPERTY", "FINANCE", "MORE"]
     for i in range(5):
         var button := buttons[i] as Button
-        check("nav %d touch target" % i, button != null and button.size.y >= 44)
+        check("nav %d touch target" % i, button != null and button.size.x >= 48 and button.size.y >= 48)
         var label := button.get_node_or_null("NavLabel") as Label
         check("nav %d label" % i, label != null and label.text == expected[i])
 
