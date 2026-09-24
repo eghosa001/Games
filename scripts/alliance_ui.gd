@@ -167,7 +167,7 @@ func _add_button(text: String, callback: Callable) -> void:
     b.set_meta("full_label", text)
     var phone_label := text
     match text:
-        "CREATE ALLIANCE  •  $1,000": phone_label = "CREATE ALLIANCE  •  $1K"
+        "CREATE ALLIANCE  •  $1,000": phone_label = "CREATE  •  $1K"
         "CONTRIBUTE  •  $1,000": phone_label = "CONTRIBUTE  •  $1K"
     b.set_meta("phone_label", phone_label)
     b.focus_mode = Control.FOCUS_NONE
