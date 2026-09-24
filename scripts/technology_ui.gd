@@ -121,8 +121,9 @@ func _layout() -> void:
     dimmer.position = Vector2.ZERO; dimmer.size = size
     panel.position = Vector2((size.x - w) / 2.0, maxf(42.0, (size.y - h) / 2.0)) if not narrow else Vector2(margin, maxf(42.0, (size.y - h) / 2.0))
     panel.size = Vector2(w, minf(h, size.y - panel.position.y - 10.0))
-    title_label.position = Vector2(14, 10); title_label.size = Vector2(w - 210.0, 30); title_label.add_theme_font_size_override("font_size", 18 if phone else 21)
-    status_label.position = Vector2(w - 198.0, 14); status_label.size = Vector2(110.0, 20); status_label.add_theme_font_size_override("font_size", 9 if phone else 10)
+    title_label.position = Vector2(14, 10); title_label.size = Vector2(w - 112.0 if phone else w - 210.0, 30); title_label.add_theme_font_size_override("font_size", 17 if phone else 21)
+    status_label.visible = not phone
+    status_label.position = Vector2(w - 198.0, 14); status_label.size = Vector2(110.0, 20); status_label.add_theme_font_size_override("font_size", 10)
     close_button.position = Vector2(w - 84.0, 7); close_button.size = Vector2(70.0, 46); close_button.add_theme_font_size_override("font_size", 10)
     summary_label.position = Vector2(14, 48); summary_label.size = Vector2(w - 28.0, 48); summary_label.add_theme_font_size_override("font_size", 10 if phone else 11)
     feedback_label.position = Vector2(14, 96); feedback_label.size = Vector2(w - 28.0, 34); feedback_label.add_theme_font_size_override("font_size", 9 if phone else 10)
