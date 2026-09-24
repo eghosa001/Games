@@ -31,20 +31,22 @@ var _title: Label
 var _status: Label
 var _summary: Label
 var _feedback: Label
+var _last_roster_signature := ""
 
 func _ready() -> void:
     layer = 75
     _build_ui()
     _layout_responsive()
-    _refresh()
+    if not get_viewport().size_changed.is_connected(_layout_responsive):
+        get_viewport().size_changed.connect(_layout_responsive)
+    _refresh(true)
 
 func _process(delta: float) -> void:
     _refresh_clock += delta
     if _refresh_clock >= 0.5:
         _refresh_clock = 0.0
         if panel != null and panel.visible:
-            _layout_responsive()
-            _refresh()
+            _refresh(false)
 
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_F:
@@ -177,7 +179,7 @@ func open_screen() -> void:
     if panel != null: panel.visible = true
     if dimmer != null: dimmer.visible = true
     _layout_responsive()
-    _refresh()
+    _refresh(true)
 
 func close_screen() -> void:
     if panel != null: panel.visible = false
@@ -242,7 +244,7 @@ func _layout_responsive() -> void:
             child.add_theme_font_size_override("font_size", 8 if phone else 10)
             child.clip_text = true
 
-func _refresh() -> void:
+func _refresh(force := false) -> void:
     if panel == null:
         return
     var roster: Array = _roster()
@@ -259,6 +261,11 @@ func _refresh() -> void:
     _summary.text = "%d ACTIVE  •  %d CANDIDATES  •  $%s DAILY WAGES\nSELECT A PERSON TO MANAGE THEIR CAREER, ROLE AND ASSIGNMENT." % [active_count, candidates, _money(daily_wages)]
     var message := str(_state_value("company", "message", ""))
     _feedback.text = message if not message.is_empty() else ""
+
+    var roster_signature := "%s|%s" % [str(roster), str(selected_id)]
+    if not force and roster_signature == _last_roster_signature:
+        return
+    _last_roster_signature = roster_signature
     _rebuild_list(roster)
     _update_details(roster)
 
@@ -330,7 +337,7 @@ func _set_portrait(employee_id: String) -> void:
 
 func _select(employee_id: String) -> void:
     selected_id = employee_id
-    _refresh()
+    _refresh(false)
 
 func _action(action: String) -> void:
     var command = _command_system()
@@ -341,7 +348,7 @@ func _action(action: String) -> void:
         var result: Dictionary = command.hire_employee()
         if bool(result.get("ok", false)):
             selected_id = str(result.get("employee", {}).get("id", selected_id))
-        _refresh()
+        _refresh(false)
         return
     if selected_id.is_empty():
         _feedback.text = "Select an employee first."
@@ -355,7 +362,7 @@ func _action(action: String) -> void:
         "fire": command.fire_employee(selected_id)
     if command.employee_system != null and command.employee_system.has_method("sync_roster"):
         command.employee_system.sync_roster()
-    _refresh()
+    _refresh(false)
 
 func _command_system():
     var main: Variant = get_node_or_null("/root/Renew")
