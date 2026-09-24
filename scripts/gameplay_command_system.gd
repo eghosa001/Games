@@ -196,6 +196,7 @@ func advance_day()->void:
     var result:Dictionary=simulation.advance_day(_simulation_state(),context)
     if not bool(result.get("ok",false)):_restore_daily_transaction(transaction["snapshot"]);_set_state("company","message",str(result.get("message","Unable to advance the day.")));return
     _apply_simulation_state(result.get("state",{}));employee_system.sync_roster()
+    if expansion_system.has_method("sync_state_mirror"):expansion_system.sync_state_mirror()
     if technology_system!=null:technology_system.add_daily_research_points(3)
     if competitor_reactions!=null:
         for reaction in competitor_reactions.observe_and_react(_simulation_state(),business_system.supply_chain,result.get("contract",{})):_log("COMPETITOR REACTION: "+reaction)
@@ -224,11 +225,13 @@ func _apply_simulation_state(state:Dictionary)->void:
     if state.get("log_lines",[]) is Array:_set_state("company","log_lines",state["log_lines"].duplicate(true))
 func save_game()->void:
     _set_state("supply_chain","resource_sites",business_system.supply_chain.warehouse_snapshot())
+    if expansion_system.has_method("sync_state_mirror"):expansion_system.sync_state_mirror()
     var state=get_node_or_null("/root/RenewGameState");var snapshot=state.capture() if state!=null else {}
     _set_state("company","message","Game saved." if SaveSystem.save_game(snapshot) else "Save failed.")
 func load_game()->void:
     var snapshot=SaveSystem.load_game();if snapshot.is_empty():_set_state("company","message","No save file found.");return
     var state=get_node_or_null("/root/RenewGameState");if state!=null:state.restore(snapshot)
+    if expansion_system.has_method("restore_from_state_mirror"):expansion_system.restore_from_state_mirror()
     var roster=_state_value("employees","roster",[]);if roster is Array:employee_system.employee_system.restore_state({"employees":roster})
     var saved_warehouse=_state_value("supply_chain","resource_sites",{});if saved_warehouse is Dictionary:business_system.supply_chain.restore_state({"warehouse":saved_warehouse})
     _refresh_domain_services()
