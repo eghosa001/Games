@@ -292,7 +292,7 @@ func _on_theme_changed(_mode: String) -> void:
 func _layout_size() -> Vector2:
     if root != null and is_instance_valid(root) and root.size.x > 0.0 and root.size.y > 0.0:
         return root.size
-    return _layout_size()
+    return get_viewport().get_visible_rect().size
 
 func _layout_responsive() -> void:
     var next_kind = _layout_class()
