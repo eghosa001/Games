@@ -458,6 +458,7 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
         button.add_theme_stylebox_override("normal", _nav_style(i == active_tab))
         button.add_theme_stylebox_override("hover", _nav_style(i == active_tab, true))
         button.add_theme_stylebox_override("pressed", _nav_style(true))
+        button.add_theme_stylebox_override("disabled", _nav_disabled_style())
         button.add_theme_stylebox_override("focus", _nav_style(true, true))
         button.add_theme_stylebox_override("disabled", _nav_disabled_style())
         var required_unlock := str(required_unlocks[i])
@@ -503,6 +504,16 @@ func _nav_style(active: bool, hover = false) -> StyleBoxFlat:
     empty.border_color = Color(0,0,0,0)
     empty.set_corner_radius_all(14)
     return empty
+
+func _nav_disabled_style() -> StyleBoxFlat:
+    var s = StyleBoxFlat.new()
+    var base := _color("surface_2")
+    var edge := _color("border")
+    s.bg_color = Color(base.r, base.g, base.b, 0.42 if _is_light_theme() else 0.18)
+    s.border_color = Color(edge.r, edge.g, edge.b, 0.44 if _is_light_theme() else 0.28)
+    s.set_border_width_all(1)
+    s.set_corner_radius_all(14)
+    return s
 
 func _style(bg: Color, border: Color, radius: int, border_width = 1) -> StyleBoxFlat:
     var s = StyleBoxFlat.new()
