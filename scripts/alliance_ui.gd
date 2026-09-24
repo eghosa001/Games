@@ -308,7 +308,7 @@ func _layout() -> void:
     title.add_theme_font_size_override("font_size", 18 if phone else 20)
     var subtitle := panel.get_node_or_null("Subtitle") as Label
     if subtitle != null:
-        subtitle.text = "Shared capital  •  alliances  •  diplomacy" if phone else "Alliance strategy  •  shared capital  •  corporate diplomacy"
+        subtitle.text = "ALLIANCES  •  CAPITAL  •  DIPLOMACY" if phone else "Alliance strategy  •  shared capital  •  corporate diplomacy"
         subtitle.position = Vector2(14, 38)
         subtitle.size = Vector2(maxf(120.0, width - 116.0), 20)
         subtitle.add_theme_font_size_override("font_size", 9 if phone else 10)
