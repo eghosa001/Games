@@ -149,14 +149,14 @@ func _layout() -> void:
     title_label.position = Vector2(side, 14)
     title_label.size = Vector2(width - (28.0 if phone else 170.0), 28)
     title_label.add_theme_font_size_override("font_size", 18 if compact else 20)
-    status_label.position = Vector2(side if phone else width - 160.0, 43 if phone else 17)
+    status_label.position = Vector2(side if phone else width - 160.0, 48 if phone else 17)
     status_label.size = Vector2(width - side * 2.0 if phone else 144.0, 20)
     status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT if phone else HORIZONTAL_ALIGNMENT_RIGHT
     status_label.add_theme_font_size_override("font_size", 9 if phone else 10)
 
     var controls_height := 184.0 if compact else 132.0
-    scroll.position = Vector2(side, 70 if phone else 52)
-    scroll.size = Vector2(width - side * 2.0, maxf(120.0, panel.size.y - controls_height - (144.0 if phone else 126.0)))
+    scroll.position = Vector2(side, 76 if phone else 52)
+    scroll.size = Vector2(width - side * 2.0, maxf(120.0, panel.size.y - controls_height - (150.0 if phone else 126.0)))
     detail_label.position = Vector2(side, scroll.position.y + scroll.size.y + 10.0)
     detail_label.size = Vector2(width - side * 2.0, 64.0)
     detail_label.add_theme_font_size_override("font_size", 10 if compact else 11)
