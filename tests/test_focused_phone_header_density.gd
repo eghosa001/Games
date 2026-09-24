@@ -38,6 +38,9 @@ func _run() -> void:
     check("Alliance title clears Close", not alliance_title.get_global_rect().intersects(alliance_close.get_global_rect()))
     check("Alliance subtitle clears Close", not alliance_subtitle.get_global_rect().intersects(alliance_close.get_global_rect()))
     check("Alliance subtitle text fits", _text_fits(alliance_subtitle))
+    for child in (alliance.get("panel") as Panel).get_children():
+        if child is Button and child != alliance_close:
+            check("Alliance action text fits: %s" % child.text, _button_text_fits(child as Button))
 
     manager.show_screen("RenewDiplomacyUI")
     await process_frame
