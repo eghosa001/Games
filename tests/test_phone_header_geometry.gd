@@ -29,7 +29,8 @@ func _run() -> void:
         return
 
     manager.show_screen("CustomerSegmentsUI")
-    await process_frame
+    for _frame in range(3):
+        await process_frame
     var market := game.get_node("UI/CustomerSegmentsUI")
     var market_title := market.get("title_label") as Label
     var market_close := market.get("close_button") as Button
@@ -40,7 +41,8 @@ func _run() -> void:
     check("Market summary starts below status", market_summary.get_global_rect().position.y >= market_status.get_global_rect().end.y)
 
     manager.show_screen("EmpireIdentityPanel")
-    await process_frame
+    for _frame in range(3):
+        await process_frame
     var identity := game.get_node("UI/EmpireIdentityPanel")
     var identity_title := identity.get("title_label") as Label
     var identity_close := identity.get("close_button") as Button
@@ -51,7 +53,8 @@ func _run() -> void:
     check("Identity power starts below summary", identity_power.get_global_rect().position.y >= identity_summary.get_global_rect().end.y)
 
     manager.show_screen("PortfolioPanel")
-    await process_frame
+    for _frame in range(3):
+        await process_frame
     var portfolio := game.get_node("UI/PortfolioPanel")
     var portfolio_title := portfolio.get("title_label") as Label
     var portfolio_status := portfolio.get("status_label") as Label
