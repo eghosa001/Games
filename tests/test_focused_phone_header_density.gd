@@ -42,9 +42,11 @@ func _run() -> void:
     await process_frame
     var diplomacy := game.get_node("UI/RenewDiplomacyUI")
     var diplomacy_panel := diplomacy.get("panel") as Panel
-    var diplomacy_close := diplomacy_panel.get_node("CloseButton") as Button
-    check("Diplomacy title clears Close", not (diplomacy_panel.get_node("Title") as Label).get_global_rect().intersects(diplomacy_close.get_global_rect()))
-    check("Diplomacy subtitle clears Close", not (diplomacy_panel.get_node("Subtitle") as Label).get_global_rect().intersects(diplomacy_close.get_global_rect()))
+    var diplomacy_close := diplomacy_panel.find_child("UniversalCloseButton", true, false) as Button
+    check("Diplomacy close resolves after manager normalization", diplomacy_close != null)
+    if diplomacy_close != null:
+        check("Diplomacy title clears Close", not (diplomacy_panel.get_node("Title") as Label).get_global_rect().intersects(diplomacy_close.get_global_rect()))
+        check("Diplomacy subtitle clears Close", not (diplomacy_panel.get_node("Subtitle") as Label).get_global_rect().intersects(diplomacy_close.get_global_rect()))
 
     manager.show_screen("TechnologyPanel")
     await process_frame
