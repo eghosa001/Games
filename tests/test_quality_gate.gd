@@ -126,13 +126,30 @@ func test_ui_contract() -> void:
         root_control.size = Vector2(target)
         hud._layout_responsive()
         await process_frame
+        await process_frame
         check(root_control.size.x >= target.x - 1.0 and root_control.size.y >= target.y - 1.0, "Responsive layout accepts %dx%d" % [target.x, target.y])
-        var tabs: Control = hud.get("tabs") as Control
-        check(tabs != null and Rect2(Vector2.ZERO, target).encloses(Rect2(tabs.position, tabs.size)), "Tabs remain inside %dx%d" % [target.x, target.y])
-        if tabs != null:
-            for child in tabs.get_children():
-                if child is Button:
-                    check((child as Button).size.x >= 44.0 and (child as Button).size.y >= 44.0, "Tab touch target >= 44px at %dx%d" % [target.x, target.y])
+
+        var layout_kind := str(hud.get("_layout_kind"))
+        if target.x >= 1000:
+            check(layout_kind == "desktop", "Desktop layout selected at %dx%d" % [target.x, target.y])
+            var desktop := root_control.get_node_or_null("DesktopExecutive") as Control
+            var desktop_rect := Rect2(desktop.position, desktop.size * desktop.scale) if desktop != null else Rect2()
+            check(desktop != null and Rect2(Vector2.ZERO, target).grow(1.0).encloses(desktop_rect), "Desktop canvas remains inside %dx%d" % [target.x, target.y])
+        elif target.x >= 700 and target.y >= 900:
+            check(layout_kind == "tablet", "Tablet layout selected at %dx%d" % [target.x, target.y])
+            var tablet := root_control.get_node_or_null("TabletLive") as Control
+            var tablet_rect := Rect2(tablet.position, tablet.size * tablet.scale) if tablet != null else Rect2()
+            check(tablet != null and Rect2(Vector2.ZERO, target).grow(1.0).encloses(tablet_rect), "Tablet canvas remains inside %dx%d" % [target.x, target.y])
+        else:
+            check(layout_kind == "mobile", "Mobile layout selected at %dx%d" % [target.x, target.y])
+            var tabs: Control = hud.get("tabs") as Control
+            var nav: Control = hud.get("bottom_nav") as Control
+            var tabs_rect := Rect2(nav.position + tabs.position, tabs.size) if tabs != null and nav != null else Rect2()
+            check(tabs != null and nav != null and Rect2(Vector2.ZERO, target).grow(1.0).encloses(tabs_rect), "Tabs remain inside %dx%d" % [target.x, target.y])
+            if tabs != null:
+                for child in tabs.get_children():
+                    if child is Button:
+                        check((child as Button).size.x >= 44.0 and (child as Button).size.y >= 44.0, "Tab touch target >= 44px at %dx%d" % [target.x, target.y])
     root_control.size = Vector2(VIEWPORT)
     hud._layout_responsive()
 
