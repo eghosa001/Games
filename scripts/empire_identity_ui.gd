@@ -74,7 +74,8 @@ func _refresh() -> void:
     var name := str(g.get("company_name")) if "company_name" in g else "RESTORA COMPANY"
     if name == "<null>" or name.is_empty(): name = "RESTORA COMPANY"
     var day := int(g.get("day")) if "day" in g else 0; var rep := int(g.get("reputation")) if "reputation" in g else 0
-    summary_label.text = "%s  •  DAY %d  •  REP %d" % [name, day, rep]
+    var phone := get_viewport().get_visible_rect().size.x < 430.0
+    summary_label.text = ("%s\nDAY %d  •  REP %d" % [name, day, rep]) if phone else ("%s  •  DAY %d  •  REP %d" % [name, day, rep])
     if ranking != null and ranking.has_method("world_power"):
         var power: Dictionary = ranking.world_power()
         power_label.text = "WORLD POWER  %.0f / 100   •   ECON %.0f   TECH %.0f   LOG %.0f   DIP %.0f" % [float(power.get("total", 0.0)), float(power.get("economic", 0.0)), float(power.get("technology", 0.0)), float(power.get("logistics", 0.0)), float(power.get("diplomatic", 0.0))]
@@ -110,10 +111,19 @@ func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_ESCAPE: _close(); get_viewport().set_input_as_handled()
 func _layout() -> void:
     if panel == null: return
-    var size := get_viewport().get_visible_rect().size; var narrow := size.x < 760.0; dimmer.position = Vector2.ZERO; dimmer.size = size
+    var size := get_viewport().get_visible_rect().size; var narrow := size.x < 760.0; var phone := size.x < 430.0; dimmer.position = Vector2.ZERO; dimmer.size = size
     var width := maxf(304.0, size.x - 16.0) if narrow else minf(660.0, size.x - 36.0); var height := maxf(430.0, size.y - 90.0) if narrow else minf(720.0, size.y - 110.0)
     panel.position = Vector2(8, 70) if narrow else Vector2(maxf(18.0, (size.x - width) * 0.5), 82); panel.size = Vector2(width, height)
-    title_label.position = Vector2(14, 10); title_label.size = Vector2(width - 130, 30); summary_label.position = Vector2(14, 40); summary_label.size = Vector2(width - 28, 20); power_label.position = Vector2(14, 61); power_label.size = Vector2(width - 28, 36); close_button.position = Vector2(width - 94, 7); close_button.size = Vector2(86, 46); scroll.position = Vector2(12, 100); scroll.size = Vector2(width - 24, height - 108); content.custom_minimum_size.x = width - 24
+    title_label.position = Vector2(14, 10); title_label.size = Vector2(width - (112 if phone else 130), 30); title_label.add_theme_font_size_override("font_size", 17 if phone else 20)
+    summary_label.position = Vector2(14, 58 if phone else 40); summary_label.add_theme_font_size_override("font_size", 9 if phone else 10)
+    var summary_h := 38.0 if phone else 20.0
+    summary_label.size = Vector2(width - 28, summary_h)
+    power_label.position = Vector2(14, summary_label.position.y + summary_h + (6.0 if phone else 1.0)); power_label.add_theme_font_size_override("font_size", 10 if phone else 11)
+    var power_h := 44.0 if phone else 36.0
+    power_label.size = Vector2(width - 28, power_h)
+    close_button.position = Vector2(width - 94, 7); close_button.size = Vector2(86, 46)
+    var scroll_y := power_label.position.y + power_h + (6.0 if phone else 3.0)
+    scroll.position = Vector2(12, scroll_y); scroll.size = Vector2(width - 24, height - scroll_y - 8.0); content.custom_minimum_size.x = width - 24
     for child in content.get_children():
         child.custom_minimum_size.y = 94 if narrow else 86
         for sub in child.get_children():
