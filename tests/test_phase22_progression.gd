@@ -77,4 +77,17 @@ func run()->void:
     progression._process(0.0)
     check(progression.get_xp()==selection_xp+50,"Unchanged restored portfolio does not repeat operational XP")
 
+    state.set_value("branches","expansion",{})
+    progression.sync_tracking()
+    var expansion_xp:=progression.get_xp()
+    var expansion_snapshot:={"properties":[{"name":"Sunrise Apartments","owned":true,"level":1}],"day":1}
+    state.set_value("branches","expansion",expansion_snapshot);progression._process(0.0)
+    check(progression.get_xp()==expansion_xp+35,"A real expansion purchase earns purchase XP")
+    expansion_snapshot["day"]=2
+    state.set_value("branches","expansion",expansion_snapshot);progression._process(0.0)
+    check(progression.get_xp()==expansion_xp+35,"Unrelated expansion snapshot changes do not fake upgrade XP")
+    expansion_snapshot["properties"][0]["level"]=2
+    state.set_value("branches","expansion",expansion_snapshot);progression._process(0.0)
+    check(progression.get_xp()==expansion_xp+55,"A real expansion level increase earns upgrade XP")
+
     print("PHASE 22 RESULT: %d passed, %d failed"%[passed,failed]);quit(1 if failed > 0 else 0)
