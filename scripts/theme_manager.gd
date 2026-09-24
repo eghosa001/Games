@@ -85,7 +85,9 @@ func color(role: String) -> Color:
         "people":
             return Color("735064") if light else Color("8f5b72")
         "scrim":
-            return Color(0.22, 0.19, 0.16, 0.34) if light else Color(0.018, 0.021, 0.026, 0.72)
+            # Deep management workspaces should read as focused screens, not
+            # translucent legacy modals with the command deck bleeding through.
+            return Color(0.91, 0.93, 0.92, 0.94) if light else Color(0.043, 0.051, 0.063, 0.94)
         _:
             return Color("202a27") if light else Color("f2efe8")
 
