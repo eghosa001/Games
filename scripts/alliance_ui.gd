@@ -164,6 +164,12 @@ func _build() -> void:
 func _add_button(text: String, callback: Callable) -> void:
     var b := Button.new()
     b.text = text
+    b.set_meta("full_label", text)
+    var phone_label := text
+    match text:
+        "CREATE ALLIANCE  •  $1,000": phone_label = "CREATE ALLIANCE  •  $1K"
+        "CONTRIBUTE  •  $1,000": phone_label = "CONTRIBUTE  •  $1K"
+    b.set_meta("phone_label", phone_label)
     b.focus_mode = Control.FOCUS_NONE
     b.custom_minimum_size = Vector2(0, 44)
     b.pressed.connect(callback)
@@ -326,6 +332,7 @@ func _layout() -> void:
     var cols := 2 if narrow else 3
     var bw := (width - 42.0) / float(cols)
     for i in range(buttons.size()):
+        buttons[i].text = str(buttons[i].get_meta("phone_label", buttons[i].text)) if phone else str(buttons[i].get_meta("full_label", buttons[i].text))
         buttons[i].position = Vector2(14 + (i % cols) * (bw + 7), y + floori(i / cols) * 50)
         buttons[i].custom_minimum_size = Vector2(0, 44)
         buttons[i].clip_text = true
