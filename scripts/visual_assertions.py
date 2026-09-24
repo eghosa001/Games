@@ -2,10 +2,11 @@
 """
 visual_assertions.py — region-level visual assertions for browser-qa screenshots.
 
-These checks validate the current RESTORA command-deck design rather than an
-obsolete world-sky background. Dark shell surfaces may be layered and textured,
-so the assertions allow normal variation while still rejecting bright/clear
-bleed-through, missing panels and broken compact layouts.
+These checks validate RESTORA's current building-first command interface.
+They deliberately avoid assumptions from the retired live-world/3D shell:
+the page background may be intentionally quiet, while the current property
+illustration, management cards and compact navigation must remain visible,
+contained and visually distinct.
 """
 
 import sys
@@ -19,7 +20,7 @@ except ImportError:
 
 BG_DARK = (4, 18, 12, 30, 16, 30)
 PANEL_DARK = (8, 16, 22, 36, 28, 42)
-ACTION_DOCK = (5, 14, 18, 34, 22, 40)
+ACTION_DOCK = (12, 52, 12, 52, 16, 58)
 
 
 def _region_avg(img: Image.Image, x0: int, y0: int, x1: int, y1: int):
@@ -50,7 +51,7 @@ def _sample_luminance(img, x0, y0, x1, y1, step=8):
 def assert_shell_backdrop(img, vw, vh):
     if vw < 700:
         return True, "shell backdrop: skipped (narrow/mobile viewport)"
-    x0, y0, x1, y1 = int(vw * 0.1), 0, int(vw * 0.9), 66
+    x0, y0, x1, y1 = int(vw * 0.1), 0, int(vw * 0.9), min(66, vh)
     mean = _region_avg(img, x0, y0, x1, y1)
     if mean is None:
         return False, "shell backdrop: could not sample top strip"
@@ -65,38 +66,7 @@ def assert_shell_backdrop(img, vw, vh):
                     f"bright_ratio={bright_ratio:.3f} range={'OK' if in_range else 'BAD'}")
 
 
-def assert_hybrid_world_surface(img, x0, y0, x1, y1, label):
-    """Validate exposed 3D/world content without pinning it to one palette.
-
-    The hybrid shell deliberately reveals rendered world geometry behind the UI.
-    Require a non-blank, non-washed-out, visually varied region so a flat missing
-    canvas, white error surface or fully black render still fails the gate.
-    """
-    mean = _region_avg(img, x0, y0, x1, y1)
-    if mean is None:
-        return False, f"{label}: empty region"
-    values = _sample_luminance(img, x0, y0, x1, y1)
-    if not values:
-        return False, f"{label}: no pixels sampled"
-    avg_lum = sum(values) / len(values)
-    variance = sum((v - avg_lum) ** 2 for v in values) / len(values)
-    std_lum = variance ** 0.5
-    dark_ratio = sum(v < 12 for v in values) / len(values)
-    bright_ratio = sum(v > 180 for v in values) / len(values)
-    passed = (18 <= avg_lum <= 125 and std_lum >= 10 and
-              dark_ratio < 0.65 and bright_ratio < 0.30)
-    return passed, (f"{label}: mean={mean} avg_lum={avg_lum:.1f} "
-                    f"std_lum={std_lum:.1f} dark_ratio={dark_ratio:.3f} "
-                    f"bright_ratio={bright_ratio:.3f}")
-
-
 def assert_dark_surface(img, x0, y0, x1, y1, expected, label, tol=24, bright_limit=0.12):
-    """Validate a dark UI surface without assuming it is pixel-flat.
-
-    Dense interactive surfaces such as the action dock legitimately contain
-    more bright text/buttons than passive panels, so callers can widen only
-    those two tolerances without weakening the rest of the visual gate.
-    """
     mean = _region_avg(img, x0, y0, x1, y1)
     if mean is None:
         return False, f"{label}: empty region"
@@ -106,9 +76,29 @@ def assert_dark_surface(img, x0, y0, x1, y1, expected, label, tol=24, bright_lim
     avg_lum = sum(values) / len(values)
     bright_ratio = sum(v > 120 for v in values) / len(values)
     in_range = _in_range(mean, expected, tol=tol)
-    passed = in_range and avg_lum < 85 and bright_ratio < bright_limit
+    passed = in_range and avg_lum < 90 and bright_ratio < bright_limit
     return passed, (f"{label}: mean={mean} avg_lum={avg_lum:.1f} "
                     f"bright_ratio={bright_ratio:.3f} range={'OK' if in_range else 'BAD'}")
+
+
+def assert_building_art(img, x0, y0, x1, y1, label):
+    """Require the staged property illustration to be present and non-blank."""
+    mean = _region_avg(img, x0, y0, x1, y1)
+    if mean is None:
+        return False, f"{label}: empty region"
+    values = _sample_luminance(img, x0, y0, x1, y1, step=6)
+    if not values:
+        return False, f"{label}: no pixels sampled"
+    avg_lum = sum(values) / len(values)
+    variance = sum((v - avg_lum) ** 2 for v in values) / len(values)
+    std_lum = variance ** 0.5
+    dark_ratio = sum(v < 18 for v in values) / len(values)
+    bright_ratio = sum(v > 225 for v in values) / len(values)
+    passed = (45 <= avg_lum <= 205 and std_lum >= 16 and
+              dark_ratio < 0.70 and bright_ratio < 0.55)
+    return passed, (f"{label}: mean={mean} avg_lum={avg_lum:.1f} "
+                    f"std_lum={std_lum:.1f} dark_ratio={dark_ratio:.3f} "
+                    f"bright_ratio={bright_ratio:.3f}")
 
 
 def assert_screenshot(path, vw, vh):
@@ -123,25 +113,41 @@ def assert_screenshot(path, vw, vh):
                 min(iw, int(x1 * sx)), min(ih, int(y1 * sy)))
 
     narrow = vw < 700
-    if not narrow:
-        results.append(assert_shell_backdrop(img, vw, vh))
-        results.append(assert_dark_surface(img, *R(4, 110, 100, 340), PANEL_DARK, "left_rail"))
-        # The action dock contains dynamic button labels/emphasis states. Keep
-        # the whole-region check so a missing/washed-out dock still fails, but
-        # allow the expected increase in bright interactive pixels.
-        results.append(assert_dark_surface(
-            img, *R(104, 216, int(vw * 0.92), int(vh * 0.80)),
-            ACTION_DOCK, "action_dock", tol=34, bright_limit=0.22
-        ))
-        results.append(assert_dark_surface(img, *R(104, 112, 440, 212), PANEL_DARK, "selected_card"))
 
-    dock_bottom = int(vh * 0.78) if narrow else int(vh * 0.80)
-    # The hybrid shell intentionally exposes the rendered 3D/world surface
-    # behind this area on both desktop and mobile. Validate that the region is
-    # present and visually textured without pinning it to the retired 2D palette.
-    results.append(assert_hybrid_world_surface(
-        img, *R(4, dock_bottom, int(vw * 0.35), vh), "status-area-world"
-    ))
+    if narrow:
+        # The compact home hero deliberately overlays copy on the left and keeps
+        # the staged building illustration exposed on the right.
+        results.append(assert_building_art(
+            img, *R(vw * 0.48, 82, vw * 0.96, min(236, vh * 0.34)),
+            "mobile-building-art"
+        ))
+        results.append(assert_dark_surface(
+            img, *R(18, 495, vw - 18, min(687, vh - 150)),
+            PANEL_DARK, "mobile-signals", tol=30, bright_limit=0.12
+        ))
+        results.append(assert_dark_surface(
+            img, *R(13, max(0, vh - 85), vw - 13, vh - 16),
+            ACTION_DOCK, "mobile-navigation", tol=34, bright_limit=0.16
+        ))
+    else:
+        results.append(assert_shell_backdrop(img, vw, vh))
+        results.append(assert_building_art(
+            img, *R(vw * 0.133, vh * 0.224, vw * 0.457, vh * 0.662),
+            "current-building-art"
+        ))
+        results.append(assert_dark_surface(
+            img, *R(vw * 0.49, vh * 0.307, vw * 0.88, vh * 0.562),
+            PANEL_DARK, "next-objective"
+        ))
+        results.append(assert_dark_surface(
+            img, *R(vw * 0.12, vh * 0.662, vw * 0.472, vh * 0.912),
+            PANEL_DARK, "building-details"
+        ))
+        results.append(assert_dark_surface(
+            img, *R(vw * 0.689, vh * 0.593, vw * 0.88, vh * 0.912),
+            ACTION_DOCK, "quick-actions", tol=34, bright_limit=0.18
+        ))
+
     return results
 
 
