@@ -351,12 +351,12 @@ func _layout() -> void:
     close_button.size = Vector2(70, 46)
     close_button.add_theme_font_size_override("font_size", 10)
     summary_label.position = Vector2(14, 50)
-    summary_label.size = Vector2(w - 28.0, 48 if phone else 42)
+    summary_label.size = Vector2(w - 28.0, 56 if phone else 42)
     summary_label.add_theme_font_size_override("font_size", 10 if phone else 11)
-    metrics_label.position = Vector2(14, 102 if phone else 91)
+    metrics_label.position = Vector2(14, 112 if phone else 91)
     metrics_label.size = Vector2(w - 28.0, 60 if phone else 48)
     metrics_label.add_theme_font_size_override("font_size", 9 if phone else 11)
-    var button_y := 168.0 if phone else 143.0
+    var button_y := 180.0 if phone else 143.0
     if phone:
         type_button.position = Vector2(14, button_y)
         type_button.size = Vector2(w - 28.0, 44)
