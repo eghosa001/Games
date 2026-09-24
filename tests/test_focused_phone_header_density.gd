@@ -75,6 +75,10 @@ func _run() -> void:
     for child in filters.get_children():
         if child is Button:
             check("Collection filter text fits: %s" % child.text, _button_text_fits(child as Button))
+    var first_three_width := 12.0
+    for i in range(mini(3, filters.get_child_count())):
+        first_three_width += (filters.get_child(i) as Button).size.x
+    check("Collection first three phone filters are fully visible", first_three_width <= filter_scroll.size.x + 1.0)
 
     manager.hide_all_screens()
     game.queue_free()
