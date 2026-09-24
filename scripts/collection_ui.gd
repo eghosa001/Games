@@ -109,6 +109,13 @@ func _layout_responsive() -> void:
     var viewport := get_viewport().get_visible_rect().size; var w := maxf(320.0, viewport.x); var h := maxf(480.0, viewport.y); var mobile := w < 760.0
     if mobile:
         panel.position = Vector2(8, 8); panel.size = Vector2(w - 16, h - 16)
+        var filters := panel.find_child("Filters", true, false) as HBoxContainer
+        if filters != null:
+            for child in filters.get_children():
+                if child is Button:
+                    var button := child as Button
+                    button.custom_minimum_size.x = 72.0 if button.text == "ALL" else 126.0
+                    button.add_theme_font_size_override("font_size", 9)
     else:
         panel.position = Vector2(70, 40); panel.size = Vector2(minf(1120, w - 140), minf(720, h - 80))
 
