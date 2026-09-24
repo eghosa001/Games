@@ -58,4 +58,23 @@ func run()->void:
     progression.sync_tracking()
     state.set_value("properties","restoration",25);state.set_value("properties","stage","Abandoned");progression._process(0.0)
     check(progression.get_xp()==10,"Restoration state change is tracked")
+
+    # Selection changes must not farm the one-time operational-property reward.
+    var catalog := [
+        {"id":"a","owned":true,"cleaning":100,"repair":100,"painting":100,"furnishing":100},
+        {"id":"b","owned":true,"cleaning":0,"repair":0,"painting":0,"furnishing":0}
+    ]
+    state.set_value("properties","catalog",catalog)
+    state.set_value("properties","stage","Operational")
+    progression.sync_tracking()
+    var selection_xp := progression.get_xp()
+    state.set_value("properties","stage","Neglected");progression._process(0.0)
+    state.set_value("properties","stage","Operational");progression._process(0.0)
+    check(progression.get_xp()==selection_xp,"Switching between restored and unfinished properties cannot farm operational XP")
+    catalog[1]["cleaning"]=100;catalog[1]["repair"]=100;catalog[1]["painting"]=100;catalog[1]["furnishing"]=100
+    state.set_value("properties","catalog",catalog);progression._process(0.0)
+    check(progression.get_xp()==selection_xp+50,"A newly restored portfolio property earns operational XP exactly once")
+    progression._process(0.0)
+    check(progression.get_xp()==selection_xp+50,"Unchanged restored portfolio does not repeat operational XP")
+
     print("PHASE 22 RESULT: %d passed, %d failed"%[passed,failed]);quit(1 if failed > 0 else 0)
