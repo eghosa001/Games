@@ -1353,7 +1353,7 @@ func _next_stage_name() -> String:
 
 func _property_cta_label() -> String:
     if not _inspected(): return "INSPECT PROPERTY"
-    if not _owned(): return "ACQUIRE  •  %s" % _money(_acquisition_cost())
+    if not _owned(): return "ACQUIRE PROPERTY  •  %s" % _money(_acquisition_cost())
     if _stage() != "Operational":
         var cost = int(parent._next_cost()) if parent != null and parent.has_method("_next_cost") else 0
         return "RESTORE NEXT STAGE  •  %s" % _money(cost)
