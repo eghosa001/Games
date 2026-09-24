@@ -47,4 +47,4 @@ func _run() -> void:
 
     game.queue_free()
     await process_frame
-    quit(1 if failed>0 else 0)
+    quit(1 if failed > 0 else 0)
