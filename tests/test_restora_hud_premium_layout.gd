@@ -32,6 +32,16 @@ func _run()->void:
     check("desktop exact Figma canvas exists",desktop!=null and desktop.size==Vector2(1280,720))
     check("desktop world panel",desktop!=null and desktop.get_node_or_null("WorldPropertyView")!=null)
     check("desktop quick actions",desktop!=null and desktop.get_node_or_null("QuickActions")!=null)
+    var property_meta:=desktop.get_node_or_null("WorldPropertyView/Meta") as Label if desktop!=null else null
+    var objective_title:=desktop.get_node_or_null("Objective/Title") as Label if desktop!=null else null
+    check("desktop selected building has real market value",property_meta!=null and property_meta.text.contains("$65.0K market value"))
+    check("desktop starts with inspection objective",objective_title!=null and objective_title.text.begins_with("Inspect "))
+    game.inspect_property();await process_frame;hud._refresh();await process_frame
+    check("desktop objective updates after inspection",objective_title.text.begins_with("Acquire "))
+    var worth_before:=str((desktop.get_node_or_null("Worth/Value") as Label).text)
+    game.acquire_property();await process_frame;hud._refresh();await process_frame
+    check("desktop objective updates after acquisition",objective_title.text.begins_with("Restore "))
+    check("desktop worth updates from owned property",str((desktop.get_node_or_null("Worth/Value") as Label).text)!=worth_before)
     var strategy:=game.get_node_or_null("UI/StrategyHUD")
     var strategy_panel:=strategy.get("panel") as Panel if strategy!=null else null
     check("duplicate strategy overlay stays hidden",strategy_panel!=null and not strategy_panel.visible)
