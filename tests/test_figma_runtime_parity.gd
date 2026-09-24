@@ -83,9 +83,9 @@ func _run() -> void:
     _rect(_child(content, "Transactions"), Vector2(18,424), Vector2(354,214), "FINANCE transactions")
     var tutorial_overlay := game.get_node_or_null("UI/TutorialOverlay")
     var guide_chip := tutorial_overlay.get("collapsed_button") as Button if tutorial_overlay != null else null
-    var investor_button := content.get_node_or_null("Investor") as Button
-    check("FINANCE investor stays clear of Guide chip", guide_chip != null and investor_button != null and not guide_chip.get_global_rect().intersects(investor_button.get_global_rect()))
-    check("Guide chip stays above bottom navigation", guide_chip != null and nav != null and guide_chip.get_global_rect().end.y <= nav.get_global_rect().position.y + 0.6)
+    if tutorial_overlay != null and tutorial_overlay.has_method("_layout_responsive"):
+        tutorial_overlay.call("_layout_responsive")
+    check("FINANCE hides compact Guide chip", guide_chip != null and not guide_chip.visible)
 
     hud.open_figma_view("property")
     await process_frame
@@ -95,6 +95,10 @@ func _run() -> void:
     _rect(_child(content, "RestorationProgress"), Vector2(18,338), Vector2(354,116), "PROPERTY progress")
     _rect(_child(content, "BuildingDetails"), Vector2(18,472), Vector2(354,126), "PROPERTY details")
     check("PROPERTY exposes nine named buildings", content.find_children("BuildingRow*", "Panel", false, false).size() == 9)
+    if tutorial_overlay != null and tutorial_overlay.has_method("_layout_responsive"):
+        tutorial_overlay.call("_layout_responsive")
+    check("PROPERTY keeps compact Guide chip available", guide_chip != null and guide_chip.visible)
+    check("PROPERTY Guide chip stays above bottom navigation", guide_chip != null and nav != null and guide_chip.get_global_rect().end.y <= nav.get_global_rect().position.y + 0.6)
 
     hud.open_figma_view("empire")
     await process_frame
