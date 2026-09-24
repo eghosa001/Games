@@ -79,7 +79,8 @@ func _run() -> void:
             var viewport_rect := Rect2(Vector2.ZERO, Vector2(root.size)).grow(2.0)
             if screen_name == "SupplyChainPanel":
                 var supply_panel := screen.get("panel") as Control
-                check("SupplyChainPanel phone modal stays in viewport", supply_panel != null and viewport_rect.encloses(supply_panel.get_global_rect()))
+                var panel_inside := supply_panel != null and supply_panel.position.x >= -2.0 and supply_panel.position.y >= -2.0 and supply_panel.position.x + supply_panel.size.x <= float(root.size.x) + 2.0 and supply_panel.position.y + supply_panel.size.y <= float(root.size.y) + 2.0
+                check("SupplyChainPanel phone modal stays in viewport", panel_inside)
             else:
                 var scrolls: Array[ScrollContainer] = []
                 collect_scrolls(screen, scrolls)
