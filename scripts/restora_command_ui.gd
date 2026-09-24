@@ -289,6 +289,11 @@ func _clear_root() -> void:
 func _on_theme_changed(_mode: String) -> void:
     _rebuild_current()
 
+func _layout_size() -> Vector2:
+    if root != null and is_instance_valid(root) and root.size.x > 0.0 and root.size.y > 0.0:
+        return root.size
+    return _layout_size()
+
 func _layout_responsive() -> void:
     var next_kind = _layout_class()
     if next_kind != _layout_kind:
@@ -296,7 +301,7 @@ func _layout_responsive() -> void:
         _rebuild_current()
         return
     if _layout_kind == "mobile":
-        var size = get_viewport().get_visible_rect().size
+        var size = _layout_size()
         var canvas_w = minf(MOBILE_DESIGN_W, size.x)
         var scroll_h = maxf(120.0, size.y - (MOBILE_NAV_H + MOBILE_NAV_BOTTOM))
         var expected_width = canvas_w
@@ -308,7 +313,7 @@ func _layout_responsive() -> void:
             _layout_mobile_host()
 
 func _layout_class() -> String:
-    var size = get_viewport().get_visible_rect().size
+    var size = _layout_size()
     if size.x >= DESKTOP_BREAKPOINT and active_view == "live":
         return "desktop"
     if size.x >= TABLET_BREAKPOINT and size.y >= 900.0 and active_view == "live":
@@ -376,7 +381,7 @@ func _set_tab(index: int) -> void:
 
 
 func _build_mobile_host() -> void:
-    var size = get_viewport().get_visible_rect().size
+    var size = _layout_size()
     var canvas_w = minf(MOBILE_DESIGN_W, size.x)
     var x0 = floor((size.x - canvas_w) * 0.5)
     var scroll_h = maxf(120.0, size.y - (MOBILE_NAV_H + MOBILE_NAV_BOTTOM))
@@ -406,7 +411,7 @@ func _build_mobile_host() -> void:
 func _layout_mobile_host() -> void:
     if mobile_scroll == null or bottom_nav == null:
         return
-    var size = get_viewport().get_visible_rect().size
+    var size = _layout_size()
     var canvas_w = minf(MOBILE_DESIGN_W, size.x)
     var x0 = floor((size.x - canvas_w) * 0.5)
     mobile_scroll.position = Vector2(x0, 0)
@@ -618,7 +623,7 @@ func _stat_tile(parent_node: Node, key: String, x: float, y: float, w: float, la
     return p
 
 func _content_width() -> float:
-    return mobile_content.size.x if mobile_content != null and mobile_content.size.x > 0.0 else minf(MOBILE_DESIGN_W, get_viewport().get_visible_rect().size.x)
+    return mobile_content.size.x if mobile_content != null and mobile_content.size.x > 0.0 else minf(MOBILE_DESIGN_W, _layout_size().x)
 
 func _header(title: String, subtitle: String, right_text = "", status_role = "gold") -> void:
     var w = _content_width()
@@ -1083,7 +1088,7 @@ func _transparent_text_button(parent_node: Node, name: String, text_value: Strin
     return b
 
 func _build_desktop_live() -> void:
-    var size = get_viewport().get_visible_rect().size
+    var size = _layout_size()
     var design = Vector2(1280,720)
     var scale_factor = minf(size.x/design.x, size.y/design.y)
     var canvas = Control.new()
@@ -1130,7 +1135,7 @@ func _desktop_stat(parent_node: Node, name: String, rect: Rect2, label_text: Str
     _label(p, "Meta", "LIVE", Rect2(14,72,rect.size.x-28,14), 9, "muted", 600)
 
 func _build_tablet_live() -> void:
-    var size = get_viewport().get_visible_rect().size
+    var size = _layout_size()
     var design = Vector2(834,1194)
     var scale_factor = minf(size.x/design.x, size.y/design.y)
     var canvas = Control.new()
