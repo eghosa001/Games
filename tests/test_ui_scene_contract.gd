@@ -34,6 +34,21 @@ func run() -> void:
     check(infrastructure is CanvasLayer, "Infrastructure uses focused CanvasLayer")
     if infrastructure is CanvasLayer:
         check((infrastructure as CanvasLayer).layer > 50, "Infrastructure renders above focused-screen backdrop")
+        var manager := root.get_node_or_null("RenewUIScreenManager")
+        if manager != null:
+            manager.show_screen("InfrastructurePanel")
+            await process_frame
+            var title := infrastructure.get("title_label") as Label
+            var close := infrastructure.get("close_button") as Button
+            var status := infrastructure.get("status_label") as Label
+            var summary := infrastructure.get("summary_label") as Label
+            var metrics := infrastructure.get("metrics_label") as Label
+            var type_button := infrastructure.get("type_button") as Button
+            check(not title.get_global_rect().intersects(close.get_global_rect()), "Infrastructure phone title clears Close")
+            check(not status.visible, "Infrastructure phone hides secondary status header")
+            check(summary.get_global_rect().end.y <= metrics.get_global_rect().position.y + 1.0, "Infrastructure summary clears metrics")
+            check(metrics.get_global_rect().end.y <= type_button.get_global_rect().position.y + 8.0, "Infrastructure metrics clear actions")
+            manager.hide_all_screens()
 
     print("UI SCENE CONTRACT RESULT: %d passed, %d failed" % [passed, failed])
     game.queue_free()
