@@ -75,7 +75,7 @@ func _refresh() -> void:
     if name == "<null>" or name.is_empty(): name = "RESTORA COMPANY"
     var day := int(g.get("day")) if "day" in g else 0; var rep := int(g.get("reputation")) if "reputation" in g else 0
     var phone := get_viewport().get_visible_rect().size.x < 430.0
-    summary_label.text = ("%s\nDAY %d  •  REP %d" % [name, day, rep]) if phone else ("%s  •  DAY %d  •  REP %d" % [name, day, rep])
+    summary_label.text = ("%s  •  D%d  •  REP %d" % [name, day, rep]) if phone else ("%s  •  DAY %d  •  REP %d" % [name, day, rep])
     if ranking != null and ranking.has_method("world_power"):
         var power: Dictionary = ranking.world_power()
         power_label.text = "WORLD POWER  %.0f / 100   •   ECON %.0f   TECH %.0f   LOG %.0f   DIP %.0f" % [float(power.get("total", 0.0)), float(power.get("economic", 0.0)), float(power.get("technology", 0.0)), float(power.get("logistics", 0.0)), float(power.get("diplomatic", 0.0))]
@@ -115,8 +115,11 @@ func _layout() -> void:
     var width := maxf(304.0, size.x - 16.0) if narrow else minf(660.0, size.x - 36.0); var height := maxf(430.0, size.y - 90.0) if narrow else minf(720.0, size.y - 110.0)
     panel.position = Vector2(8, 70) if narrow else Vector2(maxf(18.0, (size.x - width) * 0.5), 82); panel.size = Vector2(width, height)
     title_label.position = Vector2(14, 10); title_label.size = Vector2(width - (112 if phone else 130), 30); title_label.add_theme_font_size_override("font_size", 17 if phone else 20)
-    summary_label.position = Vector2(14, 58 if phone else 40); summary_label.add_theme_font_size_override("font_size", 9 if phone else 10)
-    var summary_h := 38.0 if phone else 20.0
+    summary_label.position = Vector2(14, 58 if phone else 40); summary_label.add_theme_font_size_override("font_size", 8 if phone else 10)
+    summary_label.autowrap_mode = TextServer.AUTOWRAP_OFF if phone else TextServer.AUTOWRAP_WORD_SMART
+    summary_label.clip_text = phone
+    summary_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+    var summary_h := 20.0
     summary_label.size = Vector2(width - 28, summary_h)
     power_label.position = Vector2(14, summary_label.position.y + summary_h + (6.0 if phone else 1.0)); power_label.add_theme_font_size_override("font_size", 10 if phone else 11)
     var power_h := 44.0 if phone else 36.0
