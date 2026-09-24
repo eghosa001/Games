@@ -230,7 +230,9 @@ func _layout_responsive() -> void:
     _summary.add_theme_font_size_override("font_size", 9 if phone else 10)
     _feedback.add_theme_font_size_override("font_size", 9 if phone else 10)
     _list_scroll.custom_minimum_size.y = 52 if phone else (128 if mobile else 0)
-    _detail_scroll.custom_minimum_size.y = 78 if phone else (126 if mobile else 116)
+    # Keep the selected person's core stats readable without placing a tiny
+    # nested scroll directly above the management actions.
+    _detail_scroll.custom_minimum_size.y = 132 if phone else (126 if mobile else 116)
     detail_row.custom_minimum_size.x = maxf(240.0, panel.size.x - 28.0)
     detail_label.custom_minimum_size.x = maxf(150.0, detail_row.custom_minimum_size.x - 86.0)
     _actions.columns = 3 if phone else 2
