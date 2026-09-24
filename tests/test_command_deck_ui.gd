@@ -48,6 +48,22 @@ func run() -> void:
             manager.show_screen(screen); await process_frame
             check(manager.get_active_screen_name()==screen, "deep workspace opens: "+screen)
             manager.hide_all_screens()
+
+        manager.show_screen("AlliancePanel"); await process_frame
+        var alliance:=game.get_node_or_null("UI/AlliancePanel")
+        var alliance_panel:=alliance.get("panel") as Control if alliance!=null else null
+        var alliance_subtitle:=alliance_panel.get_node_or_null("Subtitle") as Label if alliance_panel!=null else null
+        var alliance_close:=alliance.get("close_button") as Button if alliance!=null else null
+        check(alliance_subtitle!=null and alliance_close!=null and alliance_subtitle.get_global_rect().end.x <= alliance_close.get_global_rect().position.x, "Alliance subtitle stays clear of close control")
+        manager.hide_all_screens()
+
+        manager.show_screen("EmpireExpansionPanel"); await process_frame; await process_frame
+        var expansion:=game.get_node_or_null("UI/EmpireExpansionPanel")
+        var expansion_summary:=expansion.get("summary_label") as Label if expansion!=null else null
+        var expansion_list:=expansion.get("list") as VBoxContainer if expansion!=null else null
+        check(expansion_summary!=null and not expansion_summary.text.strip_edges().is_empty(), "Empire Expansion summary populates on open")
+        check(expansion_list!=null and expansion_list.get_child_count()>0, "Empire Expansion asset rows populate on open")
+        manager.hide_all_screens()
     game.queue_free(); await process_frame
     print("COMMAND DECK UI TEST: %d passed, %d failed" % [passed,failed])
     quit(1 if failed > 0 else 0)
