@@ -146,7 +146,7 @@ func _layout() -> void:
     var title := panel.get_node_or_null("Title") as Label; if title != null: title.position=Vector2(14,10); title.size=Vector2(width-108,30); title.add_theme_font_size_override("font_size",18 if phone else 20)
     var subtitle := panel.get_node_or_null("Subtitle") as Label
     if subtitle != null:
-        subtitle.text = "Trust • treaties • long-term relations" if phone else "Treaties • trust • long-term corporate relations"
+        subtitle.text = "TRUST  •  TREATIES  •  RELATIONS" if phone else "Treaties • trust • long-term corporate relations"
         subtitle.position = Vector2(14,38)
         subtitle.size = Vector2(width-116 if phone else width-28,20)
         subtitle.clip_text = true
@@ -163,9 +163,12 @@ func _layout() -> void:
     var actions_title := panel.get_node_or_null("ActionsTitle") as Label; var actions_y := height-198.0
     if actions_title != null: actions_title.position=Vector2(14,actions_y); actions_title.size=Vector2(width-28,18)
     var names := ["AcceptIncoming","SendGift","CancelTreaty","RefreshTreatyLedger"]; var bw: float=(width-35.0)*0.5
+    var phone_labels := ["ACCEPT TREATY", "SEND GIFT", "CANCEL TREATY", "REFRESH LEDGER"]
+    var desktop_labels := ["ACCEPT INCOMING TREATY", "SEND ENVOY GIFT", "CANCEL ACTIVE TREATY", "REFRESH TREATY LEDGER"]
     for i in range(names.size()):
         var b := panel.get_node_or_null(names[i]) as Button
         if b != null:
+            b.text = phone_labels[i] if phone else desktop_labels[i]
             b.custom_minimum_size=Vector2(0,44); b.clip_text=true
             b.position=Vector2(14+(i%2)*(bw+7),actions_y+24+(i/2)*50); b.size=Vector2(bw,44); b.add_theme_font_size_override("font_size",9 if phone else 10)
     summary.position=Vector2(14,height-72); summary.size=Vector2(width-28,62)
