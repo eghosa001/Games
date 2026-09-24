@@ -343,7 +343,7 @@ func _layout() -> void:
     summary_label.size = Vector2(width - 28.0, 34)
     summary_label.add_theme_font_size_override("font_size", 9 if phone else 11)
 
-    var offer_height := 172.0 if phone else 146.0
+    var offer_height := 230.0 if phone else 146.0
     offer_panel.position = Vector2(12, 92)
     offer_panel.size = Vector2(width - 24.0, offer_height)
     offer_title.position = Vector2(10, 8)
@@ -352,16 +352,16 @@ func _layout() -> void:
     offer_detail.position = Vector2(10, 31)
     offer_detail.size = Vector2(width - 44.0, 35)
     offer_detail.add_theme_font_size_override("font_size", 8 if phone else 10)
-    offer_grid.columns = 3 if phone else 2
+    offer_grid.columns = 2
     offer_grid.position = Vector2(10, 69)
     offer_grid.size = Vector2(width - 44.0, offer_height - 78.0)
-    var offer_columns := 3 if phone else 2
+    var offer_columns := 2
     var offer_gap_total := float(offer_columns - 1) * 7.0
     var offer_button_width := maxf(72.0, (width - 44.0 - offer_gap_total) / float(offer_columns))
     for child in offer_grid.get_children():
         child.custom_minimum_size = Vector2(offer_button_width, 46.0)
         if child is Button:
-            child.add_theme_font_size_override("font_size", 8 if phone else 10)
+            child.add_theme_font_size_override("font_size", 9 if phone else 10)
             child.clip_text = true
 
     var detail_height := 130.0 if phone else 180.0
