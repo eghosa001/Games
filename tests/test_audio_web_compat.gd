@@ -28,7 +28,7 @@ func _run() -> void:
     check("music scale steps are reused as a constant", audio_source.contains("const MUSIC_SCALE_STEPS: Array[int]"))
     check("music bass stays out of phone-rumble sub-bass", audio_source.contains("root * 0.75") and not audio_source.contains("root * 0.5"))
     check("construction cue avoids the former 82 Hz impact", not audio_source.contains("0.16, 82.0"))
-    check("ambient bed avoids former 37/57 Hz rumble components", not ambient_source.contains("37.0 * t") and not ambient_source.contains("57.0 * t"))
+    check("ambient bed avoids former 37/57 Hz rumble components", not ambient_source.contains("TAU_F * 37.0 * t") and not ambient_source.contains("TAU_F * 57.0 * t"))
 
     var probe := AudioStreamPlayer.new()
     probe.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
