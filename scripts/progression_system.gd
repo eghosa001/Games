@@ -50,7 +50,7 @@ func _ensure_state() -> void:
     _backfill_semantic_unlocks()
 func sync_tracking() -> void:
     var state=_state(); if state==null:return
-    _last_restoration=int(state.get_value("properties","restoration",0)); _last_profit=int(state.get_value("economy","total_profit",0)); var roster=state.get_value("employees","roster",[]); _last_employees=roster.size() if roster is Array else 0; _last_goods=int(state.get_value("production","finished_goods",0)); _last_contract_days=int(state.get_value("contracts","contract_days",0)); var expansion=state.get_value("branches","expansion",{}); _last_expansion_count=expansion.size() if expansion is Dictionary else 0; _last_expansion_signature=str(expansion); _last_operational_count=_operational_property_count(); _tracking_ready=true
+    _last_restoration=int(state.get_value("properties","restoration",0)); _last_profit=int(state.get_value("economy","total_profit",0)); var roster=state.get_value("employees","roster",[]); _last_employees=roster.size() if roster is Array else 0; _last_goods=int(state.get_value("production","finished_goods",0)); _last_contract_days=int(state.get_value("contracts","contract_days",0)); var expansion_progress:=_expansion_progress_snapshot(); _last_expansion_count=int(expansion_progress.get("count",0)); _last_expansion_signature=str(expansion_progress.get("signature","")); _last_operational_count=_operational_property_count(); _tracking_ready=true
 func _track_meaningful_progress() -> void:
     var state=_state(); if state==null:return
     var restoration:=int(state.get_value("properties","restoration",0)); if restoration>_last_restoration: award_action("restoration_step");_last_restoration=restoration
@@ -64,11 +64,27 @@ func _track_meaningful_progress() -> void:
     var contract_days:=int(state.get_value("contracts","contract_days",0)); if _last_contract_days<=0 and contract_days>0: award_action("contract_signed")
     elif _last_contract_days>0 and contract_days<=0: award_action("contract_completed")
     _last_contract_days=contract_days
-    var expansion=state.get_value("branches","expansion",{}); if expansion is Dictionary:
-        var count:int=expansion.size(); var signature:=str(expansion)
-        if count>_last_expansion_count: award_action("expansion_purchased",count-_last_expansion_count)
-        elif count==_last_expansion_count and signature!=_last_expansion_signature: award_action("expansion_upgraded")
-        _last_expansion_count=count;_last_expansion_signature=signature
+    var expansion_progress:=_expansion_progress_snapshot()
+    var expansion_count:=int(expansion_progress.get("count",0));var expansion_signature:=str(expansion_progress.get("signature",""))
+    if expansion_count>_last_expansion_count:award_action("expansion_purchased",expansion_count-_last_expansion_count)
+    elif expansion_count==_last_expansion_count and expansion_count>0 and expansion_signature!=_last_expansion_signature:award_action("expansion_upgraded")
+    _last_expansion_count=expansion_count;_last_expansion_signature=expansion_signature
+func _expansion_progress_snapshot()->Dictionary:
+    var state=_state()
+    if state==null:return {"count":0,"signature":""}
+    var snapshot=state.get_value("branches","expansion",{})
+    if not snapshot is Dictionary:return {"count":0,"signature":""}
+    var properties=snapshot.get("properties",[])
+    if not properties is Array:return {"count":0,"signature":""}
+    var count:=0
+    var parts:Array[String]=[]
+    for item in properties:
+        if not item is Dictionary or not bool(item.get("owned",false)):continue
+        count+=1
+        parts.append("%s:%d"%[str(item.get("name","asset")),int(item.get("level",1))])
+    parts.sort()
+    return {"count":count,"signature":"|".join(parts)}
+
 func _operational_property_count()->int:
     var state=_state()
     if state==null:return 0
