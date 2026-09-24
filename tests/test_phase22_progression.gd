@@ -58,4 +58,60 @@ func run()->void:
     progression.sync_tracking()
     state.set_value("properties","restoration",25);state.set_value("properties","stage","Abandoned");progression._process(0.0)
     check(progression.get_xp()==10,"Restoration state change is tracked")
+
+    # Portfolio selection mirrors must not farm or suppress progression.
+    var portfolio := [
+        {"id":"a","owned":true,"cleaning":25,"repair":0,"painting":0,"furnishing":0},
+        {"id":"b","owned":true,"cleaning":0,"repair":0,"painting":0,"furnishing":0}
+    ]
+    state.set_value("properties","catalog",portfolio)
+    state.set_value("properties","restoration",25)
+    state.set_value("properties","stage","Abandoned")
+    progression.sync_tracking()
+    var portfolio_xp: int = progression.get_xp()
+    state.set_value("properties","restoration",0)
+    progression._process(0.0)
+    check(progression.get_xp()==portfolio_xp,"Switching to a less-restored property does not change XP")
+    portfolio[1]["cleaning"]=25
+    state.set_value("properties","catalog",portfolio)
+    progression._process(0.0)
+    check(progression.get_xp()==portfolio_xp+10,"Restoring another owned property still earns restoration XP")
+
+    # Operational XP follows completed owned properties, not the selected stage string.
+    portfolio[0]["cleaning"]=100;portfolio[0]["repair"]=100;portfolio[0]["painting"]=100;portfolio[0]["furnishing"]=100
+    state.set_value("properties","catalog",portfolio)
+    progression.sync_tracking()
+    var operational_xp: int = progression.get_xp()
+    state.set_value("properties","stage","Operational");progression._process(0.0)
+    state.set_value("properties","stage","Abandoned");progression._process(0.0)
+    state.set_value("properties","stage","Operational");progression._process(0.0)
+    check(progression.get_xp()==operational_xp,"Selected stage toggles cannot farm operational XP")
+    portfolio[1]["cleaning"]=100;portfolio[1]["repair"]=100;portfolio[1]["painting"]=100;portfolio[1]["furnishing"]=100
+    state.set_value("properties","catalog",portfolio);progression._process(0.0)
+    check(progression.get_xp()==operational_xp+60,"Newly completed portfolio property earns restoration plus one-time operational XP")
+
+    # Expansion XP uses owned assets and levels only; day/cash metadata cannot fake upgrades.
+    var expansion_snapshot := {"properties":[{"id":"sunrise","name":"Sunrise Apartments","owned":true,"level":1}],"day":1}
+    state.set_value("branches","expansion",expansion_snapshot)
+    progression.sync_tracking()
+    var expansion_xp: int = progression.get_xp()
+    expansion_snapshot["day"]=2
+    state.set_value("branches","expansion",expansion_snapshot);progression._process(0.0)
+    check(progression.get_xp()==expansion_xp,"Unrelated expansion metadata cannot award upgrade XP")
+    expansion_snapshot["properties"].append({"id":"old_market","name":"Old Market","owned":true,"level":1})
+    state.set_value("branches","expansion",expansion_snapshot);progression._process(0.0)
+    check(progression.get_xp()==expansion_xp+35,"Owned expansion purchase earns purchase XP once")
+    expansion_snapshot["properties"][0]["level"]=2
+    state.set_value("branches","expansion",expansion_snapshot);progression._process(0.0)
+    check(progression.get_xp()==expansion_xp+55,"Real expansion level increase earns upgrade XP")
+
+    # Runtime polling is throttled while deterministic zero-delta test hooks still run immediately.
+    progression.sync_tracking()
+    var throttle_xp: int = progression.get_xp()
+    state.set_value("economy","total_profit",int(state.get_value("economy","total_profit",0))+100)
+    progression._process(0.05)
+    check(progression.get_xp()==throttle_xp,"Progression polling skips sub-interval frames")
+    progression._process(0.05)
+    check(progression.get_xp()==throttle_xp+1,"Progression polling processes at the configured interval")
+
     print("PHASE 22 RESULT: %d passed, %d failed"%[passed,failed]);quit(1 if failed > 0 else 0)
