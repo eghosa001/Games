@@ -143,7 +143,7 @@ func _feed_music(delta: float) -> void:
         var attack: float = clampf(melody_pos / 0.10, 0.0, 1.0)
         var decay: float = 1.0 - clampf((melody_pos - 0.18) / 0.54, 0.0, 0.65)
         var pulse: float = attack * decay
-        var bass: float = sin(TAU_F * root * 0.5 * t) * 0.012
+        var bass: float = sin(TAU_F * root * 0.75 * t) * 0.0065
         var pad_a: float = sin(TAU_F * root * t) * 0.016
         var pad_b: float = sin(TAU_F * root * 1.5 * t + 0.7) * 0.006
         var melody: float = (sin(TAU_F * melody_freq * t) * 0.010 + sin(TAU_F * melody_freq * 2.0 * t) * 0.0025) * pulse
@@ -306,6 +306,6 @@ func play_restoration() -> void:
 
 func play_construction() -> void:
     var playback: AudioStreamGeneratorPlayback = _begin_sfx(0.34)
-    _tone(playback, 0.16, 82.0, 0.060, 26.0, 0.45, 0.11, -0.12)
-    _tone(playback, 0.10, 175.0, 0.040, 40.0, 0.28, 0.08, 0.12)
+    _tone(playback, 0.16, 132.0, 0.035, 34.0, 0.24, 0.025, -0.12)
+    _tone(playback, 0.10, 214.0, 0.034, 46.0, 0.22, 0.020, 0.12)
     _tone(playback, 0.11, 310.0, 0.055, 65.0, 0.35, 0.025, -0.04)
