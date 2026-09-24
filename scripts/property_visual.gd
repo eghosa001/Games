@@ -48,8 +48,8 @@ func _ensure_progression_sprite() -> void:
     _progression_sprite = Sprite2D.new()
     _progression_sprite.name = "BuildingProgressionArt"
     _progression_sprite.z_index = -27
-    _progression_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-    _progression_sprite.modulate = Color(1, 1, 1, 0.72)
+    _progression_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+    _progression_sprite.modulate = Color(1, 1, 1, 0.94)
     _progression_sprite.visible = false
     add_child(_progression_sprite)
 
@@ -87,8 +87,8 @@ func _sync_scene_art(stage: String, property: Dictionary) -> void:
     var progress := _stage_progress(stage)
     if scene_art != null:
         scene_art.visible = true
-        scene_art.modulate = Color(1.0, 1.0, 1.0, 0.90 + progress * 0.10)
-        var target_scale := 0.86 + progress * 0.06
+        scene_art.modulate = Color(1.0, 1.0, 1.0, 0.72 + progress * 0.10)
+        var target_scale := 0.84 + progress * 0.05
         scene_art.scale = Vector2(target_scale, target_scale)
         _progression_sprite.position = scene_art.position
     var sheet_index := 0
@@ -101,7 +101,8 @@ func _sync_scene_art(stage: String, property: Dictionary) -> void:
         _progression_sprite.texture = texture
         _progression_sprite.region_enabled = true
         _progression_sprite.region_rect = Rect2(0, _stage_frame(stage) * FRAME_SIZE.y, FRAME_SIZE.x, FRAME_SIZE.y)
-        _progression_sprite.scale = Vector2(1.25 + progress * 0.08, 1.25 + progress * 0.08)
+        var art_scale := 1.34 + progress * 0.08
+        _progression_sprite.scale = Vector2(art_scale, art_scale)
         _progression_sprite.visible = true
     else:
         _progression_sprite.visible = false
