@@ -49,8 +49,8 @@ if grep -Eiq 'uncaught|exception|failed to load|webassembly|wasm|fatal|ERROR: St
 fi
 
 # ── Visual pixel assertions ──────────────────────────────────────────────────
-# Requires Python 3 + Pillow (pip install Pillow).  Fails the job if any
-# region shows ghost-text bleed-through or if the world backdrop never renders.
+# Requires Python 3 + Pillow (pip install Pillow). Fails the job when the
+# building-first property art, command surfaces or compact navigation disappear.
 assert_png() {
   local png="$1" vw="$2" vh="$3" label="$4"
   python scripts/visual_assertions.py "$png" "$vw" "$vh" \
