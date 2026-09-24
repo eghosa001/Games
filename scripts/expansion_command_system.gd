@@ -35,6 +35,11 @@ func capture_state() -> Dictionary:
         "selected_index": expansion.selected_index
     }
 
+func _sync_progression_mirror() -> void:
+    # GameState owns the lightweight progression mirror; the Expansion node
+    # remains authoritative and is still captured directly by Main before save.
+    state_adapter.set_value("branches", "expansion", capture_state())
+
 func restore_state(snapshot: Dictionary) -> void:
     if snapshot.is_empty(): return
     if snapshot.get("properties") is Array: expansion.properties = snapshot["properties"].duplicate(true)
@@ -102,6 +107,7 @@ func buy_expansion() -> void:
     state_adapter.set_value("player", "reputation", reputation + int(result.get("rep", 0)))
     state_adapter.log_message("EXPANSION: %s (-$%s)." % [result.get("name", "Asset"), state_adapter.money(int(result["cost"]))])
     state_adapter.message(result["message"])
+    _sync_progression_mirror()
 
 func upgrade_expansion() -> void:
     var selected: Variant = int(state_adapter.get_value("branches", "selected_expansion", 0))
@@ -121,3 +127,4 @@ func upgrade_expansion() -> void:
     state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + int(result.get("rep", 0)))
     state_adapter.log_message("EMPIRE UPGRADE: %s." % result.get("name", "Asset"))
     state_adapter.message(result["message"])
+    _sync_progression_mirror()
