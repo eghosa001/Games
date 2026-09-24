@@ -36,12 +36,19 @@ func run() -> void:
         return
     game.cash = 250000
     game.day = 1
+    var props: Node = game.command_system.property_system
     game.inspect_property()
+    var cash_before_purchase := int(finance.cash)
     game.acquire_property()
+    var cash_after_purchase := int(finance.cash)
     check(bool(state.get_value("properties", "owned", false)), "Property acquired")
+    check(cash_after_purchase < cash_before_purchase, "Acquisition consumes capital")
+    var distressed_quote := int(props.sale_value(props.get_selected_property()))
     game.sell_property()
+    var cash_after_flip := int(finance.cash)
     check(not bool(state.get_value("properties", "owned", false)), "Property sells")
-    check(int(finance.cash) > 250000 - 5000, "Sale pays above purchase price")
+    check(cash_after_flip > cash_after_purchase, "Sale returns capital")
+    check(cash_after_flip < cash_before_purchase, "Immediate distressed resale cannot generate profit")
     check(str(state.get_value("company", "message", "")).find("Sold") >= 0, "Sale announced")
 
     game.inspect_property()
@@ -51,6 +58,8 @@ func run() -> void:
         game.restore_property()
         guard += 1
         await process_frame
+    var restored_quote := int(props.sale_value(props.get_selected_property()))
+    check(restored_quote > distressed_quote, "Restoration increases property sale value")
     game.choose_business_purpose(0)
     game.open_business()
     game.sell_property()
@@ -58,7 +67,6 @@ func run() -> void:
 
     state.set_value("businesses", "business_open", false)
     state.set_value("businesses", "origin_property_id", "")
-    var props: Node = game.command_system.property_system
     var before := int(finance.cash)
     game.lease_property()
     var leased: Dictionary = props.get_selected_property()
