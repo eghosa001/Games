@@ -78,7 +78,7 @@ func _build_ui() -> void:
         "world_event_artifacts": "ARTIFACTS"
     }
     for type in TYPES:
-        var full_label := "ALL" if type == "all" else type.replace("_", " ").to_upper()
+        var full_label: String = "ALL" if type == "all" else str(type).replace("_", " ").to_upper()
         var b := Button.new()
         b.text = full_label
         b.set_meta("full_label", full_label)
