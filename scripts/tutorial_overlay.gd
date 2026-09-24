@@ -228,7 +228,7 @@ func _layout_responsive() -> void:
         collapsed_button.text = "GUIDE  %d/%d" % [mini(int(tutorial.step) + 1, tutorial.steps.size()), tutorial.steps.size()]
         if narrow:
             collapsed_button.size = Vector2(104.0, 48.0)
-            collapsed_button.position = Vector2(maxf(8.0, w - 116.0), maxf(8.0, h - 154.0))
+            collapsed_button.position = Vector2(maxf(8.0, w - 116.0), maxf(8.0, h - 134.0))
         elif w >= 1000.0:
             collapsed_button.size = Vector2(112.0, 44.0)
             collapsed_button.position = Vector2(maxf(8.0, w - 128.0), 24.0)
