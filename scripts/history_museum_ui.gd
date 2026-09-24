@@ -12,6 +12,8 @@ const SCRIM := Color(0.02, 0.08, 0.10, 0.76)
 
 var dimmer: ColorRect
 var panel: PanelContainer
+var title_label: Label
+var status_label: Label
 var summary_label: Label
 var content: VBoxContainer
 var tabs: HBoxContainer
@@ -60,12 +62,11 @@ func _build_ui() -> void:
     for side in ["left", "right", "top", "bottom"]: margin.add_theme_constant_override("margin_" + side, 14)
     panel.add_child(margin)
     var root := VBoxContainer.new(); root.add_theme_constant_override("separation", 9); margin.add_child(root)
-    var header := HBoxContainer.new(); root.add_child(header)
-    var title := Label.new(); title.text = "RESTORA CORPORATE MUSEUM"; title.add_theme_font_size_override("font_size", 21); title.add_theme_color_override("font_color", TEXT); header.add_child(title)
-    var spacer := Control.new(); spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL; header.add_child(spacer)
+    var header := HBoxContainer.new(); header.add_theme_constant_override("separation", 8); root.add_child(header)
+    title_label = Label.new(); title_label.text = "RESTORA CORPORATE MUSEUM"; title_label.add_theme_font_size_override("font_size", 21); title_label.add_theme_color_override("font_color", TEXT); title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL; title_label.custom_minimum_size.x = 0; title_label.clip_text = true; title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS; header.add_child(title_label)
     close_button = Button.new(); close_button.name = "CloseButton"; close_button.text = "CLOSE"; close_button.custom_minimum_size = Vector2(78, 46); close_button.focus_mode = Control.FOCUS_NONE; close_button.add_theme_font_size_override("font_size", 10); close_button.pressed.connect(close_screen); header.add_child(close_button)
-    var status := Label.new(); status.text = "CORPORATE MEMORY  •  HISTORY & LEGACY"; status.add_theme_font_size_override("font_size", 9); status.add_theme_color_override("font_color", ACCENT); root.add_child(status)
-    summary_label = Label.new(); summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; summary_label.add_theme_font_size_override("font_size", 11); summary_label.add_theme_color_override("font_color", MUTED); root.add_child(summary_label)
+    status_label = Label.new(); status_label.text = "CORPORATE MEMORY  •  HISTORY & LEGACY"; status_label.add_theme_font_size_override("font_size", 9); status_label.add_theme_color_override("font_color", ACCENT); status_label.custom_minimum_size.x = 0; status_label.clip_text = true; status_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS; root.add_child(status_label)
+    summary_label = Label.new(); summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; summary_label.custom_minimum_size.x = 0; summary_label.add_theme_font_size_override("font_size", 11); summary_label.add_theme_color_override("font_color", MUTED); root.add_child(summary_label)
     tabs_scroll = ScrollContainer.new(); tabs_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; tabs_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; tabs_scroll.custom_minimum_size.y = 48; root.add_child(tabs_scroll)
     tabs = HBoxContainer.new(); tabs.add_theme_constant_override("separation", 7); tabs_scroll.add_child(tabs)
     for id in TABS.keys(): _add_tab(id, TABS[id])
@@ -162,7 +163,18 @@ func _layout() -> void:
     var size := get_viewport().get_visible_rect().size; var phone := size.x < 430.0; var margin := 8.0 if phone else 14.0; var w := minf(720.0, maxf(280.0, size.x - margin * 2.0)); var top := 36.0 if phone else 46.0; var h := minf(720.0, maxf(360.0, size.y - top - 10.0))
     dimmer.position = Vector2.ZERO; dimmer.size = size; panel.position = Vector2((size.x - w) / 2.0, top); panel.size = Vector2(w, minf(h, size.y - top - 10.0))
     var compact := w < 420.0
+    if title_label != null:
+        title_label.text = "CORPORATE MUSEUM" if compact else "RESTORA CORPORATE MUSEUM"
+        title_label.add_theme_font_size_override("font_size", 18 if compact else 21)
+        title_label.custom_minimum_size.x = 0
+    if status_label != null:
+        status_label.text = "CORPORATE MEMORY  •  LEGACY" if compact else "CORPORATE MEMORY  •  HISTORY & LEGACY"
+        status_label.add_theme_font_size_override("font_size", 8 if compact else 9)
+        status_label.custom_minimum_size.x = 0
     if close_button != null: close_button.custom_minimum_size = Vector2(72 if compact else 82, 46)
-    if summary_label != null: summary_label.add_theme_font_size_override("font_size", 10 if compact else 11)
+    if summary_label != null:
+        summary_label.custom_minimum_size.x = 0
+        summary_label.add_theme_font_size_override("font_size", 10 if compact else 11)
+    tabs_scroll.custom_minimum_size.x = 0
     for child in tabs.get_children():
         if child is Button: child.custom_minimum_size = Vector2(108 if compact else 118, 44)
