@@ -54,11 +54,16 @@ func _scan_game_state(day: int) -> void:
     if main == null: return
     if bool(main.get("restoration")) or str(_main_value(main, "stage", "")) in ["Cleaned", "Repaired", "Rebuilt", "Installed", "Designed", "Operational"]:
         _once("first_restoration", {"stage": _main_value(main, "stage", "")})
-    if bool(_main_value(main, "business_open", false)): _once("business_opening", {})
+    if bool(_main_value(main, "business_open", false)):
+        _once("business_opening", {})
+        _once("first_business", {})
     if int(_main_value(main, "total_profit", 0)) > 0: _once("first_profit", {"total_profit": _main_value(main, "total_profit", 0)})
     if int(_main_value(main, "acquisition_count", 0)) > 0: _once("acquisition", {"count": _main_value(main, "acquisition_count", 0)})
     if int(_main_value(main, "employees", 0)) > 3: _once("hiring", {"employees": _main_value(main, "employees", 0)})
-    if int(_main_value(main, "capacity_level", 1)) > 1: _once("expansion", {"capacity_level": _main_value(main, "capacity_level", 1)})
+    if int(_main_value(main, "capacity_level", 1)) > 1:
+        var expansion_properties := {"capacity_level": _main_value(main, "capacity_level", 1)}
+        _once("expansion", expansion_properties)
+        _once("first_expansion", expansion_properties)
     if int(_main_value(main, "finished_goods", 0)) > 0: _once("production", {"finished_goods": _main_value(main, "finished_goods", 0)})
     if int(_main_value(main, "last_sales", 0)) > 0: _once("sales", {"sales": _main_value(main, "last_sales", 0)})
     if int(_main_value(main, "contract_days", 0)) > 0: _once("contracts", {})
