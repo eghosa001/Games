@@ -6,6 +6,7 @@ var root: Control
 var panel: PanelContainer
 var scroll: ScrollContainer
 var content: VBoxContainer
+var title_label: Label
 var status: Label
 var warehouse_label: Label
 var route_label: Label
@@ -63,27 +64,39 @@ func _build() -> void:
     panel.add_child(scroll)
     content = VBoxContainer.new()
     content.add_theme_constant_override("separation", 10)
+    content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     scroll.add_child(content)
     var header := HBoxContainer.new()
+    header.add_theme_constant_override("separation", 8)
+    header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     content.add_child(header)
-    var title := _label("SUPPLY CHAIN COMMAND CENTER", 19, Color("edf6f3"))
-    title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    header.add_child(title)
+    title_label = _label("SUPPLY CHAIN COMMAND CENTER", 19, Color("edf6f3"))
+    title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    title_label.custom_minimum_size.x = 0.0
+    title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    header.add_child(title_label)
     var close := _button("CLOSE", 46)
+    close.custom_minimum_size.x = 80.0
+    close.size_flags_horizontal = Control.SIZE_SHRINK_END
     close.pressed.connect(_close)
     header.add_child(close)
     status = _label("", 12, Color("a9c5c6"))
+    status.custom_minimum_size.x = 0.0
+    status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     content.add_child(status)
     content.add_child(_section("WAREHOUSE INVENTORY"))
     warehouse_label = _label("", 12, Color("dce9e7"))
+    warehouse_label.custom_minimum_size.x = 0.0
     warehouse_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     content.add_child(warehouse_label)
     content.add_child(_section("PROCUREMENT"))
     resource_select = OptionButton.new()
     resource_select.custom_minimum_size = Vector2(0, 46)
+    resource_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     content.add_child(resource_select)
     var row := HBoxContainer.new()
     row.add_theme_constant_override("separation", 8)
+    row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     content.add_child(row)
     amount_spin = SpinBox.new()
     amount_spin.min_value = 1
@@ -107,10 +120,12 @@ func _build() -> void:
     content.add_child(process_button)
     content.add_child(_section("LOGISTICS STATUS"))
     route_label = _label("", 12, Color("dce9e7"))
+    route_label.custom_minimum_size.x = 0.0
     route_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     content.add_child(route_label)
     content.add_child(_section("LATEST MOVEMENT"))
     operation_label = _label("No movement recorded.", 12, Color("b8d1cf"))
+    operation_label.custom_minimum_size.x = 0.0
     operation_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     content.add_child(operation_label)
 
@@ -188,11 +203,12 @@ func _layout() -> void:
     if size.x < 700.0:
         panel.position = Vector2(8, 8)
         panel.size = Vector2(size.x - 16, size.y - 16)
-    scroll.size = panel.size
-    content.custom_minimum_size.x = maxf(0.0, panel.size.x - 26.0)
+    content.custom_minimum_size.x = maxf(0.0, panel.size.x - 40.0)
     var phone := size.x < 430.0
-    amount_spin.custom_minimum_size.x = 88.0 if phone else 105.0
-    transport_spin.custom_minimum_size.x = 88.0 if phone else 105.0
+    amount_spin.custom_minimum_size.x = 72.0 if phone else 105.0
+    transport_spin.custom_minimum_size.x = 72.0 if phone else 105.0
+    title_label.add_theme_font_size_override("font_size", 15 if phone else 19)
+    status.add_theme_font_size_override("font_size", 10 if phone else 12)
 
 func _section(text: String) -> Label: return _label(text, 11, Color("d8b76d"))
 func _label(text: String, size: int, color: Color) -> Label:
