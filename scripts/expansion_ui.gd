@@ -38,12 +38,24 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
     if not visible or panel == null or not panel.visible: return
+    # The child CanvasLayer becomes ready before Main creates command_system.
+    # Retry immediately once the workspace is actually visible so the first
+    # rendered frame contains live expansion data instead of an empty shell.
+    if last_signature.is_empty():
+        _refresh(true)
+        if not last_signature.is_empty():
+            refresh_clock = 0.0
+        return
     refresh_clock += delta
     if refresh_clock >= 1.0:
         refresh_clock = 0.0
         _refresh(false)
 
-func _main(): return get_tree().current_scene
+func _main():
+    var scene = get_tree().current_scene
+    if scene != null:
+        return scene
+    return get_tree().root.get_node_or_null("Renew")
 
 func _style(bg: Color, border: Color, radius := 10) -> StyleBoxFlat:
     var s := StyleBoxFlat.new()
@@ -95,7 +107,15 @@ func _build_ui() -> void:
 
 func _expansion():
     var main = _main()
-    return main.command_system.expansion_system.expansion if main != null and main.command_system != null else null
+    if main == null:
+        return null
+    var command = main.get("command_system")
+    if command == null:
+        return null
+    var system = command.get("expansion_system")
+    if system == null:
+        return null
+    return system.get("expansion")
 
 func _refresh(force := false) -> void:
     var e = _expansion()
