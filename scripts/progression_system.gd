@@ -6,6 +6,7 @@ extends Node
 ## and systems can expose complexity in the intended order without breaking old saves.
 const LEVEL_THRESHOLDS := [0, 100, 250, 500, 900, 1400, 2000, 2800, 3800, 5000]
 const XP_REWARDS := {"restoration_step":10,"property_operational":50,"profit_per_100":1,"contract_signed":25,"contract_completed":40,"employee_hired":15,"production_run":12,"expansion_purchased":35,"expansion_upgraded":20}
+const TRACK_INTERVAL := 0.10
 const FEATURE_UNLOCKS := {
     1: ["restoration", "core_operations"],
     2: ["employees", "contracts", "finance"],
@@ -28,10 +29,14 @@ var _last_contract_days: Variant = 0
 var _last_expansion_count: Variant = 0
 var _last_expansion_signature: Variant = ""
 var _last_operational_count: int = 0
+var _track_clock := 0.0
 func _ready() -> void:
     state_adapter = get_node_or_null("/root/RenewGameState"); _ensure_state(); call_deferred("sync_tracking")
-func _process(_delta:float) -> void:
-    if not _tracking_ready: return
+func _process(delta:float) -> void:
+    if not _tracking_ready:return
+    _track_clock+=delta
+    if delta>0.0 and _track_clock<TRACK_INTERVAL:return
+    _track_clock=0.0
     _track_meaningful_progress()
 func _state():
     if state_adapter == null: state_adapter = get_node_or_null("/root/RenewGameState")
