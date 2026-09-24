@@ -25,6 +25,24 @@ func run() -> void:
     for view in ["live","operate","property","finance","more","portfolio","intelligence","settings","world","empire"]:
         hud.open_figma_view(view); await process_frame
         check(str(hud.get("active_view"))==view, "Figma view opens: "+view)
+    hud.open_figma_view("portfolio"); await process_frame
+    var portfolio_content:=hud.get("mobile_content") as Control
+    var portfolio_names: Array[String] = []
+    var owned_assets:=portfolio_content.get_node_or_null("OwnedAssets") if portfolio_content!=null else null
+    if owned_assets != null:
+        for i in range(6):
+            var row:=owned_assets.get_node_or_null("PortfolioRow%d" % i)
+            var name_label:=row.get_node_or_null("Name") as Label if row!=null else null
+            if name_label!=null: portfolio_names.append(name_label.text)
+    var unique_portfolio_names: Dictionary = {}
+    for asset_name in portfolio_names: unique_portfolio_names[asset_name] = true
+    check(portfolio_names.size()==6 and unique_portfolio_names.size()==6, "empty portfolio slots stay unique")
+
+    hud.open_figma_view("intelligence"); await process_frame
+    var intelligence_content:=hud.get("mobile_content") as Control
+    var latest:=intelligence_content.get_node_or_null("IntelCard4/Title") as Label if intelligence_content!=null else null
+    check(latest!=null and latest.text.length()<=56 and not latest.text.contains("\n"), "latest intelligence notice stays within its card")
+
     if manager != null:
         for screen in ["CorporationsPanel","ContractPanel","TechnologyPanel","HeadquartersPanel","HistoryPanel","SaveLoadPanel"]:
             manager.show_screen(screen); await process_frame
