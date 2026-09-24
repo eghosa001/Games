@@ -11,6 +11,10 @@ const PROPERTY_TYPES := ["Warehouse", "Workshop", "Commercial Building"]
 const RESTORATION_STEPS := ["cleaning", "repair", "painting", "furnishing"]
 const STEP_COSTS := {"cleaning": 500, "repair": 1500, "painting": 900, "furnishing": 1200}
 const STEP_GAIN := {"cleaning": 100, "repair": 100, "painting": 100, "furnishing": 100}
+const ACQUISITION_MIN_COST := 5000
+const ACQUISITION_BASE_RATE := 0.08
+const ACQUISITION_CONDITION_RATE := 0.04
+const RESTORATION_REFERENCE_VALUE := 65000.0
 
 const PROPERTY_CATALOG := [
     {"id":"warehouse_001","name":"Riverside Warehouse","type":"Warehouse","condition":35,"cleaning":0,"repair":0,"painting":0,"furnishing":0,"value":65000,"capacity":80,"industry_compatibility":["Logistics","Manufacturing","Wholesale"],"owned":false,"inspected":false},
@@ -109,6 +113,49 @@ func get_selected_property() -> Dictionary:
     var index := clampi(int(state_adapter.get_value("properties", "selected_property", 0)), 0, catalog.size() - 1)
     return catalog[index].duplicate(true)
 
+func acquisition_cost(property: Dictionary = {}) -> int:
+    var item := property if not property.is_empty() else get_selected_property()
+    if item.is_empty():
+        return 0
+    var market_value := maxi(0, int(item.get("value", 0)))
+    var condition_ratio := clampf(float(item.get("condition", 50)) / 100.0, 0.0, 1.0)
+    var rate := ACQUISITION_BASE_RATE + ACQUISITION_CONDITION_RATE * condition_ratio
+    return maxi(ACQUISITION_MIN_COST, int(round(float(market_value) * rate)))
+
+func restoration_step_cost(step: String, property: Dictionary = {}) -> int:
+    if not STEP_COSTS.has(step):
+        return 0
+    var item := property if not property.is_empty() else get_selected_property()
+    if item.is_empty():
+        return int(STEP_COSTS[step])
+    var market_value := maxi(1, int(item.get("value", 0)))
+    var condition_ratio := clampf(float(item.get("condition", 50)) / 100.0, 0.0, 1.0)
+    var value_factor := clampf(float(market_value) / RESTORATION_REFERENCE_VALUE, 1.0, 2.25)
+    var condition_factor := clampf(1.18 - condition_ratio * 0.30, 0.95, 1.18)
+    var type_factor := 1.0
+    match str(item.get("type", "Warehouse")):
+        "Workshop":
+            type_factor = 1.08
+        "Commercial Building":
+            type_factor = 1.15
+    return maxi(1, int(round(float(STEP_COSTS[step]) * value_factor * condition_factor * type_factor)))
+
+func next_restoration_cost(property: Dictionary = {}) -> int:
+    var item := property if not property.is_empty() else get_selected_property()
+    if item.is_empty():
+        return 0
+    var step := _next_restoration_step(item)
+    return restoration_step_cost(step, item) if not step.is_empty() else 0
+
+func restoration_progress(property: Dictionary = {}) -> int:
+    var item := property if not property.is_empty() else get_selected_property()
+    if item.is_empty():
+        return 0
+    var total := 0
+    for step in RESTORATION_STEPS:
+        total += clampi(int(item.get(step, 0)), 0, 100)
+    return int(round(float(total) / float(RESTORATION_STEPS.size())))
+
 func owned_property_count() -> int:
     var total := 0
     for property in list_properties():
@@ -168,7 +215,7 @@ func acquire_property() -> void:
     if bool(property.get("owned", false)):
         state_adapter.message("You already own %s." % property.get("name", "this property"))
         return
-    var purchase_price := 5000
+    var purchase_price := acquisition_cost(property)
     var spend: Dictionary = state_adapter.spend(purchase_price, "property acquisition")
     if not bool(spend.get("ok", false)):
         state_adapter.message(str(spend.get("message", "Not enough cash.")))
@@ -200,7 +247,7 @@ func restore_step(step: String, property_id: String = "") -> Dictionary:
     var progress := int(property.get(step, 0))
     if progress >= 100:
         return {"ok": false, "reason": "step_complete", "property": property}
-    var cost := int(STEP_COSTS[step])
+    var cost := restoration_step_cost(step, property)
     var spend: Dictionary = state_adapter.spend(cost, "property restoration: %s" % step)
     if not bool(spend.get("ok", false)):
         return {"ok": false, "reason": "insufficient_cash", "cost": cost, "cash": int(state_adapter.get_value("economy", "cash", 0))}
@@ -293,8 +340,15 @@ func _sync_legacy_fields() -> void:
     state_adapter.set_value("properties", "stage", _visual_stage(property, owned) if not operational else "Operational")
 
 func sale_value(property: Dictionary) -> int:
-    var improved := 0.30 + 0.70 * float(int(property.get("condition", 0))) / 100.0
-    return maxi(1000, int(round(float(property.get("value", 0)) * clampf(improved, 0.3, 1.0))))
+    # "value" is the restored market value, not a free arbitrage price for an
+    # untouched distressed asset. A neglected resale carries a transaction loss;
+    # restoration progressively converts that distressed basis into market value.
+    var market_value := maxi(1000, int(property.get("value", 0)))
+    var basis := acquisition_cost(property)
+    var progress_ratio := clampf(float(restoration_progress(property)) / 100.0, 0.0, 1.0)
+    var value_realization := progress_ratio * progress_ratio
+    var distressed_resale := float(basis) * 0.90
+    return maxi(1000, int(round(lerpf(distressed_resale, float(market_value), value_realization))))
 
 func lease_terms(property: Dictionary) -> Dictionary:
     var rent := maxi(500, int(round(float(sale_value(property)) * 0.05)))
