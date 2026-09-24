@@ -20,6 +20,11 @@ func initialize() -> void:
     expansion.unlock_from_reputation(reputation)
     districts.update_unlocks(reputation)
 
+func _sync_progression_mirror() -> void:
+    # Expansion owns the live state; GameState keeps a lightweight mirror so
+    # progression can react immediately to purchases/upgrades.
+    state_adapter.set_value("branches", "expansion", capture_state())
+
 func capture_state() -> Dictionary:
     return {
         "system_version": 1,
@@ -102,6 +107,7 @@ func buy_expansion() -> void:
     state_adapter.set_value("player", "reputation", reputation + int(result.get("rep", 0)))
     state_adapter.log_message("EXPANSION: %s (-$%s)." % [result.get("name", "Asset"), state_adapter.money(int(result["cost"]))])
     state_adapter.message(result["message"])
+    _sync_progression_mirror()
 
 func upgrade_expansion() -> void:
     var selected: Variant = int(state_adapter.get_value("branches", "selected_expansion", 0))
@@ -121,3 +127,4 @@ func upgrade_expansion() -> void:
     state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + int(result.get("rep", 0)))
     state_adapter.log_message("EMPIRE UPGRADE: %s." % result.get("name", "Asset"))
     state_adapter.message(result["message"])
+    _sync_progression_mirror()
