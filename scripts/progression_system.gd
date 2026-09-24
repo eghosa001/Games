@@ -27,7 +27,7 @@ var _last_goods: Variant = 0
 var _last_contract_days: Variant = 0
 var _last_expansion_count: Variant = 0
 var _last_expansion_signature: Variant = ""
-var _last_operational: Variant = false
+var _last_operational_count: int = 0
 func _ready() -> void:
     state_adapter = get_node_or_null("/root/RenewGameState"); _ensure_state(); call_deferred("sync_tracking")
 func _process(_delta:float) -> void:
@@ -45,12 +45,13 @@ func _ensure_state() -> void:
     _backfill_semantic_unlocks()
 func sync_tracking() -> void:
     var state=_state(); if state==null:return
-    _last_restoration=int(state.get_value("properties","restoration",0)); _last_profit=int(state.get_value("economy","total_profit",0)); var roster=state.get_value("employees","roster",[]); _last_employees=roster.size() if roster is Array else 0; _last_goods=int(state.get_value("production","finished_goods",0)); _last_contract_days=int(state.get_value("contracts","contract_days",0)); var expansion=state.get_value("branches","expansion",{}); _last_expansion_count=expansion.size() if expansion is Dictionary else 0; _last_expansion_signature=str(expansion); _last_operational=str(state.get_value("properties","stage",""))=="Operational"; _tracking_ready=true
+    _last_restoration=int(state.get_value("properties","restoration",0)); _last_profit=int(state.get_value("economy","total_profit",0)); var roster=state.get_value("employees","roster",[]); _last_employees=roster.size() if roster is Array else 0; _last_goods=int(state.get_value("production","finished_goods",0)); _last_contract_days=int(state.get_value("contracts","contract_days",0)); var expansion=state.get_value("branches","expansion",{}); _last_expansion_count=expansion.size() if expansion is Dictionary else 0; _last_expansion_signature=str(expansion); _last_operational_count=_operational_property_count(); _tracking_ready=true
 func _track_meaningful_progress() -> void:
     var state=_state(); if state==null:return
     var restoration:=int(state.get_value("properties","restoration",0)); if restoration>_last_restoration: award_action("restoration_step");_last_restoration=restoration
-    var operational:=str(state.get_value("properties","stage",""))=="Operational"; if operational and not _last_operational: award_action("property_operational");_last_operational=true
-    elif not operational: _last_operational=false
+    var operational_count:=_operational_property_count()
+    if operational_count>_last_operational_count: award_action("property_operational",operational_count-_last_operational_count)
+    _last_operational_count=operational_count
     var total_profit:=int(state.get_value("economy","total_profit",0)); if total_profit>_last_profit: award_profit(total_profit-_last_profit);_last_profit=total_profit
     var roster=state.get_value("employees","roster",[]); var employees:int = roster.size() if roster is Array else 0; if employees>_last_employees: award_action("employee_hired",employees-_last_employees);_last_employees=employees
     var goods:=int(state.get_value("production","finished_goods",0)); if goods>_last_goods: award_action("production_run");_last_goods=goods
@@ -63,6 +64,22 @@ func _track_meaningful_progress() -> void:
         if count>_last_expansion_count: award_action("expansion_purchased",count-_last_expansion_count)
         elif count==_last_expansion_count and signature!=_last_expansion_signature: award_action("expansion_upgraded")
         _last_expansion_count=count;_last_expansion_signature=signature
+func _operational_property_count()->int:
+    var state=_state()
+    if state==null:return 0
+    var catalog=state.get_value("properties","catalog",[])
+    if not catalog is Array:return 1 if str(state.get_value("properties","stage",""))=="Operational" else 0
+    var total:=0
+    for item in catalog:
+        if not item is Dictionary or not bool(item.get("owned",false)):continue
+        var complete:=true
+        for step in ["cleaning","repair","painting","furnishing"]:
+            if int(item.get(step,0))<100:
+                complete=false
+                break
+        if complete:total+=1
+    return total
+
 func get_xp()->int:return int(_state().get_value("progression","xp",0)) if _state()!=null else 0
 func get_level()->int:return int(_state().get_value("progression","level",1)) if _state()!=null else 1
 func get_next_level_xp()->int:
