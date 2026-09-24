@@ -32,7 +32,7 @@ func run() -> void:
     for i in range(20):
         hud._set_tab(i % 4)
     var grid_ms := float(Time.get_ticks_msec() - start) / 20.0
-    check(grid_ms < 1000.0, "Grid rebuild averages under budget")
+    check(grid_ms < 250.0, "Grid rebuild averages under 250 ms headless budget")
     var manager = root.get_node_or_null("RenewUIScreenManager")
     var panels := ["DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel"]
     start = Time.get_ticks_msec()
@@ -41,7 +41,7 @@ func run() -> void:
         for i in range(10):
             panel._refresh(true)
     var panel_ms := float(Time.get_ticks_msec() - start) / 40.0
-    check(panel_ms < 1000.0, "Panel refresh averages under budget")
+    check(panel_ms < 250.0, "Panel refresh averages under 250 ms headless budget")
     var state = root.get_node_or_null("RenewGameState")
     game.cash = 250000
     game.day = 1
@@ -59,7 +59,7 @@ func run() -> void:
         game.advance_day()
         await process_frame
     var day_ms := float(Time.get_ticks_msec() - start) / 10.0
-    check(day_ms < 30000.0, "Day advance averages under budget")
+    check(day_ms < 5000.0, "Day advance averages under 5 s headless budget")
     print("PERF grid=%.1fms panel=%.1fms day=%.1fms" % [grid_ms, panel_ms, day_ms])
     game.free()
     await process_frame

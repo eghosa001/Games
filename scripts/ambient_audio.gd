@@ -89,8 +89,8 @@ func _feed(delta: float) -> void:
         _noise_state_r = lerpf(_noise_state_r, raw_r, 0.018)
         var air_l: float = (_noise_state_l * 0.0020 + sin(TAU_F * 0.17 * t + _seed) * 0.0008) * (0.65 + _city_level * 0.35)
         var air_r: float = (_noise_state_r * 0.0020 + sin(TAU_F * 0.19 * t + _seed + 1.7) * 0.0008) * (0.65 + _city_level * 0.35)
-        var office: float = (sin(TAU_F * 57.0 * t + 0.3) * 0.0015 + sin(TAU_F * 113.0 * t + 1.1) * 0.0010) * (0.30 + _business_level * 0.70) * breathe
-        var city: float = (sin(TAU_F * 37.0 * t + slow * 0.8) * 0.0016 + sin(TAU_F * 71.0 * t + 2.0) * 0.0009) * _city_level
+        var office: float = (sin(TAU_F * 96.0 * t + 0.3) * 0.0012 + sin(TAU_F * 173.0 * t + 1.1) * 0.0008) * (0.30 + _business_level * 0.70) * breathe
+        var city: float = (sin(TAU_F * 82.0 * t + slow * 0.8) * 0.0011 + sin(TAU_F * 137.0 * t + 2.0) * 0.0007) * _city_level
         var market: float = sin(TAU_F * 2.0 * t + sin(t * 0.09)) * 0.00065 * _market_level
         var pulse_cycle: float = fmod(t + _seed * 0.13, 2.7)
         var pulse_window: float = maxf(0.0, 1.0 - pulse_cycle / 0.13)

@@ -77,15 +77,22 @@ func _make_fonts() -> void:
     _font_bold.font_names = PackedStringArray(["Inter", "Roboto", "Noto Sans", "Arial"])
     _font_bold.font_weight = 700
 
+const PULSE_REDRAW_INTERVAL := 0.50
+const ACTIVE_SCREEN_REFRESH_INTERVAL := 0.75
+
 func _process(delta: float) -> void:
+    # The premium skin is mostly static. Avoid forcing a full HUD redraw and
+    # active-screen relayout five times per second when no player state changed.
+    # A subtle 2 Hz material pulse preserves the authored look while the slower
+    # context refresh keeps live management data current with much less UI work.
     _pulse += delta
     _redraw_clock += delta
     _screen_clock += delta
-    if _redraw_clock >= 0.20:
-        _redraw_clock = 0.0
+    if _redraw_clock >= PULSE_REDRAW_INTERVAL:
+        _redraw_clock = fmod(_redraw_clock, PULSE_REDRAW_INTERVAL)
         queue_redraw()
-    if _screen_clock >= 0.20:
-        _screen_clock = 0.0
+    if _screen_clock >= ACTIVE_SCREEN_REFRESH_INTERVAL:
+        _screen_clock = fmod(_screen_clock, ACTIVE_SCREEN_REFRESH_INTERVAL)
         _refresh_active_screen()
 
 func _install() -> void:
