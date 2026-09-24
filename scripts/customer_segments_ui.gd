@@ -137,6 +137,7 @@ func _layout_responsive() -> void:
     var w := maxf(size.x, 320.0)
     var h := maxf(size.y, 480.0)
     var narrow := w < 760.0
+    var phone := w < 430.0
     if narrow:
         panel.position = Vector2(8, 62)
         panel.size = Vector2(w - 16.0, maxf(390.0, h - 70.0))
@@ -145,14 +146,26 @@ func _layout_responsive() -> void:
         panel.size = Vector2(720.0, minf(690.0, h - 92.0))
 
     title_label.position = Vector2(14, 10)
-    title_label.size = Vector2(maxf(150.0, panel.size.x - 115.0), 30)
+    title_label.size = Vector2(maxf(150.0, panel.size.x - (112.0 if phone else 115.0)), 30)
+    title_label.add_theme_font_size_override("font_size", 17 if phone else 20)
     close_button.position = Vector2(panel.size.x - 94.0, 7)
-    market_status.position = Vector2(14, 42)
-    market_status.size = Vector2(panel.size.x - 28.0, 20)
-    summary_label.position = Vector2(14, 64)
-    summary_label.size = Vector2(panel.size.x - 28.0, 44)
+    market_status.position = Vector2(14, 58 if phone else 42)
+    market_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if phone else TextServer.AUTOWRAP_OFF
+    market_status.add_theme_font_size_override("font_size", 9 if phone else 10)
+    var market_h := 20.0
+    if phone:
+        market_status.size = Vector2(panel.size.x - 28.0, 1.0)
+        market_h = maxf(38.0, market_status.get_combined_minimum_size().y)
+    market_status.size = Vector2(panel.size.x - 28.0, market_h)
+    summary_label.position = Vector2(14, market_status.position.y + market_h + (6.0 if phone else 2.0))
+    summary_label.add_theme_font_size_override("font_size", 10 if phone else 11)
+    var summary_h := 44.0
+    if phone:
+        summary_label.size = Vector2(panel.size.x - 28.0, 1.0)
+        summary_h = maxf(58.0, summary_label.get_combined_minimum_size().y)
+    summary_label.size = Vector2(panel.size.x - 28.0, summary_h)
 
-    var content_top := 112.0
+    var content_top := summary_label.position.y + summary_h + 6.0 if phone else 112.0
     var detail_h := 174.0 if narrow else 185.0
     detail_panel.position = Vector2(12, panel.size.y - detail_h - 12.0)
     detail_panel.size = Vector2(panel.size.x - 24.0, detail_h)
@@ -219,7 +232,8 @@ func _refresh() -> void:
     var total := int(demand_result.get("demand", 0))
     var price_delta := player_price - rival_price
     var price_signal := "PRICE ADVANTAGE" if price_delta < 0 else ("PRICE PARITY" if abs(price_delta) <= 5 else "PRICE PREMIUM")
-    market_status.text = "LIVE MARKET  •  %s  •  QUALITY %d  •  MARKETING LVL %d  •  %s" % [product.to_upper(), quality, marketing, price_signal]
+    var phone := get_viewport().get_visible_rect().size.x < 430.0
+    market_status.text = ("%s  •  QUALITY %d  •  %s\nMARKETING LVL %d" % [product.to_upper(), quality, price_signal, marketing]) if phone else ("LIVE MARKET  •  %s  •  QUALITY %d  •  MARKETING LVL %d  •  %s" % [product.to_upper(), quality, marketing, price_signal])
     summary_label.text = "Your %d vs rival %d  •  Estimated demand %d  •  Reputation %d\nSegment intelligence converts price, quality, reputation and market modifiers into actionable positioning." % [player_price, rival_price, total, reputation]
 
     for child in segment_list.get_children(): child.queue_free()
