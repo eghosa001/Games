@@ -150,14 +150,22 @@ func _layout_responsive() -> void:
     title_label.add_theme_font_size_override("font_size", 17 if phone else 20)
     close_button.position = Vector2(panel.size.x - 94.0, 7)
     market_status.position = Vector2(14, 58 if phone else 42)
-    market_status.size = Vector2(panel.size.x - 28.0, 38 if phone else 20)
     market_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if phone else TextServer.AUTOWRAP_OFF
     market_status.add_theme_font_size_override("font_size", 9 if phone else 10)
-    summary_label.position = Vector2(14, 98 if phone else 64)
-    summary_label.size = Vector2(panel.size.x - 28.0, 58 if phone else 44)
+    var market_h := 20.0
+    if phone:
+        market_status.size = Vector2(panel.size.x - 28.0, 1.0)
+        market_h = maxf(38.0, market_status.get_combined_minimum_size().y)
+    market_status.size = Vector2(panel.size.x - 28.0, market_h)
+    summary_label.position = Vector2(14, market_status.position.y + market_h + (6.0 if phone else 2.0))
     summary_label.add_theme_font_size_override("font_size", 10 if phone else 11)
+    var summary_h := 44.0
+    if phone:
+        summary_label.size = Vector2(panel.size.x - 28.0, 1.0)
+        summary_h = maxf(58.0, summary_label.get_combined_minimum_size().y)
+    summary_label.size = Vector2(panel.size.x - 28.0, summary_h)
 
-    var content_top := 160.0 if phone else 112.0
+    var content_top := summary_label.position.y + summary_h + 6.0 if phone else 112.0
     var detail_h := 174.0 if narrow else 185.0
     detail_panel.position = Vector2(12, panel.size.y - detail_h - 12.0)
     detail_panel.size = Vector2(panel.size.x - 24.0, detail_h)
