@@ -30,7 +30,7 @@ var steps: Variant = [
         "phase":"RESTORE",
         "title":"RESTORE IT TO OPERATIONAL",
         "text":"Complete each restoration stage until the property reaches Operational.",
-        "why":"An operational building is the foundation for your first business.",
+        "why":"An operational property is the foundation for your first business.",
         "where":"PROPERTY > RESTORE NEXT STAGE",
         "view":"property",
         "cta":"OPEN PROPERTY",
@@ -124,7 +124,7 @@ func notify(action:String, game)->String:
     var advanced: Variant = _advance(action, game)
     if advanced:
         return "GUIDE: " + String(current().get("title","Next step"))
-    return String(current().get("text","Keep building."))
+    return String(current().get("text","Keep growing."))
 
 func snapshot()->Dictionary:
     return {"step":step,"completed":completed}
