@@ -194,9 +194,11 @@ func _layout() -> void:
     var size:=get_viewport().get_visible_rect().size
     var narrow:=size.x<760.0
     var phone:=size.x<430.0
-    var width:=maxf(304.0,size.x-16.0) if narrow else minf(560.0,size.x-36.0)
-    var height:=maxf(430.0,size.y-90.0) if narrow else minf(700.0,size.y-120.0)
-    panel.position=Vector2(8,70) if narrow else Vector2(maxf(18.0,size.x-width-18.0),90)
+    var width:=maxf(240.0,size.x-16.0) if narrow else minf(560.0,size.x-36.0)
+    var top_margin:=8.0 if narrow else 90.0
+    var bottom_margin:=8.0 if narrow else 30.0
+    var height:=maxf(240.0,size.y-top_margin-bottom_margin) if narrow else minf(700.0,size.y-120.0)
+    panel.position=Vector2(8,top_margin) if narrow else Vector2(maxf(18.0,size.x-width-18.0),top_margin)
     panel.size=Vector2(width,height)
     title_label.position=Vector2(14,10); title_label.size=Vector2(width-130,30); title_label.add_theme_font_size_override("font_size",17 if phone else 20)
     status_label.position=Vector2(14,39); status_label.size=Vector2(width-28,20); status_label.add_theme_font_size_override("font_size",9 if phone else 10)
