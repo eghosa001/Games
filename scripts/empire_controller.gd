@@ -13,13 +13,11 @@ func _ready() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
     add_child(state_adapter)
     if parent != null: last_processed_day = parent.day
-    queue_redraw()
 
 func _process(_delta: float) -> void:
     # Strategic rival simulation is advanced by main.gd as part of the atomic
     # end-of-day transaction. Keeping this controller presentation-only avoids
     # running the same strategic tick twice on fast/mobile sessions.
-    queue_redraw()
 
 func _input(event: InputEvent) -> void:
     if not (event is InputEventKey) or not event.pressed or event.echo: return
@@ -46,7 +44,6 @@ func _input(event: InputEvent) -> void:
         KEY_BRACKETRIGHT: management_upgrade()
         KEY_TAB: district_cycle()
         KEY_BACKSPACE: upgrade_transport()
-    queue_redraw()
 
 func select_business(index:int)->void:
     if parent==null or index<0 or index>=parent.expansion.properties.size(): return
