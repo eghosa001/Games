@@ -889,65 +889,61 @@ func _header(title: String, subtitle: String, right_text = "", status_role = "go
 
 func _build_mobile_live() -> void:
     var w = _content_width()
-    _header("RESTORA", "COMMAND OVERVIEW • RESTORE • OPERATE • GROW", "DAY %d" % _day())
+    _header("RESTORA", "RESTORE → OPERATE → GROW", "DAY %d" % _day())
     var inner_w = w - 36.0
-    var hero = _panel(mobile_content, "ExecutiveHero", Rect2(18, 82, inner_w, 154), "surface", "border", 22)
-    hero.clip_contents = true
-    _label(hero, "HeroPropertyStatus", "%s\nUPGRADE %d/6 • %d%%" % [_building_name(), _building_stage_slot() + 1, _building_progress()], Rect2(inner_w * 0.52, 28, inner_w * 0.43, 82), 11, "muted", 600, HORIZONTAL_ALIGNMENT_RIGHT)
-    var hero_wash := ColorRect.new()
-    hero_wash.name = "HeroContrastWash"
-    hero_wash.position = Vector2(inner_w * 0.30, 0)
-    hero_wash.size = Vector2(inner_w * 0.70, 154)
-    var hero_bg := _color("surface")
-    var wash_alpha := 0.56 if _is_light_theme() else 0.62
-    hero_wash.color = Color(hero_bg.r, hero_bg.g, hero_bg.b, wash_alpha)
-    hero_wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    hero.add_child(hero_wash)
+
+    var hero = _panel(mobile_content, "ExecutiveHero", Rect2(18, 82, inner_w, 176), "surface", "border", 22)
     var rail = Panel.new()
     rail.position = Vector2(-1, -1)
-    rail.size = Vector2(6, 154)
+    rail.size = Vector2(6, 176)
     rail.mouse_filter = Control.MOUSE_FILTER_IGNORE
     rail.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 0))
     hero.add_child(rail)
-    _label(hero, "Eyebrow", "NEXT MOVE", Rect2(21, 17, 120, 14), 9, "gold", 600)
-    _remember("hero_title", _label(hero, "HeroTitle", _objective_title(), Rect2(21, 41, inner_w - 42, 30), 22, "text", 700))
-    hero_goal = _label(hero, "HeroGoal", _stage_meta(), Rect2(21, 77, inner_w - 42, 18), 12, "muted", 400)
+    _label(hero, "Eyebrow", "NEXT MOVE", Rect2(21, 16, 110, 14), 9, "gold", 600)
+    _remember("hero_title", _label(hero, "HeroTitle", _objective_title(), Rect2(21, 39, inner_w - 42, 30), 20, "text", 700))
+    hero_goal = _label(hero, "HeroGoal", _objective_detail(), Rect2(21, 73, inner_w - 42, 34), 10, "muted", 400)
     _remember("hero_goal", hero_goal)
     var progress_bg = Panel.new()
-    progress_bg.position = Vector2(21, 107)
-    progress_bg.size = Vector2(inner_w - 44, 12)
+    progress_bg.position = Vector2(21, 112)
+    progress_bg.size = Vector2(inner_w - 42, 8)
     progress_bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    progress_bg.add_theme_stylebox_override("panel", _solid_round(_color("surface_2"), 6))
+    progress_bg.add_theme_stylebox_override("panel", _solid_round(_color("surface_2"), 4))
     hero.add_child(progress_bg)
     var progress_fill = Panel.new()
     progress_fill.name = "ProgressFill"
-    progress_fill.position = Vector2.ZERO
-    progress_fill.size = Vector2(maxf(4.0, (inner_w - 44) * float(_restoration()) / 100.0), 12)
-    progress_fill.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 6))
+    progress_fill.size = Vector2(maxf(4.0, progress_bg.size.x * float(_restoration()) / 100.0), 8)
+    progress_fill.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 4))
     progress_bg.add_child(progress_fill)
     _remember("progress_fill", progress_fill)
-    hero_action = _transparent_button(hero, "PrimaryNextMove", Rect2(0, 0, inner_w, 154), _show_view.bind(_objective_view()))
+    hero_action = _frame_button(hero, "PrimaryNextMove", "OPEN NEXT STEP", Rect2(21, 132, inner_w - 42, 32), _show_view.bind(_objective_view()), false, true, 9)
 
     var gap = 6.0
     var tile_w = (inner_w - gap) * 0.5
-    _stat_tile(mobile_content, "cash", 18, 254, tile_w, "CASH", _money(_cash()), "LIVE")
-    _stat_tile(mobile_content, "worth", 18 + tile_w + gap, 254, tile_w, "WORTH", _money(_worth()), "LIVE")
-    _stat_tile(mobile_content, "rep", 18, 370, tile_w, "REP", str(_rep()), "RISING" if _rep() >= 50 else "BUILDING")
-    _stat_tile(mobile_content, "goods", 18 + tile_w + gap, 370, tile_w, "GOODS", str(_goods()), "READY" if _goods() > 0 else "EMPTY")
+    _stat_tile(mobile_content, "cash", 18, 276, tile_w, "CASH", _money(_cash()), "AVAILABLE")
+    _stat_tile(mobile_content, "worth", 18 + tile_w + gap, 276, tile_w, "WORTH", _money(_worth()), "TOTAL")
+    _stat_tile(mobile_content, "rep", 18, 392, tile_w, "REPUTATION", str(_rep()), "COMPANY L%d" % _company_level())
+    _stat_tile(mobile_content, "goods", 18 + tile_w + gap, 392, tile_w, "GOODS", str(_goods()), "READY" if _goods() > 0 else "EMPTY")
 
-    var signals = _panel(mobile_content, "Signals", Rect2(18, 494, inner_w, 192), "surface", "border", 18)
-    _label(signals, "Head", "THE RESTORA LOOP", Rect2(15, 15, inner_w - 30, 14), 10, "gold", 600)
-    _remember("signals", _label(signals, "SignalBody", _core_loop_lines(), Rect2(15, 43, inner_w - 30, 104), 12, "text", 600))
-    _remember("signal_footer", _label(signals, "Footer", _core_loop_status(), Rect2(15, 153, inner_w - 30, 24), 9, "success", 600))
+    var loop = _panel(mobile_content, "CoreLoop", Rect2(18, 508, inner_w, 112), "surface", "border", 18)
+    _label(loop, "Head", "YOUR PATH", Rect2(15, 14, inner_w - 30, 14), 10, "gold", 600)
+    _label(loop, "Path", "1  RESTORE  →  2  OPERATE  →  3  GROW", Rect2(15, 38, inner_w - 30, 18), 11, "text", 700)
+    _remember("signal_footer", _label(loop, "Current", _core_loop_status(), Rect2(15, 66, inner_w - 30, 32), 9, "success", 600))
 
-    var overview_y: float = 708.0
-    overview_y = _build_overview_property_catalog(overview_y)
-    overview_y = _build_overview_business_catalog(overview_y + 14.0)
-    overview_y = _build_overview_region_catalog(overview_y + 14.0)
-    overview_y = _build_overview_system_links(overview_y + 14.0)
+    var overview = _panel(mobile_content, "CommandOverview", Rect2(18, 636, inner_w, 110), "surface", "border", 18)
+    _label(overview, "Head", "MANAGEMENT OVERVIEW", Rect2(15, 12, inner_w - 30, 14), 10, "gold", 600)
+    var prop_state := "%d/%d owned • %d%% selected restored" % [_owned_building_count(), _building_catalog().size(), _building_progress()]
+    var business_state := "OPEN" if _business_open() else ("READY" if _stage() == "Operational" else "RESTORE FIRST")
+    _label(overview, "Properties", "PROPERTIES", Rect2(15, 36, 86, 14), 9, "text", 600)
+    _label(overview, "PropertiesMeta", prop_state, Rect2(102, 36, inner_w - 117, 14), 9, "muted", 400, HORIZONTAL_ALIGNMENT_RIGHT)
+    _label(overview, "Business", "BUSINESS", Rect2(15, 58, 86, 14), 9, "text", 600)
+    _label(overview, "BusinessMeta", business_state, Rect2(102, 58, inner_w - 117, 14), 9, "muted", 400, HORIZONTAL_ALIGNMENT_RIGHT)
+    _label(overview, "Growth", "GROWTH", Rect2(15, 80, 86, 14), 9, "text", 600)
+    _label(overview, "GrowthMeta", "L%d • %d contracts" % [_company_level(), _active_contracts()], Rect2(102, 80, inner_w - 117, 14), 9, "muted", 400, HORIZONTAL_ALIGNMENT_RIGHT)
+
     if mobile_content != null:
-        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, overview_y + 24.0)
-        mobile_content.size.y = maxf(mobile_content.size.y, overview_y + 24.0)
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 780.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, 780.0)
+
 
 func _build_mobile_operations() -> void:
     var property_ready := _stage() == "Operational"
@@ -1042,79 +1038,52 @@ func _build_mobile_property() -> void:
     var progress := _building_progress(building)
     var w = _content_width()
     var inner_w = w - 36.0
-    _header("PROPERTY CATALOG", "%d PROPERTIES • %d OWNED • TAP TO VIEW" % [catalog.size(), _owned_building_count()])
+    _header("PROPERTIES", "%d TOTAL • %d OWNED" % [catalog.size(), _owned_building_count()])
 
+    var selected = _panel(mobile_content, "SelectedProperty", Rect2(18, 82, inner_w, 214), "selected", "plum", 20)
+    _label(selected, "Head", "SELECTED PROPERTY", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 700)
+    _label(selected, "Name", building_name, Rect2(16, 38, inner_w - 32, 26), 19, "text", 700)
+    _label(selected, "Type", "%s • %s" % [building_type, "OWNED" if building_owned else ("SURVEYED" if building_inspected else "AVAILABLE")], Rect2(16, 69, inner_w - 32, 16), 10, "muted", 500)
+    _label(selected, "Stage", "UPGRADE %d/6 • %s" % [_building_stage_slot(building) + 1, _building_stage_name(building)], Rect2(16, 96, inner_w - 32, 16), 10, "gold", 700)
+    var track = Panel.new()
+    track.position = Vector2(16, 120)
+    track.size = Vector2(inner_w - 32, 8)
+    track.add_theme_stylebox_override("panel", _solid_round(_color("surface_2"), 4))
+    selected.add_child(track)
+    var fill = Panel.new()
+    fill.size = Vector2(maxf(4.0, track.size.x * float(progress) / 100.0), 8)
+    fill.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 4))
+    track.add_child(fill)
+    var detail_text := "Inspect to reveal condition, capacity and compatible uses."
+    if building_inspected or building_owned:
+        detail_text = "Condition %d%% • Capacity %d • %d%% restored" % [int(building.get("condition", 0)), int(building.get("capacity", 0)), progress]
+    _label(selected, "Detail", detail_text, Rect2(16, 137, inner_w - 32, 24), 9, "muted", 400)
+    var cta = _frame_button(selected, "PropertyCTA", _property_cta_label(), Rect2(16, 166, inner_w - 32, 36), _property_cta, false, true, 9)
+    cta.add_theme_stylebox_override("normal", _style(_color("gold"), _color("gold"), 12))
+
+    var catalog_y := 314.0
     var catalog_h: float = 62.0 + float(catalog.size()) * 50.0
-    var list_panel = _panel(mobile_content, "PropertyCatalog", Rect2(18, 82, inner_w, catalog_h), "surface", "border", 18)
+    var list_panel = _panel(mobile_content, "PropertyCatalog", Rect2(18, catalog_y, inner_w, catalog_h), "surface", "border", 18)
     _label(list_panel, "Head", "ALL PROPERTIES", Rect2(16, 12, inner_w - 32, 16), 11, "gold", 700)
-    _label(list_panel, "Meta", "Compare every property before you inspect, buy or restore it.", Rect2(16, 32, inner_w - 32, 18), 9, "muted", 400)
+    _label(list_panel, "Meta", "Compare cost and status. Tap any property to select it.", Rect2(16, 32, inner_w - 32, 18), 9, "muted", 400)
     for i in range(catalog.size()):
         var item: Dictionary = catalog[i]
         var row_y: float = 54.0 + float(i) * 50.0
-        var selected: bool = i == selected_index
-        var row = _panel(list_panel, "BuildingRow%d" % i, Rect2(10, row_y, inner_w - 20, 44), "selected" if selected else "surface_2", "plum" if selected else "border", 10)
+        var is_selected: bool = i == selected_index
+        var row = _panel(list_panel, "BuildingRow%d" % i, Rect2(10, row_y, inner_w - 20, 44), "selected" if is_selected else "surface_2", "plum" if is_selected else "border", 10)
         _label(row, "Name", str(item.get("name", "Property")), Rect2(10, 5, inner_w - 142, 15), 9, "text", 600)
-        var item_meta: String = "%s • %d%% restored" % [str(item.get("type", "Building")), _building_progress(item)]
+        var item_meta: String = "%s • %d%% restored" % [str(item.get("type", "Property")), _building_progress(item)]
         if not bool(item.get("owned", false)):
-            item_meta = "%s • BUY %s" % [str(item.get("type", "Building")), _money(_property_purchase_cost(item))]
+            item_meta = "%s • BUY %s" % [str(item.get("type", "Property")), _money(_property_purchase_cost(item))]
         _label(row, "Meta", item_meta, Rect2(10, 23, inner_w - 142, 13), 8, "muted", 400)
         _label(row, "State", _property_state_text(item), Rect2(inner_w - 124, 15, 96, 14), 8, _property_state_role(item), 600, HORIZONTAL_ALIGNMENT_RIGHT)
         _transparent_button(row, "SelectBuilding%d" % i, Rect2(0, 0, inner_w - 20, 44), _select_building.bind(i))
 
-    var selected_y: float = 82.0 + catalog_h + 18.0
-    _label(mobile_content, "SelectedPropertyHead", "SELECTED PROPERTY", Rect2(18, selected_y, inner_w, 18), 11, "gold", 700)
-    _label(mobile_content, "SelectedPropertyMeta", "%s • %s" % [building_name.to_upper(), "OWNED" if building_owned else ("SURVEYED" if building_inspected else "AVAILABLE")], Rect2(18, selected_y + 20.0, inner_w, 18), 9, "muted", 500)
-
-    var visual_y: float = selected_y + 48.0
-    var visual = _panel(mobile_content, "PropertyStatus", Rect2(18, visual_y, inner_w, 238), "surface", "border", 22)
-    _label(visual, "Head", "PROPERTY STATUS", Rect2(16, 16, inner_w - 32, 16), 10, "gold", 700)
-    _label(visual, "BuildingName", building_name, Rect2(16, 46, inner_w - 32, 28), 20, "text", 700)
-    _label(visual, "BuildingType", "%s • Market value %s" % [building_type, _money(int(building.get("value", 0)))], Rect2(16, 79, inner_w - 32, 16), 10, "muted", 500)
-    _label(visual, "Stage", "UPGRADE LEVEL %d/6 • %s" % [_building_stage_slot(building) + 1, _building_stage_name(building)], Rect2(16, 116, inner_w - 32, 18), 11, "gold", 700)
-    _label(visual, "Restoration", "%d%% COMPLETE" % progress, Rect2(16, 143, inner_w - 32, 18), 11, "success", 700)
-    var level_track = Panel.new()
-    level_track.position = Vector2(16, 178)
-    level_track.size = Vector2(inner_w - 32, 12)
-    level_track.add_theme_stylebox_override("panel", _solid_round(_color("surface_2"), 6))
-    visual.add_child(level_track)
-    var level_fill = Panel.new()
-    level_fill.size = Vector2(maxf(4.0, level_track.size.x * float(progress) / 100.0), 12)
-    level_fill.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 6))
-    level_track.add_child(level_fill)
-    _label(visual, "Hint", "No building render • upgrades are tracked as management levels.", Rect2(16, 202, inner_w - 32, 18), 9, "muted", 400)
-
-    var progress_y: float = visual_y + 256.0
-    var prog = _panel(mobile_content, "RestorationProgress", Rect2(18, progress_y, inner_w, 116), "surface", "border", 18)
-    _label(prog, "Head", "RESTORATION", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
-    _label(prog, "Step", _stage_step_text(), Rect2(16, 40, inner_w - 32, 24), 17, "text", 700)
-    _label(prog, "Next", _next_stage_text(), Rect2(16, 72, inner_w - 32, 16), 11, "muted", 400)
-    var track = Panel.new()
-    track.position = Vector2(16, 94)
-    track.size = Vector2(inner_w - 32, 10)
-    track.add_theme_stylebox_override("panel", _solid_round(_color("surface_2"), 5))
-    prog.add_child(track)
-    var fill = Panel.new()
-    fill.size = Vector2(maxf(4, track.size.x * float(progress) / 100.0), 10)
-    fill.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 5))
-    track.add_child(fill)
-
-    var details_y: float = progress_y + 134.0
-    var details = _panel(mobile_content, "BuildingDetails", Rect2(18, details_y, inner_w, 126), "surface", "border", 18)
-    _label(details, "Head", "BUILDING DETAILS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
-    _label(details, "Body", "Condition %d%%  •  Capacity %d\nCompatible: %s" % [
-        int(building.get("condition", 0)),
-        int(building.get("capacity", 0)),
-        ", ".join(building.get("industry_compatibility", []))
-    ], Rect2(16, 42, inner_w - 32, 58), 11, "text", 400)
-
-    var cta_y: float = details_y + 144.0
-    var cta = _frame_button(mobile_content, "PropertyCTA", _property_cta_label(), Rect2(18, cta_y, inner_w, 64), _property_cta, false, true, 11)
-    cta.add_theme_stylebox_override("normal", _style(_color("gold"), _color("gold"), 16))
-    cta.add_theme_stylebox_override("hover", _style(_color("gold").lightened(0.05), _color("gold"), 16))
-
     if mobile_content != null:
-        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, cta_y + 92.0)
-        mobile_content.size.y = maxf(mobile_content.size.y, cta_y + 92.0)
+        var total_h := catalog_y + catalog_h + 24.0
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, total_h)
+        mobile_content.size.y = maxf(mobile_content.size.y, total_h)
+
 
 func _build_mobile_empire() -> void:
     var w = _content_width()
@@ -1699,7 +1668,7 @@ func _core_loop_lines() -> String:
     return "%s  1. RESTORE PROPERTY\n%s  2. OPERATE BUSINESS\n%s  3. REINVEST & GROW" % [restore_mark, operate_mark, grow_mark]
 
 func _core_loop_status() -> String:
-    return "CURRENT PHASE: %s  •  %s" % [_core_phase(), _objective_title().to_upper()]
+    return "NOW: %s  •  %s" % [_core_phase(), _objective_title()]
 
 func _stage_meta() -> String:
     return "%s • %d%% restored" % [_building_name(), _building_progress()]
