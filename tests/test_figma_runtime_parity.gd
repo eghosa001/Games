@@ -97,10 +97,10 @@ func _run() -> void:
     content = hud.get("mobile_content") as Control
     _rect(_child(content, "PropertyCatalog"), Vector2(18,82), Vector2(354,512), "PROPERTY catalog")
     check("PROPERTY exposes nine named buildings first", content.find_children("BuildingRow*", "Panel", false, false).size() == 9)
-    _rect(_child(content, "PropertyVisual"), Vector2(18,642), Vector2(354,238), "PROPERTY visual")
+    _rect(_child(content, "PropertyVisual"), Vector2(18,660), Vector2(354,238), "PROPERTY visual")
     check("PROPERTY uses staged building art", _child(content, "PropertyVisual").get_node_or_null("BuildingStageArt") != null)
-    _rect(_child(content, "RestorationProgress"), Vector2(18,898), Vector2(354,116), "PROPERTY progress")
-    _rect(_child(content, "BuildingDetails"), Vector2(18,1032), Vector2(354,126), "PROPERTY details")
+    _rect(_child(content, "RestorationProgress"), Vector2(18,916), Vector2(354,116), "PROPERTY progress")
+    _rect(_child(content, "BuildingDetails"), Vector2(18,1050), Vector2(354,126), "PROPERTY details")
     if tutorial_overlay != null and tutorial_overlay.has_method("_layout_responsive"):
         tutorial_overlay.call("_layout_responsive")
     var guide_panel := tutorial_overlay.get("panel") as Control if tutorial_overlay != null else null
