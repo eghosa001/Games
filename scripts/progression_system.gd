@@ -6,7 +6,7 @@ extends Node
 ## and systems can expose complexity in the intended order without breaking old saves.
 const LEVEL_THRESHOLDS := [0, 100, 250, 500, 900, 1400, 2000, 2800, 3800, 5000]
 const XP_REWARDS := {"restoration_step":10,"property_operational":50,"profit_per_100":1,"contract_signed":25,"contract_completed":40,"employee_hired":15,"production_run":12,"expansion_purchased":35,"expansion_upgraded":20}
-const TRACK_INTERVAL := 0.10
+const TRACK_INTERVAL := 0.20
 const FEATURE_UNLOCKS := {
     1: ["restoration", "core_operations"],
     2: ["employees", "contracts", "finance"],
@@ -153,7 +153,9 @@ func award_xp(amount:int,reason:String)->Dictionary:
             logs.append("PROGRESSION: Company reached Level %d (+%d XP from %s)." % [new_level, amount, reason])
             if logs.size() > 100: logs.pop_front()
             state.set_value("company", "log_lines", logs)
-        state.set_value("company", "message", "Company Level %d reached. New strategic systems are available." % new_level)
+        var newly_unlocked := get_features_for_level(new_level)
+        var unlock_text := ", ".join(newly_unlocked.map(func(item): return str(item).replace("_", " ").capitalize()))
+        state.set_value("company", "message", "Company Level %d reached%s." % [new_level, " — unlocked " + unlock_text if not unlock_text.is_empty() else ""])
     return {"ok":true,"xp":xp,"level":new_level,"level_up":new_level>before_level,"reason":reason,"unlocks":get_unlocked_features()}
 func award_action(action:String,multiplier:float=1.0)->Dictionary: return award_xp(int(round(float(XP_REWARDS.get(action,0))*max(0.0,multiplier))),action)
 func award_profit(profit:int)->Dictionary:
