@@ -1,262 +1,115 @@
 extends Node2D
 
-## Premium restoration status layer.
-## When RestoraWorld3D is active, this keeps the useful restoration HUD while
-## suppressing the duplicate 2D building artwork.
+## Legacy property presentation layer retained for compatibility.
+## It intentionally renders no building, world, structure, or progression artwork.
+## Restoration is represented only as management status and upgrade progress.
 
 const STEPS := ["cleaning", "repair", "painting", "furnishing"]
-const BUILDING_SHEETS := [
-    "res://Assets/Art/building_warehouse_progression.svg",
-    "res://Assets/Art/building_factory_progression.svg",
-    "res://Assets/Art/building_office_progression.svg",
-]
-const FRAME_SIZE := Vector2(256, 144)
 const GOLD := Color("e4bd68")
 const GREEN := Color("67c99a")
-const SKY := Color("7ed0c3")
 const TEXT := Color("eef7f3")
 const MUTED := Color("a7bdbe")
 const PANEL := Color(0.035, 0.07, 0.08, 0.94)
+const TRACK := Color("16282e")
 
 var _time := 0.0
-var _progression_sprite: Sprite2D
-var _last_stage := ""
-var _last_property_type := ""
 
 func _ready() -> void:
-    process_mode = Node.PROCESS_MODE_ALWAYS
-    _ensure_progression_sprite()
-    queue_redraw()
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	queue_redraw()
 
 func _process(delta: float) -> void:
-    _time += delta
-    if fmod(_time, 0.12) < delta:
-        queue_redraw()
+	_time += delta
+	if fmod(_time, 0.20) < delta:
+		queue_redraw()
 
 func _using_3d_world() -> bool:
-    var world_3d := get_node_or_null("../../World3D")
-    if world_3d == null:
-        return false
-    return bool(world_3d.get("presentation_enabled")) if "presentation_enabled" in world_3d else world_3d.visible
+	# RESTORA no longer uses a rendered property structure.
+	return false
 
 func should_draw_site_overlay() -> bool:
-    return not _using_3d_world()
-
-func _ensure_progression_sprite() -> void:
-    if _progression_sprite != null:
-        return
-    _progression_sprite = Sprite2D.new()
-    _progression_sprite.name = "BuildingProgressionArt"
-    _progression_sprite.z_index = -27
-    _progression_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-    _progression_sprite.modulate = Color(1, 1, 1, 0.94)
-    _progression_sprite.visible = false
-    add_child(_progression_sprite)
+	return true
 
 func _draw() -> void:
-    var state = get_node_or_null("/root/RenewGameState")
-    var scene_art := get_node_or_null("../PremiumRestorationScene")
-    if scene_art != null:
-        scene_art.visible = not _using_3d_world()
-    if state == null:
-        return
-    var catalog = state.get_value("properties", "catalog", [])
-    if not catalog is Array or catalog.is_empty():
-        return
-    var index := clampi(int(state.get_value("properties", "selected_property", 0)), 0, catalog.size() - 1)
-    var property: Dictionary = catalog[index]
-    var owned := bool(property.get("owned", state.get_value("properties", "owned", false)))
-    var stage := _visual_stage(property, owned)
-    _sync_scene_art(stage, property)
-    if should_draw_site_overlay():
-        _draw_site_overlay(property, stage)
-
-func _sync_scene_art(stage: String, property: Dictionary) -> void:
-    var scene_art := get_node_or_null("../PremiumRestorationScene")
-    _ensure_progression_sprite()
-    var property_type := str(property.get("type", property.get("kind", "warehouse"))).to_lower()
-    if property_type == "":
-        property_type = "warehouse"
-    if _using_3d_world():
-        if scene_art != null:
-            scene_art.visible = false
-        _progression_sprite.visible = false
-        _last_stage = stage
-        _last_property_type = property_type
-        return
-    var progress := _stage_progress(stage)
-    if scene_art != null:
-        scene_art.visible = true
-        scene_art.modulate = Color(1.0, 1.0, 1.0, 0.72 + progress * 0.10)
-        var target_scale := 0.84 + progress * 0.05
-        scene_art.scale = Vector2(target_scale, target_scale)
-        _progression_sprite.position = scene_art.position
-    var sheet_index := 0
-    if property_type.contains("factory") or property_type.contains("industrial"):
-        sheet_index = 1
-    elif property_type.contains("office") or property_type.contains("hq") or property_type.contains("head"):
-        sheet_index = 2
-    var texture: Texture2D = load(BUILDING_SHEETS[sheet_index]) as Texture2D
-    if texture != null:
-        _progression_sprite.texture = texture
-        _progression_sprite.region_enabled = true
-        _progression_sprite.region_rect = Rect2(0, _stage_frame(stage) * FRAME_SIZE.y, FRAME_SIZE.x, FRAME_SIZE.y)
-        var art_scale := 1.34 + progress * 0.08
-        _progression_sprite.scale = Vector2(art_scale, art_scale)
-        _progression_sprite.visible = true
-    else:
-        _progression_sprite.visible = false
-    _last_stage = stage
-    _last_property_type = property_type
-
-func _stage_frame(stage: String) -> int:
-    match stage:
-        "Abandoned": return 0
-        "Cleaned": return 1
-        "Repaired": return 2
-        "Painted": return 3
-        "Furnished": return 4
-        "Operational": return 5
-    return 0
-
-func _stage_progress(stage: String) -> float:
-    match stage:
-        "Abandoned": return 0.0
-        "Cleaned": return 0.24
-        "Repaired": return 0.48
-        "Painted": return 0.68
-        "Furnished": return 0.86
-        "Operational": return 1.0
-    return 0.0
+	var state = get_node_or_null("/root/RenewGameState")
+	if state == null:
+		return
+	var catalog = state.get_value("properties", "catalog", [])
+	if not catalog is Array or catalog.is_empty():
+		return
+	var index := clampi(int(state.get_value("properties", "selected_property", 0)), 0, catalog.size() - 1)
+	var property: Dictionary = catalog[index]
+	var owned := bool(property.get("owned", state.get_value("properties", "owned", false)))
+	var stage := _visual_stage(property, owned)
+	_draw_status_only(property, stage)
 
 func _visual_stage(property: Dictionary, owned: bool) -> String:
-    if not owned:
-        return "Abandoned"
-    if int(property.get("cleaning", 0)) < 100:
-        return "Abandoned"
-    if int(property.get("repair", 0)) < 100:
-        return "Cleaned"
-    if int(property.get("painting", 0)) < 100:
-        return "Repaired"
-    if int(property.get("furnishing", 0)) < 50:
-        return "Painted"
-    if int(property.get("furnishing", 0)) < 100:
-        return "Furnished"
-    return "Operational"
+	if not owned:
+		return "Abandoned"
+	if int(property.get("cleaning", 0)) < 100:
+		return "Abandoned"
+	if int(property.get("repair", 0)) < 100:
+		return "Cleaned"
+	if int(property.get("painting", 0)) < 100:
+		return "Repaired"
+	if int(property.get("furnishing", 0)) < 50:
+		return "Painted"
+	if int(property.get("furnishing", 0)) < 100:
+		return "Furnished"
+	return "Operational"
 
-func _draw_site_overlay(property: Dictionary, stage: String) -> void:
-    var viewport_size := get_viewport_rect().size
-    var w := maxf(viewport_size.x, 320.0)
-    var h := _hud_height_for_viewport(viewport_size.y)
-    var stage_progress := _stage_progress(stage)
-    var actual_progress := _restoration_percent(property)
-    var compact := _uses_compact_layout(w)
-    var using_3d := _using_3d_world()
-    if not using_3d:
-        draw_rect(Rect2(0, h - 116.0, w, 116.0), Color(0.02, 0.04, 0.05, 0.30), true)
-        _draw_site_lights(w, h, stage_progress)
-        _draw_construction_activity(w, h, stage_progress)
-    elif not compact:
-        draw_rect(Rect2(0, h - 116.0, w, 116.0), Color(0.02, 0.04, 0.05, 0.14), true)
+func _stage_progress(stage: String) -> float:
+	match stage:
+		"Abandoned": return 0.0
+		"Cleaned": return 0.24
+		"Repaired": return 0.48
+		"Painted": return 0.68
+		"Furnished": return 0.86
+		"Operational": return 1.0
+	return 0.0
 
-    if compact:
-        _draw_compact_status_card(w, h, property, stage, actual_progress)
-    else:
-        _draw_stage_banner(w, h, property, stage, actual_progress)
-        _draw_progress_card(w, h, property, stage)
-
-func _draw_site_lights(w: float, h: float, progress: float) -> void:
-    var intensity := 0.10 + progress * 0.20
-    for i in range(7):
-        var x := 70.0 + float(i) * maxf(120.0, (w - 140.0) / 6.0)
-        var pulse := 0.65 + 0.35 * sin(_time * 1.8 + i * 0.7)
-        draw_circle(Vector2(x, h - 74.0), 5.0, Color(GOLD.r, GOLD.g, GOLD.b, intensity * pulse))
-        draw_line(Vector2(x, h - 70.0), Vector2(x, h - 54.0), Color(GOLD.r, GOLD.g, GOLD.b, intensity * 0.22), 2.0)
-
-func _draw_construction_activity(w: float, h: float, progress: float) -> void:
-    if progress >= 1.0:
-        return
-    var activity := 1.0 - progress
-    var base_y := h - 44.0
-    for i in range(4):
-        var phase := fmod(_time * (0.10 + i * 0.015) + i * 0.23, 1.0)
-        var x := lerpf(-60.0, w + 60.0, phase)
-        var y := base_y - float(i % 2) * 18.0
-        draw_rect(Rect2(x, y, 34.0, 10.0), Color(0.93, 0.72, 0.34, 0.78 * activity), true)
-        draw_circle(Vector2(x + 7, y + 11), 4.0, Color(0.02, 0.05, 0.06, 0.9))
-        draw_circle(Vector2(x + 27, y + 11), 4.0, Color(0.02, 0.05, 0.06, 0.9))
-    for i in range(5):
-        var x := w * 0.58 + float(i) * 34.0
-        var sway := sin(_time * 0.9 + i) * 5.0
-        draw_line(Vector2(x, h - 120.0), Vector2(x + sway, h - 148.0), Color(SKY.r, SKY.g, SKY.b, 0.34 * activity), 2.0)
-
-func _draw_stage_banner(w: float, h: float, property: Dictionary, stage: String, actual_progress: int) -> void:
-    var font := ThemeDB.fallback_font
-    var card := Rect2(18.0, h - 104.0, minf(330.0, w - 36.0), 76.0)
-    draw_rect(card, PANEL, true)
-    draw_rect(Rect2(card.position, Vector2(3, card.size.y)), GOLD if stage == "Operational" else GREEN, true)
-    draw_string(font, card.position + Vector2(16, 22), stage.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, card.size.x - 32, 16, TEXT)
-    draw_string(font, card.position + Vector2(16, 41), str(property.get("name", "Acquired Property")), HORIZONTAL_ALIGNMENT_LEFT, card.size.x - 32, 11, MUTED)
-    draw_string(font, card.position + Vector2(16, 61), _stage_caption(stage), HORIZONTAL_ALIGNMENT_LEFT, card.size.x - 32, 10, TEXT)
-    draw_string(font, card.position + Vector2(card.size.x - 58, 22), "%d%%" % actual_progress, HORIZONTAL_ALIGNMENT_RIGHT, 42, 13, GOLD)
+func _stage_frame(stage: String) -> int:
+	match stage:
+		"Abandoned": return 0
+		"Cleaned": return 1
+		"Repaired": return 2
+		"Painted": return 3
+		"Furnished": return 4
+		"Operational": return 5
+	return 0
 
 func _restoration_percent(property: Dictionary) -> int:
-    var total := 0
-    for step in STEPS:
-        total += clampi(int(property.get(step, 0)), 0, 100)
-    return int(round(float(total) / float(STEPS.size())))
+	var total := 0
+	for step in STEPS:
+		total += clampi(int(property.get(step, 0)), 0, 100)
+	return int(round(float(total) / float(STEPS.size())))
 
-func _hud_height_for_viewport(viewport_height: float) -> float:
-    return maxf(viewport_height, 240.0)
-
-func _uses_compact_layout(viewport_width: float) -> bool:
-    return viewport_width < 760.0
-
-func _draw_compact_status_card(w: float, h: float, property: Dictionary, stage: String, actual_progress: int) -> void:
-    var font := ThemeDB.fallback_font
-    var card := Rect2(12.0, maxf(8.0, h - 102.0), maxf(120.0, w - 24.0), 90.0)
-    var accent := GOLD if stage == "Operational" else GREEN
-    draw_rect(card, PANEL, true)
-    draw_rect(Rect2(card.position, Vector2(3.0, card.size.y)), accent, true)
-    draw_string(font, card.position + Vector2(14.0, 21.0), stage.to_upper(), HORIZONTAL_ALIGNMENT_LEFT, card.size.x - 86.0, 14, TEXT)
-    draw_string(font, card.position + Vector2(card.size.x - 58.0, 21.0), "%d%%" % actual_progress, HORIZONTAL_ALIGNMENT_RIGHT, 44.0, 12, GOLD)
-    draw_string(font, card.position + Vector2(14.0, 42.0), str(property.get("name", "Acquired Property")), HORIZONTAL_ALIGNMENT_LEFT, card.size.x - 28.0, 10, MUTED)
-    var bar := Rect2(card.position + Vector2(14.0, 52.0), Vector2(maxf(80.0, card.size.x - 28.0), 7.0))
-    draw_rect(bar, Color("16282e"), true)
-    draw_rect(Rect2(bar.position, Vector2(bar.size.x * clampf(float(actual_progress) / 100.0, 0.0, 1.0), bar.size.y)), accent, true)
-    draw_string(font, card.position + Vector2(14.0, 80.0), _stage_caption(stage), HORIZONTAL_ALIGNMENT_LEFT, card.size.x - 28.0, 9, TEXT)
+func _draw_status_only(property: Dictionary, stage: String) -> void:
+	var viewport_size := get_viewport_rect().size
+	var w := maxf(viewport_size.x, 320.0)
+	var h := maxf(viewport_size.y, 240.0)
+	var compact := w < 760.0
+	var progress := _restoration_percent(property)
+	var card_w := maxf(180.0, w - 24.0) if compact else minf(720.0, w - 36.0)
+	var card_h := 112.0 if compact else 94.0
+	var card := Rect2(12.0 if compact else (w - card_w) * 0.5, h - card_h - 14.0, card_w, card_h)
+	var accent := GOLD if stage == "Operational" else GREEN
+	var font := ThemeDB.fallback_font
+	draw_rect(card, PANEL, true)
+	draw_rect(Rect2(card.position, Vector2(4.0, card.size.y)), accent, true)
+	draw_string(font, card.position + Vector2(16, 23), str(property.get("name", "Property")), HORIZONTAL_ALIGNMENT_LEFT, card.size.x - 32, 14, TEXT)
+	draw_string(font, card.position + Vector2(16, 44), "UPGRADE LEVEL %d/6 • %s" % [_stage_frame(stage) + 1, stage.to_upper()], HORIZONTAL_ALIGNMENT_LEFT, card.size.x - 32, 10, MUTED)
+	var bar := Rect2(card.position + Vector2(16, 58), Vector2(card.size.x - 32, 9))
+	draw_rect(bar, TRACK, true)
+	draw_rect(Rect2(bar.position, Vector2(bar.size.x * float(progress) / 100.0, bar.size.y)), accent, true)
+	draw_string(font, card.position + Vector2(16, 88), "%d%% RESTORED • %s" % [progress, _stage_caption(stage)], HORIZONTAL_ALIGNMENT_LEFT, card.size.x - 32, 10, TEXT)
 
 func _stage_caption(stage: String) -> String:
-    match stage:
-        "Abandoned": return "Inspect the site • restoration starts here"
-        "Cleaned": return "Site cleared • structural work next"
-        "Repaired": return "Structure secured • finishing works next"
-        "Painted": return "Exterior complete • fit-out in progress"
-        "Furnished": return "Fit-out complete • commissioning"
-        "Operational": return "Certified site • ready for commercial use"
-    return "Restoration programme active"
-
-func _draw_progress_card(w: float, h: float, property: Dictionary, stage: String) -> void:
-    var font := ThemeDB.fallback_font
-    var card_w := minf(360.0, w - 36.0)
-    var card := Rect2(w - card_w - 18.0, h - 104.0, card_w, 76.0)
-    draw_rect(card, PANEL, true)
-    draw_rect(card, Color("34545a"), false, 1.0)
-    var x := card.position.x + 14.0
-    var y := card.position.y + 18.0
-    for step in STEPS:
-        var value := clampf(float(property.get(step, 0)), 0.0, 100.0)
-        draw_string(font, Vector2(x, y), step.capitalize(), HORIZONTAL_ALIGNMENT_LEFT, 64, 9, MUTED)
-        draw_rect(Rect2(x + 68, y - 7, maxf(70.0, card.size.x - 124.0), 7), Color("16282e"), true)
-        draw_rect(Rect2(x + 68, y - 7, maxf(70.0, card.size.x - 124.0) * value / 100.0, 7), GREEN if value >= 100.0 else GOLD, true)
-        draw_string(font, Vector2(card.end.x - 42, y), "%d" % int(value), HORIZONTAL_ALIGNMENT_RIGHT, 28, 9, TEXT)
-        y += 14.0
-    if stage == "Operational":
-        _draw_certification_mark(card)
-
-func _draw_certification_mark(card: Rect2) -> void:
-    var center := Vector2(card.end.x - 22.0, card.position.y - 8.0)
-    draw_circle(center, 9.0, GOLD)
-    draw_circle(center, 6.0, PANEL)
-    draw_line(center + Vector2(-3, 0), center + Vector2(-1, 3), GOLD, 1.5)
-    draw_line(center + Vector2(-1, 3), center + Vector2(4, -3), GOLD, 1.5)
+	match stage:
+		"Abandoned": return "Inspection and cleanup required"
+		"Cleaned": return "Structural repairs next"
+		"Repaired": return "Finishing work next"
+		"Painted": return "Fit-out in progress"
+		"Furnished": return "Commissioning next"
+		"Operational": return "Ready for commercial use"
+	return "Restoration active"
