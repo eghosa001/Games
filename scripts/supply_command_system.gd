@@ -54,7 +54,7 @@ func input_bundle_quote() -> Dictionary:
         {"resource": "iron", "amount": 10.0},
         {"resource": "energy", "amount": 20.0}
     ]
-    var quote := chain.quote_procure_bundle(orders, transport_level) if chain != null and chain.has_method("quote_procure_bundle") else {"ok": false, "cost": 0}
+    var quote: Dictionary = chain.quote_procure_bundle(orders, transport_level) if chain != null and chain.has_method("quote_procure_bundle") else {"ok": false, "cost": 0}
     quote["cash"] = int(state_adapter.get_value("economy", "cash", 35000))
     quote["affordable"] = bool(quote.get("ok", false)) and int(quote.get("cash", 0)) >= int(quote.get("cost", 0))
     return quote
