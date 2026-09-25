@@ -188,6 +188,74 @@ func _restore_production_transaction(snapshot: Dictionary) -> void:
     if participants.get("supply_chain",null) is Dictionary: supply_chain.restore_state(participants["supply_chain"])
 func _production_failure(message: String) -> Dictionary:
     state_adapter.message(message); return {"ok":false,"message":message}
+func production_quote() -> Dictionary:
+    if not bool(state_adapter.get_value("businesses", "business_open", false)):
+        return {"ok": false, "reason": "business_closed", "message": "Open a business first."}
+    var industry_id := str(state_adapter.get_value("businesses", "industry_id", "furniture"))
+    if industry_id.is_empty(): industry_id = "furniture"
+    var config := _industry_production_config(industry_id)
+    if config.is_empty():
+        return {"ok": false, "reason": "unknown_industry", "message": "Unknown industry."}
+    var employee_count := 3
+    var employee_factor := 1.0
+    var morale_multiplier := 1.0
+    if employee_system != null:
+        employee_count = employee_system.get_active_employee_count()
+        employee_factor = employee_system.get_productivity_multiplier("factory_001")
+        morale_multiplier = employee_system.get_morale_multiplier()
+    var capacity := int(state_adapter.get_value("businesses", "capacity_level", 1))
+    var business_efficiency := clamp(0.85 + float(capacity) * 0.10, 0.85, 1.50)
+    var base_output := max(1, employee_count + capacity - 1)
+    var output_factor := employee_factor * business_efficiency * _technology_multiplier() * _property_condition_multiplier() * _property_business_fit_multiplier(industry_id) * morale_multiplier * state_adapter.executive_bonus("production") * state_adapter.infra_modifier("production") * _world_modifier("production")
+    var cycles := max(1, int(floor(float(base_output) * output_factor)))
+    var inputs: Dictionary = config.get("inputs", {}).duplicate(true)
+    var metal_needed := float(inputs.get("metal", 0.0)) * float(cycles)
+    var metal_make := 0
+    if metal_needed > supply_chain.stock("metal"):
+        metal_make = int(ceil(metal_needed - supply_chain.stock("metal")))
+    var needed: Dictionary = {}
+    for resource in inputs:
+        var input_name := str(resource)
+        if input_name == "metal": continue
+        needed[input_name] = float(inputs[resource]) * float(cycles)
+    if metal_make > 0:
+        needed["iron"] = float(needed.get("iron", 0.0)) + float(metal_make) * 2.0
+        needed["energy"] = float(needed.get("energy", 0.0)) + float(metal_make) * 0.5
+    var orders: Array = []
+    for input_name in needed:
+        var shortfall := float(needed[input_name]) - supply_chain.stock(str(input_name))
+        if shortfall > 0.0:
+            orders.append({"resource": str(input_name), "amount": shortfall})
+    var operating_cost := int(config.get("operating_cost", 0))
+    operating_cost = int(round(float(operating_cost) * state_adapter.executive_bonus("operating_cost")))
+    operating_cost = int(round(float(operating_cost) / max(1.0, state_adapter.infra_modifier("energy"))))
+    var delivery_cost := 0
+    var supply_ok := true
+    var supply_reason := ""
+    if not orders.is_empty():
+        var transport_level := int(state_adapter.get_value("supply_chain", "transport_level", 1))
+        var delivery_quote := supply_chain.quote_procure_bundle(orders, transport_level) if supply_chain.has_method("quote_procure_bundle") else {"ok": false, "cost": 0}
+        supply_ok = bool(delivery_quote.get("ok", false))
+        supply_reason = str(delivery_quote.get("reason", ""))
+        delivery_cost = int(delivery_quote.get("cost", 0))
+    var total_cost := operating_cost + delivery_cost
+    var cash := int(state_adapter.get_value("economy", "cash", 35000))
+    var output := max(1, cycles - int(floor(float(cycles) * 0.08)))
+    return {
+        "ok": supply_ok,
+        "reason": supply_reason,
+        "industry_id": industry_id,
+        "product": str(config.get("product", industry_id)),
+        "cycles": cycles,
+        "estimated_output": output,
+        "operating_cost": operating_cost,
+        "delivery_cost": delivery_cost,
+        "total_cost": total_cost,
+        "cash": cash,
+        "affordable": supply_ok and cash >= total_cost,
+        "orders": orders
+    }
+
 func produce_goods() -> Dictionary:
     var transaction := _capture_production_transaction()
     if not bool(transaction.get("ok",false)): return _production_failure(str(transaction.get("message","Production transaction could not start.")))
