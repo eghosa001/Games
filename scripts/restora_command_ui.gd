@@ -1038,9 +1038,30 @@ func _build_mobile_finance() -> void:
         _label(tx, "Amount%d" % i, str(row.get("amount", "")), Rect2(inner_w - 140, y, 110, 14), 10, str(row.get("role", "text")), 600, HORIZONTAL_ALIGNMENT_RIGHT)
 
     var action_w = (inner_w - 16.0) / 3.0
-    _frame_button(mobile_content, "Loan", "LOAN", Rect2(18, 656, action_w, 48), _take_loan)
-    _frame_button(mobile_content, "Repay", "REPAY", Rect2(26 + action_w, 656, action_w, 48), _repay_loan)
-    _frame_button(mobile_content, "Investor", "INVESTOR", Rect2(34 + action_w * 2.0, 656, action_w, 48), _request_investor, false, true)
+    var loan_quote := _loan_quote()
+    var repay_quote := _repayment_quote()
+    var investor_quote := _investor_quote()
+
+    var loan_text := "LOAN"
+    if bool(loan_quote.get("eligible", false)):
+        loan_text = "LOAN %s" % _money(int(loan_quote.get("amount", 0)))
+    var loan_button = _frame_button(mobile_content, "Loan", loan_text, Rect2(18, 656, action_w, 48), _take_loan)
+    loan_button.disabled = not bool(loan_quote.get("eligible", false))
+    loan_button.tooltip_text = ("Borrow %s at %.0f%% over %d periods." % [_money(int(loan_quote.get("amount", 0))), float(loan_quote.get("rate", 0.0)) * 100.0, int(loan_quote.get("term", 20))]) if not loan_button.disabled else str(loan_quote.get("message", "Loan unavailable."))
+
+    var repay_text := "REPAY"
+    if bool(repay_quote.get("eligible", false)):
+        repay_text = "REPAY %s" % _money(int(repay_quote.get("amount", 0)))
+    var repay_button = _frame_button(mobile_content, "Repay", repay_text, Rect2(26 + action_w, 656, action_w, 48), _repay_loan)
+    repay_button.disabled = not bool(repay_quote.get("eligible", false))
+    repay_button.tooltip_text = ("Reduce debt by %s." % _money(int(repay_quote.get("amount", 0)))) if not repay_button.disabled else str(repay_quote.get("message", "No repayment available."))
+
+    var investor_text := "INVESTOR"
+    if bool(investor_quote.get("eligible", false)):
+        investor_text = "OFFER %s" % _money(int(investor_quote.get("amount", 0))) if bool(investor_quote.get("pending", false)) else "INVEST %s" % _money(int(investor_quote.get("amount", 0)))
+    var investor_button = _frame_button(mobile_content, "Investor", investor_text, Rect2(34 + action_w * 2.0, 656, action_w, 48), _request_investor, false, true)
+    investor_button.disabled = not bool(investor_quote.get("eligible", false)) or bool(investor_quote.get("pending", false))
+    investor_button.tooltip_text = ("Potential funding %s for %.1f%% ownership." % [_money(int(investor_quote.get("amount", 0))), float(investor_quote.get("percent", 0.0))]) if bool(investor_quote.get("eligible", false)) else str(investor_quote.get("message", "Investor offer unavailable."))
 
 func _build_mobile_property() -> void:
     var catalog: Array = _building_catalog()
@@ -1846,6 +1867,23 @@ func _buy_inputs() -> void:
     if parent != null and parent.has_method("buy_inputs"):
         parent.buy_inputs()
     _refresh()
+
+func _finance_command_layer():
+    if parent != null and "command_system" in parent and parent.command_system != null:
+        return parent.command_system.finance_system
+    return null
+
+func _loan_quote() -> Dictionary:
+    var commands = _finance_command_layer()
+    return commands.loan_quote() if commands != null and commands.has_method("loan_quote") else {}
+
+func _repayment_quote() -> Dictionary:
+    var commands = _finance_command_layer()
+    return commands.repayment_quote() if commands != null and commands.has_method("repayment_quote") else {}
+
+func _investor_quote() -> Dictionary:
+    var commands = _finance_command_layer()
+    return commands.investor_quote() if commands != null and commands.has_method("investor_quote") else {}
 
 func _take_loan() -> void:
     if parent != null and parent.has_method("take_loan"):
