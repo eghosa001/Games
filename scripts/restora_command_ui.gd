@@ -955,23 +955,23 @@ func _build_mobile_live() -> void:
     _label(loop, "Path", "1  RESTORE  →  2  OPERATE  →  3  GROW", Rect2(15, 38, inner_w - 30, 18), 11, "text", 700)
     _remember("signal_footer", _label(loop, "Current", _core_loop_status(), Rect2(15, 66, inner_w - 30, 32), 9, "success", 600))
 
-    var overview = _panel(mobile_content, "CommandOverview", Rect2(18, 636, inner_w, 110), "surface", "border", 18)
+    var overview = _panel(mobile_content, "CommandOverview", Rect2(18, 636, inner_w, 168), "surface", "border", 18)
     _label(overview, "Head", "MANAGEMENT OVERVIEW", Rect2(15, 12, inner_w - 30, 14), 10, "gold", 600)
     var prop_state := "%d/%d owned • %d%% selected restored" % [_owned_building_count(), _building_catalog().size(), _building_progress()]
     var business_state := "OPEN" if _business_open() else ("READY" if _stage() == "Operational" else "RESTORE FIRST")
-    _label(overview, "Properties", "PROPERTIES", Rect2(15, 36, 86, 14), 9, "text", 600)
-    _label(overview, "PropertiesMeta", prop_state, Rect2(102, 36, inner_w - 117, 14), 9, "muted", 400, HORIZONTAL_ALIGNMENT_RIGHT)
-    _label(overview, "Business", "BUSINESS", Rect2(15, 58, 86, 14), 9, "text", 600)
-    _label(overview, "BusinessMeta", business_state, Rect2(102, 58, inner_w - 117, 14), 9, "muted", 400, HORIZONTAL_ALIGNMENT_RIGHT)
-    _label(overview, "Growth", "GROWTH", Rect2(15, 80, 86, 14), 9, "text", 600)
-    _label(overview, "GrowthMeta", _progression_status_text(), Rect2(102, 80, inner_w - 117, 14), 9, "muted", 400, HORIZONTAL_ALIGNMENT_RIGHT)
-    _transparent_button(overview, "OpenHomeProperties", Rect2(0, 26, inner_w, 22), _show_view.bind("property"))
-    _transparent_button(overview, "OpenHomeBusiness", Rect2(0, 48, inner_w, 22), _show_view.bind("operate"))
-    _transparent_button(overview, "OpenHomeGrowth", Rect2(0, 70, inner_w, 28), _show_view.bind("more"))
+    _label(overview, "Properties", "PROPERTIES", Rect2(15, 46, 86, 14), 9, "text", 600)
+    _label(overview, "PropertiesMeta", prop_state, Rect2(102, 46, inner_w - 117, 14), 9, "muted", 400, HORIZONTAL_ALIGNMENT_RIGHT)
+    _label(overview, "Business", "BUSINESS", Rect2(15, 90, 86, 14), 9, "text", 600)
+    _label(overview, "BusinessMeta", business_state, Rect2(102, 90, inner_w - 117, 14), 9, "muted", 400, HORIZONTAL_ALIGNMENT_RIGHT)
+    _label(overview, "Growth", "GROWTH", Rect2(15, 134, 86, 14), 9, "text", 600)
+    _label(overview, "GrowthMeta", _progression_status_text(), Rect2(102, 134, inner_w - 117, 14), 9, "muted", 400, HORIZONTAL_ALIGNMENT_RIGHT)
+    _transparent_button(overview, "OpenHomeProperties", Rect2(0, 28, inner_w, 44), _show_view.bind("property"))
+    _transparent_button(overview, "OpenHomeBusiness", Rect2(0, 72, inner_w, 44), _show_view.bind("operate"))
+    _transparent_button(overview, "OpenHomeGrowth", Rect2(0, 116, inner_w, 44), _show_view.bind("more"))
 
     if mobile_content != null:
-        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 780.0)
-        mobile_content.size.y = maxf(mobile_content.size.y, 780.0)
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 838.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, 838.0)
 
 
 func _build_mobile_operations() -> void:
