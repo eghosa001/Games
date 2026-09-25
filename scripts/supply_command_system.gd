@@ -47,6 +47,18 @@ func procure(resource: String, amount: float, cash: int, transport_level: int = 
 func procure_bundle(orders: Array, cash: int, transport_level: int = 1) -> Dictionary:
     return chain.procure_bundle(orders, cash, transport_level)
 
+func input_bundle_quote() -> Dictionary:
+    var transport_level := int(state_adapter.get_value("supply_chain", "transport_level", 1))
+    var orders := [
+        {"resource": "timber", "amount": 10.0},
+        {"resource": "iron", "amount": 10.0},
+        {"resource": "energy", "amount": 20.0}
+    ]
+    var quote := chain.quote_procure_bundle(orders, transport_level) if chain != null and chain.has_method("quote_procure_bundle") else {"ok": false, "cost": 0}
+    quote["cash"] = int(state_adapter.get_value("economy", "cash", 35000))
+    quote["affordable"] = bool(quote.get("ok", false)) and int(quote.get("cash", 0)) >= int(quote.get("cost", 0))
+    return quote
+
 func buy_inputs() -> void:
     var finance := _finance()
     if finance == null:
