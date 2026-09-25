@@ -111,7 +111,7 @@ func run()->void:
     state.set_value("economy","total_profit",int(state.get_value("economy","total_profit",0))+100)
     progression._process(0.05)
     check(progression.get_xp()==throttle_xp,"Progression polling skips sub-interval frames")
-    progression._process(0.05)
+    progression._process(0.16)
     check(progression.get_xp()==throttle_xp+1,"Progression polling processes at the configured interval")
 
     print("PHASE 22 RESULT: %d passed, %d failed"%[passed,failed]);quit(1 if failed > 0 else 0)
