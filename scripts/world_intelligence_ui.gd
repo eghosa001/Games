@@ -98,9 +98,11 @@ func _process(delta:float)->void:
 func _layout()->void:
     if panel==null:return
     var size:=get_viewport().get_visible_rect().size;var narrow:=size.x<760.0
-    var width:=maxf(304.0,size.x-16.0) if narrow else minf(760.0,size.x-36.0)
-    var height:=maxf(430.0,size.y-82.0) if narrow else minf(720.0,size.y-90.0)
-    panel.position=Vector2(8,66) if narrow else Vector2((size.x-width)*0.5,54);panel.size=Vector2(width,height)
+    var width:=maxf(240.0,size.x-16.0) if narrow else minf(760.0,size.x-36.0)
+    var top_margin:=8.0 if narrow else 54.0
+    var bottom_margin:=8.0 if narrow else 36.0
+    var height:=maxf(240.0,size.y-top_margin-bottom_margin) if narrow else minf(720.0,size.y-90.0)
+    panel.position=Vector2(8,top_margin) if narrow else Vector2((size.x-width)*0.5,top_margin);panel.size=Vector2(width,height)
     title.position=Vector2(14,10);title.size=Vector2(width-125,30)
     var close:=panel.get_node("CloseButton") as Button;close.position=Vector2(width-94,7);close.size=Vector2(84,46)
     summary.position=Vector2(14,44);summary.size=Vector2(width-28,24)
