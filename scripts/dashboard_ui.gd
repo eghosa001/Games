@@ -104,6 +104,8 @@ func _label(text: String, font_size: int, color: Color) -> Label:
     var label := Label.new()
     label.text = text
     label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    label.clip_text = true
+    label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
     label.add_theme_font_size_override("font_size", font_size)
     label.add_theme_color_override("font_color", color)
     panel.add_child(label)
@@ -124,12 +126,15 @@ func _layout() -> void:
     var viewport: Vector2 = get_viewport().size
     var mobile := viewport.x < 720.0
     var margin := 12.0 if viewport.x < 390.0 else 18.0
-    var width := minf(940.0, maxf(280.0, viewport.x - margin * 2.0))
-    var height := minf(650.0, maxf(430.0, viewport.y - 88.0))
+    var width := minf(940.0, maxf(240.0, viewport.x - margin * 2.0))
+    width = minf(width, maxf(1.0, viewport.x - margin * 2.0))
+    var height := minf(650.0, maxf(340.0, viewport.y - 24.0))
+    height = minf(height, maxf(1.0, viewport.y - 24.0))
     dimmer.position = Vector2.ZERO
     dimmer.size = viewport
     panel.position = Vector2((viewport.x - width) * 0.5, maxf(42.0, (viewport.y - height) * 0.5))
     panel.size = Vector2(width, minf(height, viewport.y - panel.position.y - 12.0))
+    panel.clip_contents = true
 
     var pad := 16.0 if mobile else 22.0
     title_label.position = Vector2(pad, 15)
