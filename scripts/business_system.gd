@@ -63,12 +63,12 @@ func get_business_purpose(purpose) -> Dictionary:
         if str(choice.get("id", "")) == requested:
             return choice.duplicate(true)
     # Backward compatibility for saves made before property-specific business identities.
-    var legacy_industry := {
+    var legacy_industry: String = str({
         "furniture_factory":"furniture",
         "construction_materials_factory":"construction_materials",
         "consumer_electronics_factory":"consumer_electronics"
-    }.get(requested, "")
-    if not str(legacy_industry).is_empty():
+    }.get(requested, ""))
+    if not legacy_industry.is_empty():
         for choice in choices:
             if str(choice.get("industry_id", "")) == str(legacy_industry):
                 return choice.duplicate(true)
@@ -191,31 +191,31 @@ func _production_failure(message: String) -> Dictionary:
 func production_quote() -> Dictionary:
     if not bool(state_adapter.get_value("businesses", "business_open", false)):
         return {"ok": false, "reason": "business_closed", "message": "Open a business first."}
-    var industry_id := str(state_adapter.get_value("businesses", "industry_id", "furniture"))
+    var industry_id: String = str(state_adapter.get_value("businesses", "industry_id", "furniture"))
     if industry_id.is_empty(): industry_id = "furniture"
-    var config := _industry_production_config(industry_id)
+    var config: Dictionary = _industry_production_config(industry_id)
     if config.is_empty():
         return {"ok": false, "reason": "unknown_industry", "message": "Unknown industry."}
-    var employee_count := 3
-    var employee_factor := 1.0
-    var morale_multiplier := 1.0
+    var employee_count: int = 3
+    var employee_factor: float = 1.0
+    var morale_multiplier: float = 1.0
     if employee_system != null:
         employee_count = employee_system.get_active_employee_count()
         employee_factor = employee_system.get_productivity_multiplier("factory_001")
         morale_multiplier = employee_system.get_morale_multiplier()
-    var capacity := int(state_adapter.get_value("businesses", "capacity_level", 1))
-    var business_efficiency := clamp(0.85 + float(capacity) * 0.10, 0.85, 1.50)
-    var base_output := max(1, employee_count + capacity - 1)
-    var output_factor := employee_factor * business_efficiency * _technology_multiplier() * _property_condition_multiplier() * _property_business_fit_multiplier(industry_id) * morale_multiplier * state_adapter.executive_bonus("production") * state_adapter.infra_modifier("production") * _world_modifier("production")
-    var cycles := max(1, int(floor(float(base_output) * output_factor)))
+    var capacity: int = int(state_adapter.get_value("businesses", "capacity_level", 1))
+    var business_efficiency: float = clampf(0.85 + float(capacity) * 0.10, 0.85, 1.50)
+    var base_output: int = maxi(1, employee_count + capacity - 1)
+    var output_factor: float = employee_factor * business_efficiency * _technology_multiplier() * _property_condition_multiplier() * _property_business_fit_multiplier(industry_id) * morale_multiplier * state_adapter.executive_bonus("production") * state_adapter.infra_modifier("production") * _world_modifier("production")
+    var cycles: int = maxi(1, int(floor(float(base_output) * output_factor)))
     var inputs: Dictionary = config.get("inputs", {}).duplicate(true)
-    var metal_needed := float(inputs.get("metal", 0.0)) * float(cycles)
-    var metal_make := 0
+    var metal_needed: float = float(inputs.get("metal", 0.0)) * float(cycles)
+    var metal_make: int = 0
     if metal_needed > supply_chain.stock("metal"):
         metal_make = int(ceil(metal_needed - supply_chain.stock("metal")))
     var needed: Dictionary = {}
     for resource in inputs:
-        var input_name := str(resource)
+        var input_name: String = str(resource)
         if input_name == "metal": continue
         needed[input_name] = float(inputs[resource]) * float(cycles)
     if metal_make > 0:
@@ -223,24 +223,24 @@ func production_quote() -> Dictionary:
         needed["energy"] = float(needed.get("energy", 0.0)) + float(metal_make) * 0.5
     var orders: Array = []
     for input_name in needed:
-        var shortfall := float(needed[input_name]) - supply_chain.stock(str(input_name))
+        var shortfall: float = float(needed[input_name]) - supply_chain.stock(str(input_name))
         if shortfall > 0.0:
             orders.append({"resource": str(input_name), "amount": shortfall})
-    var operating_cost := int(config.get("operating_cost", 0))
+    var operating_cost: int = int(config.get("operating_cost", 0))
     operating_cost = int(round(float(operating_cost) * state_adapter.executive_bonus("operating_cost")))
     operating_cost = int(round(float(operating_cost) / max(1.0, state_adapter.infra_modifier("energy"))))
-    var delivery_cost := 0
-    var supply_ok := true
-    var supply_reason := ""
+    var delivery_cost: int = 0
+    var supply_ok: bool = true
+    var supply_reason: String = ""
     if not orders.is_empty():
-        var transport_level := int(state_adapter.get_value("supply_chain", "transport_level", 1))
+        var transport_level: int = int(state_adapter.get_value("supply_chain", "transport_level", 1))
         var delivery_quote: Dictionary = supply_chain.quote_procure_bundle(orders, transport_level) if supply_chain.has_method("quote_procure_bundle") else {"ok": false, "cost": 0}
         supply_ok = bool(delivery_quote.get("ok", false))
         supply_reason = str(delivery_quote.get("reason", ""))
         delivery_cost = int(delivery_quote.get("cost", 0))
-    var total_cost := operating_cost + delivery_cost
-    var cash := int(state_adapter.get_value("economy", "cash", 35000))
-    var output := max(1, cycles - int(floor(float(cycles) * 0.08)))
+    var total_cost: int = operating_cost + delivery_cost
+    var cash: int = int(state_adapter.get_value("economy", "cash", 35000))
+    var output: int = maxi(1, cycles - int(floor(float(cycles) * 0.08)))
     return {
         "ok": supply_ok,
         "reason": supply_reason,
