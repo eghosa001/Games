@@ -1212,20 +1212,26 @@ func _build_mobile_world() -> void:
     _label(region, "Body", _region_detail_text(), Rect2(16, 46, inner_w - 32, 76), 11, "muted", 400)
 
     var opp_y := detail_y + 160.0
-    var opp = _panel(mobile_content, "WorldOpportunities", Rect2(18, opp_y, inner_w, 176), "surface", "border", 18)
+    var opp_h := 216.0
+    var opp = _panel(mobile_content, "WorldOpportunities", Rect2(18, opp_y, inner_w, opp_h), "surface", "border", 18)
     _label(opp, "Head", "NETWORK SIGNALS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
+    var active_opportunity := _has_active_world_opportunity()
     var items = [
         ["CUSTOMER DEMAND", "%d units remain" % _demand_remaining(), "ACTIVE" if _demand_remaining() > 0 else "SATISFIED", "success" if _demand_remaining() > 0 else "muted"],
         ["EXPANSION ASSETS", "%d unlocked" % _unlocked_asset_count(), "READY" if _unlocked_asset_count() > _owned_asset_count() else "MANAGED", "gold"],
-        ["RIVAL NETWORK", "%d tracked" % _rival_count(), "MONITOR" if _rival_count() > 0 else "QUIET", "warning" if _rival_count() > 0 else "muted"]
+        ["RIVAL NETWORK", "%d tracked" % _rival_count(), "MONITOR" if _rival_count() > 0 else "QUIET", "warning" if _rival_count() > 0 else "muted"],
+        ["WORLD EVENT", _world_opportunity_title(), "DECIDE" if active_opportunity else "CLEAR", "warning" if active_opportunity else "muted"]
     ]
     for i in range(items.size()):
         var y = 46.0 + i * 40.0
         _label(opp, "Item%d" % i, items[i][0], Rect2(16, y, 118, 14), 10, "text", 600)
-        _label(opp, "Meta%d" % i, items[i][1], Rect2(146, y, 92, 14), 9, "muted", 400)
+        _label(opp, "Meta%d" % i, items[i][1], Rect2(140, y, inner_w - 246, 14), 9, "muted", 400)
         _label(opp, "State%d" % i, items[i][2], Rect2(inner_w - 106, y, 86, 14), 9, items[i][3], 600, HORIZONTAL_ALIGNMENT_RIGHT)
 
-    var cta_y := opp_y + 194.0
+    var cta_y := opp_y + opp_h + 18.0
+    if active_opportunity:
+        _frame_button(mobile_content, "OpportunityCTA", "REVIEW WORLD OPPORTUNITY", Rect2(18, cta_y, inner_w, 48), _open_screen.bind("WorldOpportunitiesPanel"), false, true, 10)
+        cta_y += 58.0
     _frame_button(mobile_content, "WorldCTA", "MANAGE SELECTED REGION", Rect2(18, cta_y, inner_w, 54), _open_screen.bind("RegionsPanel"), false, true, 10)
     if mobile_content != null:
         mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, cta_y + 82.0)
@@ -2107,6 +2113,19 @@ func _selected_region() -> Dictionary:
     var catalog: Array = _region_catalog()
     var index: int = clampi(_selected_region_index(), 0, maxi(0, catalog.size() - 1))
     return catalog[index] if not catalog.is_empty() and catalog[index] is Dictionary else {}
+
+func _world_missions():
+    return parent.get_node_or_null("World/WorldMissions") if parent != null else null
+
+func _has_active_world_opportunity() -> bool:
+    var missions = _world_missions()
+    return missions != null and "active" in missions and bool(missions.active)
+
+func _world_opportunity_title() -> String:
+    var missions = _world_missions()
+    if missions != null and "active" in missions and bool(missions.active):
+        return _compact_card_text(str(missions.title), 34)
+    return "No active opportunity"
 
 func _region_presence_count() -> int:
     var c = _region_controller()
