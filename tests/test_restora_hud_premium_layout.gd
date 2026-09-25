@@ -51,6 +51,8 @@ func _run()->void:
     check("property catalog shows nine rows",content.find_children("BuildingRow*","Panel",true,false).size()==9)
     check("property view is status-only",content.find_child("BuildingStageArt",true,false)==null and content.find_child("PropertyVisual",true,false)==null)
 
+    hud.open_figma_view("live")
+    await process_frame
     root.size=Vector2i(1280,720)
     await process_frame
     hud._layout_responsive()
