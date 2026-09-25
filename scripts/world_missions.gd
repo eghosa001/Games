@@ -27,12 +27,8 @@ func _ready() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
     if parent != null:
         last_processed_day = int(parent.day)
-    queue_redraw()
 
-var _accum := 0.0
-
-func _process(delta: float) -> void:
-    _accum += delta
+func _process(_delta: float) -> void:
     if parent == null: return
 
     # Cooldowns and expiry are gameplay-day based. They must not advance once
@@ -42,10 +38,6 @@ func _process(delta: float) -> void:
     if current_day != last_processed_day:
         last_processed_day = current_day
         _process_day(current_day)
-
-    if _accum >= 0.16:
-        _accum = 0.0
-        queue_redraw()
 
 func _process_day(current_day: int) -> void:
     if active and current_day > int(expires_day):
