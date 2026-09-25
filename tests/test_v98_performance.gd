@@ -28,11 +28,13 @@ func run() -> void:
     await process_frame
     await process_frame
     var hud: Node = game.get_node_or_null("UI/MainHUD")
+    var persistent_nav = hud.get("bottom_nav")
     var start := Time.get_ticks_msec()
     for i in range(20):
         hud._set_tab(i % 4)
     var grid_ms := float(Time.get_ticks_msec() - start) / 20.0
-    check(grid_ms < 250.0, "Grid rebuild averages under 250 ms headless budget")
+    check(hud.get("bottom_nav") == persistent_nav, "Mobile navigation shell stays mounted across tab changes")
+    check(grid_ms < 120.0, "Mobile tab change averages under 120 ms headless budget")
     var manager = root.get_node_or_null("RenewUIScreenManager")
     var panels := ["DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel"]
     start = Time.get_ticks_msec()
