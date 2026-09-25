@@ -106,27 +106,27 @@ func quote_procure_bundle(orders: Array, transport_level: int = 1) -> Dictionary
     var capacity: float = _transport_capacity(transport_level)
     if total_amount > capacity:
         return {"ok": false, "reason": "transport_capacity", "capacity": capacity, "requested": total_amount, "cost": 0, "quotes": []}
-    var total_cost := 0
+    var total_cost: int = 0
     var quotes: Array = []
     for order in orders:
-        var resource := str(order.get("resource", ""))
-        var amount := float(order.get("amount", 0.0))
+        var resource: String = str(order.get("resource", ""))
+        var amount: float = float(order.get("amount", 0.0))
         if economy == null or not economy.resources.has(resource):
             return {"ok": false, "reason": "invalid_resource", "resource": resource, "cost": 0, "quotes": []}
         if amount <= 0.0:
             return {"ok": false, "reason": "invalid_amount", "resource": resource, "cost": 0, "quotes": []}
         var effects = _railway_effects()
-        var delivery_multiplier := float(effects.get("resource_delivery_multiplier", 1.0))
-        var delivered_amount := amount * delivery_multiplier
-        var available_room := _effective_warehouse_limit() - stock(resource)
+        var delivery_multiplier: float = float(effects.get("resource_delivery_multiplier", 1.0))
+        var delivered_amount: float = amount * delivery_multiplier
+        var available_room: float = _effective_warehouse_limit() - stock(resource)
         if delivered_amount > available_room + 0.000001:
             return {"ok": false, "reason": "warehouse_capacity", "resource": resource, "capacity": _effective_warehouse_limit(), "available": max(0.0, available_room), "requested": delivered_amount, "cost": 0, "quotes": []}
-        var market_stock := float(economy.resources[resource].get("stock", 0.0))
+        var market_stock: float = float(economy.resources[resource].get("stock", 0.0))
         if market_stock < amount:
             return {"ok": false, "reason": "market_stock", "resource": resource, "available": market_stock, "requested": amount, "cost": 0, "quotes": []}
-        var material_cost := int(round(economy.current_price(resource) * amount))
-        var freight := _freight_cost(resource, amount, transport_level)
-        var line_cost := material_cost + freight
+        var material_cost: int = int(round(economy.current_price(resource) * amount))
+        var freight: int = _freight_cost(resource, amount, transport_level)
+        var line_cost: int = material_cost + freight
         total_cost += line_cost
         quotes.append({"resource": resource, "amount": amount, "delivered_amount": delivered_amount, "material_cost": material_cost, "freight": freight, "cost": line_cost})
     return {"ok": true, "cost": total_cost, "requested": total_amount, "capacity": capacity, "quotes": quotes}
