@@ -1491,7 +1491,7 @@ func _refresh() -> void:
         "live":
             _set_ref_text("right_status", "DAY %d" % _day())
             _set_ref_text("hero_title", _objective_title())
-            _set_ref_text("hero_goal", _stage_meta())
+            _set_ref_text("hero_goal", _objective_detail())
             _set_ref_text("cash_value", _money(_cash()))
             _set_ref_text("worth_value", _money(_worth()))
             _set_ref_text("rep_value", str(_rep()))
@@ -1747,10 +1747,11 @@ func _production_rate_text() -> String:
 
 func _commercial_text() -> String:
     var price = int(parent.player_price) if parent != null and "player_price" in parent else int(_state_value("business","price",42))
-    return "PRICE  %s  •  STAFF  %d  •  CAPACITY L%d\nMARKETING  %s\nCONTRACTS  %d live  •  %s" % [
-        _money(price), _employees(), maxi(1, int(_state_value("businesses","capacity_level",1))),
-        "Local campaign active" if int(_state_value("business","marketing_level",0)) > 0 else "Ready",
-        _active_contracts(), "renewal due" if _active_contracts() > 0 else "open market"
+    return "PRICE %s  •  DEMAND %d LEFT\nSTOCK %d  •  STAFF %d  •  CAPACITY L%d\nMARKETING %s  •  CONTRACTS %d" % [
+        _money(price), _demand_remaining(), _goods(), _employees(),
+        maxi(1, int(_state_value("businesses","capacity_level",1))),
+        "ACTIVE" if int(_state_value("businesses","marketing_level",0)) > 0 else "READY",
+        _active_contracts()
     ]
 
 func _open_business_choices() -> void:
@@ -1795,20 +1796,36 @@ func _open_commercial_actions() -> void:
     var panel = _panel(mobile_content, "CommercialActionModal", Rect2(18, 318, w - 36, 250), "selected", "plum", 18)
     panel.mouse_filter = Control.MOUSE_FILTER_STOP
     _label(panel, "Head", "COMMERCIAL ACTIONS", Rect2(16, 14, w - 68, 18), 12, "gold", 600)
-    _label(panel, "Help", "Move finished goods, fulfill live contracts, or open customer segments.", Rect2(16, 40, w - 68, 34), 10, "muted", 400)
-    _frame_button(panel, "SellGoods", "SELL GOODS", Rect2(16, 86, w - 68, 42), _sell_goods, false, true, 10)
-    _frame_button(panel, "DeliverContract", "DELIVER CONTRACT", Rect2(16, 138, w - 68, 42), _deliver_contract, false, false, 10)
+    _label(panel, "Help", "Price %s • %d goods • %d customer demand left today." % [_money(int(_state_value("businesses","player_price",110))), _goods(), _demand_remaining()], Rect2(16, 40, w - 68, 34), 10, "muted", 400)
+    var can_sell := _goods() > 0 and _demand_remaining() > 0
+    var sell_text := "SELL GOODS" if can_sell else ("PRODUCE STOCK FIRST" if _goods() <= 0 else "DEMAND FILLED TODAY")
+    var sell_button = _frame_button(panel, "SellGoods", sell_text, Rect2(16, 86, w - 68, 42), _sell_goods, false, can_sell, 10)
+    sell_button.disabled = not can_sell
+    var contract_button = _frame_button(panel, "DeliverContract", "DELIVER CONTRACT", Rect2(16, 138, w - 68, 42), _deliver_contract, false, _active_contracts() > 0, 10)
+    contract_button.disabled = _active_contracts() <= 0
     _frame_button(panel, "CustomerSegments", "CUSTOMER SEGMENTS", Rect2(16, 190, w - 68, 36), _open_screen.bind("CustomerSegmentsUI"), false, false, 9)
     _frame_button(panel, "CloseCommercialActions", "CLOSE", Rect2(w - 106, 14, 54, 28), panel.queue_free, false, false, 8)
 
 func _sell_goods() -> void:
-    if parent != null and parent.has_method("sell_goods"):
-        parent.sell_goods()
+    if parent == null or not parent.has_method("sell_goods"):
+        return
+    var result = parent.sell_goods()
+    if result is Dictionary and not bool(result.get("ok", false)):
+        if status_label != null:
+            status_label.text = str(result.get("message", "Sale unavailable."))
+            status_label.add_theme_color_override("font_color", _color("danger"))
+        return
     _rebuild_current()
 
 func _deliver_contract() -> void:
-    if parent != null and parent.has_method("deliver_contract"):
-        parent.deliver_contract()
+    if parent == null or not parent.has_method("deliver_contract"):
+        return
+    var result = parent.deliver_contract()
+    if result is Dictionary and not bool(result.get("ok", false)):
+        if status_label != null:
+            status_label.text = str(result.get("message", "Contract delivery unavailable."))
+            status_label.add_theme_color_override("font_color", _color("danger"))
+        return
     _rebuild_current()
 
 func _produce() -> void:
