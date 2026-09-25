@@ -822,11 +822,11 @@ func _label(parent_node: Node, name: String, text_value: String, rect: Rect2, si
     l.size = fitted.size
     # System font metrics can exceed Figma's nominal text box height on Linux/Android.
     # Keep the authored x/width intact while giving display text enough vertical room.
+    var readable_size := maxi(size_px, 9)
     if readable_size >= 15:
         l.size.y = maxf(l.size.y, float(readable_size) + 10.0)
     l.mouse_filter = Control.MOUSE_FILTER_IGNORE
     l.add_theme_font_override("font", _font(weight))
-    var readable_size := maxi(size_px, 9)
     l.add_theme_font_size_override("font_size", readable_size)
     l.add_theme_color_override("font_color", _color(role))
     l.horizontal_alignment = align
