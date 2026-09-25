@@ -11,14 +11,9 @@ const MOBILE_NAV_BOTTOM = 16.0
 const DESKTOP_BREAKPOINT = 1000.0
 const TABLET_BREAKPOINT = 700.0
 const ART_ROOT = "res://Assets/Art/"
-const RESTORATION_ART = ART_ROOT + "premium_restoration_site.svg"
 const DISTRICT_ART = ART_ROOT + "premium_industrial_district.svg"
 const ICON_ROOT = ART_ROOT + "Icons/"
 const NAV_ICON_ROOT = ART_ROOT + "NavIcons/"
-const WAREHOUSE_STAGE_ART = ART_ROOT + "building_warehouse_progression.svg"
-const WORKSHOP_STAGE_ART = ART_ROOT + "building_factory_progression.svg"
-const COMMERCIAL_STAGE_ART = ART_ROOT + "building_office_progression.svg"
-const BUILDING_FRAME_SIZE = Vector2(256, 144)
 
 var parent: Node
 var root: Control
@@ -151,22 +146,6 @@ func _building_stage_slot(building: Dictionary = {}) -> int:
 
 func _building_stage_name(building: Dictionary = {}) -> String:
     return ["ABANDONED", "CLEANED", "REPAIRED", "PAINTED", "FURNISHING", "OPERATIONAL"][_building_stage_slot(building)]
-
-func _building_stage_texture(building: Dictionary = {}) -> Texture2D:
-    var item := building if not building.is_empty() else _selected_building()
-    var kind := str(item.get("type", "Warehouse"))
-    var path := WAREHOUSE_STAGE_ART
-    if kind == "Workshop":
-        path = WORKSHOP_STAGE_ART
-    elif kind == "Commercial Building":
-        path = COMMERCIAL_STAGE_ART
-    var source := _asset_texture(path)
-    if source == null:
-        return null
-    var atlas := AtlasTexture.new()
-    atlas.atlas = source
-    atlas.region = Rect2(0, float(_building_stage_slot(item)) * BUILDING_FRAME_SIZE.y, BUILDING_FRAME_SIZE.x, BUILDING_FRAME_SIZE.y)
-    return atlas
 
 func _select_building(index: int) -> void:
     var model = _property_system()
