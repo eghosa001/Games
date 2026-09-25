@@ -29,6 +29,9 @@ func _inside_panel(child: Control, panel: Control) -> bool:
     return panel.get_global_rect().encloses(child.get_global_rect())
 
 func run() -> void:
+    # These checks exercise explicit logical phone sizes. Project-level canvas
+    # scaling is verified by Android/Web export and browser QA separately.
+    root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
     var scene = load("res://scenes/Main.tscn")
     check(scene != null, "Main scene loads for containment audit")
     if scene == null:
