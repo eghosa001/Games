@@ -24,7 +24,7 @@ func _run() -> void:
     check("dark focused-screen scrim is opaque enough", manager.color("scrim").a >= 0.90)
     manager.set_mode("light")
     check("light cool-neutral background is available", manager.color("bg").to_html(false) == "e8eeea")
-    check("light bronze accent is available", manager.color("gold").to_html(false) == "9d6b24")
+    check("light bronze accent is available", manager.color("gold").to_html(false) == "94611f")
     check("light focused-screen scrim is opaque enough", manager.color("scrim").a >= 0.90)
     check("theme resource builds", manager.get_theme_resource() != null)
     manager.free()
