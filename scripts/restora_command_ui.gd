@@ -930,7 +930,7 @@ func _build_mobile_live() -> void:
     progress_fill.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 4))
     progress_bg.add_child(progress_fill)
     _remember("progress_fill", progress_fill)
-    hero_action = _frame_button(hero, "PrimaryNextMove", "OPEN NEXT STEP", Rect2(21, 132, inner_w - 42, 32), _show_view.bind(_objective_view()), false, true, 9)
+    hero_action = _frame_button(hero, "PrimaryNextMove", "OPEN NEXT STEP", Rect2(21, 126, inner_w - 42, 44), _show_view.bind(_objective_view()), false, true, 9)
 
     var gap = 6.0
     var tile_w = (inner_w - gap) * 0.5
@@ -980,17 +980,17 @@ func _build_mobile_operations() -> void:
     if not property_ready:
         _remember("production_rate", _label(prod, "Rate", "RESTORE %s FIRST" % _building_name().to_upper(), Rect2(16, 42, inner_w - 32, 18), 13, "text", 600))
         _label(prod, "Meta", "Business selection unlocks when this property reaches Operational.", Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
-        _frame_button(prod, "ContinueRestoration", "CONTINUE RESTORATION", Rect2(16, 104, inner_w - 32, 34), _show_view.bind("property"), false, true, 9)
+        _frame_button(prod, "ContinueRestoration", "CONTINUE RESTORATION", Rect2(16, 98, inner_w - 32, 44), _show_view.bind("property"), false, true, 9)
     elif business_ready:
         _remember("production_rate", _label(prod, "Rate", _production_rate_text(), Rect2(16, 42, inner_w - 32, 18), 13, "text", 600))
         _label(prod, "Meta", "Customer demand remaining today: %d units." % _demand_remaining(), Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
-        _frame_button(prod, "ProduceBatch", "PRODUCE BATCH", Rect2(16, 104, half, 34), _produce, false, true, 9)
-        _frame_button(prod, "BuyInputs", "BUY INPUTS", Rect2(26 + half, 104, half, 34), _buy_inputs, false, false, 9)
+        _frame_button(prod, "ProduceBatch", "PRODUCE BATCH", Rect2(16, 98, half, 44), _produce, false, true, 9)
+        _frame_button(prod, "BuyInputs", "BUY INPUTS", Rect2(26 + half, 98, half, 44), _buy_inputs, false, false, 9)
     else:
         _remember("production_rate", _label(prod, "Rate", "%s IS READY FOR A BUSINESS" % _building_name().to_upper(), Rect2(16, 42, inner_w - 32, 18), 13, "text", 600))
         _label(prod, "Meta", "Choose what this restored property will operate before buying inputs.", Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
-        _frame_button(prod, "ChooseBusiness", "CHOOSE BUSINESS", Rect2(16, 104, half, 34), _open_business_choices, false, true, 9)
-        _frame_button(prod, "BackProperty", "VIEW PROPERTY", Rect2(26 + half, 104, half, 34), _show_view.bind("property"), false, false, 9)
+        _frame_button(prod, "ChooseBusiness", "CHOOSE BUSINESS", Rect2(16, 98, half, 44), _open_business_choices, false, true, 9)
+        _frame_button(prod, "BackProperty", "VIEW PROPERTY", Rect2(26 + half, 98, half, 44), _show_view.bind("property"), false, false, 9)
 
     var commercial = _panel(mobile_content, "CommercialControls", Rect2(18, 370, inner_w, 176), "surface", "border", 18)
     _label(commercial, "Head", "COMMERCIAL CONTROLS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
@@ -1073,7 +1073,7 @@ func _build_mobile_property() -> void:
     if building_inspected or building_owned:
         detail_text = "Condition %d%% • Capacity %d • %d%% restored" % [int(building.get("condition", 0)), int(building.get("capacity", 0)), progress]
     _label(selected, "Detail", detail_text, Rect2(16, 137, inner_w - 32, 24), 9, "muted", 400)
-    var cta = _frame_button(selected, "PropertyCTA", _property_cta_label(), Rect2(16, 166, inner_w - 32, 36), _property_cta, false, true, 9)
+    var cta = _frame_button(selected, "PropertyCTA", _property_cta_label(), Rect2(16, 158, inner_w - 32, 44), _property_cta, false, true, 9)
     cta.add_theme_stylebox_override("normal", _style(_color("gold"), _color("gold"), 12))
 
     var catalog_y := 314.0
@@ -1293,13 +1293,13 @@ func _build_mobile_guide() -> void:
     _label(restore, "Phase", "1  •  RESTORE", Rect2(16, 14, 160, 16), 11, "gold", 700)
     _label(restore, "Steps", "Inspect the property  →  Acquire it  →  Complete every restoration stage.", Rect2(16, 43, inner_w - 32, 48), 11, "text", 500)
     _label(restore, "Why", "Goal: reach OPERATIONAL so this property can host a business.", Rect2(16, 91, inner_w - 32, 22), 9, "muted", 500)
-    _frame_button(restore, "GoRestore", "GO TO PROPERTY", Rect2(16, 112, inner_w - 32, 28), _show_view.bind("property"), false, true, 9)
+    _frame_button(restore, "GoRestore", "GO TO PROPERTY", Rect2(16, 100, inner_w - 32, 44), _show_view.bind("property"), false, true, 9)
 
     var operate := _panel(mobile_content, "GuideOperate", Rect2(18, 376, inner_w, 166), "surface", "border", 18)
     _label(operate, "Phase", "2  •  OPERATE", Rect2(16, 14, 160, 16), 11, "gold", 700)
     _label(operate, "Steps", "Open a business  →  Buy inputs  →  Produce goods  →  Sell goods.", Rect2(16, 43, inner_w - 32, 48), 11, "text", 500)
     _label(operate, "Why", "Inputs become inventory. Selling inventory creates revenue and profit.", Rect2(16, 91, inner_w - 32, 34), 9, "muted", 500)
-    _frame_button(operate, "GoOperate", "GO TO BUSINESS", Rect2(16, 132, inner_w - 32, 28), _show_view.bind("operate"), false, true, 9)
+    _frame_button(operate, "GoOperate", "GO TO BUSINESS", Rect2(16, 116, inner_w - 32, 44), _show_view.bind("operate"), false, true, 9)
 
     var grow := _panel(mobile_content, "GuideGrow", Rect2(18, 558, inner_w, 136), "surface", "border", 18)
     _label(grow, "Phase", "3  •  GROW", Rect2(16, 14, 160, 16), 11, "gold", 700)
@@ -1310,7 +1310,7 @@ func _build_mobile_guide() -> void:
     _label(next, "Head", "YOUR NEXT MOVE", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 700)
     _label(next, "Title", _objective_title(), Rect2(16, 40, inner_w - 32, 24), 16, "text", 700)
     _label(next, "Detail", _objective_detail(), Rect2(16, 68, inner_w - 32, 34), 9, "muted", 500)
-    _frame_button(next, "GoNext", "TAKE ME THERE", Rect2(16, 102, inner_w - 32, 26), _show_view.bind(_objective_view()), false, true, 9)
+    _frame_button(next, "GoNext", "TAKE ME THERE", Rect2(16, 84, inner_w - 32, 44), _show_view.bind(_objective_view()), false, true, 9)
 
 func _build_mobile_settings() -> void:
     if mobile_content != null:
@@ -1779,7 +1779,7 @@ func _open_business_choices() -> void:
         var choose = _frame_button(card, "Choose", button_text, Rect2(w - 174, 15, 94, 48), _choose_business.bind(i), false, _cash() >= launch_cost, 9)
         choose.disabled = _cash() < launch_cost
         y += 86.0
-    _frame_button(panel, "CancelPurpose", "CANCEL", Rect2(16, 346, w - 68, 30), panel.queue_free, false, false, 9)
+    _frame_button(panel, "CancelPurpose", "CANCEL", Rect2(16, 334, w - 68, 42), panel.queue_free, false, false, 9)
 
 func _choose_business(index: int) -> void:
     if parent != null and parent.has_method("choose_business_purpose"):
