@@ -89,6 +89,20 @@ func _voting_percent(holder_id: String) -> float:
     if ownership == null or not ownership.has_entity(COMPANY_ID): return 0.0
     return ownership.get_voting_percent(COMPANY_ID, holder_id)
 
+func _outside_investor_percent() -> float:
+    _resolve_deps()
+    if ownership == null or not ownership.has_entity(COMPANY_ID):
+        return 0.0
+    var total := 0.0
+    for holder in ownership.holders(COMPANY_ID):
+        if not (holder is Dictionary):
+            continue
+        var holder_id := str(holder.get("holder_id", ""))
+        if holder_id == FOUNDER_ID or holder_id == "treasury":
+            continue
+        total += maxf(0.0, float(holder.get("ownership", 0.0)))
+    return total
+
 func _control_score() -> float:
     if ownership == null or not ownership.has_entity(COMPANY_ID): return 0.0
     var founder_vote: Variant = _voting_percent(FOUNDER_ID)
@@ -202,8 +216,12 @@ func buyback_shares() -> void:
     parent._log("BUYBACK: OwnershipSystem repurchased %d shares for $%s." % [amount, parent._money(cost)])
 
 func pay_dividend() -> void:
+    _resolve_deps()
+    if ownership == null:
+        parent.message = "Corporate ledger is unavailable."
+        return
     _recalculate()
-    if investor_stake <= 0.0:
+    if _outside_investor_percent() <= 0.0:
         parent.message = "No outside investors currently hold equity. Retain earnings for growth."
         return
     var payout: Variant = max(3000, int(round(float(valuation) * 0.025)))
