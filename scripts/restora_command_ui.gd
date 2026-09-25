@@ -965,6 +965,9 @@ func _build_mobile_live() -> void:
     _label(overview, "BusinessMeta", business_state, Rect2(102, 58, inner_w - 117, 14), 9, "muted", 400, HORIZONTAL_ALIGNMENT_RIGHT)
     _label(overview, "Growth", "GROWTH", Rect2(15, 80, 86, 14), 9, "text", 600)
     _label(overview, "GrowthMeta", _progression_status_text(), Rect2(102, 80, inner_w - 117, 14), 9, "muted", 400, HORIZONTAL_ALIGNMENT_RIGHT)
+    _transparent_button(overview, "OpenHomeProperties", Rect2(0, 26, inner_w, 22), _show_view.bind("property"))
+    _transparent_button(overview, "OpenHomeBusiness", Rect2(0, 48, inner_w, 22), _show_view.bind("operate"))
+    _transparent_button(overview, "OpenHomeGrowth", Rect2(0, 70, inner_w, 28), _show_view.bind("more"))
 
     if mobile_content != null:
         mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 780.0)
@@ -1007,12 +1010,12 @@ func _build_mobile_operations() -> void:
         elif not bool(production_quote.get("affordable", false)):
             plan_text = "Next batch needs about %s • cash %s" % [_money(production_cost), _money(_cash())]
         _label(prod, "Meta", plan_text, Rect2(16, 68, inner_w - 32, 30), 10, "muted", 400)
-        var produce_text := "PRODUCE ~%d" % estimated_output if estimated_output > 0 else "PRODUCE"
+        var produce_text := "PRODUCE BATCH • ~%d" % estimated_output if estimated_output > 0 else "PRODUCE BATCH"
         var produce_button = _frame_button(prod, "ProduceBatch", produce_text, Rect2(16, 98, half, 44), _produce, false, can_produce, 9)
         produce_button.disabled = not can_produce
         produce_button.tooltip_text = ("Expected ~%d %s • estimated total cost %s." % [estimated_output, product_name, _money(production_cost)]) if can_produce else plan_text
         var input_cost := int(input_quote.get("cost", 0))
-        var input_text := "INPUTS %s" % _money(input_cost) if input_cost > 0 else "BUY INPUTS"
+        var input_text := "BUY INPUTS • %s" % _money(input_cost) if input_cost > 0 else "BUY INPUTS"
         var input_button = _frame_button(prod, "BuyInputs", input_text, Rect2(26 + half, 98, half, 44), _buy_inputs, false, false, 9)
         input_button.disabled = not can_buy_inputs
         input_button.tooltip_text = ("10 timber + 10 iron + 20 energy • %s delivered." % _money(input_cost)) if can_buy_inputs else str(input_quote.get("reason", "Input purchase unavailable.")).replace("_", " ")
@@ -1861,7 +1864,7 @@ func _open_business_choices() -> void:
         _label(card, "Name", str(purpose.get("name", "Business")), Rect2(12, 9, w - 188, 18), 10, "text", 600)
         _label(card, "Meta", "%s • %s FIT • %s" % [str(purpose.get("product", "goods")).replace("_", " ").capitalize(), str(purpose.get("fit", "GOOD")), _money(launch_cost)], Rect2(12, 31, w - 188, 16), 8, "muted", 400)
         var button_text := "LAUNCH" if _cash() >= launch_cost else "NEED %s" % _money(launch_cost)
-        var choose = _frame_button(card, "Choose", button_text, Rect2(w - 174, 15, 94, 48), _choose_business.bind(i), false, _cash() >= launch_cost, 9)
+        var choose = _frame_button(card, "Purpose%d" % i, button_text, Rect2(w - 174, 15, 94, 48), _choose_business.bind(i), false, _cash() >= launch_cost, 9)
         choose.disabled = _cash() < launch_cost
         y += 86.0
     _frame_button(panel, "CancelPurpose", "CANCEL", Rect2(16, 332, w - 68, 44), panel.queue_free, false, false, 9)
