@@ -1360,7 +1360,7 @@ func _build_mobile_settings() -> void:
     var save = _panel(mobile_content, "SaveData", Rect2(18,694,inner_w,86), "surface", "border", 18)
     _label(save, "Head", "SAVE & DATA", Rect2(16,12,160,14), 10, "gold", 600)
     _label(save, "Auto", "AUTOSAVE", Rect2(16,38,180,16), 11, "text", 600)
-    _label(save, "AutoMeta", "Enabled on mobile pause/close", Rect2(16,58,214,14), 9, "muted", 400)
+    _label(save, "AutoMeta", "Every 30s + app background", Rect2(16,58,214,14), 9, "muted", 400)
     _frame_button(save, "AutosaveState", "ON", Rect2(inner_w-116,30,98,48), _save_company)
 
 func _toggle(parent_node: Node, name: String, pos: Vector2, on: bool, callback: Callable) -> void:
