@@ -137,83 +137,137 @@ layer=30
 script=ExtResource("19")
 layer=35
 [node name="TechnologyPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 layer=59
 script=ExtResource("35")
 [node name="HistoryPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 script=ExtResource("20")
 layer=60
 [node name="NewsPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 script=ExtResource("21")
 layer=70
 [node name="AlliancePanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 script=ExtResource("28")
 layer=55
 [node name="HeadquartersPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 script=ExtResource("29")
 layer=58
 [node name="CollectionPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 script=ExtResource("30")
 layer=61
 [node name="LiveOpsPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 script=ExtResource("31")
 layer=62
 [node name="CustomerSegmentsUI" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 script=ExtResource("32")
 layer=56
 [node name="RenewDiplomacyUI" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 script=ExtResource("46")
 layer=64
 [node name="InfrastructurePanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 layer=64
 script=ExtResource("47")
 [node name="ContractPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 script=ExtResource("33")
 layer=57
 [node name="EmployeePanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 script=ExtResource("36")
 layer=75
 [node name="DashboardPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 script=ExtResource("48")
 layer=63
 [node name="FinancePanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 script=ExtResource("49")
 layer=65
 [node name="PortfolioPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 script=ExtResource("50")
 layer=66
 [node name="CorporationsPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 script=ExtResource("51")
 layer=67
 [node name="RegionsPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 layer=68
 script=ExtResource("53")
 [node name="WorldOpportunitiesPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 layer=69
 script=ExtResource("55")
 [node name="BusinessOperationsPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 layer=71
 script=ExtResource("63")
 [node name="ProductionControlPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 layer=76
 script=ExtResource("56")
 [node name="SupplyChainPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 layer=72
 script=ExtResource("57")
 [node name="EmpireExpansionPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 layer=73
 script=ExtResource("58")
 [node name="EmpireIntelligencePanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 layer=74
 script=ExtResource("59")
 [node name="EmpireProgressionPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 layer=77
 script=ExtResource("65")
 [node name="EmpireIdentityPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 layer=78
 script=ExtResource("66")
 [node name="NotificationsCenterPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 layer=79
 script=ExtResource("67")
 [node name="SaveLoadPanel" type="CanvasLayer" parent="UI"]
+process_mode=4
+visible=false
 layer=91
 script=ExtResource("60")
