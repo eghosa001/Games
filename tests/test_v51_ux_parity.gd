@@ -18,9 +18,9 @@ func run()->void:
     var hud:=game.get_node("UI/MainHUD")
     hud.open_figma_view("more");await process_frame
     var content:=hud.get("mobile_content") as Control
-    var corp:=content.get_node_or_null("MoreTile2") as Control
-    check(corp!=null,"Corporations command is present in MORE")
-    var hit:=corp.find_child("OpenCorporationsPanel",true,false) as Button if corp!=null else null
+    var hit:=content.find_child("OpenCorporationsPanel",true,false) as Button
+    check(hit!=null,"Corporations command is present in MORE")
+    var corp:=hit.get_parent() as Control if hit!=null else null
     check(hit!=null and hit.size.y>=44.0,"Corporations command is touch reachable")
     if hit!=null:hit.pressed.emit();await process_frame
     var manager:=root.get_node_or_null("RenewUIScreenManager")

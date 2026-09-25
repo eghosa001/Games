@@ -32,7 +32,7 @@ func run()->void:
     check(content.get_node_or_null("OwnedAssets")!=null,"Figma Portfolio asset surface exists")
     hud.open_figma_view("more");await process_frame
     content=hud.get("mobile_content")
-    check(content.find_children("MoreTile*","Panel",false,false).size()==9,"MORE owns production management routes")
+    check(content.find_children("MoreTile*","Panel",false,false).size()==10,"MORE owns guide and production management routes")
     if manager!=null:
         manager.show_screen("CorporationsPanel");await process_frame
         check(manager.get_active_screen_name()=="CorporationsPanel","deep corporation screen still opens")

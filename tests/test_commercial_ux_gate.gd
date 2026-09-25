@@ -52,7 +52,7 @@ func _run()->void:
             check("%s content contained" % target,_inside(hud.get("mobile_scroll") as Control,target))
     root.size=Vector2i(390,844);hud.open_figma_view("more");await process_frame
     var content:=hud.get("mobile_content") as Control
-    check("More exposes nine command tiles",content.find_children("MoreTile*","Panel",false,false).size()==9)
+    check("More exposes ten command tiles including How to Play",content.find_children("MoreTile*","Panel",false,false).size()==10)
     check("3D world is not mounted in production",game.get_node_or_null("World3D")==null)
     check("legacy HOME label absent",not _tree_has_text(content,"HOME"))
 

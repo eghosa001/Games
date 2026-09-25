@@ -38,7 +38,7 @@ func _poll_tutorial(overlay: Node) -> void:
     overlay.set("_update_clock", 0.0)
     await process_frame
     overlay.set("_update_clock", 0.0)
-    overlay._process(0.11)
+    overlay._process(0.26)
     await process_frame
 
 func _wait_for_step(overlay: Node, target: int, max_polls := 6) -> void:
@@ -72,7 +72,7 @@ func _run() -> void:
     check(overlay != null, "Tutorial overlay is mounted")
     check(state != null, "Canonical GameState is available")
     var tutorial_overlay_source := FileAccess.get_file_as_string("res://scripts/tutorial_overlay.gd")
-    check(tutorial_overlay_source.contains("const UPDATE_INTERVAL: float = 0.10") and tutorial_overlay_source.contains("_update_clock < UPDATE_INTERVAL"), "Tutorial action polling is actually throttled")
+    check(tutorial_overlay_source.contains("const UPDATE_INTERVAL: float = 0.25") and tutorial_overlay_source.contains("_update_clock < UPDATE_INTERVAL"), "Tutorial action polling is actually throttled")
     if hud == null or overlay == null or state == null:
         game.queue_free()
         await process_frame
@@ -82,7 +82,8 @@ func _run() -> void:
     var status: Dictionary = overlay.tutorial_status()
     check(not bool(status.get("dismissed", true)), "Fresh game keeps tutorial active")
     check(_step(overlay) == 0, "Tutorial begins at Inspect")
-    check(not overlay.panel.visible and overlay.collapsed_button.visible, "Phone tutorial starts as a compact GUIDE chip")
+    check(overlay.panel.visible and not overlay.collapsed_button.visible, "Fresh phone session opens the teaching card automatically")
+    check(overlay.route_button != null and overlay.route_button.visible, "Tutorial provides a direct route to the required screen")
 
     overlay.hide_tutorial()
     await _wait(2)

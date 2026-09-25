@@ -68,6 +68,15 @@ func _run() -> void:
     await process_frame
     check(int(hud.get("active_tab")) == 3 and str(hud.get("active_view")) == "finance", "Finance navigation opens the ledger")
 
+    hud.open_figma_view("more")
+    await process_frame
+    var how_to_play := hud.get("mobile_content").find_child("Openguide", true, false) as Button
+    check(how_to_play != null, "More exposes permanent How to Play guidance")
+    if how_to_play != null:
+        how_to_play.pressed.emit()
+        await process_frame
+        check(str(hud.get("active_view")) == "guide", "How to Play opens the Restore → Operate → Grow guide")
+
     game.queue_free()
     await process_frame
     print("BOTTOM NAV: %d passed, %d failed" % [passed, failed])
