@@ -7,11 +7,13 @@ var regions = Regions.new()
 var state_adapter = DomainSystem.new()
 var message: Variant = ""
 var last_day: Variant = 0
+var _last_reputation: int = -999999
 
 func _ready() -> void:
     parent=get_tree().root.get_node_or_null("Renew")
     add_child(state_adapter)
     regions.update_unlocks(parent.reputation)
+    _last_reputation = int(parent.reputation)
     regions._normalize()
     last_day=parent.day
 
@@ -24,7 +26,10 @@ func _service(service_name:String):
 
 func _process(_delta:float)->void:
     if parent == null: return
-    regions.update_unlocks(parent.reputation)
+    var current_rep := int(parent.reputation)
+    if current_rep != _last_reputation:
+        regions.update_unlocks(current_rep)
+        _last_reputation = current_rep
     if parent.day != last_day:
         for news in regions.daily_update(parent.day): parent._log("REGION: "+news)
         var income:int = apply_branch_income()
