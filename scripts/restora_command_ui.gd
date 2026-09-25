@@ -1196,7 +1196,7 @@ func _build_mobile_world() -> void:
     var inner_w = w - 36.0
 
     var region_rows := maxi(1, regions.size())
-    var catalog_h := 60.0 + float(region_rows) * 46.0
+    var catalog_h := 60.0 + float(region_rows) * 50.0
     var catalog = _panel(mobile_content, "RegionalCatalog", Rect2(18, 82, inner_w, catalog_h), "surface", "border", 20)
     _label(catalog, "Head", "REGIONS & MARKETS", Rect2(14, 14, inner_w - 28, 14), 10, "gold", 700)
     _label(catalog, "Meta", "Select a market to inspect demand, presence and infrastructure.", Rect2(14, 34, inner_w - 28, 16), 9, "muted", 400)
@@ -1206,17 +1206,17 @@ func _build_mobile_world() -> void:
         var selected_index := _selected_region_index()
         for i in range(regions.size()):
             var item: Dictionary = regions[i] if regions[i] is Dictionary else {}
-            var row_y := 56.0 + float(i) * 46.0
+            var row_y := 56.0 + float(i) * 50.0
             var presence := _region_presence(i)
             var required_rep := int(item.get("rep", 0))
             var unlocked := bool(item.get("unlocked", _rep() >= required_rep))
             var selected := i == selected_index
-            var row = _panel(catalog, "RegionRow%d" % i, Rect2(10, row_y, inner_w - 20, 40), "selected" if selected else "surface_2", "plum" if selected else "border", 10)
+            var row = _panel(catalog, "RegionRow%d" % i, Rect2(10, row_y, inner_w - 20, 44), "selected" if selected else "surface_2", "plum" if selected else "border", 10)
             _label(row, "Name", str(item.get("name", "Region")), Rect2(10, 5, inner_w - 142, 14), 9, "text", 600)
             _label(row, "Meta", "Tier %d • Demand %.2fx • REP %d" % [int(item.get("tier", 1)), float(item.get("demand", 1.0)), required_rep], Rect2(10, 22, inner_w - 142, 13), 9, "muted", 400)
             var state_text := "ACTIVE" if presence > 0 else ("AVAILABLE" if unlocked else "LOCKED")
             _label(row, "State", state_text, Rect2(inner_w - 124, 13, 96, 14), 9, "success" if presence > 0 else ("gold" if unlocked else "muted"), 600, HORIZONTAL_ALIGNMENT_RIGHT)
-            var row_button = _transparent_button(row, "SelectRegion%d" % i, Rect2(0, 0, inner_w - 20, 40), _select_region_and_open.bind(i))
+            var row_button = _transparent_button(row, "SelectRegion%d" % i, Rect2(0, 0, inner_w - 20, 44), _select_region_and_open.bind(i))
             row_button.disabled = not unlocked
             if not unlocked:
                 row_button.tooltip_text = "Unlocks at reputation %d" % required_rep
@@ -1864,7 +1864,7 @@ func _open_business_choices() -> void:
         var choose = _frame_button(card, "Choose", button_text, Rect2(w - 174, 15, 94, 48), _choose_business.bind(i), false, _cash() >= launch_cost, 9)
         choose.disabled = _cash() < launch_cost
         y += 86.0
-    _frame_button(panel, "CancelPurpose", "CANCEL", Rect2(16, 334, w - 68, 42), panel.queue_free, false, false, 9)
+    _frame_button(panel, "CancelPurpose", "CANCEL", Rect2(16, 332, w - 68, 44), panel.queue_free, false, false, 9)
 
 func _choose_business(index: int) -> void:
     if parent != null and parent.has_method("choose_business_purpose"):
@@ -1884,12 +1884,12 @@ func _open_commercial_actions() -> void:
     _label(panel, "Help", "Price %s • %d goods • %d customer demand left today." % [_money(int(_state_value("businesses","player_price",110))), _goods(), _demand_remaining()], Rect2(16, 40, w - 68, 34), 10, "muted", 400)
     var can_sell := _goods() > 0 and _demand_remaining() > 0
     var sell_text := "SELL GOODS" if can_sell else ("PRODUCE STOCK FIRST" if _goods() <= 0 else "DEMAND FILLED TODAY")
-    var sell_button = _frame_button(panel, "SellGoods", sell_text, Rect2(16, 86, w - 68, 42), _sell_goods, false, can_sell, 10)
+    var sell_button = _frame_button(panel, "SellGoods", sell_text, Rect2(16, 84, w - 68, 44), _sell_goods, false, can_sell, 10)
     sell_button.disabled = not can_sell
-    var contract_button = _frame_button(panel, "DeliverContract", "DELIVER CONTRACT", Rect2(16, 138, w - 68, 42), _deliver_contract, false, _active_contracts() > 0, 10)
+    var contract_button = _frame_button(panel, "DeliverContract", "DELIVER CONTRACT", Rect2(16, 136, w - 68, 44), _deliver_contract, false, _active_contracts() > 0, 10)
     contract_button.disabled = _active_contracts() <= 0
-    _frame_button(panel, "CustomerSegments", "CUSTOMER SEGMENTS", Rect2(16, 190, w - 68, 36), _open_screen.bind("CustomerSegmentsUI"), false, false, 9)
-    _frame_button(panel, "CloseCommercialActions", "CLOSE", Rect2(w - 106, 14, 54, 28), panel.queue_free, false, false, 8)
+    _frame_button(panel, "CustomerSegments", "CUSTOMER SEGMENTS", Rect2(16, 188, w - 68, 44), _open_screen.bind("CustomerSegmentsUI"), false, false, 9)
+    _frame_button(panel, "CloseCommercialActions", "CLOSE", Rect2(w - 112, 10, 60, 44), panel.queue_free, false, false, 8)
 
 func _sell_goods() -> void:
     if parent == null or not parent.has_method("sell_goods"):
