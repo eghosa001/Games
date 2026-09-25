@@ -490,6 +490,7 @@ func _build_mobile_view() -> void:
         "portfolio": _build_mobile_portfolio()
         "intelligence": _build_mobile_intelligence()
         "settings": _build_mobile_settings()
+        "guide": _build_mobile_guide()
         "rewards": _build_mobile_rewards()
         "property": _build_mobile_property()
         _: _build_mobile_live()
@@ -1052,6 +1053,7 @@ func _build_mobile_more() -> void:
     _label(company, "Health", "%d ACTIVE CONTRACT%s" % [_active_contracts(), "" if _active_contracts() == 1 else "S"], Rect2(16,68,180,14), 9, "success", 600)
 
     var tiles = [
+        ["HOW TO PLAY","Restore → Operate → Grow","guide",""],
         ["REGIONS","Markets and expansion","world","regions"],
         ["INTELLIGENCE","Company and market signals","intelligence",""],
         ["CORPORATIONS","Rivals and diplomacy","CorporationsPanel","competitors"],
@@ -1077,13 +1079,49 @@ func _build_mobile_more() -> void:
         _label(p, "Body", body_text, Rect2(14,38,col_w - 28,32), 9, "muted", 400)
         var target = str(tiles[i][2])
         var open_button: Button
-        if ["world","intelligence","settings"].has(target):
+        if ["world","intelligence","settings","guide"].has(target):
             open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,82), _show_view.bind(target))
         else:
             open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,82), _open_screen.bind(target))
         open_button.disabled = locked
         if locked:
             open_button.tooltip_text = body_text
+
+func _build_mobile_guide() -> void:
+    if mobile_content != null:
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 860.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, 860.0)
+
+    var w := _content_width()
+    var inner_w := w - 36.0
+    _header("HOW RESTORA WORKS", "ONE LOOP • THREE PHASES")
+
+    var intro := _panel(mobile_content, "GuideIntro", Rect2(18, 82, inner_w, 116), "selected", "plum", 18)
+    _label(intro, "Head", "THE CORE IDEA", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
+    _label(intro, "Body", "Take an abandoned property, restore it, turn it into a working business, earn from it, then reinvest to grow.", Rect2(16, 42, inner_w - 32, 58), 12, "text", 500)
+
+    var restore := _panel(mobile_content, "GuideRestore", Rect2(18, 214, inner_w, 146), "surface", "border", 18)
+    _label(restore, "Phase", "1  •  RESTORE", Rect2(16, 14, 160, 16), 11, "gold", 700)
+    _label(restore, "Steps", "Inspect the property  →  Acquire it  →  Complete every restoration stage.", Rect2(16, 43, inner_w - 32, 48), 11, "text", 500)
+    _label(restore, "Why", "Goal: reach OPERATIONAL so the building can host a business.", Rect2(16, 91, inner_w - 32, 22), 9, "muted", 500)
+    _frame_button(restore, "GoRestore", "GO TO PROPERTY", Rect2(16, 112, inner_w - 32, 28), _show_view.bind("property"), false, true, 9)
+
+    var operate := _panel(mobile_content, "GuideOperate", Rect2(18, 376, inner_w, 166), "surface", "border", 18)
+    _label(operate, "Phase", "2  •  OPERATE", Rect2(16, 14, 160, 16), 11, "gold", 700)
+    _label(operate, "Steps", "Open a business  →  Buy inputs  →  Produce goods  →  Sell goods.", Rect2(16, 43, inner_w - 32, 48), 11, "text", 500)
+    _label(operate, "Why", "Inputs become inventory. Selling inventory creates revenue and profit.", Rect2(16, 91, inner_w - 32, 34), 9, "muted", 500)
+    _frame_button(operate, "GoOperate", "GO TO BUSINESS", Rect2(16, 132, inner_w - 32, 28), _show_view.bind("operate"), false, true, 9)
+
+    var grow := _panel(mobile_content, "GuideGrow", Rect2(18, 558, inner_w, 136), "surface", "border", 18)
+    _label(grow, "Phase", "3  •  GROW", Rect2(16, 14, 160, 16), 11, "gold", 700)
+    _label(grow, "Steps", "Reinvest profit into capacity, better assets, contracts, regions and competitive strength.", Rect2(16, 43, inner_w - 32, 46), 11, "text", 500)
+    _label(grow, "Why", "Advanced systems support this phase; they are not the starting point.", Rect2(16, 91, inner_w - 32, 24), 9, "muted", 500)
+
+    var next := _panel(mobile_content, "GuideNextMove", Rect2(18, 710, inner_w, 132), "surface", "gold", 18)
+    _label(next, "Head", "YOUR NEXT MOVE", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 700)
+    _label(next, "Title", _objective_title(), Rect2(16, 40, inner_w - 32, 24), 16, "text", 700)
+    _label(next, "Detail", _objective_detail(), Rect2(16, 68, inner_w - 32, 34), 9, "muted", 500)
+    _frame_button(next, "GoNext", "TAKE ME THERE", Rect2(16, 102, inner_w - 32, 26), _show_view.bind(_objective_view()), false, true, 9)
 
 func _build_mobile_settings() -> void:
     if mobile_content != null:
