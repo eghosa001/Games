@@ -12,7 +12,6 @@ func _ready()->void:
     parent=get_tree().root.get_node_or_null("Renew")
     add_child(state_adapter)
     last_day=parent.day
-    queue_redraw()
 
 func _process(_delta:float)->void:
     if parent==null: return
@@ -39,7 +38,6 @@ func _process(_delta:float)->void:
             elif int(result["businesses"])>0:
                 parent._log("BRANCHES: %d regional businesses generated $%s."%[result["businesses"],_money(profit)])
         last_day=parent.day
-    queue_redraw()
 
 func _input(event:InputEvent)->void:
     if not event is InputEventKey or not event.pressed or event.echo or not event.ctrl_pressed: return
