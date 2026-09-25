@@ -363,9 +363,10 @@ func _animate_view_in() -> void:
     _view_transition.set_pause_mode(Tween.TWEEN_PAUSE_PROCESS)
     _view_transition.set_trans(Tween.TRANS_QUAD)
     _view_transition.set_ease(Tween.EASE_OUT)
-    _view_transition.tween_property(root, "modulate", Color.WHITE, 0.14)
+    _view_transition.tween_property(root, "modulate", Color.WHITE, 0.08)
 
 func _show_view(view_name: String) -> void:
+    var previous_view := active_view
     active_view = view_name
     match view_name:
         "live":
@@ -378,16 +379,66 @@ func _show_view(view_name: String) -> void:
             active_tab = 3
         _:
             active_tab = 4
+
+    # On phones the shell/navigation is persistent. Rebuild only the changing
+    # page body instead of destroying and recreating the entire UI tree.
+    if _layout_kind == "mobile" and mobile_content != null and bottom_nav != null:
+        if previous_view == view_name and mobile_content.get_child_count() > 0:
+            _refresh_bottom_nav()
+            return
+        _rebuild_mobile_content()
+        return
+
     _rebuild_current()
 
 func open_figma_view(view_name: String) -> void:
     _show_view(view_name)
 
 func _set_tab(index: int) -> void:
-    active_tab = clampi(index, 0, 4)
+    var target_index := clampi(index, 0, 4)
     var views = ["live", "operate", "property", "finance", "more"]
-    _show_view(views[active_tab])
+    _show_view(views[target_index])
 
+func _rebuild_mobile_content() -> void:
+    if mobile_content == null:
+        _rebuild_current()
+        return
+    refs.clear()
+    feedback_label = null
+    status_label = null
+    hero_goal = null
+    hero_action = null
+    for child in mobile_content.get_children():
+        child.free()
+
+    var content_w := mobile_content.custom_minimum_size.x
+    mobile_content.custom_minimum_size = Vector2(content_w, MOBILE_CONTENT_H)
+    mobile_content.size = Vector2(content_w, MOBILE_CONTENT_H)
+    _build_mobile_view()
+    if mobile_scroll != null:
+        mobile_scroll.scroll_vertical = 0
+    _refresh_bottom_nav()
+    _last_progress_level = _company_level()
+    _last_signature = _state_signature()
+    _refresh()
+
+func _refresh_bottom_nav() -> void:
+    for i in range(mode_buttons.size()):
+        var button := mode_buttons[i]
+        if button == null or not is_instance_valid(button):
+            continue
+        var active := i == active_tab
+        button.add_theme_stylebox_override("normal", _nav_style(active))
+        button.add_theme_stylebox_override("hover", _nav_style(active, true))
+        button.add_theme_stylebox_override("pressed", _nav_style(true))
+        button.add_theme_stylebox_override("focus", _nav_style(active, true))
+        var label := button.get_node_or_null("NavLabel") as Label
+        if label != null:
+            label.add_theme_color_override("font_color", _color("text") if active else _color("muted"))
+        var icon := button.get_node_or_null("NavIcon") as TextureRect
+        if icon != null:
+            var tint := _color("gold") if active else _color("muted")
+            icon.modulate = Color(tint.r, tint.g, tint.b, icon.modulate.a)
 
 func _build_mobile_host() -> void:
     var size = _layout_size()
@@ -683,7 +734,7 @@ func _build_mobile_live() -> void:
     progress_fill.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 6))
     progress_bg.add_child(progress_fill)
     _remember("progress_fill", progress_fill)
-    hero_action = _transparent_button(hero, "PrimaryNextMove", Rect2(0, 0, inner_w, 154), _show_view.bind("property"))
+    hero_action = _transparent_button(hero, "PrimaryNextMove", Rect2(0, 0, inner_w, 154), _show_view.bind(_objective_view()))
 
     var gap = 6.0
     var tile_w = (inner_w - gap) * 0.5
@@ -693,9 +744,9 @@ func _build_mobile_live() -> void:
     _stat_tile(mobile_content, "goods", 18 + tile_w + gap, 370, tile_w, "GOODS", str(_goods()), "READY" if _goods() > 0 else "EMPTY")
 
     var signals = _panel(mobile_content, "Signals", Rect2(18, 494, inner_w, 192), "surface", "border", 18)
-    _label(signals, "Head", "TODAY'S SIGNALS", Rect2(15, 15, inner_w - 30, 14), 10, "gold", 600)
-    _remember("signals", _label(signals, "SignalBody", _signal_lines(), Rect2(15, 45, inner_w - 30, 92), 12, "text", 400))
-    _remember("signal_footer", _label(signals, "Footer", _signal_footer(), Rect2(15, 153, inner_w - 30, 18), 9, "success", 600))
+    _label(signals, "Head", "THE RESTORA LOOP", Rect2(15, 15, inner_w - 30, 14), 10, "gold", 600)
+    _remember("signals", _label(signals, "SignalBody", _core_loop_lines(), Rect2(15, 43, inner_w - 30, 104), 12, "text", 600))
+    _remember("signal_footer", _label(signals, "Footer", _core_loop_status(), Rect2(15, 153, inner_w - 30, 24), 9, "success", 600))
 
 func _build_mobile_operations() -> void:
     var property_ready := _stage() == "Operational"
@@ -1212,8 +1263,8 @@ func _refresh() -> void:
             _set_ref_text("worth_value", _money(_worth()))
             _set_ref_text("rep_value", str(_rep()))
             _set_ref_text("goods_value", str(_goods()))
-            _set_ref_text("signals", _signal_lines())
-            _set_ref_text("signal_footer", _signal_footer())
+            _set_ref_text("signals", _core_loop_lines())
+            _set_ref_text("signal_footer", _core_loop_status())
             _set_ref_text("desktop_property_meta", "%s • %s\n%d%% restored • %s market value" % [_building_name(), _building_type(), _building_progress(), _money(int(_selected_building().get("value", 0)))])
             _set_ref_text("desktop_objective_title", _objective_title())
             _set_ref_text("desktop_objective_body", _objective_detail())
@@ -1348,23 +1399,61 @@ func _acquisition_cost() -> int:
     return 5000
 
 func _objective_title() -> String:
-    if not _inspected(): return "Inspect " + _building_name()
-    if not _owned(): return "Acquire " + _building_name()
-    if _stage() != "Operational": return "Restore " + _building_name()
-    if not _business_open(): return "Open the first business"
-    if _goods() <= 0: return "Produce the next batch"
-    return "Grow the enterprise"
+    if not _inspected():
+        return "Inspect " + _building_name()
+    if not _owned():
+        return "Acquire " + _building_name()
+    if _stage() != "Operational":
+        return "Restore " + _building_name()
+    if not _business_open():
+        return "Open your first business"
+    if _inputs() <= 0 and _goods() <= 0:
+        return "Buy production inputs"
+    if _goods() <= 0:
+        return "Produce your first batch"
+    if _last_sales() <= 0:
+        return "Sell your first goods"
+    return "Reinvest and grow"
 
 func _objective_detail() -> String:
     if not _inspected():
-        return "Survey the selected building before committing capital."
+        return "Start with the property: inspect it to understand condition and restoration needs."
     if not _owned():
-        return "Acquire the selected property for %s while preserving operating liquidity." % _money(_acquisition_cost())
+        return "Acquire the inspected property for %s so restoration can begin." % _money(_acquisition_cost())
     if _stage() != "Operational":
-        return "Complete the next restoration stage while protecting available cash."
+        return "Finish the restoration stages. An Operational property can host a business."
     if not _business_open():
-        return "Open the restored asset and establish its first operating company."
-    return "Protect liquidity while expanding operations, contracts and regional presence."
+        return "Move to Business and choose what the restored property will operate as."
+    if _inputs() <= 0 and _goods() <= 0:
+        return "Buy inputs in Business. Inputs are the raw materials used to make goods."
+    if _goods() <= 0:
+        return "Produce a batch in Business. Finished goods are the inventory you can sell."
+    if _last_sales() <= 0:
+        return "Open Commercial Controls in Business and sell the finished goods."
+    return "The core loop is complete. Reinvest profit into capacity, property and expansion."
+
+func _objective_view() -> String:
+    if not _inspected() or not _owned() or _stage() != "Operational":
+        return "property"
+    if not _business_open() or _inputs() <= 0 or _goods() <= 0 or _last_sales() <= 0:
+        return "operate"
+    return "more"
+
+func _core_phase() -> String:
+    if _stage() != "Operational":
+        return "RESTORE"
+    if not _business_open() or _last_sales() <= 0:
+        return "OPERATE"
+    return "GROW"
+
+func _core_loop_lines() -> String:
+    var restore_mark := "●" if _core_phase() == "RESTORE" else "✓"
+    var operate_mark := "●" if _core_phase() == "OPERATE" else ("✓" if _core_phase() == "GROW" else "○")
+    var grow_mark := "●" if _core_phase() == "GROW" else "○"
+    return "%s  1. RESTORE PROPERTY\n%s  2. OPERATE BUSINESS\n%s  3. REINVEST & GROW" % [restore_mark, operate_mark, grow_mark]
+
+func _core_loop_status() -> String:
+    return "CURRENT PHASE: %s  •  %s" % [_core_phase(), _objective_title().to_upper()]
 
 func _stage_meta() -> String:
     return "%s • %d%% restored" % [_building_name(), _building_progress()]
