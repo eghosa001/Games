@@ -22,15 +22,13 @@ func _sync_legacy_finance(finance: Node) -> void:
         if snapshot.has(key):
             state.set_value("finance" if key != "cash" else "economy", key, snapshot[key])
 
-func take_loan() -> void:
+func loan_quote() -> Dictionary:
     var finance := _finance()
     if finance == null:
-        state_adapter.message("Finance system unavailable.")
-        return
+        return {"eligible": false, "message": "Finance system unavailable."}
     var debt: int = int(finance.get("debt"))
     if debt > 0:
-        state_adapter.message("Repay the current loan before borrowing again.")
-        return
+        return {"eligible": false, "message": "Repay the current loan before borrowing again.", "debt": debt}
     var reputation: int = int(state_adapter.get_value("player", "reputation", 0))
     var score := float(finance.get("credit_score"))
     var rate := 0.12
@@ -47,6 +45,47 @@ func take_loan() -> void:
     else:
         rate = 0.22
         amount = 5000
+    return {"eligible": true, "amount": amount, "rate": rate, "term": 20, "rating": str(finance.get("credit_rating")), "score": score}
+
+func repayment_quote() -> Dictionary:
+    var finance := _finance()
+    if finance == null:
+        return {"eligible": false, "message": "Finance system unavailable."}
+    var debt: int = int(finance.get("debt"))
+    if debt <= 0:
+        return {"eligible": false, "message": "You have no outstanding loan.", "debt": 0}
+    var amount: int = min(debt, max(1000, debt / 4))
+    return {"eligible": int(finance.get("cash")) >= amount, "amount": amount, "debt": debt, "cash": int(finance.get("cash")), "message": "Repayment requires sufficient cash."}
+
+func investor_quote() -> Dictionary:
+    var finance := _finance()
+    if finance == null:
+        return {"eligible": false, "message": "Finance system unavailable."}
+    var pending := _pending_offer()
+    if not pending.is_empty():
+        var existing := pending.duplicate(true)
+        existing["eligible"] = true
+        existing["pending"] = true
+        return existing
+    var ownership = _ownership()
+    if ownership == null or not ownership.has_method("get_entity") or not ownership.has_entity("renew_co"):
+        return {"eligible": false, "message": "Incorporate first: investor offers need a registered company."}
+    var confidence := float(ownership.get_entity("renew_co").get("investor_confidence", 50.0))
+    if confidence < 30.0:
+        return {"eligible": false, "message": "Raise investor confidence above 30 first.", "confidence": confidence}
+    var valuation := max(25000.0, float(finance.valuation())) if finance.has_method("valuation") else 25000.0
+    var percent := clampf(10.0 + confidence / 10.0, 10.0, 20.0)
+    var amount := max(5000, int(round(valuation * percent / max(1.0, 100.0 - percent))))
+    return {"eligible": true, "pending": false, "amount": amount, "percent": percent, "valuation": int(round(valuation)), "confidence": confidence, "investor": "fund_a"}
+
+func take_loan() -> void:
+    var finance := _finance()
+    var quote := loan_quote()
+    if not bool(quote.get("eligible", false)):
+        state_adapter.message(str(quote.get("message", "Loan could not be approved.")))
+        return
+    var amount := int(quote.get("amount", 0))
+    var rate := float(quote.get("rate", 0.12))
     var result: Dictionary = finance.create_loan(amount, rate, 20, false, "unsecured loan")
     if not bool(result.get("ok", false)):
         state_adapter.message(str(result.get("message", "Loan could not be approved.")))
@@ -57,14 +96,11 @@ func take_loan() -> void:
 
 func repay_loan() -> void:
     var finance := _finance()
-    if finance == null:
-        state_adapter.message("Finance system unavailable.")
+    var quote := repayment_quote()
+    if not bool(quote.get("eligible", false)):
+        state_adapter.message(str(quote.get("message", "Repayment is unavailable.")))
         return
-    var debt: int = int(finance.get("debt"))
-    if debt <= 0:
-        state_adapter.message("You have no outstanding loan.")
-        return
-    var amount: int = min(debt, max(1000, debt / 4))
+    var amount := int(quote.get("amount", 0))
     var result: Dictionary = finance.repay(amount)
     if not bool(result.get("ok", false)):
         state_adapter.message(str(result.get("message", "Repayment failed.")))
@@ -102,24 +138,17 @@ func _set_pending_offer(offer: Dictionary) -> void:
 
 func request_investment() -> void:
     var finance := _finance()
-    if finance == null:
-        state_adapter.message("Finance system unavailable.")
+    var quote := investor_quote()
+    if not bool(quote.get("eligible", false)):
+        state_adapter.message(str(quote.get("message", "Investor offer is unavailable.")))
         return
-    var ownership = _ownership()
-    if ownership == null or not ownership.has_method("get_entity"):
-        state_adapter.message("Incorporate first: investor offers need a registered company.")
+    if bool(quote.get("pending", false)):
+        state_adapter.message("%s already offers $%s for %.1f%%. ACCEPT DEAL or DECLINE DEAL before requesting another offer." % [str(quote.get("investor", "Investor")), state_adapter.money(int(quote.get("amount", 0))), float(quote.get("percent", 0.0))])
         return
-    if not ownership.has_entity("renew_co"):
-        state_adapter.message("Incorporate first: investor offers need a registered company.")
-        return
-    var confidence := float(ownership.get_entity("renew_co").get("investor_confidence", 50.0))
-    if confidence < 30.0:
-        state_adapter.message("Investors are watching but not ready. Raise confidence above 30 first.")
-        return
-    var valuation := max(25000.0, float(finance.valuation())) if finance.has_method("valuation") else 25000.0
-    var percent := clampf(10.0 + confidence / 10.0, 10.0, 20.0)
-    var amount := max(5000, int(round(valuation * percent / max(1.0, 100.0 - percent))))
-    var investor := "fund_a"
+    var amount := int(quote.get("amount", 0))
+    var percent := float(quote.get("percent", 0.0))
+    var valuation := float(quote.get("valuation", 25000))
+    var investor := str(quote.get("investor", "fund_a"))
     var offer := {"investor": investor, "amount": amount, "percent": percent, "valuation": int(round(valuation)), "day": int(state_adapter.get_value("player", "day", 1))}
     _set_pending_offer(offer)
     state_adapter.log_message("INVESTOR: %s offers $%s for %.1f%% of the company." % [investor, state_adapter.money(amount), percent])
