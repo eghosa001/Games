@@ -9,6 +9,7 @@ const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 const COMPANY_ID := "renew_co"
 const FOUNDER_ID := "founder"
 const INVESTOR_ID := "fund_a"
+const RECALC_INTERVAL := 0.20
 
 var parent
 var ownership: Node
@@ -24,6 +25,7 @@ var board_influence: Variant = 0
 var takeover_wins: Variant = 0
 var hostile_attempts: Variant = 0
 var milestone_level: Variant = 0
+var _recalc_clock := 0.0
 
 # Compatibility accessors: these are derived from OwnershipSystem, never stored here.
 var founder_stake: float:
@@ -52,13 +54,19 @@ func _ready() -> void:
     # Do not load a second user:// ledger here; it could overwrite newer state.
     _ensure_company()
 
-func _process(_delta: float) -> void:
-    _resolve_deps()
+func _process(delta: float) -> void:
     if parent == null:
-        return
+        _resolve_deps()
+        if parent == null:
+            return
     if parent.day != last_processed_day:
         last_processed_day = parent.day
         process_day()
+    _recalc_clock += delta
+    if _recalc_clock < RECALC_INTERVAL:
+        return
+    _recalc_clock = 0.0
+    _resolve_deps()
     if ownership == null:
         return
     _recalculate()
