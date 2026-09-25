@@ -2,7 +2,7 @@ extends CanvasLayer
 
 const Tutorial = preload("res://scripts/tutorial.gd")
 
-const UPDATE_INTERVAL: float = 0.10
+const UPDATE_INTERVAL: float = 0.25
 var game: Node
 var tutorial = Tutorial.new()
 var overlay_root: Control
@@ -13,6 +13,7 @@ var progress_label: Label
 var progress_bar: ProgressBar
 var hint_label: Label
 var continue_button: Button
+var route_button: Button
 var collapsed_button: Button
 var dismissed := false
 var last_step := -1
@@ -64,11 +65,9 @@ func _process(delta: float) -> void:
         tutorial.notify(current_action, game)
         if int(tutorial.step) != old_step:
             _save_tutorial_state()
-            game.message = "TUTORIAL: %s" % String(tutorial.current().get("title", "Next step"))
+            game.message = "GUIDE: %s" % String(tutorial.current().get("title", "Next step"))
+            _expanded_by_user = true
             _refresh()
-            return
-
-    _layout_responsive()
 
 func _build() -> void:
     overlay_root = Control.new()
@@ -79,7 +78,7 @@ func _build() -> void:
 
     panel = Panel.new()
     panel.name = "TutorialCard"
-    panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    panel.mouse_filter = Control.MOUSE_FILTER_PASS
     overlay_root.add_child(panel)
 
     title_label = Label.new()
@@ -113,13 +112,23 @@ func _build() -> void:
     hint_label = Label.new()
     hint_label.name = "TutorialHint"
     hint_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     hint_label.add_theme_font_size_override("font_size", 10)
     panel.add_child(hint_label)
 
+    route_button = Button.new()
+    route_button.name = "TutorialRouteButton"
+    route_button.text = "SHOW ME"
+    route_button.custom_minimum_size = Vector2(132, 48)
+    route_button.focus_mode = Control.FOCUS_ALL
+    route_button.mouse_filter = Control.MOUSE_FILTER_STOP
+    route_button.pressed.connect(_go_to_current_step)
+    panel.add_child(route_button)
+
     continue_button = Button.new()
     continue_button.name = "TutorialHideButton"
-    continue_button.text = "GOT IT"
-    continue_button.custom_minimum_size = Vector2(96, 48)
+    continue_button.text = "HIDE GUIDE"
+    continue_button.custom_minimum_size = Vector2(112, 48)
     continue_button.focus_mode = Control.FOCUS_ALL
     continue_button.mouse_filter = Control.MOUSE_FILTER_STOP
     continue_button.pressed.connect(_hide_overlay)
@@ -128,7 +137,7 @@ func _build() -> void:
     collapsed_button = Button.new()
     collapsed_button.name = "TutorialGuideChip"
     collapsed_button.text = "GUIDE"
-    collapsed_button.custom_minimum_size = Vector2(104, 48)
+    collapsed_button.custom_minimum_size = Vector2(112, 48)
     collapsed_button.focus_mode = Control.FOCUS_ALL
     collapsed_button.mouse_filter = Control.MOUSE_FILTER_STOP
     collapsed_button.pressed.connect(open_tutorial)
@@ -156,7 +165,7 @@ func _apply_theme() -> void:
         raised = manager.color("surface_2")
 
     var tutorial_style := StyleBoxFlat.new()
-    tutorial_style.bg_color = Color(bg.r, bg.g, bg.b, 0.98)
+    tutorial_style.bg_color = Color(bg.r, bg.g, bg.b, 0.985)
     tutorial_style.border_color = gold
     tutorial_style.set_border_width_all(1)
     tutorial_style.set_border_width(SIDE_TOP, 3)
@@ -180,14 +189,23 @@ func _apply_theme() -> void:
     body_label.add_theme_color_override("font_color", text)
     hint_label.add_theme_color_override("font_color", muted)
 
-    var button_style := StyleBoxFlat.new()
-    button_style.bg_color = raised
-    button_style.border_color = plum
-    button_style.set_border_width_all(1)
-    button_style.set_corner_radius_all(12)
-    continue_button.add_theme_stylebox_override("normal", button_style)
-    continue_button.add_theme_stylebox_override("hover", button_style)
+    var secondary_style := StyleBoxFlat.new()
+    secondary_style.bg_color = raised
+    secondary_style.border_color = plum
+    secondary_style.set_border_width_all(1)
+    secondary_style.set_corner_radius_all(12)
+    continue_button.add_theme_stylebox_override("normal", secondary_style)
+    continue_button.add_theme_stylebox_override("hover", secondary_style)
     continue_button.add_theme_color_override("font_color", text)
+
+    var route_style := StyleBoxFlat.new()
+    route_style.bg_color = gold
+    route_style.border_color = gold
+    route_style.set_border_width_all(1)
+    route_style.set_corner_radius_all(12)
+    route_button.add_theme_stylebox_override("normal", route_style)
+    route_button.add_theme_stylebox_override("hover", route_style)
+    route_button.add_theme_color_override("font_color", bg)
 
     var chip_style := StyleBoxFlat.new()
     chip_style.bg_color = raised
@@ -240,64 +258,50 @@ func _layout_responsive() -> void:
             if not _compact_guide_allowed():
                 collapsed_button.hide()
                 return
-            collapsed_button.size = Vector2(104.0, 48.0)
-            collapsed_button.position = Vector2(maxf(8.0, w - 116.0), maxf(8.0, h - 154.0))
-        elif w >= 1000.0:
-            collapsed_button.size = Vector2(112.0, 44.0)
-            collapsed_button.position = Vector2(maxf(8.0, w - 128.0), 24.0)
-        else:
             collapsed_button.size = Vector2(112.0, 48.0)
-            collapsed_button.position = Vector2(maxf(8.0, w - 126.0), maxf(64.0, h - 120.0))
+            collapsed_button.position = Vector2(maxf(8.0, w - 124.0), maxf(8.0, h - 154.0))
+        elif w >= 1000.0:
+            collapsed_button.size = Vector2(120.0, 44.0)
+            collapsed_button.position = Vector2(maxf(8.0, w - 136.0), 24.0)
+        else:
+            collapsed_button.size = Vector2(120.0, 48.0)
+            collapsed_button.position = Vector2(maxf(8.0, w - 134.0), maxf(64.0, h - 120.0))
         collapsed_button.show()
         return
 
+    var panel_w := minf(470.0, w - 16.0)
+    var panel_h := 222.0 if narrow else 214.0
     if narrow:
-        var panel_y := 92.0 if h >= 640.0 else 74.0
-        panel.position = Vector2(8.0, panel_y)
-        panel.size = Vector2(w - 16.0, 142.0)
-        var content_width := panel.size.x - 28.0
-        title_label.position = Vector2(14, 10)
-        title_label.size = Vector2(maxf(120.0, panel.size.x - 128.0), 24)
-        title_label.add_theme_font_size_override("font_size", 15)
-        progress_label.position = Vector2(14, 34)
-        progress_label.size = Vector2(content_width, 16)
-        progress_bar.position = Vector2(14, 52)
-        progress_bar.size = Vector2(content_width, 6)
-        body_label.position = Vector2(14, 66)
-        body_label.size = Vector2(content_width, 62)
-        body_label.add_theme_font_size_override("font_size", 11)
-        hint_label.hide()
-        continue_button.position = Vector2(panel.size.x - 108.0, 8)
-        continue_button.size = Vector2(94, 48)
+        panel.position = Vector2((w - panel_w) * 0.5, 78.0 if h >= 640.0 else 58.0)
     elif w >= 1000.0:
-        panel.position = Vector2(w - 445.0, 116.0)
-        panel.size = Vector2(430.0, 136.0)
-        title_label.position = Vector2(18, 12)
-        title_label.size = Vector2(panel.size.x - 140.0, 24)
-        progress_label.position = Vector2(18, 38)
-        progress_label.size = Vector2(panel.size.x - 36.0, 18)
-        progress_bar.position = Vector2(18, 58)
-        progress_bar.size = Vector2(panel.size.x - 36.0, 6)
-        body_label.position = Vector2(18, 72)
-        body_label.size = Vector2(panel.size.x - 36.0, 48)
-        hint_label.hide()
-        continue_button.position = Vector2(panel.size.x - 116.0, 12)
-        continue_button.size = Vector2(98, 48)
+        panel.position = Vector2(w - panel_w - 18.0, 104.0)
     else:
-        panel.position = Vector2(w - 430.0, 104.0)
-        panel.size = Vector2(414.0, 136.0)
-        title_label.position = Vector2(18, 12)
-        title_label.size = Vector2(panel.size.x - 140.0, 24)
-        progress_label.position = Vector2(18, 38)
-        progress_label.size = Vector2(panel.size.x - 36.0, 18)
-        progress_bar.position = Vector2(18, 58)
-        progress_bar.size = Vector2(panel.size.x - 36.0, 6)
-        body_label.position = Vector2(18, 72)
-        body_label.size = Vector2(panel.size.x - 36.0, 48)
-        hint_label.hide()
-        continue_button.position = Vector2(panel.size.x - 116.0, 12)
-        continue_button.size = Vector2(98, 48)
+        panel.position = Vector2(w - panel_w - 16.0, 92.0)
+    panel.size = Vector2(panel_w, panel_h)
 
+    var pad := 16.0
+    var content_w := panel_w - pad * 2.0
+    title_label.position = Vector2(pad, 12)
+    title_label.size = Vector2(content_w - 8.0, 24)
+    title_label.add_theme_font_size_override("font_size", 15 if narrow else 16)
+    progress_label.position = Vector2(pad, 38)
+    progress_label.size = Vector2(content_w, 16)
+    progress_bar.position = Vector2(pad, 57)
+    progress_bar.size = Vector2(content_w, 6)
+    body_label.position = Vector2(pad, 72)
+    body_label.size = Vector2(content_w, 76)
+    body_label.add_theme_font_size_override("font_size", 11 if narrow else 12)
+    hint_label.position = Vector2(pad, 151)
+    hint_label.size = Vector2(content_w, 28)
+    hint_label.show()
+
+    var gap := 8.0
+    var button_y := panel_h - 53.0
+    var route_w := maxf(126.0, content_w * 0.56)
+    route_button.position = Vector2(pad, button_y)
+    route_button.size = Vector2(route_w, 42.0)
+    continue_button.position = Vector2(pad + route_w + gap, button_y)
+    continue_button.size = Vector2(content_w - route_w - gap, 42.0)
     collapsed_button.hide()
     panel.show()
 
@@ -307,24 +311,36 @@ func _refresh() -> void:
     var current: Dictionary = tutorial.current()
     var step := int(tutorial.step)
     last_step = step
-    title_label.text = String(current.get("title", "RESTORA TUTORIAL"))
     var total_steps := maxi(1, tutorial.steps.size())
-    progress_label.text = "PHASE A  •  STEP %d/%d" % [mini(step + 1, total_steps), total_steps]
+    var phase := String(current.get("phase", "RESTORE"))
+    title_label.text = String(current.get("title", "RESTORA GUIDE"))
+    progress_label.text = "%s  •  STEP %d/%d" % [phase, mini(step + 1, total_steps), total_steps]
     progress_bar.value = clampf(float(mini(step + 1, total_steps)) / float(total_steps), 0.0, 1.0)
-    body_label.text = String(current.get("text", "Keep building."))
-    hint_label.text = "Goal: " + String(current.get("action", "COMPLETE"))
-    continue_button.text = "HIDE"
+
+    var instruction := String(current.get("text", "Keep building."))
+    var reason := String(current.get("why", ""))
+    body_label.text = "DO THIS
+%s" % instruction
+    if not reason.is_empty():
+        body_label.text += "
+WHY
+%s" % reason
+
+    hint_label.text = "WHERE: " + String(current.get("where", "HOME"))
+    route_button.text = String(current.get("cta", "SHOW ME"))
+    continue_button.text = "HIDE GUIDE"
+    route_button.disabled = tutorial.completed and String(current.get("view", "live")) == ""
+
     if tutorial.completed:
-        title_label.text = "FIRST BUSINESS COMPLETE"
-        progress_label.text = "PHASE A  •  COMPLETE"
+        progress_label.text = "GROW  •  CORE LOOP COMPLETE"
         progress_bar.value = 1.0
-        body_label.text = String(current.get("text", "Keep building and expand the company."))
     _layout_responsive()
 
 func _load_tutorial_state() -> void:
     var state = _state()
     if state == null:
         dismissed = false
+        _expanded_by_user = true
         return
     tutorial.load_snapshot({
         "step": int(state.get_value("progression", "tutorial_step", 0)),
@@ -333,6 +349,10 @@ func _load_tutorial_state() -> void:
     dismissed = bool(state.get_value("progression", "tutorial_dismissed", false))
     if tutorial.completed:
         dismissed = true
+        _expanded_by_user = false
+    else:
+        # A new player should see the guide without discovering a hidden chip first.
+        _expanded_by_user = not dismissed
 
 func _save_tutorial_state() -> void:
     var state = _state()
@@ -341,6 +361,17 @@ func _save_tutorial_state() -> void:
     state.set_value("progression", "tutorial_step", int(tutorial.step))
     state.set_value("progression", "tutorial_completed", bool(tutorial.completed))
     state.set_value("progression", "tutorial_dismissed", dismissed)
+
+func _go_to_current_step() -> void:
+    var current := tutorial.current()
+    var view := String(current.get("view", "live"))
+    var hud := get_node_or_null("/root/Renew/UI/MainHUD")
+    if hud != null and hud.has_method("open_figma_view"):
+        hud.open_figma_view(view)
+    dismissed = false
+    _expanded_by_user = false
+    _save_tutorial_state()
+    _layout_responsive()
 
 func open_tutorial() -> void:
     dismissed = false
