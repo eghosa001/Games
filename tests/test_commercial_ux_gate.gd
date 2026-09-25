@@ -27,10 +27,10 @@ func _run()->void:
     check("primary view transitions are subtle and reduced-motion aware",ui_source.contains("func _animate_view_in()") and ui_source.contains("if _reduce_motion()"))
 
     var home_content:=hud.get("mobile_content") as Control
-    check("HOME exposes all nine properties",home_content.find_children("OverviewPropertyRow*","Panel",false,false).size()==9)
-    check("HOME exposes all three business models",home_content.find_children("OverviewBusinessRow*","Panel",false,false).size()==3)
-    check("HOME exposes all six regions and markets",home_content.find_children("OverviewRegionRow*","Panel",false,false).size()==6)
-    check("HOME exposes connected system links",home_content.find_children("OverviewSystemTile*","Panel",false,false).size()==8)
+    check("HOME exposes all nine properties",home_content.find_children("OverviewPropertyRow*","Panel",true,false).size()==9)
+    check("HOME exposes all three business models",home_content.find_children("OverviewBusinessRow*","Panel",true,false).size()==3)
+    check("HOME exposes all six regions and markets",home_content.find_children("OverviewRegionRow*","Panel",true,false).size()==6)
+    check("HOME exposes connected system links",home_content.find_children("OverviewSystemTile*","Panel",true,false).size()==8)
     var first_property_link:=home_content.find_child("OpenOverviewProperty0",true,false) as Button
     check("overview property row is directly actionable",first_property_link!=null)
     if first_property_link!=null:
