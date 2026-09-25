@@ -252,7 +252,7 @@ func _build_overview_property_catalog(y: float) -> float:
     var panel_h: float = 62.0 + float(catalog.size()) * 42.0
     var panel = _panel(mobile_content, "OverviewProperties", Rect2(18, y, inner_w, panel_h), "surface", "border", 18)
     _label(panel, "Head", "PROPERTIES • %d/%d OWNED" % [_owned_building_count(), catalog.size()], Rect2(16, 12, inner_w - 32, 16), 11, "gold", 700)
-    _label(panel, "Meta", "Every buyable building. Tap one to inspect, acquire or restore.", Rect2(16, 32, inner_w - 32, 18), 9, "muted", 400)
+    _label(panel, "Meta", "Every property in one place. Compare status, cost and upgrade progress.", Rect2(16, 32, inner_w - 32, 18), 9, "muted", 400)
     for i in range(catalog.size()):
         var item: Dictionary = catalog[i]
         var row_y: float = 54.0 + float(i) * 42.0
@@ -878,9 +878,7 @@ func _build_mobile_live() -> void:
     var inner_w = w - 36.0
     var hero = _panel(mobile_content, "ExecutiveHero", Rect2(18, 82, inner_w, 154), "surface", "border", 22)
     hero.clip_contents = true
-    var hero_texture := _building_stage_texture()
-    if hero_texture != null:
-        _add_texture(hero, "HeroBuildingArt", Rect2(inner_w * 0.48, 0, inner_w * 0.52, 154), hero_texture, 0.90 if not _is_light_theme() else 0.78)
+    _label(hero, "HeroPropertyStatus", "%s\nUPGRADE %d/6 • %d%%" % [_building_name(), _building_stage_slot() + 1, _building_progress()], Rect2(inner_w * 0.52, 28, inner_w * 0.43, 82), 11, "muted", 600, HORIZONTAL_ALIGNMENT_RIGHT)
     var hero_wash := ColorRect.new()
     hero_wash.name = "HeroContrastWash"
     hero_wash.position = Vector2(inner_w * 0.30, 0)
@@ -1029,7 +1027,7 @@ func _build_mobile_property() -> void:
     var progress := _building_progress(building)
     var w = _content_width()
     var inner_w = w - 36.0
-    _header("PROPERTY CATALOG", "%d BUILDINGS • %d OWNED • TAP TO VIEW" % [catalog.size(), _owned_building_count()])
+    _header("PROPERTY CATALOG", "%d PROPERTIES • %d OWNED • TAP TO VIEW" % [catalog.size(), _owned_building_count()])
 
     var catalog_h: float = 62.0 + float(catalog.size()) * 50.0
     var list_panel = _panel(mobile_content, "PropertyCatalog", Rect2(18, 82, inner_w, catalog_h), "surface", "border", 18)
@@ -1053,27 +1051,22 @@ func _build_mobile_property() -> void:
     _label(mobile_content, "SelectedPropertyMeta", "%s • %s" % [building_name.to_upper(), "OWNED" if building_owned else ("SURVEYED" if building_inspected else "AVAILABLE")], Rect2(18, selected_y + 20.0, inner_w, 18), 9, "muted", 500)
 
     var visual_y: float = selected_y + 48.0
-    var visual = _panel(mobile_content, "PropertyVisual", Rect2(18, visual_y, inner_w, 238), "surface", "border", 22)
-    visual.clip_contents = true
-    var stage_texture := _building_stage_texture(building)
-    if stage_texture != null:
-        _add_texture(visual, "BuildingStageArt", Rect2(0, 0, inner_w, 238), stage_texture, 1.0)
-    var top_scrim := ColorRect.new()
-    top_scrim.position = Vector2.ZERO
-    top_scrim.size = Vector2(inner_w, 54)
-    top_scrim.color = Color(1, 1, 1, 0.78) if _is_light_theme() else Color(0.02, 0.03, 0.03, 0.66)
-    top_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    visual.add_child(top_scrim)
-    var bottom_scrim := ColorRect.new()
-    bottom_scrim.position = Vector2(0, 174)
-    bottom_scrim.size = Vector2(inner_w, 64)
-    bottom_scrim.color = Color(1, 1, 1, 0.86) if _is_light_theme() else Color(0.02, 0.03, 0.03, 0.72)
-    bottom_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    visual.add_child(bottom_scrim)
-    _label(visual, "Stage", "%s • STAGE %d/6" % [_building_stage_name(building), _building_stage_slot(building) + 1], Rect2(16, 15, inner_w - 150, 16), 10, "gold", 700)
-    _label(visual, "Restoration", "%d%% RESTORED" % progress, Rect2(inner_w - 140, 15, 124, 16), 10, "success", 700, HORIZONTAL_ALIGNMENT_RIGHT)
-    _label(visual, "BuildingName", building_name, Rect2(16, 184, inner_w - 32, 26), 19, "text", 700)
-    _label(visual, "BuildingType", "%s • Market value %s" % [building_type, _money(int(building.get("value", 0)))], Rect2(16, 212, inner_w - 32, 16), 10, "muted", 500)
+    var visual = _panel(mobile_content, "PropertyStatus", Rect2(18, visual_y, inner_w, 238), "surface", "border", 22)
+    _label(visual, "Head", "PROPERTY STATUS", Rect2(16, 16, inner_w - 32, 16), 10, "gold", 700)
+    _label(visual, "BuildingName", building_name, Rect2(16, 46, inner_w - 32, 28), 20, "text", 700)
+    _label(visual, "BuildingType", "%s • Market value %s" % [building_type, _money(int(building.get("value", 0)))], Rect2(16, 79, inner_w - 32, 16), 10, "muted", 500)
+    _label(visual, "Stage", "UPGRADE LEVEL %d/6 • %s" % [_building_stage_slot(building) + 1, _building_stage_name(building)], Rect2(16, 116, inner_w - 32, 18), 11, "gold", 700)
+    _label(visual, "Restoration", "%d%% COMPLETE" % progress, Rect2(16, 143, inner_w - 32, 18), 11, "success", 700)
+    var level_track = Panel.new()
+    level_track.position = Vector2(16, 178)
+    level_track.size = Vector2(inner_w - 32, 12)
+    level_track.add_theme_stylebox_override("panel", _solid_round(_color("surface_2"), 6))
+    visual.add_child(level_track)
+    var level_fill = Panel.new()
+    level_fill.size = Vector2(maxf(4.0, level_track.size.x * float(progress) / 100.0), 12)
+    level_fill.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 6))
+    level_track.add_child(level_fill)
+    _label(visual, "Hint", "No building render • upgrades are tracked as management levels.", Rect2(16, 202, inner_w - 32, 18), 9, "muted", 400)
 
     var progress_y: float = visual_y + 256.0
     var prog = _panel(mobile_content, "RestorationProgress", Rect2(18, progress_y, inner_w, 116), "surface", "border", 18)
@@ -1301,7 +1294,7 @@ func _build_mobile_guide() -> void:
     var restore := _panel(mobile_content, "GuideRestore", Rect2(18, 214, inner_w, 146), "surface", "border", 18)
     _label(restore, "Phase", "1  •  RESTORE", Rect2(16, 14, 160, 16), 11, "gold", 700)
     _label(restore, "Steps", "Inspect the property  →  Acquire it  →  Complete every restoration stage.", Rect2(16, 43, inner_w - 32, 48), 11, "text", 500)
-    _label(restore, "Why", "Goal: reach OPERATIONAL so the building can host a business.", Rect2(16, 91, inner_w - 32, 22), 9, "muted", 500)
+    _label(restore, "Why", "Goal: reach OPERATIONAL so this property can host a business.", Rect2(16, 91, inner_w - 32, 22), 9, "muted", 500)
     _frame_button(restore, "GoRestore", "GO TO PROPERTY", Rect2(16, 112, inner_w - 32, 28), _show_view.bind("property"), false, true, 9)
 
     var operate := _panel(mobile_content, "GuideOperate", Rect2(18, 376, inner_w, 166), "surface", "border", 18)
@@ -1416,10 +1409,13 @@ func _build_desktop_live() -> void:
     _label(canvas, "Brand", "RESTORA", Rect2(34,26,240,34), 28, "text", 700)
     _label(canvas, "Mode", "EXECUTIVE COMMAND • DAY %d" % _day(), Rect2(34,62,300,16), 10, "gold", 600)
     var world = _panel(canvas, "WorldPropertyView", Rect2(34,104,560,552), "surface", "border", 24)
-    _label(world, "Head", "CURRENT BUILDING", Rect2(21,19,250,16), 11, "gold", 600)
+    _label(world, "Head", "PROPERTY PORTFOLIO", Rect2(21,19,250,16), 11, "gold", 600)
     var scene = _panel(world, "Scene", Rect2(21,57,516,316), "surface_2", "border", 20)
-    scene.clip_contents = true
-    _remember("desktop_building_art", _add_texture(scene, "DesktopBuildingArt", Rect2(0,0,516,316), _building_stage_texture(), 1.0))
+    _label(scene, "PropertyName", _building_name(), Rect2(24,28,468,34), 24, "text", 700)
+    _label(scene, "PropertyType", _building_type(), Rect2(24,68,468,20), 12, "muted", 500)
+    _label(scene, "Upgrade", "UPGRADE LEVEL %d/6" % (_building_stage_slot() + 1), Rect2(24,124,468,24), 15, "gold", 700)
+    _label(scene, "Progress", "%d%% RESTORED" % _building_progress(), Rect2(24,162,468,24), 15, "success", 700)
+    _label(scene, "Stage", _building_stage_name(), Rect2(24,204,468,20), 12, "text", 600)
     _remember("desktop_property_meta", _label(world, "Meta", "%s • %s\n%d%% restored • %s market value" % [_building_name(), _building_type(), _building_progress(), _money(int(_selected_building().get("value", 0)))], Rect2(21,401,500,54), 14, "text", 400))
     _transparent_button(world, "OpenProperty", Rect2(0,0,560,552), _show_view.bind("property"))
 
@@ -1468,8 +1464,10 @@ func _build_tablet_live() -> void:
     _remember("tablet_objective_title", _label(hero, "Title", _objective_title(), Rect2(22,52,420,36), 28, "text", 700))
     _remember("tablet_stage_meta", _label(hero, "Meta", _stage_meta(), Rect2(22,96,360,20), 14, "muted", 400))
     var scene = _panel(hero, "Scene", Rect2(506,22,240,206), "surface_2", "border", 20)
-    scene.clip_contents = true
-    _remember("tablet_building_art", _add_texture(scene, "TabletBuildingArt", Rect2(0,0,240,206), _building_stage_texture(), 1.0))
+    _label(scene, "Property", _building_name(), Rect2(16,24,208,42), 14, "text", 700)
+    _label(scene, "Upgrade", "LEVEL %d/6" % (_building_stage_slot() + 1), Rect2(16,86,208,22), 12, "gold", 700)
+    _label(scene, "Progress", "%d%% RESTORED" % _building_progress(), Rect2(16,120,208,22), 12, "success", 700)
+    _label(scene, "Stage", _building_stage_name(), Rect2(16,154,208,20), 10, "muted", 600)
     var xs = [32.0,228.0,424.0,620.0]
     var names = ["CASH","WORTH","REPUTATION","GOODS"]
     var vals = [_money(_cash()),_money(_worth()),str(_rep()),str(_goods())]
@@ -1509,10 +1507,6 @@ func _refresh() -> void:
             _set_ref_text("tablet_stage_meta", _stage_meta())
             _set_ref_text("tablet_operations", "Production\n%s\n\nContracts\n%d active\n\nPeople\n%d staff\n\nInventory\n%d inputs • %d goods\n\nFleet\nLevel %d" % [_production_rate_text(), _active_contracts(), _employees(), _inputs(), _goods(), maxi(1,_transport_level())])
             _set_ref_text("tablet_signals", "%s\n\nNEXT OBJECTIVE\n%s" % [_signal_lines(), _objective_title()])
-            for art_key in ["desktop_building_art", "tablet_building_art"]:
-                var art = refs.get(art_key) as TextureRect
-                if art != null:
-                    art.texture = _building_stage_texture()
             var fill = refs.get("progress_fill") as Control
             if fill != null and fill.get_parent() is Control:
                 fill.size.x = maxf(4.0, (fill.get_parent() as Control).size.x * float(_restoration()) / 100.0)
