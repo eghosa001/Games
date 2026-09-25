@@ -176,6 +176,178 @@ func _select_building(index: int) -> void:
     model.select_property(str(catalog[index].get("id", "")))
     _rebuild_current()
 
+func _select_building_and_open(index: int) -> void:
+    var model = _property_system()
+    var catalog: Array = _building_catalog()
+    if model == null or index < 0 or index >= catalog.size():
+        return
+    model.select_property(str(catalog[index].get("id", "")))
+    _show_view("property")
+
+func _property_purchase_cost(item: Dictionary) -> int:
+    var model = _property_system()
+    if model != null and model.has_method("acquisition_cost"):
+        return int(model.acquisition_cost(item))
+    return maxi(0, int(item.get("value", 0)))
+
+func _property_state_text(item: Dictionary) -> String:
+    if _building_stage_slot(item) == 5:
+        return "RESTORED"
+    if bool(item.get("owned", false)):
+        return "OWNED"
+    if bool(item.get("inspected", false)):
+        return "SURVEYED"
+    return "AVAILABLE"
+
+func _property_state_role(item: Dictionary) -> String:
+    if _building_stage_slot(item) == 5 or bool(item.get("owned", false)):
+        return "success"
+    if bool(item.get("inspected", false)):
+        return "warning"
+    return "gold"
+
+func _owned_building_count() -> int:
+    var count := 0
+    for item in _building_catalog():
+        if item is Dictionary and bool(item.get("owned", false)):
+            count += 1
+    return count
+
+func _business_catalog() -> Array:
+    if parent != null and parent.has_method("get_business_purposes"):
+        var purposes = parent.get_business_purposes()
+        return purposes if purposes is Array else []
+    return []
+
+func _region_catalog() -> Array:
+    var controller = _region_controller()
+    if controller != null and "regions" in controller and controller.regions != null and "regions" in controller.regions:
+        return controller.regions.regions
+    return []
+
+func _region_presence(index: int) -> int:
+    var controller = _region_controller()
+    if controller != null and "regions" in controller and controller.regions != null and "player_presence" in controller.regions:
+        var presence = controller.regions.player_presence
+        if presence is Array and index >= 0 and index < presence.size():
+            return int(presence[index])
+    return 0
+
+func _select_region_and_open(index: int) -> void:
+    var controller = _region_controller()
+    if controller != null and controller.has_method("select_region"):
+        controller.select_region(index)
+    _show_view("world")
+
+func _build_overview_property_catalog(y: float) -> float:
+    var catalog: Array = _building_catalog()
+    var w: float = _content_width()
+    var inner_w: float = w - 36.0
+    var panel_h: float = 62.0 + float(catalog.size()) * 42.0
+    var panel = _panel(mobile_content, "OverviewProperties", Rect2(18, y, inner_w, panel_h), "surface", "border", 18)
+    _label(panel, "Head", "PROPERTIES • %d/%d OWNED" % [_owned_building_count(), catalog.size()], Rect2(16, 12, inner_w - 32, 16), 11, "gold", 700)
+    _label(panel, "Meta", "Every buyable building. Tap one to inspect, acquire or restore.", Rect2(16, 32, inner_w - 32, 18), 9, "muted", 400)
+    for i in range(catalog.size()):
+        var item: Dictionary = catalog[i]
+        var row_y: float = 54.0 + float(i) * 42.0
+        var row = _panel(panel, "OverviewPropertyRow%d" % i, Rect2(10, row_y, inner_w - 20, 36), "surface_2", "border", 9)
+        _label(row, "Name", str(item.get("name", "Property")), Rect2(9, 4, inner_w - 144, 13), 8, "text", 600)
+        var meta: String = str(item.get("type", "Building"))
+        if not bool(item.get("owned", false)):
+            meta += " • " + _money(_property_purchase_cost(item))
+        else:
+            meta += " • %d%% restored" % _building_progress(item)
+        _label(row, "Meta", meta, Rect2(9, 19, inner_w - 144, 12), 7, "muted", 400)
+        _label(row, "State", _property_state_text(item), Rect2(inner_w - 124, 11, 96, 12), 7, _property_state_role(item), 600, HORIZONTAL_ALIGNMENT_RIGHT)
+        _transparent_button(row, "OpenOverviewProperty%d" % i, Rect2(0, 0, inner_w - 20, 36), _select_building_and_open.bind(i))
+    return y + panel_h
+
+func _build_overview_business_catalog(y: float) -> float:
+    var purposes: Array = _business_catalog()
+    var w: float = _content_width()
+    var inner_w: float = w - 36.0
+    var panel_h: float = 62.0 + float(purposes.size()) * 48.0
+    var panel = _panel(mobile_content, "OverviewBusinesses", Rect2(18, y, inner_w, panel_h), "surface", "border", 18)
+    _label(panel, "Head", "BUSINESS MODELS • %d OPTIONS" % purposes.size(), Rect2(16, 12, inner_w - 32, 16), 11, "gold", 700)
+    _label(panel, "Meta", "See what a restored property can become, then open Operations.", Rect2(16, 32, inner_w - 32, 18), 9, "muted", 400)
+    var current_purpose: String = str(_state_value("businesses", "business_purpose", ""))
+    for i in range(purposes.size()):
+        var purpose: Dictionary = purposes[i] if purposes[i] is Dictionary else {}
+        var row_y: float = 54.0 + float(i) * 48.0
+        var row = _panel(panel, "OverviewBusinessRow%d" % i, Rect2(10, row_y, inner_w - 20, 42), "selected" if str(purpose.get("id", "")) == current_purpose else "surface_2", "plum" if str(purpose.get("id", "")) == current_purpose else "border", 9)
+        _label(row, "Name", str(purpose.get("name", "Business")), Rect2(9, 5, inner_w - 136, 14), 9, "text", 600)
+        _label(row, "Meta", "Product: %s • Launch %s" % [str(purpose.get("product", "goods")).replace("_", " ").capitalize(), _money(3000)], Rect2(9, 22, inner_w - 136, 12), 7, "muted", 400)
+        var state_text: String = "OPEN" if _business_open() and str(purpose.get("id", "")) == current_purpose else ("READY" if _stage() == "Operational" else "RESTORE FIRST")
+        _label(row, "State", state_text, Rect2(inner_w - 116, 13, 88, 12), 7, "success" if state_text == "OPEN" else ("gold" if state_text == "READY" else "muted"), 600, HORIZONTAL_ALIGNMENT_RIGHT)
+        _transparent_button(row, "OpenOverviewBusiness%d" % i, Rect2(0, 0, inner_w - 20, 42), _show_view.bind("operate"))
+    return y + panel_h
+
+func _build_overview_region_catalog(y: float) -> float:
+    var regions: Array = _region_catalog()
+    var w: float = _content_width()
+    var inner_w: float = w - 36.0
+    var panel_h: float = 62.0 + float(regions.size()) * 42.0
+    var panel = _panel(mobile_content, "OverviewRegions", Rect2(18, y, inner_w, panel_h), "surface", "border", 18)
+    _label(panel, "Head", "REGIONS & MARKETS • %d" % regions.size(), Rect2(16, 12, inner_w - 32, 16), 11, "gold", 700)
+    _label(panel, "Meta", "See every market, its unlock requirement and your presence.", Rect2(16, 32, inner_w - 32, 18), 9, "muted", 400)
+    for i in range(regions.size()):
+        var region: Dictionary = regions[i] if regions[i] is Dictionary else {}
+        var row_y: float = 54.0 + float(i) * 42.0
+        var unlocked: bool = bool(region.get("unlocked", _rep() >= int(region.get("rep", 0))))
+        var presence: int = _region_presence(i)
+        var row = _panel(panel, "OverviewRegionRow%d" % i, Rect2(10, row_y, inner_w - 20, 36), "surface_2", "border", 9)
+        _label(row, "Name", str(region.get("name", "Region")), Rect2(9, 4, inner_w - 142, 13), 8, "text", 600)
+        _label(row, "Meta", "Tier %d • REP %d • Demand %.2fx" % [int(region.get("tier", 1)), int(region.get("rep", 0)), float(region.get("demand", 1.0))], Rect2(9, 19, inner_w - 142, 12), 7, "muted", 400)
+        var state_text: String = "ACTIVE" if presence > 0 else ("OPEN" if unlocked else "LOCKED")
+        _label(row, "State", state_text, Rect2(inner_w - 116, 11, 88, 12), 7, "success" if presence > 0 else ("gold" if unlocked else "muted"), 600, HORIZONTAL_ALIGNMENT_RIGHT)
+        var open_button = _transparent_button(row, "OpenOverviewRegion%d" % i, Rect2(0, 0, inner_w - 20, 36), _select_region_and_open.bind(i))
+        open_button.disabled = not unlocked
+        if not unlocked:
+            open_button.tooltip_text = "Unlocks at reputation %d" % int(region.get("rep", 0))
+    return y + panel_h
+
+func _build_overview_system_links(y: float) -> float:
+    var w: float = _content_width()
+    var inner_w: float = w - 36.0
+    var panel_h := 430.0
+    var panel = _panel(mobile_content, "OverviewSystems", Rect2(18, y, inner_w, panel_h), "surface", "border", 18)
+    _label(panel, "Head", "CONNECTED SYSTEMS", Rect2(16, 12, inner_w - 32, 16), 11, "gold", 700)
+    _label(panel, "Meta", "Everything important is reachable from this overview.", Rect2(16, 32, inner_w - 32, 18), 9, "muted", 400)
+    var links = [
+        ["OPERATIONS", "%d goods • %d inputs" % [_goods(), _inputs()], "operate", "view", ""],
+        ["PORTFOLIO", "%d expansion assets owned" % _owned_asset_count(), "portfolio", "view", ""],
+        ["EXPANSION", "%d/%d assets owned" % [_owned_asset_count(), _expansion_assets().size()], "empire", "view", ""],
+        ["FINANCE", "Cash %s • Debt %s" % [_money(_cash()), _money(_debt())], "finance", "view", "finance"],
+        ["CONTRACTS", "%d active" % _active_contracts(), "ContractPanel", "screen", "contracts"],
+        ["TECHNOLOGY", "Research and upgrades", "TechnologyPanel", "screen", "technology"],
+        ["RIVALS", "%d competitors tracked" % _rival_count(), "CorporationsPanel", "screen", "competitors"],
+        ["HOW TO PLAY", "Restore → Operate → Grow", "guide", "view", ""]
+    ]
+    var gap: float = 8.0
+    var col_w: float = (inner_w - 20.0 - gap) * 0.5
+    for i in range(links.size()):
+        var col: int = i % 2
+        var row_index: int = floori(float(i) / 2.0)
+        var x: float = 10.0 + float(col) * (col_w + gap)
+        var row_y: float = 58.0 + float(row_index) * 88.0
+        var required_unlock: String = str(links[i][4])
+        var locked: bool = not required_unlock.is_empty() and not _has_unlock(required_unlock)
+        var tile = _panel(panel, "OverviewSystemTile%d" % i, Rect2(x, row_y, col_w, 78), "surface_2", "border", 12)
+        _label(tile, "Head", str(links[i][0]), Rect2(12, 10, col_w - 24, 14), 9, "text" if not locked else "muted", 600)
+        var body: String = "Unlocks at Company Level %d" % _unlock_level(required_unlock) if locked else str(links[i][1])
+        _label(tile, "Body", body, Rect2(12, 31, col_w - 24, 32), 8, "muted", 400)
+        var target: String = str(links[i][2])
+        var mode: String = str(links[i][3])
+        var open_button: Button
+        if mode == "view":
+            open_button = _transparent_button(tile, "OpenOverviewSystem%d" % i, Rect2(0, 0, col_w, 78), _show_view.bind(target))
+        else:
+            open_button = _transparent_button(tile, "OpenOverviewSystem%d" % i, Rect2(0, 0, col_w, 78), _open_screen.bind(target))
+        open_button.disabled = locked
+        if locked:
+            open_button.tooltip_text = body
+    return y + panel_h
+
 func _progression():
     return parent.get_node_or_null("Systems/StrategicProgression") if parent != null else null
 
@@ -696,7 +868,7 @@ func _header(title: String, subtitle: String, right_text = "", status_role = "go
 
 func _build_mobile_live() -> void:
     var w = _content_width()
-    _header("RESTORA", "BUILD • RESTORE • OPERATE", "DAY %d" % _day())
+    _header("RESTORA", "COMMAND OVERVIEW • RESTORE • OPERATE • GROW", "DAY %d" % _day())
     var inner_w = w - 36.0
     var hero = _panel(mobile_content, "ExecutiveHero", Rect2(18, 82, inner_w, 154), "surface", "border", 22)
     hero.clip_contents = true
@@ -748,6 +920,15 @@ func _build_mobile_live() -> void:
     _label(signals, "Head", "THE RESTORA LOOP", Rect2(15, 15, inner_w - 30, 14), 10, "gold", 600)
     _remember("signals", _label(signals, "SignalBody", _core_loop_lines(), Rect2(15, 43, inner_w - 30, 104), 12, "text", 600))
     _remember("signal_footer", _label(signals, "Footer", _core_loop_status(), Rect2(15, 153, inner_w - 30, 24), 9, "success", 600))
+
+    var overview_y: float = 708.0
+    overview_y = _build_overview_property_catalog(overview_y)
+    overview_y = _build_overview_business_catalog(overview_y + 14.0)
+    overview_y = _build_overview_region_catalog(overview_y + 14.0)
+    overview_y = _build_overview_system_links(overview_y + 14.0)
+    if mobile_content != null:
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, overview_y + 24.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, overview_y + 24.0)
 
 func _build_mobile_operations() -> void:
     var property_ready := _stage() == "Operational"
@@ -832,10 +1013,8 @@ func _build_mobile_finance() -> void:
     _frame_button(mobile_content, "Investor", "INVESTOR", Rect2(34 + action_w * 2.0, 656, action_w, 48), _request_investor, false, true)
 
 func _build_mobile_property() -> void:
-    if mobile_content != null:
-        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 1380.0)
-        mobile_content.size.y = maxf(mobile_content.size.y, 1380.0)
-
+    var catalog: Array = _building_catalog()
+    var selected_index: int = clampi(int(_state_value("properties", "selected_property", 0)), 0, maxi(0, catalog.size() - 1))
     var building := _selected_building()
     var building_name := str(building.get("name", "Riverside Warehouse"))
     var building_type := str(building.get("type", "Warehouse"))
@@ -843,10 +1022,32 @@ func _build_mobile_property() -> void:
     var building_inspected := bool(building.get("inspected", _inspected()))
     var progress := _building_progress(building)
     var w = _content_width()
-    _header("PROPERTY", "%s • %s" % [building_name.to_upper(), "OWNED" if building_owned else ("SURVEYED" if building_inspected else "AVAILABLE")])
     var inner_w = w - 36.0
+    _header("PROPERTY CATALOG", "%d BUILDINGS • %d OWNED • TAP TO VIEW" % [catalog.size(), _owned_building_count()])
 
-    var visual = _panel(mobile_content, "PropertyVisual", Rect2(18, 82, inner_w, 238), "surface", "border", 22)
+    var catalog_h: float = 62.0 + float(catalog.size()) * 50.0
+    var list_panel = _panel(mobile_content, "PropertyCatalog", Rect2(18, 82, inner_w, catalog_h), "surface", "border", 18)
+    _label(list_panel, "Head", "ALL PROPERTIES", Rect2(16, 12, inner_w - 32, 16), 11, "gold", 700)
+    _label(list_panel, "Meta", "Compare every property before you inspect, buy or restore it.", Rect2(16, 32, inner_w - 32, 18), 9, "muted", 400)
+    for i in range(catalog.size()):
+        var item: Dictionary = catalog[i]
+        var row_y: float = 54.0 + float(i) * 50.0
+        var selected: bool = i == selected_index
+        var row = _panel(list_panel, "BuildingRow%d" % i, Rect2(10, row_y, inner_w - 20, 44), "selected" if selected else "surface_2", "plum" if selected else "border", 10)
+        _label(row, "Name", str(item.get("name", "Property")), Rect2(10, 5, inner_w - 142, 15), 9, "text", 600)
+        var item_meta: String = "%s • %d%% restored" % [str(item.get("type", "Building")), _building_progress(item)]
+        if not bool(item.get("owned", false)):
+            item_meta = "%s • BUY %s" % [str(item.get("type", "Building")), _money(_property_purchase_cost(item))]
+        _label(row, "Meta", item_meta, Rect2(10, 23, inner_w - 142, 13), 8, "muted", 400)
+        _label(row, "State", _property_state_text(item), Rect2(inner_w - 124, 15, 96, 14), 8, _property_state_role(item), 600, HORIZONTAL_ALIGNMENT_RIGHT)
+        _transparent_button(row, "SelectBuilding%d" % i, Rect2(0, 0, inner_w - 20, 44), _select_building.bind(i))
+
+    var selected_y: float = 82.0 + catalog_h + 18.0
+    _label(mobile_content, "SelectedPropertyHead", "SELECTED PROPERTY", Rect2(18, selected_y, inner_w, 18), 11, "gold", 700)
+    _label(mobile_content, "SelectedPropertyMeta", "%s • %s" % [building_name.to_upper(), "OWNED" if building_owned else ("SURVEYED" if building_inspected else "AVAILABLE")], Rect2(18, selected_y + 20.0, inner_w, 18), 9, "muted", 500)
+
+    var visual_y: float = selected_y + 48.0
+    var visual = _panel(mobile_content, "PropertyVisual", Rect2(18, visual_y, inner_w, 238), "surface", "border", 22)
     visual.clip_contents = true
     var stage_texture := _building_stage_texture(building)
     if stage_texture != null:
@@ -868,7 +1069,8 @@ func _build_mobile_property() -> void:
     _label(visual, "BuildingName", building_name, Rect2(16, 184, inner_w - 32, 26), 19, "text", 700)
     _label(visual, "BuildingType", "%s • Market value %s" % [building_type, _money(int(building.get("value", 0)))], Rect2(16, 212, inner_w - 32, 16), 10, "muted", 500)
 
-    var prog = _panel(mobile_content, "RestorationProgress", Rect2(18, 338, inner_w, 116), "surface", "border", 18)
+    var progress_y: float = visual_y + 256.0
+    var prog = _panel(mobile_content, "RestorationProgress", Rect2(18, progress_y, inner_w, 116), "surface", "border", 18)
     _label(prog, "Head", "RESTORATION", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     _label(prog, "Step", _stage_step_text(), Rect2(16, 40, inner_w - 32, 24), 17, "text", 700)
     _label(prog, "Next", _next_stage_text(), Rect2(16, 72, inner_w - 32, 16), 11, "muted", 400)
@@ -882,7 +1084,8 @@ func _build_mobile_property() -> void:
     fill.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 5))
     track.add_child(fill)
 
-    var details = _panel(mobile_content, "BuildingDetails", Rect2(18, 472, inner_w, 126), "surface", "border", 18)
+    var details_y: float = progress_y + 134.0
+    var details = _panel(mobile_content, "BuildingDetails", Rect2(18, details_y, inner_w, 126), "surface", "border", 18)
     _label(details, "Head", "BUILDING DETAILS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     _label(details, "Body", "Condition %d%%  •  Capacity %d\nCompatible: %s" % [
         int(building.get("condition", 0)),
@@ -890,25 +1093,14 @@ func _build_mobile_property() -> void:
         ", ".join(building.get("industry_compatibility", []))
     ], Rect2(16, 42, inner_w - 32, 58), 11, "text", 400)
 
-    var cta = _frame_button(mobile_content, "PropertyCTA", _property_cta_label(), Rect2(18, 616, inner_w, 64), _property_cta, false, true, 11)
+    var cta_y: float = details_y + 144.0
+    var cta = _frame_button(mobile_content, "PropertyCTA", _property_cta_label(), Rect2(18, cta_y, inner_w, 64), _property_cta, false, true, 11)
     cta.add_theme_stylebox_override("normal", _style(_color("gold"), _color("gold"), 16))
     cta.add_theme_stylebox_override("hover", _style(_color("gold").lightened(0.05), _color("gold"), 16))
 
-    _label(mobile_content, "BuildingListHead", "BUILDINGS", Rect2(18, 790, inner_w, 18), 11, "gold", 700)
-    _label(mobile_content, "BuildingListMeta", "Select another building to inspect or restore.", Rect2(18, 814, inner_w, 22), 10, "muted", 400)
-
-    var catalog := _building_catalog()
-    var selected_index := int(_state_value("properties", "selected_property", 0))
-    for i in range(catalog.size()):
-        var item: Dictionary = catalog[i]
-        var y := 852.0 + float(i) * 56.0
-        var selected := i == selected_index
-        var row = _panel(mobile_content, "BuildingRow%d" % i, Rect2(18, y, inner_w, 48), "selected" if selected else "surface", "plum" if selected else "border", 12)
-        _label(row, "Name", str(item.get("name", "Property")), Rect2(12, 7, inner_w - 126, 16), 10, "text", 600)
-        _label(row, "Meta", "%s • %d%% restored" % [str(item.get("type", "Building")), _building_progress(item)], Rect2(12, 25, inner_w - 126, 14), 9, "muted", 400)
-        var state_text := "RESTORED" if _building_stage_slot(item) == 5 else ("OWNED" if bool(item.get("owned", false)) else ("SURVEYED" if bool(item.get("inspected", false)) else "AVAILABLE"))
-        _label(row, "State", state_text, Rect2(inner_w - 110, 16, 92, 14), 8, "success" if bool(item.get("owned", false)) else "gold", 600, HORIZONTAL_ALIGNMENT_RIGHT)
-        _transparent_button(row, "SelectBuilding%d" % i, Rect2(0, 0, inner_w, 48), _select_building.bind(i))
+    if mobile_content != null:
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, cta_y + 92.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, cta_y + 92.0)
 
 func _build_mobile_empire() -> void:
     var w = _content_width()
