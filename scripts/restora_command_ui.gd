@@ -168,6 +168,17 @@ func _property_purchase_cost(item: Dictionary) -> int:
         return int(model.acquisition_cost(item))
     return maxi(0, int(item.get("value", 0)))
 
+func _property_action_cost(item: Dictionary = {}) -> int:
+    var property := item if not item.is_empty() else _selected_building()
+    if property.is_empty() or not bool(property.get("inspected", false)):
+        return 0
+    var model = _property_system()
+    if not bool(property.get("owned", false)):
+        return int(model.acquisition_cost(property)) if model != null and model.has_method("acquisition_cost") else _property_purchase_cost(property)
+    if _building_stage_slot(property) < 5:
+        return int(model.next_restoration_cost(property)) if model != null and model.has_method("next_restoration_cost") else 0
+    return 0
+
 func _property_state_text(item: Dictionary) -> String:
     if _building_stage_slot(item) == 5:
         return "RESTORED"
@@ -1112,9 +1123,15 @@ func _build_mobile_property() -> void:
     var detail_text := "Inspect to reveal condition, capacity and compatible uses."
     if building_inspected or building_owned:
         detail_text = "Condition %d%% • Capacity %d • %d%% restored" % [int(building.get("condition", 0)), int(building.get("capacity", 0)), progress]
+    var action_cost := _property_action_cost(building)
+    var action_affordable := action_cost <= 0 or _cash() >= action_cost
+    if action_cost > _cash():
+        detail_text += " • Need %s more" % _money(action_cost - _cash())
     _label(selected, "Detail", detail_text, Rect2(16, 137, inner_w - 32, 24), 9, "muted", 400)
-    var cta = _frame_button(selected, "PropertyCTA", _property_cta_label(), Rect2(16, 158, inner_w - 32, 44), _property_cta, false, true, 9)
-    cta.add_theme_stylebox_override("normal", _style(_color("gold"), _color("gold"), 12))
+    var cta = _frame_button(selected, "PropertyCTA", _property_cta_label(), Rect2(16, 158, inner_w - 32, 44), _property_cta, false, action_affordable, 9)
+    cta.disabled = not action_affordable
+    cta.tooltip_text = ("Cost %s • Cash %s" % [_money(action_cost), _money(_cash())]) if action_cost > 0 else _property_cta_label()
+    cta.add_theme_stylebox_override("normal", _style(_color("gold") if action_affordable else _color("surface_2"), _color("gold") if action_affordable else _color("border"), 12))
 
     var catalog_y := 314.0
     var catalog_h: float = 62.0 + float(catalog.size()) * 50.0
@@ -1785,11 +1802,13 @@ func _next_stage_name() -> String:
         _: return "Open operations"
 
 func _property_cta_label() -> String:
-    if not _inspected(): return "INSPECT PROPERTY"
-    if not _owned(): return "ACQUIRE PROPERTY  •  %s" % _money(_acquisition_cost())
-    if _stage() != "Operational":
-        var cost = int(parent._next_cost()) if parent != null and parent.has_method("_next_cost") else 0
-        return "RESTORE NEXT STAGE  •  %s" % _money(cost)
+    var property := _selected_building()
+    if property.is_empty() or not bool(property.get("inspected", _inspected())):
+        return "INSPECT PROPERTY"
+    if not bool(property.get("owned", _owned())):
+        return "ACQUIRE PROPERTY  •  %s" % _money(_property_action_cost(property))
+    if _building_stage_slot(property) < 5:
+        return "RESTORE NEXT STAGE  •  %s" % _money(_property_action_cost(property))
     return "OPEN OPERATIONS"
 
 func _property_cta() -> void:
