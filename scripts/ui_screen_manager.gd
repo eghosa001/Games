@@ -9,7 +9,7 @@ const SCREEN_ALIASES := {"MarketPanel": "CustomerSegmentsUI"}
 const CLOSE_BUTTON_NAME := "UniversalCloseButton"
 const MODAL_LAYER_NAME := "FocusedScreenBackdrop"
 const MODAL_LAYER := 50
-const SCREEN_SCAN_INTERVAL := 0.25
+const SCREEN_SCAN_INTERVAL := 0.50
 
 var _previous_visible: Dictionary = {}
 var _active_screen: Node = null
@@ -207,7 +207,7 @@ func _set_modal_backdrop(value: bool) -> void:
         _modal_backdrop.modulate.a = 0.0
         _backdrop_tween = create_tween()
         _backdrop_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-        _backdrop_tween.tween_property(_modal_backdrop, "modulate:a", 1.0, 0.18)
+        _backdrop_tween.tween_property(_modal_backdrop, "modulate:a", 1.0, 0.12)
     else:
         _modal_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
         _modal_backdrop.process_mode = Node.PROCESS_MODE_DISABLED
@@ -231,14 +231,14 @@ func _animate_screen_in(node: Node) -> void:
         control.scale = Vector2.ONE
         return
     control.modulate.a = 0.0
-    control.scale = Vector2(0.976, 0.976)
-    control.position.y += 16.0
-    var target_y := control.position.y - 16.0
+    control.scale = Vector2(0.988, 0.988)
+    control.position.y += 8.0
+    var target_y := control.position.y - 8.0
     _screen_tween = create_tween().set_parallel(true)
     _screen_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-    _screen_tween.tween_property(control, "modulate:a", 1.0, 0.22)
-    _screen_tween.tween_property(control, "scale", Vector2.ONE, 0.26)
-    _screen_tween.tween_property(control, "position:y", target_y, 0.25)
+    _screen_tween.tween_property(control, "modulate:a", 1.0, 0.12)
+    _screen_tween.tween_property(control, "scale", Vector2.ONE, 0.15)
+    _screen_tween.tween_property(control, "position:y", target_y, 0.14)
 
 func hide_all_screens() -> void:
     if _active_screen != null and is_instance_valid(_active_screen):
