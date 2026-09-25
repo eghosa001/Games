@@ -10,9 +10,9 @@ var supply_chain = SupplyChain.new()
 var employee_system = null
 
 const INDUSTRIES := {
-    "furniture": {"id":"furniture","name":"Furniture","inputs":{"timber":1.0,"metal":0.5,"energy":2.0},"output":{"product":"furniture","units":1},"workers":3,"capacity":6,"operating_cost":70,"base_price":220,"market_demand":80},
-    "construction_materials": {"id":"construction_materials","name":"Construction Materials","inputs":{"timber":1.0,"iron":1.0,"energy":2.5},"output":{"product":"construction_materials","units":1},"workers":4,"capacity":5,"operating_cost":95,"base_price":180,"market_demand":100},
-    "consumer_electronics": {"id":"consumer_electronics","name":"Consumer Electronics","inputs":{"iron":1.0,"electronics":1.0,"energy":3.0},"output":{"product":"consumer_electronics","units":1},"workers":5,"capacity":4,"operating_cost":130,"base_price":360,"market_demand":70}
+    "furniture": {"id":"furniture","name":"Furniture","inputs":{"timber":1.0,"metal":0.5,"energy":2.0},"output":{"product":"furniture","units":1},"workers":3,"capacity":6,"operating_cost":70,"base_price":220,"market_demand":80,"launch_cost":2500},
+    "construction_materials": {"id":"construction_materials","name":"Construction Materials","inputs":{"timber":1.0,"iron":1.0,"energy":2.5},"output":{"product":"construction_materials","units":1},"workers":4,"capacity":5,"operating_cost":95,"base_price":180,"market_demand":100,"launch_cost":3200},
+    "consumer_electronics": {"id":"consumer_electronics","name":"Consumer Electronics","inputs":{"iron":1.0,"electronics":1.0,"energy":3.0},"output":{"product":"consumer_electronics","units":1},"workers":5,"capacity":4,"operating_cost":130,"base_price":360,"market_demand":70,"launch_cost":4500}
 }
 const INDUSTRY_PRODUCTION := {
     "furniture": {"purpose":"furniture_factory","inputs":{"timber":1.0,"metal":0.5,"energy":2.0},"product":"furniture","base_price":220,"operating_cost":70},
@@ -20,9 +20,21 @@ const INDUSTRY_PRODUCTION := {
     "consumer_electronics": {"purpose":"consumer_electronics_factory","inputs":{"iron":1.0,"electronics":1.0,"energy":3.0},"product":"consumer_electronics","base_price":360,"operating_cost":130}
 }
 const PURPOSES := {
-    "Warehouse": [{"id":"furniture_factory","name":"Furniture Factory","type":"Factory","product":"furniture","industry_id":"furniture"},{"id":"construction_materials_factory","name":"Construction Materials Plant","type":"Factory","product":"construction_materials","industry_id":"construction_materials"},{"id":"consumer_electronics_factory","name":"Consumer Electronics Factory","type":"Factory","product":"consumer_electronics","industry_id":"consumer_electronics"}],
-    "Workshop": [{"id":"furniture_factory","name":"Furniture Factory","type":"Factory","product":"furniture","industry_id":"furniture"},{"id":"construction_materials_factory","name":"Construction Materials Plant","type":"Factory","product":"construction_materials","industry_id":"construction_materials"},{"id":"consumer_electronics_factory","name":"Consumer Electronics Factory","type":"Factory","product":"consumer_electronics","industry_id":"consumer_electronics"}],
-    "Commercial Building": [{"id":"furniture_factory","name":"Furniture Factory","type":"Factory","product":"furniture","industry_id":"furniture"},{"id":"construction_materials_factory","name":"Construction Materials Plant","type":"Factory","product":"construction_materials","industry_id":"construction_materials"},{"id":"consumer_electronics_factory","name":"Consumer Electronics Factory","type":"Factory","product":"consumer_electronics","industry_id":"consumer_electronics"}]
+    "Warehouse": [
+        {"id":"warehouse_furniture","name":"Furniture Distribution Hub","type":"Warehouse Business","product":"furniture","industry_id":"furniture","launch_cost":2500,"fit":"GOOD"},
+        {"id":"warehouse_materials","name":"Building Materials Depot","type":"Warehouse Business","product":"construction_materials","industry_id":"construction_materials","launch_cost":3200,"fit":"EXCELLENT"},
+        {"id":"warehouse_electronics","name":"Electronics Fulfilment Hub","type":"Warehouse Business","product":"consumer_electronics","industry_id":"consumer_electronics","launch_cost":4500,"fit":"GOOD"}
+    ],
+    "Workshop": [
+        {"id":"workshop_furniture","name":"Furniture Workshop","type":"Workshop Business","product":"furniture","industry_id":"furniture","launch_cost":2500,"fit":"EXCELLENT"},
+        {"id":"workshop_materials","name":"Materials Fabrication Shop","type":"Workshop Business","product":"construction_materials","industry_id":"construction_materials","launch_cost":3200,"fit":"EXCELLENT"},
+        {"id":"workshop_electronics","name":"Electronics Assembly Studio","type":"Workshop Business","product":"consumer_electronics","industry_id":"consumer_electronics","launch_cost":4500,"fit":"GOOD"}
+    ],
+    "Commercial Building": [
+        {"id":"commercial_furniture","name":"Furniture Showroom","type":"Commercial Business","product":"furniture","industry_id":"furniture","launch_cost":2500,"fit":"GOOD"},
+        {"id":"commercial_materials","name":"Building Supplies Store","type":"Commercial Business","product":"construction_materials","industry_id":"construction_materials","launch_cost":3200,"fit":"FAIR"},
+        {"id":"commercial_electronics","name":"Electronics Retail & Service","type":"Commercial Business","product":"consumer_electronics","industry_id":"consumer_electronics","launch_cost":4500,"fit":"EXCELLENT"}
+    ]
 }
 func _ready() -> void:
     add_child(state_adapter); add_child(supply_chain); supply_chain.set_economy(economy)
@@ -64,7 +76,12 @@ func create_business(purpose_id: String = "") -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)) or str(state_adapter.get_value("properties", "stage", "Neglected")) != "Operational": state_adapter.message("Finish restoring the property first."); return
     if bool(state_adapter.get_value("businesses", "business_open", false)): state_adapter.message("%s is already open." % _business_name()); return
     var purpose: Dictionary = get_business_purpose(purpose_id if not purpose_id.is_empty() else str(state_adapter.get_value("businesses", "business_purpose", ""))); if purpose.is_empty(): state_adapter.message("Choose a business purpose first from the available business choices."); return
-    var cost := 3000; var cash: int = int(state_adapter.get_value("economy", "cash", 35000)); if cash < cost: state_adapter.message("Need $3,000 working capital to launch the business."); return
+    var industry: Dictionary = get_industry(str(purpose.get("industry_id", "furniture")))
+    var cost: int = int(purpose.get("launch_cost", industry.get("launch_cost", 3000)))
+    var cash: int = int(state_adapter.get_value("economy", "cash", 35000))
+    if cash < cost:
+        state_adapter.message("Need $%s working capital to launch %s." % [state_adapter.money(cost), purpose.get("name", "this business")])
+        return
     var property: Dictionary = _selected_property(); var property_id: String = str(property.get("id", "")); var business_id: String = "%s_%s" % [purpose.get("id", "business"), property_id]; var spend: Dictionary = state_adapter.spend(cost, "business launch")
     if not bool(spend.get("ok", false)): state_adapter.message(str(spend.get("message", "Unable to fund the business launch."))); return
     state_adapter.set_value("businesses", "business_open", true); state_adapter.set_value("businesses", "business_id", business_id); state_adapter.set_value("businesses", "business_name", str(purpose.get("name", "Business"))); state_adapter.set_value("businesses", "business_type", str(purpose.get("type", "Business"))); state_adapter.set_value("businesses", "business_purpose", str(purpose.get("id", ""))); state_adapter.set_value("businesses", "industry_id", str(purpose.get("industry_id", "furniture"))); state_adapter.set_value("businesses", "origin_property_id", property_id); state_adapter.set_value("businesses", "origin_property_name", str(property.get("name", "Property"))); state_adapter.set_value("businesses", "origin_property_type", str(property.get("type", "Property"))); state_adapter.set_value("player", "reputation", int(state_adapter.get_value("player", "reputation", 0)) + 2)
@@ -100,6 +117,23 @@ func change_price() -> void:
         price = 80
     state_adapter.set_value("businesses", "player_price", price)
     state_adapter.message("Selling price is now $%s." % state_adapter.money(price))
+func _property_business_fit_multiplier(industry_id: String) -> float:
+    var property_type := _origin_property_type()
+    match property_type:
+        "Warehouse":
+            if industry_id == "construction_materials": return 1.12
+            if industry_id == "consumer_electronics": return 1.06
+            return 1.02
+        "Workshop":
+            if industry_id == "furniture": return 1.14
+            if industry_id == "construction_materials": return 1.10
+            return 1.05
+        "Commercial Building":
+            if industry_id == "consumer_electronics": return 1.12
+            if industry_id == "furniture": return 1.06
+            if industry_id == "construction_materials": return 0.96
+    return 1.0
+
 func _property_condition_multiplier() -> float:
     var restoration: int = int(state_adapter.get_value("properties", "restoration", 100)); return clamp(0.70 + float(restoration) / 100.0 * 0.30, 0.70, 1.0)
 func _technology_multiplier() -> float:
@@ -159,7 +193,7 @@ func _produce_goods_impl() -> Dictionary:
         return _production_failure("Unknown V1 industry: %s." % industry_id)
     var employee_count: int = 3; var employee_factor: float = 1.0; var morale_multiplier: float = 1.0
     if employee_system != null: employee_count = employee_system.get_active_employee_count(); employee_factor = employee_system.get_productivity_multiplier("factory_001"); morale_multiplier = employee_system.get_morale_multiplier()
-    var capacity: int = int(state_adapter.get_value("businesses", "capacity_level", 1)); var business_efficiency: float = clamp(0.85 + float(capacity) * 0.10, 0.85, 1.50); var base_output: int = max(1, employee_count + capacity - 1); var output_factor: float = employee_factor * business_efficiency * _technology_multiplier() * _property_condition_multiplier() * morale_multiplier * state_adapter.executive_bonus("production") * state_adapter.infra_modifier("production") * _world_modifier("production"); var cycles: int = max(1, int(floor(float(base_output) * output_factor))); var inputs: Dictionary = config.get("inputs", {}).duplicate(true); var cash: int = int(state_adapter.get_value("economy", "cash", 35000)); var orders: Array = []
+    var capacity: int = int(state_adapter.get_value("businesses", "capacity_level", 1)); var business_efficiency: float = clamp(0.85 + float(capacity) * 0.10, 0.85, 1.50); var base_output: int = max(1, employee_count + capacity - 1); var output_factor: float = employee_factor * business_efficiency * _technology_multiplier() * _property_condition_multiplier() * _property_business_fit_multiplier(industry_id) * morale_multiplier * state_adapter.executive_bonus("production") * state_adapter.infra_modifier("production") * _world_modifier("production"); var cycles: int = max(1, int(floor(float(base_output) * output_factor))); var inputs: Dictionary = config.get("inputs", {}).duplicate(true); var cash: int = int(state_adapter.get_value("economy", "cash", 35000)); var orders: Array = []
     var metal_needed: float = float(inputs.get("metal", 0.0)) * float(cycles)
     var metal_make: int = 0
     if metal_needed > supply_chain.stock("metal"):
