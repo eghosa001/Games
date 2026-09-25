@@ -16,6 +16,10 @@ var detail_label: Label
 var action_grid: GridContainer
 var feedback_label: Label
 var close_button: Button
+var establish_button: Button
+var infrastructure_button: Button
+var ship_button: Button
+var trade_button: Button
 var selected_index := 0
 var opened := false
 
@@ -44,7 +48,12 @@ func _build() -> void:
     region_grid = GridContainer.new(); region_grid.columns = 2; region_grid.add_theme_constant_override("h_separation", 8); region_grid.add_theme_constant_override("v_separation", 8); region_scroll.add_child(region_grid)
     detail_label = _label("", 10, TEXT); detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; panel.add_child(detail_label)
     action_grid = GridContainer.new(); action_grid.add_theme_constant_override("h_separation", 8); action_grid.add_theme_constant_override("v_separation", 8); panel.add_child(action_grid)
-    _add_action("NEXT", Callable(self, "_next")); _add_action("PREVIOUS", Callable(self, "_previous")); _add_action("ESTABLISH", Callable(self, "_establish")); _add_action("INFRASTRUCTURE", Callable(self, "_infrastructure")); _add_action("SHIP", Callable(self, "_dispatch")); _add_action("TRADE ROUTE", Callable(self, "_trade"))
+    _add_action("NEXT", Callable(self, "_next"))
+    _add_action("PREVIOUS", Callable(self, "_previous"))
+    establish_button = _add_action("ESTABLISH", Callable(self, "_establish"))
+    infrastructure_button = _add_action("INFRASTRUCTURE", Callable(self, "_infrastructure"))
+    ship_button = _add_action("SHIP", Callable(self, "_dispatch"))
+    trade_button = _add_action("TRADE ROUTE", Callable(self, "_trade"))
     feedback_label = _label("", 9, MUTED); feedback_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; panel.add_child(feedback_label)
 
 func _label(text: String, size: int, color: Color) -> Label:
@@ -56,7 +65,10 @@ func _style(bg: Color, border: Color, radius: int) -> StyleBoxFlat:
 func _button(text: String, callback: Callable, min_height := 44) -> Button:
     var button := Button.new(); button.text = text; button.custom_minimum_size = Vector2(0, min_height); button.focus_mode = Control.FOCUS_NONE; button.size_flags_horizontal = Control.SIZE_EXPAND_FILL; button.pressed.connect(callback); button.add_theme_font_size_override("font_size", 10); button.add_theme_stylebox_override("normal", _style(Color("142c33"), BORDER, 9)); button.add_theme_stylebox_override("hover", _style(Color("1b3b40"), ACCENT, 9)); button.add_theme_stylebox_override("pressed", _style(Color("24464a"), ACCENT, 9)); button.add_theme_color_override("font_color", TEXT); button.tooltip_text = text.capitalize(); return button
 
-func _add_action(text: String, callback: Callable) -> void: action_grid.add_child(_button(text, callback, 46))
+func _add_action(text: String, callback: Callable) -> Button:
+    var button := _button(text, callback, 46)
+    action_grid.add_child(button)
+    return button
 
 func _layout() -> void:
     if panel == null: return
@@ -118,7 +130,32 @@ func _update_detail() -> void:
         summary_label.text = "%d TERRITORIES  •  %d OPERATING" % [territory_count, operating_count]
     else:
         summary_label.text = "REGIONAL MARKETS  •  %d TERRITORIES  •  %d OPERATING" % [territory_count, operating_count]
-    if not unlocked: feedback_label.text = "%s unlocks at %d reputation." % [str(r.get("name", "This region")), int(r.get("rep", 0))]
+
+    var establish_cost := int(controller.regions.establishment_cost(selected_index)) if controller.regions.has_method("establishment_cost") else 0
+    var infra_cost := int(controller.regions.infrastructure_upgrade_cost(selected_index)) if controller.regions.has_method("infrastructure_upgrade_cost") else 0
+    var trade_cost := int(controller.regions.trade_route_cost(0, selected_index)) if controller.regions.has_method("trade_route_cost") else 0
+    var infra_level := int(r.get("infrastructure", 0))
+    var goods := int(game.finished_goods) if game != null and "finished_goods" in game else 0
+
+    if establish_button != null:
+        establish_button.text = "ESTABLISH  $%s" % _money(establish_cost) if presence <= 0 and unlocked else ("OPERATING" if presence > 0 else "ESTABLISH")
+        establish_button.disabled = not unlocked or presence > 0
+    if infrastructure_button != null:
+        infrastructure_button.text = "INFRA L%d→%d  $%s" % [infra_level, infra_level + 1, _money(infra_cost)] if presence > 0 and infra_level < 3 else ("INFRA MAX" if infra_level >= 3 else "INFRASTRUCTURE")
+        infrastructure_button.disabled = presence <= 0 or infra_level >= 3
+    if ship_button != null:
+        ship_button.text = "SHIP %d GOODS" % mini(10, goods) if selected_index != 0 and goods > 0 else "SHIP"
+        ship_button.disabled = selected_index == 0 or goods <= 0
+    if trade_button != null:
+        trade_button.text = "TRADE ROUTE  $%s" % _money(trade_cost) if selected_index != 0 and trade_cost > 0 else "TRADE ROUTE"
+        trade_button.disabled = selected_index == 0 or presence <= 0 or int(controller.regions.player_presence[0]) <= 0
+
+    if not unlocked:
+        feedback_label.text = "%s unlocks at %d reputation." % [str(r.get("name", "This region")), int(r.get("rep", 0))]
+    elif presence <= 0:
+        feedback_label.text = "Establishing here costs $%s. Review demand, wages and logistics before committing." % _money(establish_cost)
+    elif infra_level < 3:
+        feedback_label.text = "Next infrastructure upgrade costs $%s and improves regional efficiency." % _money(infra_cost)
 
 func _next() -> void:
     if controller != null: controller.next_region(); _refresh()
@@ -134,3 +171,11 @@ func _trade() -> void:
     if controller != null: controller.establish_trade_route(); _feedback_from_controller(); _refresh()
 func _feedback_from_controller() -> void:
     if controller != null: feedback_label.text = str(controller.message)
+
+
+func _money(value: int) -> String:
+    if abs(value) >= 1000000:
+        return "%.2fM" % (float(value) / 1000000.0)
+    if abs(value) >= 1000:
+        return "%.1fK" % (float(value) / 1000.0)
+    return str(value)
