@@ -22,6 +22,8 @@ func _ready() -> void:
 
 func _process(_delta: float) -> void:
     _link_economy()
+    if supply != null and supply.economy != null:
+        set_process(false)
 
 func _link_economy() -> void:
     if supply == null:
