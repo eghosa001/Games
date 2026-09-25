@@ -503,6 +503,7 @@ func _rebuild_current() -> void:
     else:
         _build_mobile_host()
         _build_mobile_view()
+        _normalize_mobile_content_extent()
     _last_progress_level = _company_level()
     _refresh()
     _animate_view_in()
@@ -572,6 +573,7 @@ func _rebuild_mobile_content() -> void:
     mobile_content.custom_minimum_size = Vector2(content_w, MOBILE_CONTENT_H)
     mobile_content.size = Vector2(content_w, MOBILE_CONTENT_H)
     _build_mobile_view()
+    _normalize_mobile_content_extent()
     if mobile_scroll != null:
         mobile_scroll.scroll_vertical = 0
     _refresh_bottom_nav()
@@ -615,6 +617,8 @@ func _build_mobile_host() -> void:
     mobile_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     mobile_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
     mobile_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+    mobile_scroll.clip_contents = true
+    mobile_scroll.scroll_deadzone = 8
     root.add_child(mobile_scroll)
 
     mobile_content = Control.new()
@@ -746,11 +750,39 @@ func _solid_round(color: Color, radius: int) -> StyleBoxFlat:
     s.set_corner_radius_all(radius)
     return s
 
+func _fit_horizontal_rect(parent_node: Node, rect: Rect2, margin := 0.0) -> Rect2:
+    var fitted := rect
+    if parent_node is Control:
+        var parent_control := parent_node as Control
+        var parent_w := parent_control.size.x
+        if parent_w <= 0.0:
+            parent_w = parent_control.custom_minimum_size.x
+        if parent_w > 0.0:
+            fitted.position.x = clampf(fitted.position.x, margin, maxf(margin, parent_w - margin))
+            fitted.size.x = maxf(1.0, minf(fitted.size.x, parent_w - fitted.position.x - margin))
+    return fitted
+
+func _normalize_mobile_content_extent() -> void:
+    if mobile_content == null:
+        return
+    var max_bottom := MOBILE_CONTENT_H
+    var content_w := mobile_content.custom_minimum_size.x
+    for child in mobile_content.get_children():
+        if child is Control:
+            var control := child as Control
+            max_bottom = maxf(max_bottom, control.position.y + control.size.y + 18.0)
+            if control.position.x + control.size.x > content_w:
+                control.size.x = maxf(1.0, content_w - control.position.x)
+    mobile_content.custom_minimum_size.y = max_bottom
+    mobile_content.size.y = max_bottom
+
 func _panel(parent_node: Node, name: String, rect: Rect2, bg_role = "surface", border_role = "border", radius = 18) -> Panel:
     var p = Panel.new()
     p.name = name
-    p.position = rect.position
-    p.size = rect.size
+    var fitted := _fit_horizontal_rect(parent_node, rect)
+    p.position = fitted.position
+    p.size = fitted.size
+    p.clip_contents = true
     p.mouse_filter = Control.MOUSE_FILTER_IGNORE
     p.add_theme_stylebox_override("panel", _style(_color(bg_role), _color(border_role), radius))
     parent_node.add_child(p)
@@ -760,8 +792,9 @@ func _label(parent_node: Node, name: String, text_value: String, rect: Rect2, si
     var l = Label.new()
     l.name = name
     l.text = text_value
-    l.position = rect.position
-    l.size = rect.size
+    var fitted := _fit_horizontal_rect(parent_node, rect)
+    l.position = fitted.position
+    l.size = fitted.size
     # System font metrics can exceed Figma's nominal text box height on Linux/Android.
     # Keep the authored x/width intact while giving display text enough vertical room.
     if size_px >= 15:
@@ -773,7 +806,8 @@ func _label(parent_node: Node, name: String, text_value: String, rect: Rect2, si
     l.horizontal_alignment = align
     l.vertical_alignment = VERTICAL_ALIGNMENT_TOP
     l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    l.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+    l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+    l.clip_text = true
     parent_node.add_child(l)
     return l
 
@@ -785,8 +819,9 @@ func _transparent_button(parent_node: Node, name: String, rect: Rect2, callback:
     var b = Button.new()
     b.name = name
     b.text = ""
-    b.position = rect.position
-    b.size = rect.size
+    var fitted := _fit_horizontal_rect(parent_node, rect)
+    b.position = fitted.position
+    b.size = fitted.size
     b.focus_mode = Control.FOCUS_ALL
     b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
     var empty = StyleBoxEmpty.new()
@@ -809,8 +844,9 @@ func _frame_button(parent_node: Node, name: String, text_value: String, rect: Re
     var b = Button.new()
     b.name = name
     b.text = text_value
-    b.position = rect.position
-    b.size = rect.size
+    var fitted := _fit_horizontal_rect(parent_node, rect)
+    b.position = fitted.position
+    b.size = fitted.size
     b.focus_mode = Control.FOCUS_ALL
     b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
     b.add_theme_font_override("font", _font(600))
@@ -1305,12 +1341,12 @@ func _build_mobile_settings() -> void:
     var appearance = _panel(mobile_content, "Appearance", Rect2(18,82,inner_w,160), "surface", "border", 18)
     _label(appearance, "Head", "APPEARANCE", Rect2(16,14,180,14), 10, "gold", 600)
     _label(appearance, "Theme", "THEME", Rect2(16,44,100,16), 11, "text", 600)
-    var btn_gap = 8.0
-    var b1 = 96.0
-    var b2 = maxf(96.0, inner_w - 32.0 - b1*2.0 - btn_gap*2.0)
-    _frame_button(appearance, "DarkTheme", "DARK", Rect2(16,70,b1,54), _set_theme.bind("dark"), not _is_light_theme() and _theme_mode() == "dark")
-    _frame_button(appearance, "LightTheme", "LIGHT", Rect2(16+b1+btn_gap,70,b1,54), _set_theme.bind("light"), _is_light_theme() and _theme_mode() == "light")
-    _frame_button(appearance, "DeviceTheme", "DEVICE", Rect2(16+b1*2+btn_gap*2,70,b2,54), _set_theme.bind("system"), _theme_mode() == "system")
+    var btn_gap = 6.0
+    var theme_available := maxf(132.0, inner_w - 32.0 - btn_gap * 2.0)
+    var theme_w := theme_available / 3.0
+    _frame_button(appearance, "DarkTheme", "DARK", Rect2(16,70,theme_w,54), _set_theme.bind("dark"), not _is_light_theme() and _theme_mode() == "dark")
+    _frame_button(appearance, "LightTheme", "LIGHT", Rect2(16+theme_w+btn_gap,70,theme_w,54), _set_theme.bind("light"), _is_light_theme() and _theme_mode() == "light")
+    _frame_button(appearance, "DeviceTheme", "DEVICE", Rect2(16+(theme_w+btn_gap)*2.0,70,theme_w,54), _set_theme.bind("system"), _theme_mode() == "system")
     _label(appearance, "Help", "Applies across every command screen.", Rect2(16,134,inner_w - 32,14), 9, "muted", 400)
 
     var audio = _panel(mobile_content, "AudioAccessibility", Rect2(18,258,inner_w,174), "surface", "border", 18)
@@ -1362,8 +1398,9 @@ func _transparent_text_button(parent_node: Node, name: String, text_value: Strin
     var b = Button.new()
     b.name = name
     b.text = text_value
-    b.position = rect.position
-    b.size = rect.size
+    var fitted := _fit_horizontal_rect(parent_node, rect)
+    b.position = fitted.position
+    b.size = fitted.size
     b.focus_mode = Control.FOCUS_ALL
     b.flat = true
     b.add_theme_font_override("font", _font(600))
