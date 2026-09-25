@@ -1134,41 +1134,46 @@ func _build_asset_row(panel: Panel, index: int, asset: Dictionary, y: float, w: 
 
 func _build_mobile_world() -> void:
     var w = _content_width()
-    _header("WORLD NETWORK", "%d MARKETS • %d ACTIVE • %d TRADE ROUTES" % [_region_catalog().size(), _region_presence_count(), _trade_route_count()])
+    var regions: Array = _region_catalog()
+    _header("WORLD NETWORK", "%d MARKETS • %d ACTIVE • %d TRADE ROUTES" % [regions.size(), _region_presence_count(), _trade_route_count()])
     var inner_w = w - 36.0
-    var map = _panel(mobile_content, "RegionalMap", Rect2(18, 82, inner_w, 220), "surface", "border", 22)
-    map.clip_contents = true
-    var map_scrim := ColorRect.new()
-    map_scrim.position = Vector2.ZERO
-    map_scrim.size = Vector2(inner_w, 220)
-    map_scrim.color = Color(0.02, 0.04, 0.045, 0.38 if not _is_light_theme() else 0.28)
-    map_scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    map.add_child(map_scrim)
-    _label(map, "Head", "REGIONAL FOOTPRINT", Rect2(14, 14, inner_w - 28, 14), 10, "gold", 600)
-    _route_bar(map, Vector2(86, 92), 120, -12)
-    _route_bar(map, Vector2(198, 74), 94, 29)
-    _route_bar(map, Vector2(96, 116), 78, 52)
-    var pts = [
-        {"x":72.0,"y":82.0,"role":"success","name":"CENTRAL"},
-        {"x":190.0,"y":56.0,"role":"gold","name":"NORTH"},
-        {"x":268.0,"y":132.0,"role":"warning","name":"EAST"},
-        {"x":112.0,"y":154.0,"role":"muted","name":"SOUTH"}
-    ]
-    for p in pts:
-        var dot = Panel.new()
-        dot.position = Vector2(minf(float(p.get("x", 0.0)), inner_w - 40), float(p.get("y", 0.0)))
-        dot.size = Vector2(22,22)
-        dot.add_theme_stylebox_override("panel", _solid_round(_color(str(p.get("role", "muted"))), 11))
-        map.add_child(dot)
-        _label(map, "Region" + str(p.get("name", "REGION")), str(p.get("name", "REGION")), Rect2(dot.position.x - 18, dot.position.y + 28, 64, 14), 8, str(p.get("role", "muted")), 600, HORIZONTAL_ALIGNMENT_CENTER)
 
-    var region = _panel(mobile_content, "RegionDetail", Rect2(18, 320, inner_w, 142), "surface", "border", 18)
+    var region_rows := maxi(1, regions.size())
+    var catalog_h := 60.0 + float(region_rows) * 46.0
+    var catalog = _panel(mobile_content, "RegionalCatalog", Rect2(18, 82, inner_w, catalog_h), "surface", "border", 20)
+    _label(catalog, "Head", "REGIONS & MARKETS", Rect2(14, 14, inner_w - 28, 14), 10, "gold", 700)
+    _label(catalog, "Meta", "Select a market to inspect demand, presence and infrastructure.", Rect2(14, 34, inner_w - 28, 16), 9, "muted", 400)
+    if regions.is_empty():
+        _label(catalog, "Empty", "No regional markets are available yet.", Rect2(14, 58, inner_w - 28, 28), 10, "muted", 500)
+    else:
+        var selected_index := _selected_region_index()
+        for i in range(regions.size()):
+            var item: Dictionary = regions[i] if regions[i] is Dictionary else {}
+            var row_y := 56.0 + float(i) * 46.0
+            var presence := _region_presence(i)
+            var required_rep := int(item.get("rep", 0))
+            var unlocked := bool(item.get("unlocked", _rep() >= required_rep))
+            var selected := i == selected_index
+            var row = _panel(catalog, "RegionRow%d" % i, Rect2(10, row_y, inner_w - 20, 40), "selected" if selected else "surface_2", "plum" if selected else "border", 10)
+            _label(row, "Name", str(item.get("name", "Region")), Rect2(10, 5, inner_w - 142, 14), 9, "text", 600)
+            _label(row, "Meta", "Tier %d • Demand %.2fx • REP %d" % [int(item.get("tier", 1)), float(item.get("demand", 1.0)), required_rep], Rect2(10, 22, inner_w - 142, 13), 9, "muted", 400)
+            var state_text := "ACTIVE" if presence > 0 else ("AVAILABLE" if unlocked else "LOCKED")
+            _label(row, "State", state_text, Rect2(inner_w - 124, 13, 96, 14), 9, "success" if presence > 0 else ("gold" if unlocked else "muted"), 600, HORIZONTAL_ALIGNMENT_RIGHT)
+            var row_button = _transparent_button(row, "SelectRegion%d" % i, Rect2(0, 0, inner_w - 20, 40), _select_region_and_open.bind(i))
+            row_button.disabled = not unlocked
+            if not unlocked:
+                row_button.tooltip_text = "Unlocks at reputation %d" % required_rep
+
+    var detail_y := 100.0 + catalog_h
+    var region = _panel(mobile_content, "RegionDetail", Rect2(18, detail_y, inner_w, 142), "surface", "border", 18)
     _label(region, "Head", _current_region_name(), Rect2(16, 14, inner_w - 140, 20), 15, "text", 700)
-    _label(region, "State", "PRESENCE ESTABLISHED" if _region_presence_count() > 0 else "EXPANSION READY", Rect2(inner_w - 150, 17, 134, 14), 9, "success" if _region_presence_count() > 0 else "gold", 600, HORIZONTAL_ALIGNMENT_RIGHT)
-    _label(region, "Body", _region_detail_text(), Rect2(16, 46, inner_w - 32, 70), 11, "muted", 400)
+    var selected_presence := _region_presence(_selected_region_index())
+    _label(region, "State", "PRESENCE ESTABLISHED" if selected_presence > 0 else "EXPANSION READY", Rect2(inner_w - 150, 17, 134, 14), 9, "success" if selected_presence > 0 else "gold", 600, HORIZONTAL_ALIGNMENT_RIGHT)
+    _label(region, "Body", _region_detail_text(), Rect2(16, 46, inner_w - 32, 76), 11, "muted", 400)
 
-    var opp = _panel(mobile_content, "WorldOpportunities", Rect2(18, 480, inner_w, 176), "surface", "border", 18)
-    _label(opp, "Head", "WORLD OPPORTUNITIES", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
+    var opp_y := detail_y + 160.0
+    var opp = _panel(mobile_content, "WorldOpportunities", Rect2(18, opp_y, inner_w, 176), "surface", "border", 18)
+    _label(opp, "Head", "NETWORK SIGNALS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     var items = [
         ["CUSTOMER DEMAND", "%d units remain" % _demand_remaining(), "ACTIVE" if _demand_remaining() > 0 else "SATISFIED", "success" if _demand_remaining() > 0 else "muted"],
         ["EXPANSION ASSETS", "%d unlocked" % _unlocked_asset_count(), "READY" if _unlocked_asset_count() > _owned_asset_count() else "MANAGED", "gold"],
@@ -1180,7 +1185,11 @@ func _build_mobile_world() -> void:
         _label(opp, "Meta%d" % i, items[i][1], Rect2(146, y, 92, 14), 9, "muted", 400)
         _label(opp, "State%d" % i, items[i][2], Rect2(inner_w - 106, y, 86, 14), 9, items[i][3], 600, HORIZONTAL_ALIGNMENT_RIGHT)
 
-    _frame_button(mobile_content, "WorldCTA", "UPGRADE NORTH INFRASTRUCTURE", Rect2(18, 674, inner_w, 54), _upgrade_region, false, true, 10)
+    var cta_y := opp_y + 194.0
+    _frame_button(mobile_content, "WorldCTA", "MANAGE SELECTED REGION", Rect2(18, cta_y, inner_w, 54), _open_screen.bind("RegionsPanel"), false, true, 10)
+    if mobile_content != null:
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, cta_y + 82.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, cta_y + 82.0)
 
 func _route_bar(parent_node: Node, pos: Vector2, width: float, degrees: float) -> void:
     var r = Panel.new()
