@@ -39,43 +39,51 @@ func run() -> void:
     current_scene = game
     await process_frame
     await process_frame
-    root.size = Vector2i(320, 568)
-    await process_frame
-    await process_frame
     var manager = root.get_node_or_null("RenewUIScreenManager")
     check(manager != null, "Screen manager is available")
     if manager == null:
         game.free()
         quit(1)
         return
-    var viewport_size := Vector2(root.size)
-    for screen_name in ["DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel"]:
-        manager.show_screen(screen_name)
+
+    var containment_screens := [
+        "DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel",
+        "EmpireExpansionPanel", "EmpireIntelligencePanel"
+    ]
+    for target in [Vector2i(320, 480), Vector2i(320, 568)]:
+        root.size = target
         await process_frame
         await process_frame
-        var panel: Node = game.get_node_or_null("UI/" + screen_name)
-        check(panel != null, screen_name + " mounted")
-        if panel == null:
-            continue
-        var box: Control = null
-        for child in panel.get_children():
-            if child is Panel:
-                box = child
-        check(box != null, screen_name + " has a panel box")
-        if box == null:
-            continue
-        check(_inside_viewport(box, viewport_size), screen_name + " panel stays inside 320x568 viewport")
-        var small := 0
-        var outside := 0
-        for child in box.get_children():
-            if child is Button:
-                var button := child as Button
-                if button.custom_minimum_size.y < 44.0:
+        var viewport_size := Vector2(target)
+        for screen_name in containment_screens:
+            manager.show_screen(screen_name)
+            await process_frame
+            await process_frame
+            var layer: Node = game.get_node_or_null("UI/" + screen_name)
+            check(layer != null, "%s mounted at %s" % [screen_name, target])
+            if layer == null:
+                continue
+            var box: Control = null
+            for child in layer.get_children():
+                if child is Panel:
+                    box = child
+                    break
+            check(box != null, "%s has a panel box at %s" % [screen_name, target])
+            if box == null:
+                continue
+            check(_inside_viewport(box, viewport_size), "%s panel stays inside %s viewport" % [screen_name, target])
+            var small := 0
+            var outside := 0
+            for node in box.find_children("*", "Button", true, false):
+                var button := node as Button
+                if not button.visible:
+                    continue
+                if button.size.y < 44.0 and button.custom_minimum_size.y < 44.0:
                     small += 1
                 if not _inside_panel(button, box):
                     outside += 1
-        check(small == 0, screen_name + " buttons meet touch sizing")
-        check(outside == 0, screen_name + " visible controls stay inside panel")
+            check(small == 0, "%s visible buttons meet touch sizing at %s" % [screen_name, target])
+            check(outside == 0, "%s visible buttons stay inside panel at %s" % [screen_name, target])
     manager.hide_all_screens()
     root.size = Vector2i(1280, 720)
     await process_frame
