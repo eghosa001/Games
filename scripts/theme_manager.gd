@@ -67,7 +67,7 @@ func color(role: String) -> Color:
         "muted":
             return Color("66716b") if light else Color("928a80")
         "gold", "brass":
-            return Color("9d6b24") if light else Color("c99a4b")
+            return Color("94611f") if light else Color("c99a4b")
         "plum":
             return Color("674356") if light else Color("7a405f")
         "success":
