@@ -343,6 +343,19 @@ func _company_level() -> int:
         return int(progression.get_level())
     return int(_state_value("progression", "level", 1))
 
+func _progression_status_text() -> String:
+    var progression = _progression()
+    if progression != null and progression.has_method("get_progress"):
+        var progress: Dictionary = progression.get_progress()
+        var level := int(progress.get("level", 1))
+        var xp := int(progress.get("xp", 0))
+        var current := int(progress.get("current_threshold", 0))
+        var next := int(progress.get("next_threshold", -1))
+        if next < 0:
+            return "L%d • MAX LEVEL" % level
+        return "L%d • %d/%d XP" % [level, maxi(0, xp - current), maxi(1, next - current)]
+    return "L%d" % _company_level()
+
 func _has_unlock(unlock_id: String) -> bool:
     if unlock_id.is_empty():
         return true
@@ -940,7 +953,7 @@ func _build_mobile_live() -> void:
     _label(overview, "Business", "BUSINESS", Rect2(15, 58, 86, 14), 9, "text", 600)
     _label(overview, "BusinessMeta", business_state, Rect2(102, 58, inner_w - 117, 14), 9, "muted", 400, HORIZONTAL_ALIGNMENT_RIGHT)
     _label(overview, "Growth", "GROWTH", Rect2(15, 80, 86, 14), 9, "text", 600)
-    _label(overview, "GrowthMeta", "L%d • %d contracts" % [_company_level(), _active_contracts()], Rect2(102, 80, inner_w - 117, 14), 9, "muted", 400, HORIZONTAL_ALIGNMENT_RIGHT)
+    _label(overview, "GrowthMeta", _progression_status_text(), Rect2(102, 80, inner_w - 117, 14), 9, "muted", 400, HORIZONTAL_ALIGNMENT_RIGHT)
 
     if mobile_content != null:
         mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 780.0)
