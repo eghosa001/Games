@@ -319,12 +319,9 @@ func _refresh() -> void:
 
     var instruction := String(current.get("text", "Keep building."))
     var reason := String(current.get("why", ""))
-    body_label.text = "DO THIS
-%s" % instruction
+    body_label.text = "DO THIS\n%s" % instruction
     if not reason.is_empty():
-        body_label.text += "
-WHY
-%s" % reason
+        body_label.text += "\nWHY\n%s" % reason
 
     hint_label.text = "WHERE: " + String(current.get("where", "HOME"))
     route_button.text = String(current.get("cta", "SHOW ME"))
