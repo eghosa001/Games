@@ -14,7 +14,6 @@ var resource_control: Variant = {
 func _ready() -> void:
     parent = get_tree().root.get_node_or_null("Renew")
     last_day = parent.day
-    queue_redraw()
 
 func _process(_delta: float) -> void:
     if parent == null:
@@ -22,7 +21,6 @@ func _process(_delta: float) -> void:
     if parent.day != last_day:
         _advance_competition(parent.day)
         last_day = parent.day
-    queue_redraw()
 
 func _advance_competition(day: int) -> void:
     news.clear()
