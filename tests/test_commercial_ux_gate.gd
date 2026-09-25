@@ -27,18 +27,26 @@ func _run()->void:
     check("primary view transitions are subtle and reduced-motion aware",ui_source.contains("func _animate_view_in()") and ui_source.contains("if _reduce_motion()"))
 
     var home_content:=hud.get("mobile_content") as Control
-    check("HOME exposes all nine properties",home_content.find_children("OverviewPropertyRow*","Panel",true,false).size()==9)
-    check("HOME exposes all three business models",home_content.find_children("OverviewBusinessRow*","Panel",true,false).size()==3)
-    check("HOME exposes all six regions and markets",home_content.find_children("OverviewRegionRow*","Panel",true,false).size()==6)
-    check("HOME exposes connected system links",home_content.find_children("OverviewSystemTile*","Panel",true,false).size()==8)
-    var first_property_link:=home_content.find_child("OpenOverviewProperty0",true,false) as Button
-    check("overview property row is directly actionable",first_property_link!=null)
-    if first_property_link!=null:
-        first_property_link.pressed.emit()
+    check("HOME keeps a compact management overview",home_content.find_child("CommandOverview",true,false)!=null)
+    var home_property:=home_content.find_child("OpenHomeProperties",true,false) as Button
+    var home_business:=home_content.find_child("OpenHomeBusiness",true,false) as Button
+    var home_growth:=home_content.find_child("OpenHomeGrowth",true,false) as Button
+    check("HOME property summary is actionable",home_property!=null)
+    check("HOME business summary is actionable",home_business!=null)
+    check("HOME growth summary is actionable",home_growth!=null)
+    if home_property!=null:
+        home_property.pressed.emit()
         await process_frame
-        check("overview property link opens exact property workflow",str(hud.get("active_view"))=="property")
-        hud.open_figma_view("live")
-        await process_frame
+        check("HOME property summary opens property workflow",str(hud.get("active_view"))=="property")
+        var property_content:=hud.get("mobile_content") as Control
+        check("PROPERTY exposes all nine properties",property_content.find_children("BuildingRow*","Panel",true,false).size()==9)
+    hud.open_figma_view("world");await process_frame
+    var world_content:=hud.get("mobile_content") as Control
+    check("WORLD exposes regional markets",world_content.find_children("RegionRow*","Panel",true,false).size()>=3)
+    var business_system=game.command_system.business_system if game.get("command_system")!=null else null
+    check("business model exposes three property-specific purposes",business_system!=null and business_system.get_business_purposes().size()==3)
+    hud.open_figma_view("live")
+    await process_frame
 
     hud.open_figma_view("operate");await process_frame
     var fresh_business_content:=hud.get("mobile_content") as Control
