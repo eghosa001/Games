@@ -97,9 +97,11 @@ func _run() -> void:
     check("PROPERTY exposes nine named buildings", content.find_children("BuildingRow*", "Panel", false, false).size() == 9)
     if tutorial_overlay != null and tutorial_overlay.has_method("_layout_responsive"):
         tutorial_overlay.call("_layout_responsive")
-    check("PROPERTY keeps compact Guide chip available", guide_chip != null and guide_chip.visible)
+    var guide_panel := tutorial_overlay.get("panel") as Control if tutorial_overlay != null else null
+    check("PROPERTY keeps tutorial guidance available", tutorial_overlay != null and ((guide_panel != null and guide_panel.visible) or (guide_chip != null and guide_chip.visible)))
     var property_nav := hud.get("bottom_nav") as Control
-    check("PROPERTY Guide chip stays above bottom navigation", guide_chip != null and property_nav != null and guide_chip.get_global_rect().end.y <= property_nav.get_global_rect().position.y + 0.6)
+    var guide_control: Control = guide_panel if guide_panel != null and guide_panel.visible else guide_chip
+    check("PROPERTY guidance stays above bottom navigation", guide_control != null and property_nav != null and guide_control.get_global_rect().end.y <= property_nav.get_global_rect().position.y + 0.6)
 
     hud.open_figma_view("empire")
     await process_frame
@@ -120,7 +122,7 @@ func _run() -> void:
     await process_frame
     content = hud.get("mobile_content") as Control
     _rect(_child(content, "CompanyProfile"), Vector2(18,82), Vector2(354,94), "MORE company")
-    check("MORE has nine production tiles", content.find_children("MoreTile*", "Panel", false, false).size() == 9)
+    check("MORE has ten command tiles including How to Play", content.find_children("MoreTile*", "Panel", false, false).size() == 10)
 
     hud.open_figma_view("settings")
     await process_frame
