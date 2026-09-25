@@ -634,7 +634,7 @@ func _build_mobile_host() -> void:
     mobile_scroll.position = Vector2(x0, 0)
     mobile_scroll.size = Vector2(canvas_w, scroll_h)
     mobile_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-    mobile_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+    mobile_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
     mobile_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
     root.add_child(mobile_scroll)
 
