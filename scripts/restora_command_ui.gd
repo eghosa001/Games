@@ -815,7 +815,7 @@ func _label(parent_node: Node, name: String, text_value: String, rect: Rect2, si
         l.size.y = maxf(l.size.y, float(readable_size) + 10.0)
     l.mouse_filter = Control.MOUSE_FILTER_IGNORE
     l.add_theme_font_override("font", _font(weight))
-    var readable_size := maxi(size_px, 8)
+    var readable_size := maxi(size_px, 9)
     l.add_theme_font_size_override("font_size", readable_size)
     l.add_theme_color_override("font_color", _color(role))
     l.horizontal_alignment = align
@@ -868,7 +868,7 @@ func _frame_button(parent_node: Node, name: String, text_value: String, rect: Re
     b.add_theme_font_size_override("font_size", font_size)
     var bg = _color("gold") if gold_fill else (_color("selected") if selected else _color("surface_2"))
     var border = _color("gold") if gold_fill else (_color("plum") if selected else _color("border"))
-    var fg = _color("bg") if gold_fill else (_color("plum") if selected else _color("text"))
+    var fg = _color("bg") if gold_fill else (_color("gold") if selected else _color("text"))
     b.add_theme_stylebox_override("normal", _style(bg, border, 12))
     b.add_theme_stylebox_override("hover", _style(bg.lightened(0.05), border, 12))
     b.add_theme_stylebox_override("pressed", _style(bg.darkened(0.05), border, 12))
