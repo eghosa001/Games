@@ -68,6 +68,11 @@ func _run() -> void:
     _rect(_child(content, "Stat_goods"), Vector2(198,370), Vector2(174,104), "LIVE goods")
     _rect(_child(content, "Signals"), Vector2(18,494), Vector2(354,192), "LIVE signals")
 
+    check("LIVE overview contains nine properties", content.find_children("OverviewPropertyRow*", "Panel", true, false).size() == 9)
+    check("LIVE overview contains three business models", content.find_children("OverviewBusinessRow*", "Panel", true, false).size() == 3)
+    check("LIVE overview contains six regions", content.find_children("OverviewRegionRow*", "Panel", true, false).size() == 6)
+    check("LIVE overview links eight connected systems", content.find_children("OverviewSystemTile*", "Panel", true, false).size() == 8)
+
     hud.open_figma_view("operate")
     await process_frame
     content = hud.get("mobile_content") as Control
@@ -90,11 +95,12 @@ func _run() -> void:
     hud.open_figma_view("property")
     await process_frame
     content = hud.get("mobile_content") as Control
-    _rect(_child(content, "PropertyVisual"), Vector2(18,82), Vector2(354,238), "PROPERTY visual")
+    _rect(_child(content, "PropertyCatalog"), Vector2(18,82), Vector2(354,512), "PROPERTY catalog")
+    check("PROPERTY exposes nine named buildings first", content.find_children("BuildingRow*", "Panel", true, false).size() == 9)
+    _rect(_child(content, "PropertyVisual"), Vector2(18,660), Vector2(354,238), "PROPERTY visual")
     check("PROPERTY uses staged building art", _child(content, "PropertyVisual").get_node_or_null("BuildingStageArt") != null)
-    _rect(_child(content, "RestorationProgress"), Vector2(18,338), Vector2(354,116), "PROPERTY progress")
-    _rect(_child(content, "BuildingDetails"), Vector2(18,472), Vector2(354,126), "PROPERTY details")
-    check("PROPERTY exposes nine named buildings", content.find_children("BuildingRow*", "Panel", false, false).size() == 9)
+    _rect(_child(content, "RestorationProgress"), Vector2(18,916), Vector2(354,116), "PROPERTY progress")
+    _rect(_child(content, "BuildingDetails"), Vector2(18,1050), Vector2(354,126), "PROPERTY details")
     if tutorial_overlay != null and tutorial_overlay.has_method("_layout_responsive"):
         tutorial_overlay.call("_layout_responsive")
     var guide_panel := tutorial_overlay.get("panel") as Control if tutorial_overlay != null else null
