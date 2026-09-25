@@ -1136,7 +1136,7 @@ func _build_asset_row(panel: Panel, index: int, asset: Dictionary, y: float, w: 
 
 func _build_mobile_world() -> void:
     var w = _content_width()
-    _header("WORLD NETWORK", "%d REGIONS • %d TRADE ROUTES" % [_region_presence_count(), _trade_route_count()])
+    _header("WORLD NETWORK", "%d MARKETS • %d ACTIVE • %d TRADE ROUTES" % [_region_catalog().size(), _region_presence_count(), _trade_route_count()])
     var inner_w = w - 36.0
     var map = _panel(mobile_content, "RegionalMap", Rect2(18, 82, inner_w, 220), "surface", "border", 22)
     map.clip_contents = true
@@ -1933,6 +1933,21 @@ func _unlocked_asset_count() -> int:
 func _region_controller():
     return parent.get_node_or_null("World/RegionController") if parent != null else null
 
+func _selected_region_index() -> int:
+    var controller = _region_controller()
+    if controller != null and "regions" in controller and controller.regions != null and "selected" in controller.regions:
+        return int(controller.regions.selected)
+    return 0
+
+func _selected_region() -> Dictionary:
+    var controller = _region_controller()
+    if controller != null and "regions" in controller and controller.regions != null and controller.regions.has_method("current"):
+        var current = controller.regions.current()
+        return current if current is Dictionary else {}
+    var catalog: Array = _region_catalog()
+    var index: int = clampi(_selected_region_index(), 0, maxi(0, catalog.size() - 1))
+    return catalog[index] if not catalog.is_empty() and catalog[index] is Dictionary else {}
+
 func _region_presence_count() -> int:
     var c = _region_controller()
     if c != null and "regions" in c and c.regions != null and "player_presence" in c.regions:
@@ -1943,17 +1958,23 @@ func _trade_route_count() -> int:
     return int(_state_value("regions","trade_routes",0))
 
 func _current_region_name() -> String:
-    var names = ["CENTRAL REGION","NORTH REGION","EAST REGION","SOUTH REGION"]
-    var idx = int(parent.selected_district) if parent != null and "selected_district" in parent else 1
-    return names[clampi(idx,0,names.size()-1)]
+    var region: Dictionary = _selected_region()
+    return str(region.get("name", "OLD MARKET REGION")).to_upper()
 
 func _region_detail_text() -> String:
-    return "Infrastructure L%d  •  %d region%s active\nBranch: %s Trade Office\nTransport fleet L%d  •  %d rival%s tracked" % [
-        maxi(1,int(_state_value("regions","infrastructure_level",1))),
-        _region_presence_count(), "" if _region_presence_count() == 1 else "s",
-        _current_region_name().replace(" REGION","").capitalize(),
-        maxi(1,_transport_level()),
-        _rival_count(), "" if _rival_count() == 1 else "s"
+    var region: Dictionary = _selected_region()
+    if region.is_empty():
+        return "No regional market is currently selected."
+    var index: int = _selected_region_index()
+    var presence: int = _region_presence(index)
+    var infrastructure_level: int = int(region.get("infrastructure", 0))
+    return "Tier %d  •  Market %.2fx  •  Demand %.2fx\nPresence %s  •  Infrastructure L%d\n%s" % [
+        int(region.get("tier", 1)),
+        float(region.get("market_level", 1.0)) * float(region.get("market_size", 1.0)),
+        float(region.get("demand", 1.0)),
+        "ESTABLISHED" if presence > 0 else "NOT ESTABLISHED",
+        infrastructure_level,
+        str(region.get("special", "Regional market"))
     ]
 
 func _upgrade_region() -> void:
