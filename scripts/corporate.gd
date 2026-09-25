@@ -51,7 +51,6 @@ func _ready() -> void:
     # Corporate state is persisted by the canonical GameState/save pipeline.
     # Do not load a second user:// ledger here; it could overwrite newer state.
     _ensure_company()
-    queue_redraw()
 
 func _process(_delta: float) -> void:
     _resolve_deps()
@@ -63,7 +62,6 @@ func _process(_delta: float) -> void:
     if ownership == null:
         return
     _recalculate()
-    queue_redraw()
 
 func _company() -> Dictionary:
     if ownership == null: return {}
