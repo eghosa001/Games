@@ -58,8 +58,20 @@ func get_business_purpose(purpose) -> Dictionary:
         if item is Dictionary:
             return (item as Dictionary).duplicate(true)
         return {}
+    var requested := str(purpose)
     for choice in choices:
-        if str(choice.get("id", "")) == str(purpose): return choice.duplicate(true)
+        if str(choice.get("id", "")) == requested:
+            return choice.duplicate(true)
+    # Backward compatibility for saves made before property-specific business identities.
+    var legacy_industry := {
+        "furniture_factory":"furniture",
+        "construction_materials_factory":"construction_materials",
+        "consumer_electronics_factory":"consumer_electronics"
+    }.get(requested, "")
+    if not str(legacy_industry).is_empty():
+        for choice in choices:
+            if str(choice.get("industry_id", "")) == str(legacy_industry):
+                return choice.duplicate(true)
     return {}
 func open_business() -> void:
     if not bool(state_adapter.get_value("properties", "owned", false)) or str(state_adapter.get_value("properties", "stage", "Neglected")) != "Operational": state_adapter.message("Finish restoration first."); return
