@@ -982,10 +982,29 @@ func _build_mobile_operations() -> void:
         _label(prod, "Meta", "Business selection unlocks when this property reaches Operational.", Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
         _frame_button(prod, "ContinueRestoration", "CONTINUE RESTORATION", Rect2(16, 98, inner_w - 32, 44), _show_view.bind("property"), false, true, 9)
     elif business_ready:
+        var production_quote := _production_quote()
+        var input_quote := _input_bundle_quote()
+        var estimated_output := int(production_quote.get("estimated_output", 0))
+        var production_cost := int(production_quote.get("total_cost", 0))
+        var product_name := str(production_quote.get("product", "goods")).replace("_", " ").capitalize()
+        var can_produce := bool(production_quote.get("ok", false)) and bool(production_quote.get("affordable", false))
+        var can_buy_inputs := bool(input_quote.get("ok", false)) and bool(input_quote.get("affordable", false))
         _remember("production_rate", _label(prod, "Rate", _production_rate_text(), Rect2(16, 42, inner_w - 32, 18), 13, "text", 600))
-        _label(prod, "Meta", "Customer demand remaining today: %d units." % _demand_remaining(), Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
-        _frame_button(prod, "ProduceBatch", "PRODUCE BATCH", Rect2(16, 98, half, 44), _produce, false, true, 9)
-        _frame_button(prod, "BuyInputs", "BUY INPUTS", Rect2(26 + half, 98, half, 44), _buy_inputs, false, false, 9)
+        var plan_text := "Next batch ~%d %s • est %s • demand %d left" % [estimated_output, product_name, _money(production_cost), _demand_remaining()]
+        if not bool(production_quote.get("ok", false)):
+            plan_text = "Production blocked: %s" % str(production_quote.get("reason", "inputs unavailable")).replace("_", " ")
+        elif not bool(production_quote.get("affordable", false)):
+            plan_text = "Next batch needs about %s • cash %s" % [_money(production_cost), _money(_cash())]
+        _label(prod, "Meta", plan_text, Rect2(16, 68, inner_w - 32, 30), 10, "muted", 400)
+        var produce_text := "PRODUCE ~%d" % estimated_output if estimated_output > 0 else "PRODUCE"
+        var produce_button = _frame_button(prod, "ProduceBatch", produce_text, Rect2(16, 98, half, 44), _produce, false, can_produce, 9)
+        produce_button.disabled = not can_produce
+        produce_button.tooltip_text = ("Expected ~%d %s • estimated total cost %s." % [estimated_output, product_name, _money(production_cost)]) if can_produce else plan_text
+        var input_cost := int(input_quote.get("cost", 0))
+        var input_text := "INPUTS %s" % _money(input_cost) if input_cost > 0 else "BUY INPUTS"
+        var input_button = _frame_button(prod, "BuyInputs", input_text, Rect2(26 + half, 98, half, 44), _buy_inputs, false, false, 9)
+        input_button.disabled = not can_buy_inputs
+        input_button.tooltip_text = ("10 timber + 10 iron + 20 energy • %s delivered." % _money(input_cost)) if can_buy_inputs else str(input_quote.get("reason", "Input purchase unavailable.")).replace("_", " ")
     else:
         _remember("production_rate", _label(prod, "Rate", "%s IS READY FOR A BUSINESS" % _building_name().to_upper(), Rect2(16, 42, inner_w - 32, 18), 13, "text", 600))
         _label(prod, "Meta", "Choose what this restored property will operate before buying inputs.", Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
@@ -1858,15 +1877,39 @@ func _deliver_contract() -> void:
         return
     _rebuild_current()
 
+func _business_command_layer():
+    if parent != null and "command_system" in parent and parent.command_system != null:
+        return parent.command_system.business_system
+    return null
+
+func _supply_command_layer():
+    if parent != null and "command_system" in parent and parent.command_system != null:
+        return parent.command_system.supply_system
+    return null
+
+func _production_quote() -> Dictionary:
+    var business = _business_command_layer()
+    return business.production_quote() if business != null and business.has_method("production_quote") else {}
+
+func _input_bundle_quote() -> Dictionary:
+    var supply = _supply_command_layer()
+    return supply.input_bundle_quote() if supply != null and supply.has_method("input_bundle_quote") else {}
+
 func _produce() -> void:
     if parent != null and parent.has_method("produce_goods"):
         parent.produce_goods()
-    _refresh()
+    if _layout_kind == "mobile":
+        _rebuild_mobile_content()
+    else:
+        _refresh()
 
 func _buy_inputs() -> void:
     if parent != null and parent.has_method("buy_inputs"):
         parent.buy_inputs()
-    _refresh()
+    if _layout_kind == "mobile":
+        _rebuild_mobile_content()
+    else:
+        _refresh()
 
 func _finance_command_layer():
     if parent != null and "command_system" in parent and parent.command_system != null:
