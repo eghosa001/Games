@@ -382,7 +382,7 @@ func _show_view(view_name: String) -> void:
 
     # On phones the shell/navigation is persistent. Rebuild only the changing
     # page body instead of destroying and recreating the entire UI tree.
-    if _layout_kind == "mobile" and mobile_content != null and bottom_nav != null:
+    if _layout_kind == "mobile" and _layout_class() == "mobile" and mobile_content != null and bottom_nav != null:
         if previous_view == view_name and mobile_content.get_child_count() > 0:
             _refresh_bottom_nav()
             return
