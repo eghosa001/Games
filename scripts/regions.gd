@@ -80,12 +80,30 @@ func rotate_opportunity() -> Dictionary:
     opportunity_rotation = (opportunity_rotation + 1) % 4
     return current_opportunity(1)
 
+func establishment_cost(index:int) -> int:
+    _normalize()
+    if index < 0 or index >= regions.size(): return 0
+    return 12000 + int(regions[index]["tier"]) * 6500
+
+func infrastructure_upgrade_cost(index:int) -> int:
+    _normalize()
+    if index < 0 or index >= regions.size(): return 0
+    var level := int(infrastructure[index])
+    if level >= 3: return 0
+    return 9000 + level * 7000 + int(regions[index]["tier"]) * 1500
+
+func trade_route_cost(origin:int, destination:int) -> int:
+    _normalize()
+    if origin < 0 or origin >= regions.size() or destination < 0 or destination >= regions.size() or origin == destination: return 0
+    var distance := abs(origin - destination)
+    return 10000 + distance * 5000 + int(regions[destination]["tier"]) * 2000
+
 func establish(index:int, cash:int, reputation:int) -> Dictionary:
     _normalize(); update_unlocks(reputation)
     if index < 0 or index >= regions.size(): return {"ok":false,"message":"Invalid region."}
     if not bool(regions[index].get("unlocked",false)): return {"ok":false,"message":"Region is locked."}
     if player_presence[index] > 0: return {"ok":false,"message":"You already have an operating presence here."}
-    var cost: int = 12000 + int(regions[index]["tier"])*6500
+    var cost: int = establishment_cost(index)
     if cash < cost: return {"ok":false,"message":"Regional launch requires $%s."%_money(cost)}
     player_presence[index]=1
     local_reputation[index] = max(local_reputation[index], 10.0)
@@ -97,7 +115,7 @@ func build_infrastructure(index:int, cash:int, reputation:int) -> Dictionary:
     if player_presence[index] <= 0: return {"ok":false,"message":"Establish a regional operation first."}
     var level:int = int(infrastructure[index])
     if level >= 3: return {"ok":false,"message":"Regional infrastructure is already maxed."}
-    var cost: int = 9000 + level*7000 + int(regions[index]["tier"])*1500
+    var cost: int = infrastructure_upgrade_cost(index)
     if cash < cost: return {"ok":false,"message":"Infrastructure upgrade requires $%s."%_money(cost)}
     infrastructure[index]=level+1
     local_reputation[index] = clamp(local_reputation[index] + 2.0, -100.0, 100.0)
@@ -109,8 +127,7 @@ func establish_trade_route(origin:int, destination:int, cash:int, reputation:int
     if player_presence[origin] <= 0 or player_presence[destination] <= 0: return {"ok":false,"message":"You need operations in both regions before connecting them."}
     var key: Variant = "%d-%d" % [min(origin,destination),max(origin,destination)]
     if trade_routes.has(key): return {"ok":false,"message":"This trade corridor is already active."}
-    var distance: Variant = abs(origin-destination)
-    var cost: int = 10000 + distance*5000 + int(regions[destination]["tier"])*2000
+    var cost: int = trade_route_cost(origin, destination)
     if cash < cost: return {"ok":false,"message":"Trade corridor requires $%s."%_money(cost)}
     trade_routes[key] = {"level":1,"origin":origin,"destination":destination}
     local_reputation[origin] += 2.0; local_reputation[destination] += 2.0
