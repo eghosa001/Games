@@ -128,7 +128,10 @@ func _set_direct_canvas_children_visible(node: Node, value: bool) -> void:
             child.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
 
 func _set_node_visible(node: Node, value: bool) -> void:
-    if node == null or not is_instance_valid(node): return
+    if node == null or not is_instance_valid(node):
+        return
+    if node is CanvasLayer:
+        (node as CanvasLayer).visible = value
 
     if node.has_method("open_screen") or node.has_method("close_screen"):
         node.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
@@ -238,13 +241,11 @@ func _animate_screen_in(node: Node) -> void:
     _screen_tween.tween_property(control, "position:y", target_y, 0.25)
 
 func hide_all_screens() -> void:
-    _suppress_hooks = true
     if _active_screen != null and is_instance_valid(_active_screen):
         _set_node_visible(_active_screen, false)
         _previous_visible[_active_screen.name] = false
     _active_screen = null
     _active_screen_name = ""
-    _suppress_hooks = false
     _set_modal_backdrop(false)
     var coordinator := _coordinator()
     if coordinator != null:
@@ -318,11 +319,9 @@ func show_screen(screen_name: String) -> bool:
 
     # Screen changes are event driven: close the one active screen and open the
     # target. Do not synchronously walk every panel on every touch.
-    _suppress_hooks = true
     if _active_screen != null and is_instance_valid(_active_screen) and _active_screen != target:
         _set_node_visible(_active_screen, false)
         _previous_visible[_active_screen.name] = false
-    _suppress_hooks = false
 
     _active_screen = target
     _active_screen_name = canonical_name
