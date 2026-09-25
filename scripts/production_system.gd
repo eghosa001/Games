@@ -83,7 +83,7 @@ func run_recipe(recipe_id:String,cycles:int=1)->Dictionary:
     last_run={"recipe":recipe_id,"stage":r["stage"],"cycles":run_cycles,"outputs":outputs,"quality":run_quality,"waste":effective_waste,"machine":machine_id,"condition":m["condition"]}; history.append(last_run.duplicate(true)); if history.size()>MAX_HISTORY:history.pop_front()
     return {"ok":true,"recipe":recipe_id,"stage":r["stage"],"cycles":run_cycles,"outputs":outputs,"output":total,"quality":run_quality,"waste_rate":effective_waste,"machine":machine_id,"condition":m["condition"],"utilization":utilization[machine_id]}
 
-func produce(economy:RenewEconomy,cycles:int,product_id:String="consumer_goods")->Dictionary:
+func produce(economy,cycles:int,product_id:String="consumer_goods")->Dictionary:
     if economy==null or cycles<=0:return {"ok":false,"requested_cycles":maxi(0,cycles),"cycles":0,"output":0,"quality":quality}
     var c:=get_product_config(product_id); if c.is_empty():return {"ok":false,"requested_cycles":cycles,"cycles":0,"output":0,"quality":quality,"reason":"invalid_product"}
     var possible:=cycles
