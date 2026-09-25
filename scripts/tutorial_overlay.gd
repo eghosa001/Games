@@ -349,9 +349,9 @@ func _load_tutorial_state() -> void:
         dismissed = true
         _expanded_by_user = false
     else:
-        # Keep first-run guidance available without covering the command surface.
-        # Home already carries the next-action instruction; tapping GUIDE expands details.
-        _expanded_by_user = false
+        # A genuinely fresh session teaches the first action immediately.
+        # Later sessions remain compact unless the player explicitly opens GUIDE.
+        _expanded_by_user = not dismissed and int(tutorial.step) == 0
 
 func _save_tutorial_state() -> void:
     var state = _state()
@@ -394,7 +394,7 @@ func reset_tutorial() -> void:
     tutorial.step = 0
     tutorial.completed = false
     dismissed = false
-    _expanded_by_user = false
+    _expanded_by_user = true
     _save_tutorial_state()
     _refresh()
 
