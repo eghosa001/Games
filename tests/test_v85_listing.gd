@@ -34,7 +34,8 @@ func run() -> void:
         quit(1)
         return
     game.go_public()
-    check(str(game.message).find("250K") >= 0 or str(game.message).find("40 reputation") >= 0, "Listing gated early")
+    var early_table: String = corporate.cap_table_text()
+    check(early_table.find("public_float") < 0 and early_table.find("listed @") < 0, "Listing gated early")
     game.cash = 300000
     await process_frame
     game.go_public()
