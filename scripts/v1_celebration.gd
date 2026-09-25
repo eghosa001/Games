@@ -1,5 +1,8 @@
 extends CanvasLayer
 
+const CHECK_INTERVAL := 0.20
+var _check_clock := 0.0
+
 # Presentation layer for moments that deserve more than a status-line update.
 # It observes game state and never changes the simulation itself.
 var game: Node
@@ -78,7 +81,10 @@ func _process(delta: float) -> void:
         if game == null:
             return
         _seed()
-    _check()
+    _check_clock += delta
+    if _check_clock >= CHECK_INTERVAL:
+        _check_clock = 0.0
+        _check()
     if timer > 0.0:
         timer -= delta
         if timer <= 0.0:
@@ -143,15 +149,19 @@ func _show_banner(title: String, body: String) -> void:
     body_label.text = body
     banner.show()
     timer = 5.0
+    if bool(ProjectSettings.get_setting("renew/ui/reduce_motion", false)):
+        banner.scale = Vector2.ONE
+        banner.modulate.a = 1.0
+        return
     var tween: Variant = create_tween().set_parallel(true)
-    tween.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+    tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
     var final_position := banner.position
-    banner.position.y -= 18.0
-    banner.scale = Vector2(0.90, 0.90)
+    banner.position.y -= 8.0
+    banner.scale = Vector2(0.97, 0.97)
     banner.modulate.a = 0.0
-    tween.tween_property(banner, "position", final_position, 0.34)
-    tween.tween_property(banner, "scale", Vector2.ONE, 0.34)
-    tween.tween_property(banner, "modulate:a", 1.0, 0.20)
+    tween.tween_property(banner, "position", final_position, 0.16)
+    tween.tween_property(banner, "scale", Vector2.ONE, 0.16)
+    tween.tween_property(banner, "modulate:a", 1.0, 0.12)
 
 func _hide_banner() -> void:
     var tween: Variant = create_tween()
