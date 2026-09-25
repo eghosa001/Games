@@ -66,7 +66,8 @@ func _process(delta: float) -> void:
         if int(tutorial.step) != old_step:
             _save_tutorial_state()
             game.message = "GUIDE: %s" % String(tutorial.current().get("title", "Next step"))
-            _expanded_by_user = true
+            # Advance quietly. The GUIDE chip updates without covering the active task.
+            _expanded_by_user = false
             _refresh()
 
 func _build() -> void:
@@ -348,8 +349,9 @@ func _load_tutorial_state() -> void:
         dismissed = true
         _expanded_by_user = false
     else:
-        # A new player should see the guide without discovering a hidden chip first.
-        _expanded_by_user = not dismissed
+        # Keep first-run guidance available without covering the command surface.
+        # Home already carries the next-action instruction; tapping GUIDE expands details.
+        _expanded_by_user = false
 
 func _save_tutorial_state() -> void:
     var state = _state()
