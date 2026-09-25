@@ -1022,7 +1022,8 @@ func _build_mobile_operations() -> void:
     else:
         _remember("production_rate", _label(prod, "Rate", "%s IS READY FOR A BUSINESS" % _building_name().to_upper(), Rect2(16, 42, inner_w - 32, 18), 13, "text", 600))
         _label(prod, "Meta", "Choose what this restored property will operate before buying inputs.", Rect2(16, 70, inner_w - 32, 28), 11, "muted", 400)
-        _frame_button(prod, "ChooseBusiness", "CHOOSE BUSINESS", Rect2(16, 98, half, 44), _open_business_choices, false, true, 9)
+        var choose_business := _frame_button(prod, "ChooseBusiness", "CHOOSE BUSINESS", Rect2(16, 98, half, 44), Callable(), false, true, 9)
+        choose_business.pressed.connect(_open_business_choices)
         _frame_button(prod, "BackProperty", "VIEW PROPERTY", Rect2(26 + half, 98, half, 44), _show_view.bind("property"), false, false, 9)
 
     var commercial = _panel(mobile_content, "CommercialControls", Rect2(18, 370, inner_w, 176), "surface", "border", 18)
