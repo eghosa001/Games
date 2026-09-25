@@ -144,9 +144,11 @@ func _close()->void:
 func _layout()->void:
     if panel==null:return
     var size:=get_viewport().get_visible_rect().size; var narrow:=size.x<760.0
-    var width:=maxf(304.0,size.x-16.0) if narrow else minf(660.0,size.x-36.0)
-    var height:=maxf(430.0,size.y-90.0) if narrow else minf(760.0,size.y-120.0)
-    panel.position=Vector2(8,70) if narrow else Vector2(maxf(18.0,size.x-width-18.0),90); panel.size=Vector2(width,height)
+    var width:=maxf(240.0,size.x-16.0) if narrow else minf(660.0,size.x-36.0)
+    var top_margin:=8.0 if narrow else 90.0
+    var bottom_margin:=8.0 if narrow else 30.0
+    var height:=maxf(240.0,size.y-top_margin-bottom_margin) if narrow else minf(760.0,size.y-120.0)
+    panel.position=Vector2(8,top_margin) if narrow else Vector2(maxf(18.0,size.x-width-18.0),top_margin); panel.size=Vector2(width,height)
     title_label.position=Vector2(14,10); title_label.size=Vector2(width-134,32); status_label.position=Vector2(14,43); status_label.size=Vector2(width-28,22); close_button.position=Vector2(width-108,7); close_button.size=Vector2(98,48)
     summary.position=Vector2(14,68); summary.size=Vector2(width-28,42)
     scroll.position=Vector2(12,114); scroll.size=Vector2(width-24,height-122); content.custom_minimum_size.x=width-24
