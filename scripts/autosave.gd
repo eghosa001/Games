@@ -1,7 +1,7 @@
 extends Node
 
-# RENEW safety net: periodically persist the canonical GameState so a mobile session
-# ending unexpectedly does not erase a long run. Manual F5/F9 save/load remains available.
+# RESTORA safety net: periodically persist the canonical GameState so a mobile session
+# ending unexpectedly does not erase a long run.
 const SaveSystem := preload("res://scripts/save_system.gd")
 const AUTOSAVE_INTERVAL := 30.0
 
@@ -28,12 +28,12 @@ func _on_autosave_timeout() -> void:
     _save_current_game()
 
 func _notification(what: int) -> void:
-    if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_GO_BACK_REQUEST:
+    if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_GO_BACK_REQUEST:
         _save_current_game()
         if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_WM_GO_BACK_REQUEST:
             get_tree().quit()
 
 func _save_current_game() -> void:
-    # SaveSystem owns serialization. It captures the authoritative GameState itself;
-    # autosave must not ask Main to manually collect individual systems.
-    SaveSystem.save_game({})
+    # SaveSystem owns serialization. It captures the authoritative GameState itself.
+    if not SaveSystem.save_game({}):
+        push_warning("RESTORA autosave failed; the previous committed save remains available.")
