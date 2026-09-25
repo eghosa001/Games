@@ -85,8 +85,8 @@ func map_rects() -> Array:
 	if not catalog is Array or catalog.is_empty():
 		return out
 	var area := _map_area()
-	var count := catalog.size()
-	var cols := 3 if area.size.x >= 980.0 else (2 if area.size.x >= 600.0 else 1)
+	var count: int = catalog.size()
+	var cols: int = 3 if area.size.x >= 980.0 else (2 if area.size.x >= 600.0 else 1)
 	cols = mini(cols, count)
 	var rows := int(ceil(float(count) / float(maxi(cols, 1))))
 	var gap := 10.0
