@@ -56,6 +56,12 @@ func _finance():
 func _game():
     return get_tree().current_scene if get_tree() != null else null
 
+func _finance_commands():
+    var game = _game()
+    if game != null and "command_system" in game and game.command_system != null:
+        return game.command_system.finance_system
+    return null
+
 func _style(bg: Color, border: Color = BORDER, radius := 12) -> StyleBoxFlat:
     var s := StyleBoxFlat.new()
     s.bg_color = bg
@@ -208,6 +214,34 @@ func _refresh(_force: bool) -> void:
     var equity := int(float(bs.get("equity", 0.0)))
     overview_label.text = "CASH  $%s    DEBT  $%s\nREVENUE  $%s    EXPENSES  $%s    EQUITY  $%s" % [_money(cash), _money(debt), _money(revenue), _money(expenses), _money(equity)]
 
+    var commands = _finance_commands()
+    var loan_quote: Dictionary = commands.loan_quote() if commands != null and commands.has_method("loan_quote") else {}
+    var repay_quote: Dictionary = commands.repayment_quote() if commands != null and commands.has_method("repayment_quote") else {}
+    var investor_quote: Dictionary = commands.investor_quote() if commands != null and commands.has_method("investor_quote") else {}
+
+    loan_button.text = "LOAN $%s" % _money(int(loan_quote.get("amount", 0))) if bool(loan_quote.get("eligible", false)) else "LOAN UNAVAILABLE"
+    loan_button.disabled = not bool(loan_quote.get("eligible", false))
+    repay_button.text = "REPAY $%s" % _money(int(repay_quote.get("amount", 0))) if bool(repay_quote.get("eligible", false)) else "NO REPAYMENT"
+    repay_button.disabled = not bool(repay_quote.get("eligible", false))
+    if bool(investor_quote.get("eligible", false)):
+        investor_button.text = "OFFER $%s" % _money(int(investor_quote.get("amount", 0))) if bool(investor_quote.get("pending", false)) else "INVESTOR $%s" % _money(int(investor_quote.get("amount", 0)))
+        investor_button.disabled = bool(investor_quote.get("pending", false))
+    else:
+        investor_button.text = "INVESTOR UNAVAILABLE"
+        investor_button.disabled = true
+
+    if feedback.is_empty():
+        var quote_bits: Array[String] = []
+        if bool(loan_quote.get("eligible", false)):
+            quote_bits.append("Loan $%s @ %.0f%%" % [_money(int(loan_quote.get("amount", 0))), float(loan_quote.get("rate", 0.0)) * 100.0])
+        if bool(repay_quote.get("eligible", false)):
+            quote_bits.append("Repay $%s" % _money(int(repay_quote.get("amount", 0))))
+        if bool(investor_quote.get("eligible", false)):
+            quote_bits.append("Investor $%s for %.1f%%" % [_money(int(investor_quote.get("amount", 0))), float(investor_quote.get("percent", 0.0))])
+        feedback_label.text = "  •  ".join(quote_bits) if not quote_bits.is_empty() else "No financing action is currently available."
+    else:
+        feedback_label.text = feedback
+
     var valid: Dictionary = finance.validate_invariants() if finance.has_method("validate_invariants") else {"ok": true}
     var balanced := bool(valid.get("ok", false))
     credit_label.text = "CREDIT %s  •  SCORE %d  •  BOOKS %s" % [str(finance.get("credit_rating")), int(finance.get("credit_score")), "BALANCED" if balanced else "NEEDS REVIEW"]
@@ -224,7 +258,6 @@ func _refresh(_force: bool) -> void:
                 var amount := int(entry.get("amount", 0))
                 lines.append("%s   $%s\n%s" % [str(entry.get("kind", "TRANSACTION")).to_upper(), _money(abs(amount)), str(entry.get("reason", "Ledger entry"))])
     tx_label.text = "RECENT TRANSACTIONS\n\n" + ("\n\n".join(lines) if not lines.is_empty() else "No transactions recorded yet.")
-    feedback_label.text = feedback
     feedback_label.add_theme_color_override("font_color", GOOD if feedback == "" or not feedback.to_lower().contains("fail") else WARN)
     var signature := "%d:%d:%d:%d:%d:%d:%s" % [cash, debt, revenue, expenses, equity, int(finance.get("credit_score")), feedback]
     if signature == last_signature and not _force:
