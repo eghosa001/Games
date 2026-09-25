@@ -162,9 +162,12 @@ func run() -> void:
     state.set_value("businesses", "business_open", false)
     state.set_value("businesses", "business_purpose", "")
     var business = game.command_system.business_system
+    var launch_quote: Dictionary = business.get_business_purpose(0)
+    var launch_cost := int(launch_quote.get("launch_cost", 0))
+    var launch_cash_before := int(finance.get("cash"))
     business.choose_business_purpose(0)
     check(bool(state.get_value("businesses", "business_open", false)), "Business launch succeeds")
-    check(int(finance.get("cash")) == 22000, "Business launch charges canonical finance")
+    check(int(finance.get("cash")) == launch_cash_before - launch_cost, "Business launch charges canonical finance")
     check(int(state.get_value("economy", "cash", 0)) == int(finance.get("cash")), "Business launch cash mirror matches finance")
     var business_cash_before_upgrade := int(finance.get("cash"))
     business.upgrade_business()
