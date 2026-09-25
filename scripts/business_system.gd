@@ -234,7 +234,7 @@ func production_quote() -> Dictionary:
     var supply_reason := ""
     if not orders.is_empty():
         var transport_level := int(state_adapter.get_value("supply_chain", "transport_level", 1))
-        var delivery_quote := supply_chain.quote_procure_bundle(orders, transport_level) if supply_chain.has_method("quote_procure_bundle") else {"ok": false, "cost": 0}
+        var delivery_quote: Dictionary = supply_chain.quote_procure_bundle(orders, transport_level) if supply_chain.has_method("quote_procure_bundle") else {"ok": false, "cost": 0}
         supply_ok = bool(delivery_quote.get("ok", false))
         supply_reason = str(delivery_quote.get("reason", ""))
         delivery_cost = int(delivery_quote.get("cost", 0))
