@@ -58,8 +58,8 @@ func run() -> void:
     coordinator.set_active_screen("")
     await process_frame
     check("wide desktop strategy overlay stays retired", not strat_panel.visible and strategy._get_rect() == Rect2())
-    check("desktop tutorial defaults to compact guide", not tut_panel.visible and tut_chip != null and tut_chip.visible)
-    check("compact guide remains inside the viewport", tut_chip != null and tut_chip.position.x >= 0.0 and tut_chip.position.y >= 0.0)
+    check("fresh desktop tutorial opens the teaching card", tut_panel != null and tut_panel.visible and (tut_chip == null or not tut_chip.visible))
+    check("teaching card remains inside the viewport", tut_panel != null and tut_panel.position.x >= 0.0 and tut_panel.position.y >= 0.0)
 
     if strat_root != null: strat_root.size = Vector2(390, 844)
     if tut_root != null: tut_root.size = Vector2(390, 844)
