@@ -2,10 +2,9 @@
 """
 visual_assertions.py — region-level visual assertions for browser-qa screenshots.
 
-These checks validate RESTORA's current building-first command interface.
+These checks validate RESTORA's management-first command interface.
 They deliberately avoid assumptions from the retired live-world/3D shell:
-the page background may be intentionally quiet, while the current property
-illustration, management cards and compact navigation must remain visible,
+the page background may be intentionally quiet, while the current property status surface, management cards and compact navigation must remain visible,
 contained and visually distinct.
 """
 
@@ -81,8 +80,8 @@ def assert_dark_surface(img, x0, y0, x1, y1, expected, label, tol=24, bright_lim
                     f"bright_ratio={bright_ratio:.3f} range={'OK' if in_range else 'BAD'}")
 
 
-def assert_building_art(img, x0, y0, x1, y1, label):
-    """Require the staged property illustration to be present and non-blank."""
+def assert_management_surface(img, x0, y0, x1, y1, label):
+    """Require a non-blank, readable management/status surface without assuming artwork."""
     mean = _region_avg(img, x0, y0, x1, y1)
     if mean is None:
         return False, f"{label}: empty region"
@@ -92,13 +91,10 @@ def assert_building_art(img, x0, y0, x1, y1, label):
     avg_lum = sum(values) / len(values)
     variance = sum((v - avg_lum) ** 2 for v in values) / len(values)
     std_lum = variance ** 0.5
-    dark_ratio = sum(v < 18 for v in values) / len(values)
-    bright_ratio = sum(v > 225 for v in values) / len(values)
-    passed = (45 <= avg_lum <= 205 and std_lum >= 16 and
-              dark_ratio < 0.70 and bright_ratio < 0.55)
+    bright_ratio = sum(v > 180 for v in values) / len(values)
+    passed = 18 <= avg_lum <= 105 and std_lum >= 7 and bright_ratio < 0.20
     return passed, (f"{label}: mean={mean} avg_lum={avg_lum:.1f} "
-                    f"std_lum={std_lum:.1f} dark_ratio={dark_ratio:.3f} "
-                    f"bright_ratio={bright_ratio:.3f}")
+                    f"std_lum={std_lum:.1f} bright_ratio={bright_ratio:.3f}")
 
 
 def assert_screenshot(path, vw, vh):
@@ -116,10 +112,10 @@ def assert_screenshot(path, vw, vh):
 
     if narrow:
         # The compact home hero deliberately overlays copy on the left and keeps
-        # the staged building illustration exposed on the right.
-        results.append(assert_building_art(
+        # the current property status readable within the hero.
+        results.append(assert_management_surface(
             img, *R(vw * 0.48, 82, vw * 0.96, min(236, vh * 0.34)),
-            "mobile-building-art"
+            "mobile-property-status"
         ))
         results.append(assert_dark_surface(
             img, *R(18, 495, vw - 18, min(687, vh - 150)),
@@ -131,9 +127,9 @@ def assert_screenshot(path, vw, vh):
         ))
     else:
         results.append(assert_shell_backdrop(img, vw, vh))
-        results.append(assert_building_art(
+        results.append(assert_management_surface(
             img, *R(vw * 0.133, vh * 0.224, vw * 0.457, vh * 0.662),
-            "current-building-art"
+            "current-property-status"
         ))
         results.append(assert_dark_surface(
             img, *R(vw * 0.49, vh * 0.307, vw * 0.88, vh * 0.562),
