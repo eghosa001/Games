@@ -1963,12 +1963,49 @@ func _credit_score_text() -> String:
     return "CREDIT DATA UNAVAILABLE"
 
 func _transaction_rows() -> Array:
-    return [
-        {"kind":"SALE","reason":"Goods revenue","amount":"+ " + _money(maxi(0,_last_sales())),"role":"success"},
-        {"kind":"PAYROLL","reason":"%d employees" % _employees(),"amount":"- " + _money(maxi(0,_employees()*100)),"role":"danger"},
-        {"kind":"SUPPLY","reason":"Core inputs","amount":"- " + _money(maxi(0,_inputs()*2)),"role":"danger"},
-        {"kind":"REGION","reason":"Branch income","amount":"+ " + _money(maxi(0,_last_profit())),"role":"success"}
-    ]
+    var finance = get_node_or_null("/root/RenewFinanceSystem")
+    var rows: Array = []
+    if finance == null:
+        return [{"kind":"LEDGER","reason":"Finance unavailable","amount":"—","role":"muted"}]
+    var history = finance.get("history")
+    if not (history is Array) or history.is_empty():
+        return [{"kind":"LEDGER","reason":"No transactions yet","amount":"—","role":"muted"}]
+
+    var negative_kinds := ["spend", "investment", "term_deposit", "buyback", "repayment", "interest", "scheduled_payment"]
+    var positive_kinds := ["receive", "loan", "bond", "deposit_break", "deposit_matured", "equity", "asset_sale"]
+    var start := maxi(0, history.size() - 4)
+    for index in range(history.size() - 1, start - 1, -1):
+        var entry = history[index]
+        if not (entry is Dictionary):
+            continue
+        var kind := str(entry.get("kind", "transaction"))
+        var raw_amount := int(entry.get("amount", 0))
+        var signed_amount := raw_amount
+        var role := "text"
+        if kind in negative_kinds:
+            signed_amount = -abs(raw_amount)
+            role = "danger"
+        elif kind in positive_kinds:
+            signed_amount = abs(raw_amount)
+            role = "success"
+        elif kind == "settlement" or kind == "reconcile":
+            role = "success" if signed_amount >= 0 else "danger"
+        else:
+            role = "gold"
+        var amount_text := "—"
+        if signed_amount > 0:
+            amount_text = "+ " + _money(signed_amount)
+        elif signed_amount < 0:
+            amount_text = "- " + _money(abs(signed_amount))
+        elif raw_amount != 0:
+            amount_text = _money(raw_amount)
+        rows.append({
+            "kind": kind.replace("_", " ").to_upper(),
+            "reason": _compact_card_text(str(entry.get("reason", "Ledger entry")), 24),
+            "amount": amount_text,
+            "role": role
+        })
+    return rows
 
 func _expansion_model():
     if parent == null or parent.get("command_system") == null:
