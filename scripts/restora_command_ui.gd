@@ -11,7 +11,6 @@ const MOBILE_NAV_BOTTOM = 16.0
 const DESKTOP_BREAKPOINT = 1000.0
 const TABLET_BREAKPOINT = 700.0
 const ART_ROOT = "res://Assets/Art/"
-const DISTRICT_ART = ART_ROOT + "premium_industrial_district.svg"
 const ICON_ROOT = ART_ROOT + "Icons/"
 const NAV_ICON_ROOT = ART_ROOT + "NavIcons/"
 
@@ -797,11 +796,12 @@ func _label(parent_node: Node, name: String, text_value: String, rect: Rect2, si
     l.size = fitted.size
     # System font metrics can exceed Figma's nominal text box height on Linux/Android.
     # Keep the authored x/width intact while giving display text enough vertical room.
-    if size_px >= 15:
-        l.size.y = maxf(l.size.y, float(size_px) + 10.0)
+    if readable_size >= 15:
+        l.size.y = maxf(l.size.y, float(readable_size) + 10.0)
     l.mouse_filter = Control.MOUSE_FILTER_IGNORE
     l.add_theme_font_override("font", _font(weight))
-    l.add_theme_font_size_override("font_size", size_px)
+    var readable_size := maxi(size_px, 8)
+    l.add_theme_font_size_override("font_size", readable_size)
     l.add_theme_color_override("font_color", _color(role))
     l.horizontal_alignment = align
     l.vertical_alignment = VERTICAL_ALIGNMENT_TOP
@@ -1123,7 +1123,6 @@ func _build_mobile_world() -> void:
     var inner_w = w - 36.0
     var map = _panel(mobile_content, "RegionalMap", Rect2(18, 82, inner_w, 220), "surface", "border", 22)
     map.clip_contents = true
-    _add_art(map, "RegionalDistrictArt", Rect2(0, 0, inner_w, 220), DISTRICT_ART, 0.88)
     var map_scrim := ColorRect.new()
     map_scrim.position = Vector2.ZERO
     map_scrim.size = Vector2(inner_w, 220)
