@@ -9,7 +9,7 @@ const SCREEN_ALIASES := {"MarketPanel": "CustomerSegmentsUI"}
 const CLOSE_BUTTON_NAME := "UniversalCloseButton"
 const MODAL_LAYER_NAME := "FocusedScreenBackdrop"
 const MODAL_LAYER := 50
-const SCREEN_SCAN_INTERVAL := 0.10
+const SCREEN_SCAN_INTERVAL := 0.25
 
 var _previous_visible: Dictionary = {}
 var _active_screen: Node = null
@@ -21,15 +21,18 @@ var _modal_backdrop: ColorRect
 var _screen_tween: Tween
 var _backdrop_tween: Tween
 var _scan_clock := 0.0
+var _screen_cache: Array[Node] = []
 
 func _ready() -> void:
     call_deferred("_try_initialize")
 
 func _try_initialize() -> void:
-    if not _initializing: return
-    if get_tree().root.get_node_or_null("Renew") == null: return
+    if not _initializing:
+        return
+    if get_tree().root.get_node_or_null("Renew") == null:
+        return
     _suppress_hooks = true
-    hide_all_screens()
+    _hide_all_screens_full()
     _suppress_hooks = false
     _initializing = false
 
@@ -55,14 +58,25 @@ func _root_screen_nodes() -> Array[Node]:
     return result
 
 func _screen_nodes() -> Array[Node]:
+    if not _screen_cache.is_empty():
+        var cached_valid := true
+        for node in _screen_cache:
+            if node == null or not is_instance_valid(node):
+                cached_valid = false
+                break
+        if cached_valid:
+            return _screen_cache
+
     var result: Array[Node] = []
     var ui := _ui_root()
     if ui != null:
         for screen_name in SCREEN_NAMES:
             var node := ui.get_node_or_null(screen_name)
-            if node != null: result.append(node)
+            if node != null:
+                result.append(node)
     result.append_array(_root_screen_nodes())
-    return result
+    _screen_cache = result
+    return _screen_cache
 
 func _process(delta: float) -> void:
     if _initializing:
@@ -85,13 +99,13 @@ func _notification(what: int) -> void:
         hide_all_screens()
 
 func _is_node_visible(node: Node) -> bool:
-    if node == null or not is_instance_valid(node): return false
-    if node is CanvasLayer:
-        for child in node.get_children():
-            if child is CanvasItem and child.visible and child.is_visible_in_tree(): return true
-            if _has_visible_canvas_item(child): return true
+    if node == null or not is_instance_valid(node):
         return false
-    return (node is CanvasItem and node.visible and node.is_visible_in_tree()) or _has_visible_canvas_item(node)
+    if node is CanvasLayer:
+        return bool((node as CanvasLayer).visible)
+    if node is CanvasItem:
+        return bool((node as CanvasItem).visible and (node as CanvasItem).is_visible_in_tree())
+    return false
 
 func _has_visible_canvas_item(node: Node) -> bool:
     for child in node.get_children():
@@ -225,17 +239,27 @@ func _animate_screen_in(node: Node) -> void:
 
 func hide_all_screens() -> void:
     _suppress_hooks = true
+    if _active_screen != null and is_instance_valid(_active_screen):
+        _set_node_visible(_active_screen, false)
+        _previous_visible[_active_screen.name] = false
     _active_screen = null
     _active_screen_name = ""
-    for node in _screen_nodes():
-        _set_node_visible(node, false)
-        _previous_visible[node.name] = false
     _suppress_hooks = false
     _set_modal_backdrop(false)
     var coordinator := _coordinator()
     if coordinator != null:
         coordinator.set_active_screen("")
-        if coordinator.has_method("_resolve"): coordinator._resolve()
+
+func _hide_all_screens_full() -> void:
+    _active_screen = null
+    _active_screen_name = ""
+    for node in _screen_nodes():
+        _set_node_visible(node, false)
+        _previous_visible[node.name] = false
+    _set_modal_backdrop(false)
+    var coordinator := _coordinator()
+    if coordinator != null:
+        coordinator.set_active_screen("")
 
 func _enforce_single_screen() -> void:
     var nodes := _screen_nodes()
@@ -274,29 +298,42 @@ func _enforce_single_screen() -> void:
         if active_coordinator.has_method("_resolve"): active_coordinator._resolve()
 
 func show_screen(screen_name: String) -> bool:
-    if _initializing: _try_initialize()
+    if _initializing:
+        _try_initialize()
     var canonical_name := _canonical_screen_name(screen_name)
     var target: Node = null
     var ui := _ui_root()
-    if ui != null: target = ui.get_node_or_null(canonical_name)
-    if target == null: target = get_tree().root.get_node_or_null("Renew/" + canonical_name)
-    if target == null: target = get_tree().root.get_node_or_null(canonical_name)
+    if ui != null:
+        target = ui.get_node_or_null(canonical_name)
+    if target == null:
+        target = get_tree().root.get_node_or_null("Renew/" + canonical_name)
+    if target == null:
+        target = get_tree().root.get_node_or_null(canonical_name)
     if target == null or not (SCREEN_NAMES.has(canonical_name) or ROOT_SCREEN_NAMES.has(canonical_name)):
         push_warning("Unknown primary RESTORA screen: %s" % screen_name)
         return false
+
+    if _active_screen == target and _is_node_visible(target):
+        return true
+
+    # Screen changes are event driven: close the one active screen and open the
+    # target. Do not synchronously walk every panel on every touch.
+    _suppress_hooks = true
+    if _active_screen != null and is_instance_valid(_active_screen) and _active_screen != target:
+        _set_node_visible(_active_screen, false)
+        _previous_visible[_active_screen.name] = false
+    _suppress_hooks = false
+
     _active_screen = target
     _active_screen_name = canonical_name
-    for node in _screen_nodes():
-        var should_show := node == target
-        _set_node_visible(node, should_show)
-        _previous_visible[node.name] = should_show
+    _set_node_visible(target, true)
+    _previous_visible[target.name] = true
     _ensure_close_button(target)
     _set_modal_backdrop(true)
     _animate_screen_in(target)
     var coordinator := _coordinator()
     if coordinator != null:
         coordinator.set_active_screen(canonical_name)
-        if coordinator.has_method("_resolve"): coordinator._resolve()
     return true
 
 func get_active_screen_name() -> String:
