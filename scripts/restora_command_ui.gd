@@ -214,10 +214,16 @@ func _owned_building_count() -> int:
     return count
 
 func _business_catalog() -> Array:
-    if parent != null and parent.has_method("get_business_purposes"):
-        var purposes = parent.get_business_purposes()
-        return purposes if purposes is Array else []
-    return []
+    if parent == null:
+        return []
+    var command = parent.get("command_system")
+    if command == null:
+        return []
+    var business = command.get("business_system")
+    if business == null or not business.has_method("get_business_purposes"):
+        return []
+    var purposes = business.get_business_purposes()
+    return purposes if purposes is Array else []
 
 func _region_catalog() -> Array:
     var controller = _region_controller()
