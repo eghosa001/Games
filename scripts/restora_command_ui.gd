@@ -366,7 +366,7 @@ func _animate_view_in() -> void:
     _view_transition.tween_property(root, "modulate", Color.WHITE, 0.08)
 
 func _show_view(view_name: String) -> void:
-    var previous_view := active_view
+    var previous_view: String = str(active_view)
     active_view = view_name
     match view_name:
         "live":
@@ -427,7 +427,7 @@ func _refresh_bottom_nav() -> void:
         var button := mode_buttons[i]
         if button == null or not is_instance_valid(button):
             continue
-        var active := i == active_tab
+        var active: bool = i == active_tab
         button.add_theme_stylebox_override("normal", _nav_style(active))
         button.add_theme_stylebox_override("hover", _nav_style(active, true))
         button.add_theme_stylebox_override("pressed", _nav_style(true))
