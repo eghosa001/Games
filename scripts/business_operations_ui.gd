@@ -70,6 +70,8 @@ func _label(text: String, size: int, color: Color) -> Label:
     l.add_theme_color_override("font_color", color)
     l.mouse_filter = Control.MOUSE_FILTER_IGNORE
     l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    l.clip_text = true
+    l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
     return l
 
 func _style(bg: Color, border: Color, radius: int) -> StyleBoxFlat:
@@ -97,10 +99,15 @@ func _layout() -> void:
     var s := get_viewport().get_visible_rect().size
     var phone := s.x < 430.0
     var narrow := s.x < 720.0
-    var w := minf(780.0, maxf(304.0, s.x - (16.0 if narrow else 56.0)))
-    var h := minf(620.0, maxf(470.0, s.y - (70.0 if narrow else 90.0)))
-    panel.size = Vector2(w, minf(h, s.y - 16.0))
-    panel.position = Vector2((s.x - w) * 0.5, maxf(38.0, (s.y - panel.size.y) * 0.5))
+    var side_margin := 8.0 if narrow else 28.0
+    var top_margin := 8.0 if narrow else 24.0
+    var w := minf(780.0, maxf(240.0, s.x - side_margin * 2.0))
+    var h := minf(620.0, maxf(360.0, s.y - top_margin * 2.0))
+    w = minf(w, maxf(1.0, s.x - side_margin * 2.0))
+    h = minf(h, maxf(1.0, s.y - top_margin * 2.0))
+    panel.size = Vector2(w, h)
+    panel.position = Vector2(maxf(side_margin, (s.x - w) * 0.5), maxf(top_margin, (s.y - h) * 0.5))
+    panel.clip_contents = true
     header.position = Vector2(14, 10); header.size = Vector2(w - 112, 28)
     summary.position = Vector2(14, 39); summary.size = Vector2(w - 112, 18)
     close_button.position = Vector2(w - 88, 10); close_button.size = Vector2(76, 44)
