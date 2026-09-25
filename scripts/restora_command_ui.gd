@@ -260,7 +260,9 @@ func _build_overview_business_catalog(y: float) -> float:
         var row_y: float = 54.0 + float(i) * 48.0
         var row = _panel(panel, "OverviewBusinessRow%d" % i, Rect2(10, row_y, inner_w - 20, 42), "selected" if str(purpose.get("id", "")) == current_purpose else "surface_2", "plum" if str(purpose.get("id", "")) == current_purpose else "border", 9)
         _label(row, "Name", str(purpose.get("name", "Business")), Rect2(9, 5, inner_w - 136, 14), 9, "text", 600)
-        _label(row, "Meta", "Product: %s • Launch %s" % [str(purpose.get("product", "goods")).replace("_", " ").capitalize(), _money(3000)], Rect2(9, 22, inner_w - 136, 12), 7, "muted", 400)
+        var launch_cost := int(purpose.get("launch_cost", 3000))
+        var fit_text := str(purpose.get("fit", "GOOD"))
+        _label(row, "Meta", "%s • %s FIT • Launch %s" % [str(purpose.get("product", "goods")).replace("_", " ").capitalize(), fit_text, _money(launch_cost)], Rect2(9, 22, inner_w - 136, 12), 8, "muted", 400)
         var state_text: String = "OPEN" if _business_open() and str(purpose.get("id", "")) == current_purpose else ("READY" if _stage() == "Operational" else "RESTORE FIRST")
         _label(row, "State", state_text, Rect2(inner_w - 116, 13, 88, 12), 7, "success" if state_text == "OPEN" else ("gold" if state_text == "READY" else "muted"), 600, HORIZONTAL_ALIGNMENT_RIGHT)
         _transparent_button(row, "OpenOverviewBusiness%d" % i, Rect2(0, 0, inner_w - 20, 42), _show_view.bind("operate"))
@@ -1748,17 +1750,22 @@ func _open_business_choices() -> void:
     if old != null:
         old.queue_free()
     var w = _content_width()
-    var panel = _panel(mobile_content, "BusinessChoiceModal", Rect2(18, 188, w - 36, 278), "selected", "plum", 18)
+    var panel = _panel(mobile_content, "BusinessChoiceModal", Rect2(18, 144, w - 36, 376), "selected", "plum", 18)
     panel.mouse_filter = Control.MOUSE_FILTER_STOP
     _label(panel, "Head", "CHOOSE BUSINESS", Rect2(16, 14, w - 68, 18), 12, "gold", 600)
-    _label(panel, "Help", "Choose what this restored property will become.", Rect2(16, 40, w - 68, 32), 10, "muted", 400)
-    var y = 82.0
+    _label(panel, "Help", "Different properties favor different businesses. Fit improves output.", Rect2(16, 40, w - 68, 34), 10, "muted", 400)
+    var y = 84.0
     for i in range(mini(3, purposes.size())):
         var purpose: Dictionary = purposes[i] if purposes[i] is Dictionary else {}
-        var name = str(purpose.get("name", "BUSINESS")).to_upper()
-        _frame_button(panel, "Purpose%d" % i, name, Rect2(16, y, w - 68, 46), _choose_business.bind(i), i == 0, false, 10)
-        y += 56.0
-    _frame_button(panel, "CancelPurpose", "CANCEL", Rect2(16, 238, w - 68, 30), panel.queue_free, false, false, 9)
+        var launch_cost := int(purpose.get("launch_cost", 3000))
+        var card = _panel(panel, "PurposeCard%d" % i, Rect2(16, y, w - 68, 78), "surface_2", "border", 12)
+        _label(card, "Name", str(purpose.get("name", "Business")), Rect2(12, 9, w - 188, 18), 10, "text", 600)
+        _label(card, "Meta", "%s • %s FIT • %s" % [str(purpose.get("product", "goods")).replace("_", " ").capitalize(), str(purpose.get("fit", "GOOD")), _money(launch_cost)], Rect2(12, 31, w - 188, 16), 8, "muted", 400)
+        var button_text := "LAUNCH" if _cash() >= launch_cost else "NEED %s" % _money(launch_cost)
+        var choose = _frame_button(card, "Choose", button_text, Rect2(w - 174, 15, 94, 48), _choose_business.bind(i), false, _cash() >= launch_cost, 9)
+        choose.disabled = _cash() < launch_cost
+        y += 86.0
+    _frame_button(panel, "CancelPurpose", "CANCEL", Rect2(16, 346, w - 68, 30), panel.queue_free, false, false, 9)
 
 func _choose_business(index: int) -> void:
     if parent != null and parent.has_method("choose_business_purpose"):
