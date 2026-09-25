@@ -1623,6 +1623,12 @@ func _goods() -> int:
     return int(parent.finished_goods) if parent != null and "finished_goods" in parent else int(_state_value("production","finished_goods",0))
 
 func _inputs() -> int:
+    var business = _business_command_layer()
+    if business != null and "supply_chain" in business and business.supply_chain != null and business.supply_chain.has_method("stock"):
+        var total := 0.0
+        for resource in ["timber", "iron", "metal", "energy", "electronics", "food"]:
+            total += maxf(0.0, float(business.supply_chain.stock(resource)))
+        return int(floor(total))
     return int(_state_value("production","inputs",0))
 
 func _employees() -> int:
