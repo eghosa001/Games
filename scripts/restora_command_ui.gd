@@ -1593,13 +1593,13 @@ func _state_value(domain: String, key: String, default_value):
     return default_value
 
 func _cash() -> int:
-    return int(parent.cash) if parent != null and "cash" in parent else int(_state_value("finance","cash",0))
+    return int(parent.cash) if parent != null and "cash" in parent else int(_state_value("economy","cash",0))
 
 func _rep() -> int:
-    return int(parent.reputation) if parent != null and "reputation" in parent else int(_state_value("company","reputation",0))
+    return int(parent.reputation) if parent != null and "reputation" in parent else int(_state_value("player","reputation",0))
 
 func _day() -> int:
-    return int(parent.day) if parent != null and "day" in parent else int(_state_value("company","day",1))
+    return int(parent.day) if parent != null and "day" in parent else int(_state_value("player","day",1))
 
 func _debt() -> int:
     return int(parent.debt) if parent != null and "debt" in parent else int(_state_value("finance","debt",0))
@@ -1617,7 +1617,7 @@ func _inspected() -> bool:
     return bool(parent.inspected) if parent != null and "inspected" in parent else bool(_state_value("properties","inspected",false))
 
 func _business_open() -> bool:
-    return bool(parent.business_open) if parent != null and "business_open" in parent else bool(_state_value("business","open",false))
+    return bool(parent.business_open) if parent != null and "business_open" in parent else bool(_state_value("businesses","business_open",false))
 
 func _goods() -> int:
     return int(parent.finished_goods) if parent != null and "finished_goods" in parent else int(_state_value("production","finished_goods",0))
@@ -1632,21 +1632,26 @@ func _inputs() -> int:
     return int(_state_value("production","inputs",0))
 
 func _employees() -> int:
-    return int(parent.employees) if parent != null and "employees" in parent else int(_state_value("employees","count",0))
+    if parent != null and "employees" in parent:
+        return int(parent.employees)
+    var roster = _state_value("employees", "roster", [])
+    if roster is Array:
+        return roster.size()
+    return 0
 
 func _last_sales() -> int:
-    return int(parent.last_sales) if parent != null and "last_sales" in parent else int(_state_value("finance","last_sales",0))
+    return int(parent.last_sales) if parent != null and "last_sales" in parent else int(_state_value("economy","last_sales",0))
 
 func _last_profit() -> int:
-    return int(parent.last_profit) if parent != null and "last_profit" in parent else int(_state_value("finance","last_profit",0))
+    return int(parent.last_profit) if parent != null and "last_profit" in parent else int(_state_value("economy","last_profit",0))
 
 func _transport_level() -> int:
-    return int(parent.transport_level) if parent != null and "transport_level" in parent else int(_state_value("branches","transport_level",0))
+    return int(parent.transport_level) if parent != null and "transport_level" in parent else int(_state_value("supply_chain","transport_level",1))
 
 func _active_contracts() -> int:
     if parent != null and "contract_days" in parent and int(parent.contract_days) > 0:
         return 1
-    return int(_state_value("contracts","active_count",0))
+    return 1 if int(_state_value("contracts", "contract_days", 0)) > 0 else 0
 
 func _money(value: int) -> String:
     var abs_value = abs(value)
@@ -1801,7 +1806,7 @@ func _production_rate_text() -> String:
     ]
 
 func _commercial_text() -> String:
-    var price = int(parent.player_price) if parent != null and "player_price" in parent else int(_state_value("business","price",42))
+    var price = int(parent.player_price) if parent != null and "player_price" in parent else int(_state_value("businesses","player_price",110))
     return "PRICE %s  •  DEMAND %d LEFT\nSTOCK %d  •  STAFF %d  •  CAPACITY L%d\nMARKETING %s  •  CONTRACTS %d" % [
         _money(price), _demand_remaining(), _goods(), _employees(),
         maxi(1, int(_state_value("businesses","capacity_level",1))),
@@ -1952,9 +1957,10 @@ func _request_investor() -> void:
     _refresh()
 
 func _credit_score_text() -> String:
-    var score = clampi(620 + _rep()*2 - int(float(_debt())/5000.0), 500, 850)
-    var grade = "A−" if score >= 760 else ("B+" if score >= 700 else ("B" if score >= 650 else "C"))
-    return "%s  •  SCORE %d" % [grade,score]
+    var finance = get_node_or_null("/root/RenewFinanceSystem")
+    if finance != null:
+        return "%s  •  SCORE %d" % [str(finance.get("credit_rating")), int(round(float(finance.get("credit_score"))))]
+    return "CREDIT DATA UNAVAILABLE"
 
 func _transaction_rows() -> Array:
     return [
@@ -2072,7 +2078,12 @@ func _region_presence_count() -> int:
     return 0
 
 func _trade_route_count() -> int:
-    return int(_state_value("regions","trade_routes",0))
+    var controller = _region_controller()
+    if controller != null and "regions" in controller and controller.regions != null and "trade_routes" in controller.regions:
+        var routes = controller.regions.trade_routes
+        if routes is Dictionary:
+            return routes.size()
+    return 0
 
 func _current_region_name() -> String:
     var region: Dictionary = _selected_region()
