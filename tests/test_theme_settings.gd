@@ -41,7 +41,7 @@ func _run() -> void:
     check("settings is integrated in production HUD", hud.contains('func _build_mobile_settings()'))
     check("obsolete SettingsPanel is not registered", not screens.contains('"SettingsPanel"'))
     check("MORE exposes integrated settings", hud.contains('["SETTINGS","Theme, audio, purchases, privacy","settings",""]'))
-    check("MORE routes settings through the production HUD", hud.contains('["world","intelligence","settings"].has(target)') and hud.contains('_show_view.bind(target)'))
+    check("MORE routes settings through the production HUD", hud.contains('"settings","guide"') and hud.contains('_show_view.bind(target)'))
     check("premium skin consumes global theme manager", skin.contains('/root/RestoraThemeManager') and skin.contains('get_theme_resource'))
     check("premium skin no longer owns old fixed navy palette", not skin.contains('const SURFACE := Color("101d3d")'))
     check("settings exposes dark light and device modes", settings.contains('_set_theme.bind("dark")') and settings.contains('_set_theme.bind("light")') and settings.contains('_set_theme.bind("system")'))
