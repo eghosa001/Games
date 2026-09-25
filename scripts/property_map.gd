@@ -1,18 +1,17 @@
 extends Node2D
 
-## District property map: every catalog property drawn from authoritative
-## GameState. Owns no gameplay state; selection routes through property_system.
-const STEPS := ["cleaning", "repair", "painting", "furnishing"]
-const BODY := {"Warehouse": Color("2a3f46"), "Workshop": Color("3a3230"), "Commercial Building": Color("323a4a")}
-const ROOF := {"Warehouse": Color("4a6a72"), "Workshop": Color("6a5a4a"), "Commercial Building": Color("5a6a8a")}
-const TRIM := Color("d5b56e")
-const LIT := Color("ffd97a")
-const DARK_WIN := Color("1a2a30")
-const BOARD := Color("6a5a3a")
-const OWNED_RING := Color("7ed0c3")
-const SELECT_RING := Color("e4bd68")
+## Flat property overview board.
+## Properties are management records with upgrade/restoration levels.
+## No building/world rendering is used here.
+
 const TEXT := Color("e7f2ef")
 const MUTED := Color("78949a")
+const GOLD := Color("e4bd68")
+const GREEN := Color("7ed0c3")
+const BORDER := Color("355057")
+const SURFACE := Color("102027")
+const SURFACE_ALT := Color("162a31")
+const TRACK := Color("20363d")
 
 var _last_signature := ""
 
@@ -55,39 +54,27 @@ func stage_of(property: Dictionary, owned: bool) -> int:
 		return 4
 	return 5
 
+func _restoration_percent(property: Dictionary) -> int:
+	var total := 0
+	for step in ["cleaning", "repair", "painting", "furnishing"]:
+		total += clampi(int(property.get(step, 0)), 0, 100)
+	return int(round(float(total) / 4.0))
+
 func _map_area() -> Rect2:
-	var viewport: Vector2 = get_viewport_rect().size
-	var top := 64.0
-	var bottom: float = viewport.y - 200.0
-	var left: float = 16.0
-	var width: float = maxf(100.0, viewport.x - 32.0)
-	if viewport.x < 700.0:
-		top = 112.0
+	var viewport := get_viewport_rect().size
+	var top := 210.0 if viewport.x >= 700.0 else 190.0
+	var bottom := viewport.y - 180.0
+	var left := 18.0
+	var right := viewport.x - 18.0
 	var hud := get_tree().root.get_node_or_null("Renew/UI/MainHUD") if get_tree() != null and get_tree().root != null else null
 	if hud != null:
 		var dock: Variant = hud.get("action_dock")
-		if dock is Control and (dock as Control).visible:
-			bottom = minf(bottom, (dock as Control).get_global_rect().position.y - 8.0)
-		var selected: Variant = hud.get("selected_card")
-		if selected is Control and selected.visible:
-			top = maxf(top, (selected as Control).get_global_rect().end.y + 4.0)
-		else:
-			var objective: Variant = hud.get("objective_card")
-			if objective is Control and objective.visible:
-				top = maxf(top, (objective as Control).get_global_rect().end.y + 4.0)
-			else:
-				top = maxf(top, 212.0)
-		var left_rail: Variant = hud.get("left_rail")
-		var rail_right: float = 16.0
-		if left_rail is Control and left_rail.visible:
-			rail_right = maxf(rail_right, (left_rail as Control).get_global_rect().end.x + 4.0)
-		elif dock is Control and dock.visible:
-			rail_right = maxf(rail_right, (dock as Control).get_global_rect().position.x + 4.0)
-		left = rail_right
-		width = maxf(100.0, viewport.x - left - 16.0)
-	if bottom - top < 90.0:
-		top = maxf(8.0, bottom - 90.0)
-	return Rect2(left, top, maxf(width, 100.0), maxf(40.0, bottom - top))
+		if dock is Control and dock.visible:
+			bottom = minf(bottom, (dock as Control).get_global_rect().position.y - 10.0)
+		var rail: Variant = hud.get("left_rail")
+		if rail is Control and rail.visible:
+			left = maxf(left, (rail as Control).get_global_rect().end.x + 10.0)
+	return Rect2(left, top, maxf(140.0, right - left), maxf(80.0, bottom - top))
 
 func map_rects() -> Array:
 	var out: Array = []
@@ -98,32 +85,18 @@ func map_rects() -> Array:
 	if not catalog is Array or catalog.is_empty():
 		return out
 	var area := _map_area()
-	var count := 0
-	for entry in catalog:
-		if entry is Dictionary:
-			count += 1
-	if count <= 0:
-		return out
-	var cols := 9
-	if area.size.x < 900.0:
-		cols = 5
-	if area.size.x < 500.0:
-		cols = 3
+	var count := catalog.size()
+	var cols := 3 if area.size.x >= 980.0 else (2 if area.size.x >= 600.0 else 1)
 	cols = mini(cols, count)
-	var rows := int(ceil(float(count) / float(maxi(1, cols))))
-	var cell := Vector2(area.size.x / float(cols), area.size.y / float(maxi(1, rows)))
-	var index := 0
-	for entry in catalog:
-		if not entry is Dictionary:
-			continue
-		var col: int = index % cols
-		var row: int = index / cols
-		var origin := area.position + Vector2(col * cell.x + 6.0, row * cell.y + 4.0)
-		var preferred_size := Vector2(maxf(40.0, cell.x - 12.0), maxf(24.0, cell.y - 32.0))
-		var cell_safe_size := Vector2(maxf(8.0, cell.x - 8.0), maxf(8.0, cell.y - 8.0))
-		var size := Vector2(minf(preferred_size.x, cell_safe_size.x), minf(preferred_size.y, cell_safe_size.y))
-		out.append({"id": str(entry.get("id", "")), "rect": Rect2(origin, size)})
-		index += 1
+	var rows := int(ceil(float(count) / float(maxi(cols, 1))))
+	var gap := 10.0
+	var cell_w := (area.size.x - gap * float(cols - 1)) / float(maxi(cols, 1))
+	var cell_h := maxf(84.0, (area.size.y - gap * float(rows - 1)) / float(maxi(rows, 1)))
+	for i in range(count):
+		var col := i % cols
+		var row := i / cols
+		var rect := Rect2(area.position + Vector2(float(col) * (cell_w + gap), float(row) * (cell_h + gap)), Vector2(cell_w, cell_h))
+		out.append({"id": str(catalog[i].get("id", "")), "rect": rect})
 	return out
 
 func _draw() -> void:
@@ -137,105 +110,45 @@ func _draw() -> void:
 	var business_open := bool(state.get_value("businesses", "business_open", false))
 	var origin_property_id := str(state.get_value("businesses", "origin_property_id", ""))
 	var day := int(state.get_value("player", "day", 1))
-	var font: Font = ThemeDB.fallback_font
-	var index := 0
-	for slot in map_rects():
-		var entry: Dictionary = catalog[index] if index < catalog.size() and catalog[index] is Dictionary else {}
-		if entry.is_empty():
-			continue
+	var font := ThemeDB.fallback_font
+	for i in range(map_rects().size()):
+		var slot: Dictionary = map_rects()[i]
+		var entry: Dictionary = catalog[i]
 		var rect: Rect2 = slot["rect"]
-		var entry_owned := bool(entry.get("owned", false))
-		var stage := stage_of(entry, entry_owned)
-		_draw_building(rect, str(entry.get("type", "Warehouse")), stage, int(entry.get("condition", 0)))
-		if entry_owned:
-			draw_rect(rect.grow(4.0), OWNED_RING, false, 2.0)
-		if index == selected:
-			draw_rect(rect.grow(8.0), SELECT_RING, false, 1.5)
+		var owned := bool(entry.get("owned", false))
+		var stage := stage_of(entry, owned)
+		var progress := _restoration_percent(entry)
+		var selected_card := i == selected
+		draw_rect(rect, SURFACE_ALT if selected_card else SURFACE, true)
+		draw_rect(rect, GOLD if selected_card else BORDER, false, 2.0 if selected_card else 1.0)
+		var pad := 14.0
+		draw_string(font, rect.position + Vector2(pad, 23), str(entry.get("name", "Property")), HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - pad * 2.0, 13, TEXT)
+		var status := _stage_caption(stage, business_open and owned and str(entry.get("id", "")) == origin_property_id)
+		if not owned and bool(entry.get("inspected", false)):
+			status = "SURVEYED"
+		draw_string(font, rect.position + Vector2(pad, 43), "%s  •  %s" % [str(entry.get("type", "Property")), status], HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - pad * 2.0, 10, MUTED)
+		var bar := Rect2(rect.position + Vector2(pad, rect.size.y - 27), Vector2(maxf(40.0, rect.size.x - pad * 2.0), 7.0))
+		draw_rect(bar, TRACK, true)
+		draw_rect(Rect2(bar.position, Vector2(bar.size.x * float(progress) / 100.0, bar.size.y)), GREEN if progress >= 100 else GOLD, true)
+		draw_string(font, rect.position + Vector2(pad, rect.size.y - 36), "UPGRADE %d/6  •  %d%%" % [stage + 1, progress], HORIZONTAL_ALIGNMENT_LEFT, rect.size.x - pad * 2.0, 9, TEXT)
 		if int(entry.get("lease_until", 0)) > day:
-			draw_string(font, rect.position + Vector2(4, -6), "LEASED", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, TRIM)
-		draw_string(font, rect.position + Vector2(0, rect.size.y + 14), str(entry.get("name", "?")), HORIZONTAL_ALIGNMENT_LEFT, rect.size.x, 10, TEXT)
-		var operating := business_open and entry_owned and str(entry.get("id", "")) == origin_property_id
-		var caption := _stage_caption(stage, operating)
-		if not entry_owned and bool(entry.get("inspected", false)):
-			caption = "SURVEYED"
-		draw_string(font, rect.position + Vector2(0, rect.size.y + 27), caption, HORIZONTAL_ALIGNMENT_LEFT, rect.size.x, 9, MUTED)
-		index += 1
+			draw_string(font, rect.position + Vector2(rect.size.x - 84, 23), "LEASED", HORIZONTAL_ALIGNMENT_RIGHT, 70, 9, GOLD)
 
 func _stage_caption(stage: int, operating: bool) -> String:
 	if operating and stage >= 5:
 		return "OPERATING"
-	match stage:
-		0:
-			return "ABANDONED"
-		1:
-			return "CLEANED"
-		2:
-			return "REPAIRED"
-		3:
-			return "PAINTED"
-		4:
-			return "FURNISHED"
-	return "RESTORED"
-
-func _draw_building(rect: Rect2, building_type: String, stage: int, condition: int) -> void:
-	var body: Color = BODY.get(building_type, BODY["Warehouse"])
-	var roof: Color = ROOF.get(building_type, ROOF["Warehouse"])
-	if stage == 0:
-		var gloom := 0.35 + 0.45 * clampf(float(condition) / 100.0, 0.0, 1.0)
-		body = body.lerp(Color("0a0f12"), 1.0 - gloom)
-		roof = roof.lerp(Color("0a0f12"), 1.0 - gloom)
-	var w := rect.size
-	var base := Rect2(rect.position + Vector2(0, w.y * 0.30), Vector2(w.x, w.y * 0.70))
-	draw_rect(base, body, true)
-	draw_rect(base, roof, false, 2.0)
-	match building_type:
-		"Warehouse":
-			draw_colored_polygon(PackedVector2Array([rect.position + Vector2(-4, w.y * 0.30), rect.position + Vector2(w.x + 4, w.y * 0.30), rect.position + Vector2(w.x * 0.78, 0), rect.position + Vector2(w.x * 0.22, 0)]), roof)
-		"Workshop":
-			draw_rect(Rect2(rect.position + Vector2(w.x * 0.68, 0), Vector2(w.x * 0.16, w.y * 0.34)), roof, true)
-		_:
-			draw_rect(Rect2(rect.position + Vector2(0, w.y * 0.22), Vector2(w.x, w.y * 0.10)), roof, true)
-	var floors := 2 if building_type == "Commercial Building" else 1
-	for floor in range(floors):
-		var wy: float = base.position.y + 10.0 + floor * (base.size.y / 2.0)
-		var count := 4 if building_type == "Warehouse" else 3
-		for i in range(count):
-			var wx: float = base.position.x + 8.0 + i * ((base.size.x - 16.0) / float(count))
-			var lit := stage >= 4 and ((i + floor) % 2 == 0)
-			var broken := stage == 0 and ((i + floor) % 3 == 0)
-			var win := Rect2(wx, wy, (base.size.x - 16.0) / float(count) - 6.0, 16.0)
-			draw_rect(win, LIT if lit else DARK_WIN, true)
-			if broken:
-				draw_line(win.position, win.position + win.size, BOARD, 2.0)
-				draw_line(win.position + Vector2(win.size.x, 0), win.position + Vector2(0, win.size.y), BOARD, 2.0)
-	var door := Rect2(base.position + Vector2(base.size.x / 2.0 - 9.0, base.size.y - 24.0), Vector2(18, 24))
-	draw_rect(door, DARK_WIN if stage < 2 else roof, true)
-	if stage == 0:
-		draw_line(door.position, door.position + door.size, BOARD, 3.0)
-	if stage >= 3:
-		draw_line(base.position + Vector2(0, 2), base.position + Vector2(base.size.x, 2), TRIM, 2.0)
-	if stage >= 5:
-		var sign := Rect2(rect.position + Vector2(w.x * 0.2, w.y * 0.30 - 14.0), Vector2(w.x * 0.6, 12.0))
-		draw_rect(sign, TRIM, true)
-	if stage > 0 and stage < 5:
-		var bar := Rect2(rect.position + Vector2(0, w.y + 2.0), Vector2(w.x, 4.0))
-		draw_rect(bar, Color("17282e"), true)
-		draw_rect(Rect2(bar.position, Vector2(bar.size.x * (float(stage) / 5.0), bar.size.y)), TRIM, true)
+	return ["ABANDONED", "CLEANED", "REPAIRED", "PAINTED", "FURNISHED", "RESTORED"][clampi(stage, 0, 5)]
 
 func _unhandled_input(event: InputEvent) -> void:
 	var point := Vector2.ZERO
-	var is_selection := false
+	var select := false
 	if event is InputEventMouseButton:
-		var click: InputEventMouseButton = event
-		is_selection = click.pressed and click.button_index == MOUSE_BUTTON_LEFT
-		if is_selection:
-			point = click.position
+		select = event.pressed and event.button_index == MOUSE_BUTTON_LEFT
+		point = event.position
 	elif event is InputEventScreenTouch:
-		var touch: InputEventScreenTouch = event
-		is_selection = touch.pressed
-		if is_selection:
-			point = touch.position
-	if not is_selection:
+		select = event.pressed
+		point = event.position
+	if not select:
 		return
 	for slot in map_rects():
 		if (slot["rect"] as Rect2).has_point(point):
@@ -257,7 +170,7 @@ func _select_property(property_id: String) -> void:
 		return
 	var catalog = state.get_value("properties", "catalog", [])
 	if catalog is Array:
-		for index in range((catalog as Array).size()):
-			if (catalog as Array)[index] is Dictionary and str(((catalog as Array)[index] as Dictionary).get("id", "")) == property_id:
+		for index in range(catalog.size()):
+			if catalog[index] is Dictionary and str(catalog[index].get("id", "")) == property_id:
 				state.set_value("properties", "selected_property", index)
 				return
