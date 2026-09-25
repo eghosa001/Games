@@ -102,8 +102,8 @@ func test_2d_runtime_contract() -> void:
     check(game.get_script() != null and str(game.get_script().resource_path) == "res://scripts/main.gd", "Authoritative Main gameplay boundary remains domain-driven")
     var scene_source := FileAccess.get_file_as_string("res://scenes/Main.tscn")
     var command_ui_source := FileAccess.get_file_as_string("res://scripts/restora_command_ui.gd")
-    check(not scene_source.contains("RestoraWorld3D") and not scene_source.contains('name="World3D"'), "Main scene stays building-first")
-    check(command_ui_source.contains("building_warehouse_progression.svg") and command_ui_source.contains("_building_stage_texture"), "Building presentation reads staged property state without owning simulation")
+    check(not scene_source.contains("RestoraWorld3D") and not scene_source.contains('name="World3D"'), "Main scene stays management-first")
+    check(not command_ui_source.contains("building_warehouse_progression.svg") and not command_ui_source.contains("_building_stage_texture"), "Property presentation remains status-only without rendered structures")
 
 func test_persistence_contract() -> void:
     var save_source := FileAccess.get_file_as_string("res://scripts/save_system.gd")
