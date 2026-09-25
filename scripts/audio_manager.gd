@@ -1,15 +1,15 @@
 extends Node
-## RENEW premium adaptive audio system.
+## RESTORA adaptive audio system.
 ## Runtime synthesis keeps the build self-contained and Android-friendly.
 
 const SAMPLE_RATE: int = 22050
-const MAX_SFX_PLAYERS: int = 12
+const MAX_SFX_PLAYERS: int = 8
 const AUDIO_PREFS_PATH := "user://restora_ui.cfg"
 const DEFAULT_MUSIC_LEVEL := 0.72
 const DEFAULT_SFX_LEVEL := 0.84
 const TAU_F: float = TAU
 const MUSIC_SCALE_STEPS: Array[int] = [0, 2, 4, 7, 9, 7, 4, 2]
-const STATE_WATCH_INTERVAL: float = 0.10
+const STATE_WATCH_INTERVAL: float = 0.16
 
 var _music_player: AudioStreamPlayer
 var _music_playback: AudioStreamGeneratorPlayback
