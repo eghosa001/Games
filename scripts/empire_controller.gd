@@ -18,6 +18,7 @@ func _process(_delta: float) -> void:
     # Strategic rival simulation is advanced by main.gd as part of the atomic
     # end-of-day transaction. Keeping this controller presentation-only avoids
     # running the same strategic tick twice on fast/mobile sessions.
+    pass
 
 func _input(event: InputEvent) -> void:
     if not (event is InputEventKey) or not event.pressed or event.echo: return
