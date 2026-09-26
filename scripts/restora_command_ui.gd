@@ -831,10 +831,17 @@ func _label(parent_node: Node, name: String, text_value: String, rect: Rect2, si
     l.add_theme_color_override("font_color", _color(role))
     l.horizontal_alignment = align
     l.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-    l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+    var multiline := text_value.contains("\n") or fitted.size.y >= float(readable_size) * 1.8
+    l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if multiline else TextServer.AUTOWRAP_OFF
+    l.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING if multiline else TextServer.OVERRUN_TRIM_ELLIPSIS
     l.clip_text = true
     parent_node.add_child(l)
+    # Label minimum-size calculation can expand wrapped copy after it enters the tree.
+    # Re-apply the authored bounds once wrapping/clipping are configured so nested
+    # labels stay inside responsive cards instead of growing to their natural line width.
+    l.size = fitted.size
+    if readable_size >= 15:
+        l.size.y = maxf(l.size.y, float(readable_size) + 10.0)
     return l
 
 func _remember(key: String, node: Node) -> Node:
@@ -1029,7 +1036,8 @@ func _build_mobile_operations() -> void:
     var commercial = _panel(mobile_content, "CommercialControls", Rect2(18, 370, inner_w, 176), "surface", "border", 18)
     _label(commercial, "Head", "COMMERCIAL CONTROLS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     if business_ready:
-        _remember("commercial_body", _label(commercial, "Body", _commercial_text(), Rect2(16, 44, inner_w - 32, 88), 12, "text", 400))
+        _remember("commercial_body", _label(commercial, "Body", _commercial_text(), Rect2(16, 44, inner_w - 32, 82), 12, "text", 400))
+        _label(commercial, "ActionHint", "TAP FOR SELL, CONTRACTS & CUSTOMERS  →", Rect2(16, 145, inner_w - 32, 14), 8, "gold", 600, HORIZONTAL_ALIGNMENT_RIGHT)
         _transparent_button(commercial, "OpenCommercial", Rect2(0, 0, inner_w, 176), _open_commercial_actions)
     else:
         var commercial_lock := "Restore the property first." if not property_ready else "Choose a business to unlock pricing, staff, marketing and contracts."
@@ -1318,16 +1326,16 @@ func _build_mobile_more() -> void:
     _label(company, "Health", "%d ACTIVE CONTRACT%s" % [_active_contracts(), "" if _active_contracts() == 1 else "S"], Rect2(16,68,180,14), 9, "success", 600)
 
     var tiles = [
-        ["HOW TO PLAY","Restore → Operate → Grow","guide",""],
-        ["REGIONS","Markets and expansion","world","regions"],
-        ["INTELLIGENCE","Company and market signals","intelligence",""],
-        ["CORPORATIONS","Rivals and diplomacy","CorporationsPanel","competitors"],
-        ["CONTRACTS","Customers and renewals","ContractPanel","contracts"],
-        ["TECHNOLOGY","Research and upgrades","TechnologyPanel","technology"],
-        ["HEADQUARTERS","Capacity and policy","HeadquartersPanel","headquarters"],
-        ["HISTORY","Milestones and museum","HistoryPanel",""],
-        ["SAVE / LOAD","Profiles and recovery","SaveLoadPanel",""],
-        ["SETTINGS","Theme, audio, purchases, privacy","settings",""]
+        ["HOW TO PLAY","Restore • Operate\n• Grow","guide",""],
+        ["REGIONS","Markets • expansion","world","regions"],
+        ["INTELLIGENCE","Company • market\nsignals","intelligence",""],
+        ["CORPORATIONS","Rivals • diplomacy","CorporationsPanel","competitors"],
+        ["CONTRACTS","Customers • renewals","ContractPanel","contracts"],
+        ["TECHNOLOGY","Research • upgrades","TechnologyPanel","technology"],
+        ["HEADQUARTERS","Capacity • policy","HeadquartersPanel","headquarters"],
+        ["HISTORY","Milestones • museum","HistoryPanel",""],
+        ["SAVE / LOAD","Profiles • recovery","SaveLoadPanel",""],
+        ["SETTINGS","Theme • audio • privacy","settings",""]
     ]
     var gap = 8.0
     var col_w = (inner_w - gap) * 0.5
@@ -1340,8 +1348,8 @@ func _build_mobile_more() -> void:
         var locked := not required_unlock.is_empty() and not _has_unlock(required_unlock)
         var p = _panel(mobile_content, "MoreTile%d" % i, Rect2(x,y,col_w,82), "surface" if locked else ("selected" if i == 0 else "surface"), "border" if locked else ("plum" if i == 0 else "border"), 16)
         _label(p, "Head", tiles[i][0], Rect2(14,14,col_w - 28,14), 10, "muted" if locked else ("gold" if i == 0 else "text"), 600)
-        var body_text := "Unlocks at Company Level %d" % _unlock_level(required_unlock) if locked else str(tiles[i][1])
-        _label(p, "Body", body_text, Rect2(14,38,col_w - 28,32), 9, "muted", 400)
+        var body_text := "Unlocks at Level %d" % _unlock_level(required_unlock) if locked else str(tiles[i][1])
+        _label(p, "Body", body_text, Rect2(14,36,col_w - 28,40), 9, "muted", 400)
         var target = str(tiles[i][2])
         var open_button: Button
         if ["world","intelligence","settings","guide"].has(target):
@@ -1354,8 +1362,8 @@ func _build_mobile_more() -> void:
 
 func _build_mobile_guide() -> void:
     if mobile_content != null:
-        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 860.0)
-        mobile_content.size.y = maxf(mobile_content.size.y, 860.0)
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 982.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, 982.0)
 
     var w := _content_width()
     var inner_w := w - 36.0
@@ -1365,28 +1373,28 @@ func _build_mobile_guide() -> void:
     _label(intro, "Head", "THE CORE IDEA", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     _label(intro, "Body", "Take an abandoned property, restore it, turn it into a working business, earn from it, then reinvest to grow.", Rect2(16, 42, inner_w - 32, 58), 12, "text", 500)
 
-    var restore := _panel(mobile_content, "GuideRestore", Rect2(18, 214, inner_w, 146), "surface", "border", 18)
+    var restore := _panel(mobile_content, "GuideRestore", Rect2(18, 214, inner_w, 176), "surface", "border", 18)
     _label(restore, "Phase", "1  •  RESTORE", Rect2(16, 14, 160, 16), 11, "gold", 700)
-    _label(restore, "Steps", "Inspect the property  →  Acquire it  →  Complete every restoration stage.", Rect2(16, 43, inner_w - 32, 48), 11, "text", 500)
-    _label(restore, "Why", "Goal: reach OPERATIONAL so this property can host a business.", Rect2(16, 91, inner_w - 32, 22), 9, "muted", 500)
-    _frame_button(restore, "GoRestore", "GO TO PROPERTY", Rect2(16, 100, inner_w - 32, 44), _show_view.bind("property"), false, true, 9)
+    _label(restore, "Steps", "Inspect the property  →  Acquire it  →  Complete every restoration stage.", Rect2(16, 43, inner_w - 32, 44), 11, "text", 500)
+    _label(restore, "Why", "Goal: reach OPERATIONAL so this property can host a business.", Rect2(16, 94, inner_w - 32, 26), 9, "muted", 500)
+    _frame_button(restore, "GoRestore", "GO TO PROPERTY", Rect2(16, 126, inner_w - 32, 44), _show_view.bind("property"), false, true, 9)
 
-    var operate := _panel(mobile_content, "GuideOperate", Rect2(18, 376, inner_w, 166), "surface", "border", 18)
+    var operate := _panel(mobile_content, "GuideOperate", Rect2(18, 406, inner_w, 190), "surface", "border", 18)
     _label(operate, "Phase", "2  •  OPERATE", Rect2(16, 14, 160, 16), 11, "gold", 700)
-    _label(operate, "Steps", "Open a business  →  Buy inputs  →  Produce goods  →  Sell goods.", Rect2(16, 43, inner_w - 32, 48), 11, "text", 500)
-    _label(operate, "Why", "Inputs become inventory. Selling inventory creates revenue and profit.", Rect2(16, 91, inner_w - 32, 34), 9, "muted", 500)
-    _frame_button(operate, "GoOperate", "GO TO BUSINESS", Rect2(16, 116, inner_w - 32, 44), _show_view.bind("operate"), false, true, 9)
+    _label(operate, "Steps", "Open a business  →  Buy inputs  →  Produce goods  →  Sell goods.", Rect2(16, 43, inner_w - 32, 44), 11, "text", 500)
+    _label(operate, "Why", "Inputs become inventory. Selling inventory creates revenue and profit.", Rect2(16, 94, inner_w - 32, 34), 9, "muted", 500)
+    _frame_button(operate, "GoOperate", "GO TO BUSINESS", Rect2(16, 138, inner_w - 32, 44), _show_view.bind("operate"), false, true, 9)
 
-    var grow := _panel(mobile_content, "GuideGrow", Rect2(18, 558, inner_w, 136), "surface", "border", 18)
+    var grow := _panel(mobile_content, "GuideGrow", Rect2(18, 612, inner_w, 164), "surface", "border", 18)
     _label(grow, "Phase", "3  •  GROW", Rect2(16, 14, 160, 16), 11, "gold", 700)
-    _label(grow, "Steps", "Reinvest profit into capacity, better assets, contracts, regions and competitive strength.", Rect2(16, 43, inner_w - 32, 46), 11, "text", 500)
-    _label(grow, "Why", "Advanced systems support this phase; they are not the starting point.", Rect2(16, 91, inner_w - 32, 24), 9, "muted", 500)
+    _label(grow, "Steps", "Reinvest profit into capacity, better assets, contracts, regions and competitive strength.", Rect2(16, 43, inner_w - 32, 52), 11, "text", 500)
+    _label(grow, "Why", "Advanced systems support growth; they are not your starting point.", Rect2(16, 103, inner_w - 32, 40), 9, "muted", 500)
 
-    var next := _panel(mobile_content, "GuideNextMove", Rect2(18, 710, inner_w, 132), "surface", "gold", 18)
+    var next := _panel(mobile_content, "GuideNextMove", Rect2(18, 792, inner_w, 162), "surface", "gold", 18)
     _label(next, "Head", "YOUR NEXT MOVE", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 700)
     _label(next, "Title", _objective_title(), Rect2(16, 40, inner_w - 32, 24), 16, "text", 700)
-    _label(next, "Detail", _objective_detail(), Rect2(16, 68, inner_w - 32, 34), 9, "muted", 500)
-    _frame_button(next, "GoNext", "TAKE ME THERE", Rect2(16, 84, inner_w - 32, 44), _show_view.bind(_objective_view()), false, true, 9)
+    _label(next, "Detail", _objective_detail(), Rect2(16, 70, inner_w - 32, 36), 9, "muted", 500)
+    _frame_button(next, "GoNext", "TAKE ME THERE", Rect2(16, 112, inner_w - 32, 44), _show_view.bind(_objective_view()), false, true, 9)
 
 func _build_mobile_settings() -> void:
     if mobile_content != null:
@@ -1853,22 +1861,22 @@ func _open_business_choices() -> void:
     if old != null:
         old.queue_free()
     var w = _content_width()
-    var panel = _panel(mobile_content, "BusinessChoiceModal", Rect2(18, 144, w - 36, 376), "selected", "plum", 18)
+    var panel = _panel(mobile_content, "BusinessChoiceModal", Rect2(18, 144, w - 36, 394), "selected", "plum", 18)
     panel.mouse_filter = Control.MOUSE_FILTER_STOP
     _label(panel, "Head", "CHOOSE BUSINESS", Rect2(16, 14, w - 68, 18), 12, "gold", 600)
-    _label(panel, "Help", "Different properties favor different businesses. Fit improves output.", Rect2(16, 40, w - 68, 34), 10, "muted", 400)
-    var y = 84.0
+    _label(panel, "Help", "Choose a business that fits this property. Better fit improves output.", Rect2(16, 40, w - 68, 40), 10, "muted", 400)
+    var y = 90.0
     for i in range(mini(3, purposes.size())):
         var purpose: Dictionary = purposes[i] if purposes[i] is Dictionary else {}
         var launch_cost := int(purpose.get("launch_cost", 3000))
         var card = _panel(panel, "PurposeCard%d" % i, Rect2(16, y, w - 68, 78), "surface_2", "border", 12)
         _label(card, "Name", str(purpose.get("name", "Business")), Rect2(12, 9, w - 188, 18), 10, "text", 600)
-        _label(card, "Meta", "%s • %s FIT • %s" % [str(purpose.get("product", "goods")).replace("_", " ").capitalize(), str(purpose.get("fit", "GOOD")), _money(launch_cost)], Rect2(12, 31, w - 188, 16), 8, "muted", 400)
+        _label(card, "Meta", "%s\n%s FIT • %s" % [str(purpose.get("product", "goods")).replace("_", " ").capitalize(), str(purpose.get("fit", "GOOD")), _money(launch_cost)], Rect2(12, 30, w - 188, 36), 8, "muted", 400)
         var button_text := "LAUNCH" if _cash() >= launch_cost else "NEED %s" % _money(launch_cost)
         var choose = _frame_button(card, "Purpose%d" % i, button_text, Rect2(w - 174, 15, 94, 48), _choose_business.bind(i), false, _cash() >= launch_cost, 9)
         choose.disabled = _cash() < launch_cost
         y += 86.0
-    _frame_button(panel, "CancelPurpose", "CANCEL", Rect2(16, 332, w - 68, 44), panel.queue_free, false, false, 9)
+    _frame_button(panel, "CancelPurpose", "CANCEL", Rect2(16, 348, w - 68, 44), panel.queue_free, false, false, 9)
 
 func _choose_business(index: int) -> void:
     if parent != null and parent.has_method("choose_business_purpose"):
