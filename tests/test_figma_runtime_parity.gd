@@ -86,6 +86,24 @@ func _run() -> void:
     await process_frame
     content = hud.get("mobile_content") as Control
     check("MORE has ten command tiles", content.find_children("MoreTile*", "Panel", false, false).size() == 10)
+    var how_to_body := content.get_node_or_null("MoreTile0/Body") as Label
+    check("HOW TO PLAY copy names the full loop", how_to_body != null and how_to_body.text.contains("Grow") and how_to_body.get_line_count() >= 2)
+
+    hud.open_figma_view("guide")
+    await process_frame
+    content = hud.get("mobile_content") as Control
+    var intro_body := content.get_node_or_null("GuideIntro/Body") as Label
+    var restore_steps := content.get_node_or_null("GuideRestore/Steps") as Label
+    var restore_why := content.get_node_or_null("GuideRestore/Why") as Control
+    var restore_button := content.get_node_or_null("GuideRestore/GoRestore") as Control
+    var operate_why := content.get_node_or_null("GuideOperate/Why") as Control
+    var operate_button := content.get_node_or_null("GuideOperate/GoOperate") as Control
+    var grow_panel := content.get_node_or_null("GuideGrow") as Control
+    var grow_why := content.get_node_or_null("GuideGrow/Why") as Label
+    check("guide body wraps instead of clipping", intro_body != null and intro_body.get_line_count() >= 2 and restore_steps != null and restore_steps.get_line_count() >= 2)
+    check("RESTORE explanation clears its action", restore_why != null and restore_button != null and restore_why.get_global_rect().end.y <= restore_button.get_global_rect().position.y)
+    check("OPERATE explanation clears its action", operate_why != null and operate_button != null and operate_why.get_global_rect().end.y <= operate_button.get_global_rect().position.y)
+    check("GROW explanation fits its card", grow_panel != null and grow_why != null and grow_why.get_line_count() >= 2 and grow_panel.get_global_rect().encloses(grow_why.get_global_rect()))
 
     for target in [Vector2i(320,568), Vector2i(390,844), Vector2i(480,800)]:
         root.size = target
