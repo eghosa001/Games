@@ -40,7 +40,7 @@ func _run() -> void:
     check("theme manager is an autoload", project.contains('RestoraThemeManager="*res://scripts/theme_manager.gd"'))
     check("settings is integrated in production HUD", hud.contains('func _build_mobile_settings()'))
     check("obsolete SettingsPanel is not registered", not screens.contains('"SettingsPanel"'))
-    check("MORE exposes integrated settings", hud.contains('["SETTINGS","Theme • audio • privacy","settings",""]'))
+    check("MORE exposes integrated settings", hud.contains('["SETTINGS","Theme, audio, purchases, privacy","settings",""]'))
     check("MORE routes settings through the production HUD", hud.contains('"settings","guide"') and hud.contains('_show_view.bind(target)'))
     check("premium skin consumes global theme manager", skin.contains('/root/RestoraThemeManager') and skin.contains('get_theme_resource'))
     check("premium skin no longer owns old fixed navy palette", not skin.contains('const SURFACE := Color("101d3d")'))
