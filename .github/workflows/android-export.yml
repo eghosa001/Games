@@ -2,8 +2,6 @@ name: RENEW Android Export
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
 
 permissions:
   contents: read
