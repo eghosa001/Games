@@ -1,4 +1,5 @@
 name: Godot Web Export
+# fast-policy: allow-broad-auto - main pushes deploy the current web build to gh-pages
 
 on:
   push:
