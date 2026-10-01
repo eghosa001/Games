@@ -20,6 +20,7 @@ var last_step := -1
 var _update_clock: float = 0.0
 var _coordinator_active := false
 var _expanded_by_user := false
+var _last_hud_view := ""
 
 func _state():
     return get_node_or_null("/root/RenewGameState")
@@ -58,6 +59,11 @@ func _process(delta: float) -> void:
     if _update_clock < UPDATE_INTERVAL:
         return
     _update_clock = fmod(_update_clock, UPDATE_INTERVAL)
+
+    var hud_view := _main_hud_view()
+    if hud_view != _last_hud_view:
+        _last_hud_view = hud_view
+        _layout_responsive()
 
     var current_action := String(tutorial.current().get("action", "COMPLETE"))
     if not tutorial.completed and current_action != "COMPLETE":
@@ -166,7 +172,7 @@ func _apply_theme() -> void:
         raised = manager.color("surface_2")
 
     var tutorial_style := StyleBoxFlat.new()
-    tutorial_style.bg_color = Color(bg.r, bg.g, bg.b, 0.985)
+    tutorial_style.bg_color = Color(bg.r, bg.g, bg.b, 1.0)
     tutorial_style.border_color = gold
     tutorial_style.set_border_width_all(1)
     tutorial_style.set_border_width(SIDE_TOP, 3)
@@ -248,6 +254,14 @@ func _layout_responsive() -> void:
         collapsed_button.hide()
         return
 
+    # The teaching overlay belongs only on the three core-loop screens.
+    # Hiding it on Finance/More/Guide prevents it from covering navigation
+    # and keeps the permanent How-to-Play page readable.
+    if not _compact_guide_allowed():
+        panel.hide()
+        collapsed_button.hide()
+        return
+
     var compact_by_default := not _expanded_by_user
     if dismissed or compact_by_default:
         panel.hide()
@@ -271,7 +285,7 @@ func _layout_responsive() -> void:
         return
 
     var panel_w := minf(470.0, w - 16.0)
-    var panel_h := 222.0 if narrow else 214.0
+    var panel_h := 232.0 if narrow else 222.0
     if narrow:
         panel.position = Vector2((w - panel_w) * 0.5, 78.0 if h >= 640.0 else 58.0)
     elif w >= 1000.0:
@@ -290,10 +304,10 @@ func _layout_responsive() -> void:
     progress_bar.position = Vector2(pad, 57)
     progress_bar.size = Vector2(content_w, 6)
     body_label.position = Vector2(pad, 72)
-    body_label.size = Vector2(content_w, 76)
+    body_label.size = Vector2(content_w, 80)
     body_label.add_theme_font_size_override("font_size", 11 if narrow else 12)
-    hint_label.position = Vector2(pad, 151)
-    hint_label.size = Vector2(content_w, 28)
+    hint_label.position = Vector2(pad, 156)
+    hint_label.size = Vector2(content_w, 20)
     hint_label.show()
 
     var gap := 8.0
