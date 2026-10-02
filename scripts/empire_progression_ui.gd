@@ -80,6 +80,10 @@ func _goals() -> Node:
     return game.get_node_or_null("Systems/EmpireGoals") if game != null else null
 func _progression() -> Node:
     return game.get_node_or_null("Systems/Progression") if game != null else null
+func _strategic_progression() -> Node:
+    return game.get_node_or_null("Systems/StrategicProgression") if game != null else null
+func _victory() -> Node:
+    return get_node_or_null("/root/RenewVictorySystem")
 func _regions() -> Node:
     return game.get_node_or_null("World/RegionController") if game != null else null
 
@@ -110,6 +114,9 @@ func _refresh(force := false) -> void:
     if game == null: game = get_tree().root.get_node_or_null("Renew")
     if game == null: return
     var goals := _goals(); var progression := _progression()
+    var strategic := _strategic_progression()
+    var victory := _victory()
+    var company_level := int(strategic.get_level()) if strategic != null and strategic.has_method("get_level") else 1
     var rep := int(game.reputation); var assets := _owned_assets()
     var goal_done: int = int(goals.completed_count()) if goals != null and goals.has_method("completed_count") else 0
     var goal_total: int = int(goals.goals.size()) if goals != null else 0
@@ -121,7 +128,7 @@ func _refresh(force := false) -> void:
     var signature := "%d|%d|%d|%d|%d|%d|%d" % [rep, assets, goal_done, milestone_done, region_count, int(game.total_profit), int(game.day)]
     if not force and signature == last_signature: return
     last_signature = signature
-    status_label.text = "%s  •  REP %d  •  %d ASSETS  •  %d REGION%s" % [_rank(rep), rep, assets, region_count, "" if region_count == 1 else "S"]
+    status_label.text = "LEVEL %d  •  %s  •  REP %d  •  %d ASSETS  •  %d REGION%s" % [company_level, _rank(rep), rep, assets, region_count, "" if region_count == 1 else "S"]
     summary_label.text = "CAMPAIGN %d/%d GOALS  •  %d/%d MILESTONES" % [goal_done, goal_total, milestone_done, milestone_total]
     for child in content.get_children(): child.queue_free()
     var current_goal: Dictionary = goals.current_goal() if goals != null and goals.has_method("current_goal") else {}
@@ -136,7 +143,27 @@ func _refresh(force := false) -> void:
         _card("MILESTONE TRACKER", "%d of %d milestones claimed.\nThese achievements mark the company's transformation from a single site into a connected economic empire." % [milestone_done, milestone_total], ACCENT)
     var msg := str(game.message)
     if msg != "": _card("LATEST EXECUTIVE NOTICE", msg, ACCENT)
-    _card("VICTORY READINESS", "Current campaign depth: %d goals complete, %d milestones complete.\nKeep expanding, strengthening relationships and connecting regions to reach the empire objective." % [goal_done, milestone_done], MUTED)
+    var victory_text := "Victory tracking is unavailable."
+    var prestige_text := "No legacy bonuses banked yet."
+    if victory != null:
+        if victory.has_method("progress_text"):
+            victory_text = str(victory.progress_text())
+        if victory.has_method("prestige_wins") and victory.has_method("prestige_bonuses"):
+            var wins := int(victory.prestige_wins())
+            var bonuses: Dictionary = victory.prestige_bonuses()
+            prestige_text = "%d campaign win%s banked  •  heir capital +$%s  •  reputation +%d  •  research +%d" % [
+                wins, "" if wins == 1 else "s",
+                String.num_int64(int(bonuses.get("starting_cash", 0))),
+                int(bonuses.get("starting_reputation", 0)),
+                int(bonuses.get("starting_research", 0))
+            ]
+    _card("VICTORY PATHS", victory_text, ACCENT)
+    _card("PRESTIGE & LEGACY", prestige_text, GOOD if victory != null and victory.has_method("prestige_wins") and int(victory.prestige_wins()) > 0 else MUTED)
+    if strategic != null and strategic.has_method("get_next_level_xp"):
+        var next_xp := int(strategic.get_next_level_xp())
+        var xp := int(strategic.get_xp()) if strategic.has_method("get_xp") else 0
+        var progression_text := "Maximum company level reached. Endgame and prestige systems are fully unlocked." if next_xp < 0 else "Company Level %d  •  %d XP  •  next level at %d XP.\nAdvance through meaningful restoration, operations, contracts, expansion and profit." % [company_level, xp, next_xp]
+        _card("COMPANY LEVEL", progression_text, GOOD if next_xp < 0 else ACCENT)
 
 func _process(delta: float) -> void:
     if not open: return
