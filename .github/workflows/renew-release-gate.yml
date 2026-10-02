@@ -5,7 +5,6 @@ on:
     workflows:
       - RENEW Godot Tests
       - Godot Web Export
-      - RENEW Android Export
       - Live Browser QA
     types: [completed]
 
@@ -34,12 +33,12 @@ jobs:
           required=(
             "RENEW Godot Tests"
             "Godot Web Export"
-            "RENEW Android Export"
             "Live Browser QA"
           )
 
-          echo "Evaluating RENEW release readiness for ${TARGET_SHA}"
+          echo "Evaluating RENEW automated release readiness for ${TARGET_SHA}"
           echo "Live Browser QA must be a non-skipped post-Web-export workflow_run."
+          echo "Android export is intentionally on-demand and is a separate store-release candidate gate."
 
           for attempt in $(seq 1 90); do
             runs="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${TARGET_SHA}&per_page=100")"
