@@ -141,9 +141,15 @@ func _set_node_visible(node: Node, value: bool) -> void:
             for child in node.get_children():
                 if child is CanvasItem or child is CanvasLayer:
                     child.process_mode = Node.PROCESS_MODE_INHERIT if value else Node.PROCESS_MODE_DISABLED
-            _call_screen_hook(node, value)
-            if value and not _is_node_visible(node):
+            # Startup suppression hides direct CanvasItem children so no legacy panel
+            # flashes before the manager takes control. Restore those children before
+            # opening; the screen hook can still hide any optional child afterwards.
+            if value:
                 _set_direct_canvas_children_visible(node, true)
+                _call_screen_hook(node, true)
+            else:
+                _call_screen_hook(node, false)
+                _set_direct_canvas_children_visible(node, false)
         return
 
     if node is CanvasLayer:

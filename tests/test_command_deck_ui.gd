@@ -25,6 +25,19 @@ func run() -> void:
     for view in ["live","operate","property","finance","more","portfolio","intelligence","settings","world","empire"]:
         hud.open_figma_view(view); await process_frame
         check(str(hud.get("active_view"))==view, "Figma view opens: "+view)
+    hud.open_figma_view("more"); await process_frame
+    var more_content:=hud.get("mobile_content") as Control
+    var progression_tile:=more_content.get_node_or_null("MoreTile1") if more_content!=null else null
+    var corporate_power_tile:=more_content.get_node_or_null("MoreTile7") if more_content!=null else null
+    var world_power_tile:=more_content.get_node_or_null("MoreTile9") if more_content!=null else null
+    var collections_tile:=more_content.get_node_or_null("MoreTile11") if more_content!=null else null
+    check(progression_tile!=null and progression_tile.get_node_or_null("OpenEmpireProgressionPanel")!=null, "More exposes campaign progression")
+    check(corporate_power_tile!=null and (corporate_power_tile.get_node_or_null("OpenCorporationsPanel") as Button).disabled, "Corporate Power is progression-gated")
+    check(world_power_tile!=null and (world_power_tile.get_node_or_null("OpenEmpireIdentityPanel") as Button).disabled, "World Power is progression-gated")
+    check(collections_tile!=null and (collections_tile.get_node_or_null("OpenCollectionPanel") as Button).disabled, "Collections are progression-gated")
+    var last_more_tile:=more_content.get_node_or_null("MoreTile13") as Control if more_content!=null else null
+    check(last_more_tile!=null and more_content.size.y>=last_more_tile.position.y+last_more_tile.size.y+18.0, "premium More command grid remains scrollable on phone")
+
     hud.open_figma_view("portfolio"); await process_frame
     var portfolio_content:=hud.get("mobile_content") as Control
     var portfolio_names: Array[String] = []
@@ -44,7 +57,7 @@ func run() -> void:
     check(latest!=null and latest.text.length()<=56 and not latest.text.contains("\n"), "latest intelligence notice stays within its card")
 
     if manager != null:
-        for screen in ["CorporationsPanel","ContractPanel","TechnologyPanel","HeadquartersPanel","HistoryPanel","SaveLoadPanel"]:
+        for screen in ["CorporationsPanel","ContractPanel","TechnologyPanel","HeadquartersPanel","HistoryPanel","CollectionPanel","EmpireProgressionPanel","EmpireIdentityPanel","SaveLoadPanel"]:
             manager.show_screen(screen); await process_frame
             check(manager.get_active_screen_name()==screen, "deep workspace opens: "+screen)
             manager.hide_all_screens()

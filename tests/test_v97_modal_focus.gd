@@ -18,6 +18,8 @@ func run()->void:
     for n in names:
         manager.show_screen(n);await process_frame
         check(manager.get_active_screen_name()==n,n+" takes focus")
+        var screen:=game.get_node_or_null("UI/"+n)
+        check(screen!=null and _has_visible_control(screen),n+" restores visible panel content")
     manager.show_screen("NoSuchScreen");await process_frame
     check(manager.get_active_screen_name()=="HistoryPanel","unknown screen ignored")
     var esc:=InputEventKey.new();esc.keycode=KEY_ESCAPE;esc.pressed=true;manager._unhandled_input(esc);await process_frame
@@ -36,3 +38,11 @@ func run()->void:
     game.queue_free();await process_frame
     print("V97 MODAL FOCUS: %d passed, %d failed" % [passed,failed])
     quit(1 if failed > 0 else 0)
+
+func _has_visible_control(node:Node)->bool:
+    if node is Control and (node as Control).visible and (node as Control).is_visible_in_tree():
+        return true
+    for child in node.get_children():
+        if _has_visible_control(child):
+            return true
+    return false

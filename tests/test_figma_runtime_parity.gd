@@ -85,7 +85,7 @@ func _run() -> void:
     hud.open_figma_view("more")
     await process_frame
     content = hud.get("mobile_content") as Control
-    check("MORE has ten command tiles", content.find_children("MoreTile*", "Panel", false, false).size() == 10)
+    check("MORE has fourteen premium command tiles", content.find_children("MoreTile*", "Panel", false, false).size() == 14)
     var how_to_body := content.get_node_or_null("MoreTile0/Body") as Label
     check("HOW TO PLAY copy names the full loop", how_to_body != null and how_to_body.text.contains("Grow") and how_to_body.get_line_count() >= 2)
 

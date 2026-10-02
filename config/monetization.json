@@ -5,6 +5,7 @@
   "admob_android_app_id": "",
   "rewarded_ad_unit_id": "",
   "premium_subscription_product_id": "",
-  "privacy_policy_url": "",
-  "support_email": ""
+  "privacy_policy_url": "https://eghosa001.github.io/Games/privacy.html",
+  "support_email": "",
+  "terms_of_service_url": "https://eghosa001.github.io/Games/terms.html"
 }

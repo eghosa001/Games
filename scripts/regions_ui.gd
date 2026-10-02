@@ -80,12 +80,21 @@ func _layout() -> void:
     summary_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if phone else TextServer.AUTOWRAP_OFF
     summary_label.clip_text = not phone
     summary_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-    region_scroll.position = Vector2(12, 104 if phone else 62); region_scroll.size = Vector2(panel.size.x - 24, panel.size.y * (0.35 if phone else (0.43 if narrow else 0.44))); region_grid.columns = 1 if narrow else 2
-    detail_label.position = Vector2(14, region_scroll.position.y + region_scroll.size.y + 8); detail_label.size = Vector2(panel.size.x - 28, 86 if phone else (74 if narrow else 66))
-    action_grid.position = Vector2(12, detail_label.position.y + detail_label.size.y + 6); action_grid.size = Vector2(panel.size.x - 24, 104 if phone else 54); action_grid.columns = 2 if narrow else 3
+    region_scroll.position = Vector2(12, 104 if phone else 62)
+    region_scroll.size = Vector2(panel.size.x - 24, minf(152.0, panel.size.y * 0.28) if phone else panel.size.y * (0.43 if narrow else 0.44))
+    region_grid.columns = 1 if narrow else 2
+    detail_label.position = Vector2(14, region_scroll.position.y + region_scroll.size.y + 8)
+    detail_label.size = Vector2(panel.size.x - 28, 76 if phone else (74 if narrow else 66))
+    action_grid.position = Vector2(12, detail_label.position.y + detail_label.size.y + 6)
+    action_grid.size = Vector2(panel.size.x - 24, 150 if phone else 54)
+    action_grid.columns = 2 if narrow else 3
     for child in action_grid.get_children():
         if child is Button: child.custom_minimum_size = Vector2(0, 44 if phone else 46); child.add_theme_font_size_override("font_size", 9 if phone else 10)
-    feedback_label.position = Vector2(14, action_grid.position.y + action_grid.size.y + 8); feedback_label.size = Vector2(panel.size.x - 28, maxf(40.0, panel.size.y - feedback_label.position.y - 10.0))
+    feedback_label.position = Vector2(14, action_grid.position.y + action_grid.size.y + 8)
+    feedback_label.size = Vector2(panel.size.x - 28, maxf(40.0, panel.size.y - feedback_label.position.y - 10.0))
+    # On very short phones the six 44px action targets take priority over an
+    # auxiliary status line. Feedback remains available on all taller layouts.
+    feedback_label.visible = not (phone and h < 600.0)
 
 func open_screen() -> void:
     opened = true; visible = true

@@ -394,8 +394,10 @@ func _unlock_level(unlock_id: String) -> int:
         "branches": 3, "regions": 3, "supply_chain": 3,
         "competitors": 4, "alliances": 4, "ownership": 4,
         "technology": 6, "research": 6, "infrastructure": 6,
-        "headquarters": 8, "world_power": 8,
-        "museum": 9, "legacy": 9
+        "acquisitions": 7, "mergers": 7, "corporate_strategy": 7,
+        "headquarters": 8, "rankings": 8, "world_power": 8,
+        "museum": 9, "collections": 9, "legacy": 9,
+        "prestige": 10, "endgame": 10
     }
     return int(levels.get(unlock_id, 1))
 
@@ -1337,16 +1339,24 @@ func _build_mobile_more() -> void:
 
     var tiles = [
         ["HOW TO PLAY","Restore → Operate → Grow","guide",""],
+        ["PROGRESSION","Goals, milestones and victory paths","EmpireProgressionPanel",""],
         ["REGIONS","Markets and expansion","world","regions"],
         ["INTELLIGENCE","Company and market signals","intelligence",""],
-        ["CORPORATIONS","Rivals and diplomacy","CorporationsPanel","competitors"],
+        ["CORPORATIONS","Rivals, alliances and ownership","CorporationsPanel","competitors"],
         ["CONTRACTS","Customers and renewals","ContractPanel","contracts"],
         ["TECHNOLOGY","Research and upgrades","TechnologyPanel","technology"],
+        ["CORPORATE POWER","Acquisitions, mergers and bidding wars","CorporationsPanel","acquisitions"],
         ["HEADQUARTERS","Capacity and policy","HeadquartersPanel","headquarters"],
+        ["WORLD POWER","Rankings, influence and executive standing","EmpireIdentityPanel","world_power"],
         ["HISTORY","Milestones and museum","HistoryPanel",""],
+        ["COLLECTIONS","Recovered assets and legacy rewards","CollectionPanel","collections"],
         ["SAVE / LOAD","Profiles and recovery","SaveLoadPanel",""],
         ["SETTINGS","Theme, audio, purchases, privacy","settings",""]
     ]
+    var rows := ceili(float(tiles.size()) / 2.0)
+    var required_height := 196.0 + float(rows) * 100.0 + 18.0
+    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, required_height)
+    mobile_content.size.y = maxf(mobile_content.size.y, required_height)
     var gap = 8.0
     var col_w = (inner_w - gap) * 0.5
     for i in range(tiles.size()):
@@ -1408,8 +1418,8 @@ func _build_mobile_guide() -> void:
 
 func _build_mobile_settings() -> void:
     if mobile_content != null:
-        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 790.0)
-        mobile_content.size.y = maxf(mobile_content.size.y, 790.0)
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 846.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, 846.0)
     var w = _content_width()
     var mode = "LIGHT MODE" if _is_light_theme() else "DARK MODE"
     _header("SETTINGS", "PERSONALIZE RESTORA", mode)
@@ -1437,7 +1447,7 @@ func _build_mobile_settings() -> void:
     _label(audio, "Motion", "REDUCE MOTION", Rect2(16,140,190,16), 11, "text", 600)
     _toggle(audio, "MotionToggle", Vector2(inner_w-68,136), _reduce_motion(), _toggle_motion)
 
-    var monet = _panel(mobile_content, "Monetization", Rect2(18,448,inner_w,230), "surface", "border", 18)
+    var monet = _panel(mobile_content, "Monetization", Rect2(18,448,inner_w,286), "surface", "border", 18)
     _label(monet, "Head", "PREMIUM & REWARDS", Rect2(16,14,220,14), 10, "gold", 600)
     _label(monet, "Premium", "PREMIUM", Rect2(16,44,180,16), 11, "text", 600)
     _label(monet, "PremiumMeta", _premium_meta(), Rect2(16,64,214,14), 9, "muted", 400)
@@ -1448,10 +1458,13 @@ func _build_mobile_settings() -> void:
     _label(monet, "Rewards", "OPTIONAL REWARDED OFFERS", Rect2(16,130,220,16), 11, "text", 600)
     _toggle(monet, "RewardsToggle", Vector2(inner_w-68,128), _rewarded_enabled(), _open_rewards)
     _label(monet, "RewardMeta", "Sponsor Grant + Market Research • max 2/day", Rect2(16,150,inner_w - 32,14), 9, "muted", 400)
-    _label(monet, "NoForced", "NO FORCED ADS", Rect2(16,180,130,14), 9, "success", 600)
-    _transparent_text_button(monet, "Privacy", "PRIVACY POLICY", Rect2(inner_w-128,174,112,48), _open_privacy, "plum")
+    _label(monet, "NoForced", "NO FORCED ADS • NO PAY-TO-WIN", Rect2(16,180,inner_w-32,14), 9, "success", 600)
+    var legal_gap := 6.0
+    var legal_w: float = (float(inner_w) - 38.0) * 0.5
+    _transparent_text_button(monet, "Privacy", "PRIVACY POLICY", Rect2(16,204,legal_w,48), _open_privacy, "plum")
+    _transparent_text_button(monet, "Terms", "TERMS OF SERVICE", Rect2(16+legal_w+legal_gap,204,legal_w,48), _open_terms, "plum")
 
-    var save = _panel(mobile_content, "SaveData", Rect2(18,694,inner_w,86), "surface", "border", 18)
+    var save = _panel(mobile_content, "SaveData", Rect2(18,750,inner_w,86), "surface", "border", 18)
     _label(save, "Head", "SAVE & DATA", Rect2(16,12,160,14), 10, "gold", 600)
     _label(save, "Auto", "AUTOSAVE", Rect2(16,38,180,16), 11, "text", 600)
     _label(save, "AutoMeta", "Every 30s + app background", Rect2(16,58,214,14), 9, "muted", 400)
@@ -2410,6 +2423,12 @@ func _open_privacy() -> void:
     var m = _monetization()
     if m != null and m.has_method("privacy_policy_url"):
         var url = str(m.privacy_policy_url())
+        if not url.is_empty(): OS.shell_open(url)
+
+func _open_terms() -> void:
+    var m = _monetization()
+    if m != null and m.has_method("terms_of_service_url"):
+        var url = str(m.terms_of_service_url())
         if not url.is_empty(): OS.shell_open(url)
 
 func _save_company() -> void:
