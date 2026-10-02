@@ -48,6 +48,7 @@ func _run() -> void:
     check("settings exposes premium purchase", settings.contains("purchase_premium"))
     check("settings exposes purchase restore", settings.contains("restore_premium"))
     check("settings exposes privacy policy", settings.contains("privacy_policy_url"))
+    check("settings exposes terms of service", settings.contains("terms_of_service_url") and settings.contains('\"Terms\"'))
     check("audio exposes persistent music level", audio.contains("func set_music_level"))
     check("audio exposes persistent SFX level", audio.contains("func set_sfx_level"))
 
