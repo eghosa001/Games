@@ -1460,7 +1460,7 @@ func _build_mobile_settings() -> void:
     _label(monet, "RewardMeta", "Sponsor Grant + Market Research • max 2/day", Rect2(16,150,inner_w - 32,14), 9, "muted", 400)
     _label(monet, "NoForced", "NO FORCED ADS • NO PAY-TO-WIN", Rect2(16,180,inner_w-32,14), 9, "success", 600)
     var legal_gap := 6.0
-    var legal_w := (inner_w - 38.0) * 0.5
+    var legal_w: float = (float(inner_w) - 38.0) * 0.5
     _transparent_text_button(monet, "Privacy", "PRIVACY POLICY", Rect2(16,204,legal_w,48), _open_privacy, "plum")
     _transparent_text_button(monet, "Terms", "TERMS OF SERVICE", Rect2(16+legal_w+legal_gap,204,legal_w,48), _open_terms, "plum")
 
