@@ -74,13 +74,13 @@ func _run()->void:
             check("%s content contained" % target,_inside(hud.get("mobile_scroll") as Control,target))
     root.size=Vector2i(390,844);hud.open_figma_view("more");await process_frame
     var content:=hud.get("mobile_content") as Control
-    check("More exposes ten command tiles including How to Play",content.find_children("MoreTile*","Panel",false,false).size()==10)
+    check("More exposes fourteen premium command tiles including How to Play",content.find_children("MoreTile*","Panel",false,false).size()==14)
     check("3D world is not mounted in production",game.get_node_or_null("World3D")==null)
     check("legacy HOME label absent",not _tree_has_text(content,"HOME"))
 
     hud.open_figma_view("settings");await process_frame
     content=hud.get("mobile_content") as Control
-    for control_name in ["MusicValue","SfxValue","PremiumView","RestoreButton","AutosaveState","Privacy","MotionToggleHit","RewardsToggleHit"]:
+    for control_name in ["MusicValue","SfxValue","PremiumView","RestoreButton","AutosaveState","Privacy","Terms","MotionToggleHit","RewardsToggleHit"]:
         var control:=content.find_child(control_name,true,false) as Control
         check(control_name+" has 48px touch height",control!=null and control.size.y>=48.0)
     var rewards:=content.find_child("RewardsToggleHit",true,false) as Button
