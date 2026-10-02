@@ -54,6 +54,9 @@ func subscriptions_enabled() -> bool:
 func privacy_policy_url() -> String:
     return str(config.get("privacy_policy_url", ""))
 
+func terms_of_service_url() -> String:
+    return str(config.get("terms_of_service_url", ""))
+
 func register_provider(service: Node) -> void:
     provider = service
     monetization_status_changed.emit()
