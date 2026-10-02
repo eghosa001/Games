@@ -37,6 +37,7 @@ func run()->void:
     check(wired,"five rebuilt navigation buttons remain wired")
     game.queue_free();await process_frame
     print("V97 MODAL FOCUS: %d passed, %d failed" % [passed,failed])
+    quit(1 if failed > 0 else 0)
 
 func _has_visible_control(node:Node)->bool:
     if node is Control and (node as Control).visible and (node as Control).is_visible_in_tree():
@@ -45,4 +46,3 @@ func _has_visible_control(node:Node)->bool:
         if _has_visible_control(child):
             return true
     return false
-    quit(1 if failed > 0 else 0)
