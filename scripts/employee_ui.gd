@@ -237,7 +237,7 @@ func _layout_responsive() -> void:
     _detail_scroll.custom_minimum_size.y = 132 if phone else (126 if mobile else 116)
     detail_row.custom_minimum_size.x = maxf(240.0, panel.size.x - 28.0)
     detail_label.custom_minimum_size.x = maxf(150.0, detail_row.custom_minimum_size.x - 86.0)
-    _actions.columns = 3 if phone else 2
+    _actions.columns = 4 if phone else 2
     for child in _actions.get_children():
         if child is Button:
             child.custom_minimum_size = Vector2(0, 44 if phone else 46)
