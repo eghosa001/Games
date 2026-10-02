@@ -21,7 +21,9 @@ func run() -> void:
     # Funded to survive 1,000 unmanaged days of idle burn: this suite measures
     # engine stability over time, not economic balance (dedicated suites cover
     # balance). A lone starting workshop is not expected to be profitable idle.
-    game.cash = 2500000
+    # Use a deliberately oversized treasury: this is a stability soak, not a
+    # profitability/balance test. Dedicated long-run balance suites cover economy.
+    game.cash = 25000000
     game.inspect_property()
     game.acquire_property()
     var restoration_steps := 0
