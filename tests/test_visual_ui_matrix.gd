@@ -28,6 +28,8 @@ func _initialize() -> void:
     call_deferred("_run")
 
 func _run() -> void:
+    # Audit explicit logical viewport sizes; do not apply the project's 390x844 canvas stretch here.
+    root.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
     var packed := load("res://scenes/Main.tscn") as PackedScene
     _check(packed != null, "Main scene loads")
     if packed == null:
