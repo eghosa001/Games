@@ -57,8 +57,12 @@ done
 rm -rf build/web
 mkdir -p build/web
 "${GODOT_BIN}" --headless --path . --export-release "Web" build/web/index.html
+cp web/privacy.html build/web/privacy.html
+cp web/terms.html build/web/terms.html
 
 test -s build/web/index.html
+test -s build/web/privacy.html
+test -s build/web/terms.html
 pck_file="$(find build/web -maxdepth 1 -type f -name '*.pck' -print -quit)"
 wasm_file="$(find build/web -maxdepth 1 -type f -name '*.wasm' -print -quit)"
 test -n "${pck_file}" && test -s "${pck_file}"
