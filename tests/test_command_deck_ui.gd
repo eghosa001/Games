@@ -35,7 +35,8 @@ func run() -> void:
     check(corporate_power_tile!=null and (corporate_power_tile.get_node_or_null("OpenCorporationsPanel") as Button).disabled, "Corporate Power is progression-gated")
     check(world_power_tile!=null and (world_power_tile.get_node_or_null("OpenEmpireIdentityPanel") as Button).disabled, "World Power is progression-gated")
     check(collections_tile!=null and (collections_tile.get_node_or_null("OpenCollectionPanel") as Button).disabled, "Collections are progression-gated")
-    var last_more_tile:=more_content.get_node_or_null("MoreTile13") as Control if more_content!=null else null\n    check(last_more_tile!=null and more_content.size.y>=last_more_tile.position.y+last_more_tile.size.y+18.0, "premium More command grid remains scrollable on phone")
+    var last_more_tile:=more_content.get_node_or_null("MoreTile13") as Control if more_content!=null else null
+    check(last_more_tile!=null and more_content.size.y>=last_more_tile.position.y+last_more_tile.size.y+18.0, "premium More command grid remains scrollable on phone")
 
     hud.open_figma_view("portfolio"); await process_frame
     var portfolio_content:=hud.get("mobile_content") as Control
