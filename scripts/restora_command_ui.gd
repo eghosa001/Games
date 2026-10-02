@@ -394,8 +394,10 @@ func _unlock_level(unlock_id: String) -> int:
         "branches": 3, "regions": 3, "supply_chain": 3,
         "competitors": 4, "alliances": 4, "ownership": 4,
         "technology": 6, "research": 6, "infrastructure": 6,
-        "headquarters": 8, "world_power": 8,
-        "museum": 9, "legacy": 9
+        "acquisitions": 7, "mergers": 7, "corporate_strategy": 7,
+        "headquarters": 8, "rankings": 8, "world_power": 8,
+        "museum": 9, "collections": 9, "legacy": 9,
+        "prestige": 10, "endgame": 10
     }
     return int(levels.get(unlock_id, 1))
 
@@ -1337,16 +1339,24 @@ func _build_mobile_more() -> void:
 
     var tiles = [
         ["HOW TO PLAY","Restore → Operate → Grow","guide",""],
+        ["PROGRESSION","Goals, milestones and victory paths","EmpireProgressionPanel",""],
         ["REGIONS","Markets and expansion","world","regions"],
         ["INTELLIGENCE","Company and market signals","intelligence",""],
-        ["CORPORATIONS","Rivals and diplomacy","CorporationsPanel","competitors"],
+        ["CORPORATIONS","Rivals, alliances and ownership","CorporationsPanel","competitors"],
         ["CONTRACTS","Customers and renewals","ContractPanel","contracts"],
         ["TECHNOLOGY","Research and upgrades","TechnologyPanel","technology"],
+        ["CORPORATE POWER","Acquisitions, mergers and bidding wars","CorporationsPanel","acquisitions"],
         ["HEADQUARTERS","Capacity and policy","HeadquartersPanel","headquarters"],
+        ["WORLD POWER","Rankings, influence and executive standing","EmpireIdentityPanel","world_power"],
         ["HISTORY","Milestones and museum","HistoryPanel",""],
+        ["COLLECTIONS","Recovered assets and legacy rewards","CollectionPanel","collections"],
         ["SAVE / LOAD","Profiles and recovery","SaveLoadPanel",""],
         ["SETTINGS","Theme, audio, purchases, privacy","settings",""]
     ]
+    var rows := ceili(float(tiles.size()) / 2.0)
+    var required_height := 196.0 + float(rows) * 100.0 + 18.0
+    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, required_height)
+    mobile_content.size.y = maxf(mobile_content.size.y, required_height)
     var gap = 8.0
     var col_w = (inner_w - gap) * 0.5
     for i in range(tiles.size()):
