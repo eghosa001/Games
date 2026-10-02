@@ -109,12 +109,16 @@ jobs:
           rm -rf build/web
           mkdir -p build/web
           timeout 600s "$HOME/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" --headless --path . --export-release "Web" build/web/index.html
+          cp web/privacy.html build/web/privacy.html
+          cp web/terms.html build/web/terms.html
 
       - name: Verify Web release artifact
         shell: bash
         run: |
           set -euo pipefail
           test -s build/web/index.html
+          test -s build/web/privacy.html
+          test -s build/web/terms.html
           pck_file="$(find build/web -maxdepth 1 -type f -name '*.pck' -print -quit)"
           wasm_file="$(find build/web -maxdepth 1 -type f -name '*.wasm' -print -quit)"
           test -n "$pck_file" && test -s "$pck_file"
