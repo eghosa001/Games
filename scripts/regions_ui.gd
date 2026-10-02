@@ -90,7 +90,11 @@ func _layout() -> void:
     action_grid.columns = 2 if narrow else 3
     for child in action_grid.get_children():
         if child is Button: child.custom_minimum_size = Vector2(0, 44 if phone else 46); child.add_theme_font_size_override("font_size", 9 if phone else 10)
-    feedback_label.position = Vector2(14, action_grid.position.y + action_grid.size.y + 8); feedback_label.size = Vector2(panel.size.x - 28, maxf(40.0, panel.size.y - feedback_label.position.y - 10.0))
+    feedback_label.position = Vector2(14, action_grid.position.y + action_grid.size.y + 8)
+    feedback_label.size = Vector2(panel.size.x - 28, maxf(40.0, panel.size.y - feedback_label.position.y - 10.0))
+    # On very short phones the six 44px action targets take priority over an
+    # auxiliary status line. Feedback remains available on all taller layouts.
+    feedback_label.visible = not (phone and h < 600.0)
 
 func open_screen() -> void:
     opened = true; visible = true
