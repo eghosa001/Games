@@ -13,6 +13,8 @@ var selected_type: Variant = "all"
 var close_button: Button
 var count_label: Label
 var empty_label: Label
+var title_label: Label
+var subtitle_label: Label
 
 const TYPES := ["all", "historic_properties", "rare_machinery", "landmark_businesses", "unique_technologies", "special_contracts", "famous_employees", "world_event_artifacts"]
 const BG := Color("071319")
@@ -60,10 +62,10 @@ func _build_ui() -> void:
     var root := VBoxContainer.new(); root.add_theme_constant_override("separation", 10); panel.add_child(root)
     var header := HBoxContainer.new(); header.add_theme_constant_override("separation", 10); root.add_child(header)
     var title_box := VBoxContainer.new(); title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL; header.add_child(title_box)
-    var title := Label.new(); title.text = "RESTORATION ARCHIVE"; title.add_theme_font_size_override("font_size", 22); title.add_theme_color_override("font_color", TEXT); title_box.add_child(title)
-    var subtitle := Label.new(); subtitle.text = "Recovered assets, heritage properties and strategic restoration rewards"; subtitle.add_theme_font_size_override("font_size", 10); subtitle.add_theme_color_override("font_color", MUTED); subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; title_box.add_child(subtitle)
+    title_label = Label.new(); title_label.text = "RESTORATION ARCHIVE"; title_label.add_theme_font_size_override("font_size", 22); title_label.add_theme_color_override("font_color", TEXT); title_label.clip_text = true; title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS; title_box.add_child(title_label)
+    subtitle_label = Label.new(); subtitle_label.text = "Recovered assets, heritage properties and strategic restoration rewards"; subtitle_label.add_theme_font_size_override("font_size", 10); subtitle_label.add_theme_color_override("font_color", MUTED); subtitle_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; title_box.add_child(subtitle_label)
     count_label = Label.new(); count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT; count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER; count_label.add_theme_font_size_override("font_size", 11); count_label.add_theme_color_override("font_color", ACCENT); header.add_child(count_label)
-    close_button = Button.new(); close_button.text = "CLOSE"; close_button.custom_minimum_size = Vector2(76, 44); close_button.focus_mode = Control.FOCUS_NONE; close_button.pressed.connect(close_screen); header.add_child(close_button)
+    close_button = Button.new(); close_button.text = "CLOSE"; close_button.custom_minimum_size = Vector2(76, 44); close_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER; close_button.focus_mode = Control.FOCUS_NONE; close_button.pressed.connect(close_screen); header.add_child(close_button)
     summary = Label.new(); summary.add_theme_font_size_override("font_size", 11); summary.add_theme_color_override("font_color", MUTED); summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; root.add_child(summary)
     filter_scroll = ScrollContainer.new(); filter_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO; filter_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED; filter_scroll.custom_minimum_size.y = 48; root.add_child(filter_scroll)
     var filters := HBoxContainer.new(); filters.name = "Filters"; filters.add_theme_constant_override("separation", 6); filter_scroll.add_child(filters)
@@ -124,8 +126,12 @@ func _make_item_card(item: Dictionary) -> Control:
 
 func _layout_responsive() -> void:
     if panel == null: return
-    var viewport := get_viewport().get_visible_rect().size; var w := maxf(320.0, viewport.x); var h := maxf(480.0, viewport.y); var mobile := w < 760.0
+    var viewport := get_viewport().get_visible_rect().size; var w := maxf(320.0, viewport.x); var h := maxf(480.0, viewport.y); var mobile := w < 760.0; var compact := w < 380.0
     var filters := panel.find_child("Filters", true, false) as HBoxContainer
+    count_label.visible = not compact
+    subtitle_label.visible = not compact
+    title_label.add_theme_font_size_override("font_size", 17 if compact else 22)
+    close_button.custom_minimum_size = Vector2(72 if compact else 76, 44)
     if mobile:
         panel.position = Vector2(8, 8); panel.size = Vector2(w - 16, h - 16)
         if filters != null:
