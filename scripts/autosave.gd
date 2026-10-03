@@ -2,6 +2,7 @@ extends Node
 
 # RESTORA safety net: periodically persist the canonical GameState so a mobile session
 # ending unexpectedly does not erase a long run.
+# Lifecycle persistence must never override the HUD/screen manager's Android Back navigation.
 const SaveSystem := preload("res://scripts/save_system.gd")
 const AUTOSAVE_INTERVAL := 30.0
 
