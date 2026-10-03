@@ -12,6 +12,7 @@ const VIEWS := [
     "supply_chain", "supplier_compare", "inventory",
     "budget", "funding", "region_overview", "property_acquisition",
     "infrastructure_roadmap", "company_progress", "milestones", "alliances",
+    "corporate_strategy", "world_power", "headquarters", "legacy",
     "reports", "notifications", "accessibility", "pause", "day_summary",
     "level_up", "restoration_complete", "insufficient_funds",
     "offline_error", "loading", "empty_states"
@@ -197,6 +198,21 @@ func _run() -> void:
     check("infrastructure returns to World hub", str(bridge.back_target("infrastructure_roadmap")) == "world")
     check("restoration confirmation back chain is stable", str(bridge.back_target("restoration_confirm")) == "restoration_plan")
     check("accessibility back chain is stable", str(bridge.back_target("accessibility")) == "settings")
+    check("corporate strategy returns to More", str(bridge.back_target("corporate_strategy")) == "more")
+    check("world power returns to corporate strategy", str(bridge.back_target("world_power")) == "corporate_strategy")
+    check("headquarters returns to world power", str(bridge.back_target("headquarters")) == "world_power")
+    check("legacy returns to More", str(bridge.back_target("legacy")) == "more")
+
+    hud.open_figma_view("more")
+    await process_frame
+    var strategy_button := (hud.get("mobile_content") as Control).find_child("Opencorporate_strategy", true, false) as Button
+    var power_button := (hud.get("mobile_content") as Control).find_child("Openworld_power", true, false) as Button
+    var headquarters_button := (hud.get("mobile_content") as Control).find_child("Openheadquarters", true, false) as Button
+    var legacy_button := (hud.get("mobile_content") as Control).find_child("Openlegacy", true, false) as Button
+    check("More exposes progression-gated corporate strategy", strategy_button != null)
+    check("More exposes progression-gated world power", power_button != null)
+    check("More exposes progression-gated headquarters", headquarters_button != null)
+    check("More exposes progression-gated legacy", legacy_button != null)
 
     if state != null:
         hud.open_figma_view("restoration_complete")
