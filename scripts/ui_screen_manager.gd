@@ -103,8 +103,15 @@ func _unhandled_input(event: InputEvent) -> void:
         get_viewport().set_input_as_handled()
 
 func _notification(what: int) -> void:
-    if what == NOTIFICATION_WM_GO_BACK_REQUEST and _active_screen != null:
+    if what != NOTIFICATION_WM_GO_BACK_REQUEST:
+        return
+    if _active_screen != null:
         hide_all_screens()
+        return
+    var ui := _ui_root()
+    var hud := ui.get_node_or_null("MainHUD") if ui != null else null
+    if hud != null and hud.has_method("handle_system_back"):
+        hud.handle_system_back()
 
 func _is_node_visible(node: Node) -> bool:
     if node == null or not is_instance_valid(node):
