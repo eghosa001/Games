@@ -50,7 +50,10 @@ func _ready() -> void:
         manager.theme_changed.connect(_on_theme_changed)
     if not get_viewport().size_changed.is_connected(_layout_responsive):
         get_viewport().size_changed.connect(_layout_responsive)
-    _show_view("live")
+    if OS.has_feature("standalone") and not OS.has_feature("editor"):
+        _show_view("launch")
+    else:
+        _show_view("live")
     call_deferred("_bind_runtime_after_parent_ready")
 
 func _bind_runtime_after_parent_ready() -> void:
@@ -508,7 +511,8 @@ func _layout_responsive() -> void:
     if _layout_kind == "mobile":
         var size = _layout_size()
         var canvas_w = minf(MOBILE_DESIGN_W, size.x)
-        var scroll_h = maxf(120.0, size.y - (MOBILE_NAV_H + MOBILE_NAV_BOTTOM))
+        var reserved_nav: float = 0.0 if _figma_view_is_immersive() else (MOBILE_NAV_H + MOBILE_NAV_BOTTOM)
+        var scroll_h = maxf(120.0, size.y - reserved_nav)
         var expected_width = canvas_w
         if scroll_h < MOBILE_CONTENT_H and is_equal_approx(canvas_w, size.x):
             expected_width = maxf(240.0, canvas_w - 8.0)
@@ -568,11 +572,11 @@ func _show_view(view_name: String) -> void:
     match view_name:
         "live":
             active_tab = 0
-        "operate":
+        "operate", "business_list", "business_overview", "production", "employee_list", "employee_detail", "hiring", "assign_employee", "contract_market", "contract_detail", "active_contracts", "supply_chain", "supplier_compare", "inventory":
             active_tab = 1
-        "property", "portfolio", "empire", "intelligence":
+        "property", "portfolio", "property_overview", "restoration_plan", "restoration_confirm", "before_after", "property_acquisition":
             active_tab = 2
-        "finance":
+        "finance", "budget", "funding":
             active_tab = 3
         _:
             active_tab = 4
@@ -616,6 +620,7 @@ func _rebuild_mobile_content() -> void:
     if mobile_scroll != null:
         mobile_scroll.scroll_vertical = 0
     _refresh_bottom_nav()
+    _layout_mobile_host()
     _last_progress_level = _company_level()
     _last_signature = _state_signature()
     _refresh()
@@ -674,12 +679,24 @@ func _layout_mobile_host() -> void:
     var size = _layout_size()
     var canvas_w = minf(MOBILE_DESIGN_W, size.x)
     var x0 = floor((size.x - canvas_w) * 0.5)
+    var immersive := _figma_view_is_immersive()
+    var reserved_nav: float = 0.0 if immersive else (MOBILE_NAV_H + MOBILE_NAV_BOTTOM)
     mobile_scroll.position = Vector2(x0, 0)
-    mobile_scroll.size = Vector2(canvas_w, maxf(120.0, size.y - (MOBILE_NAV_H + MOBILE_NAV_BOTTOM)))
+    mobile_scroll.size = Vector2(canvas_w, maxf(120.0, size.y - reserved_nav))
+    bottom_nav.visible = not immersive
     bottom_nav.position = Vector2(x0 + 12.0, size.y - MOBILE_NAV_H - MOBILE_NAV_BOTTOM)
     bottom_nav.size = Vector2(canvas_w - 24.0, MOBILE_NAV_H)
 
+func _figma_view_is_immersive() -> bool:
+    var figma_flow = get_node_or_null("FigmaFlowBridge")
+    return figma_flow != null and figma_flow.has_method("is_immersive") and bool(figma_flow.is_immersive(active_view))
+
 func _build_mobile_view() -> void:
+    if bottom_nav != null:
+        bottom_nav.visible = not _figma_view_is_immersive()
+    var figma_flow = get_node_or_null("FigmaFlowBridge")
+    if figma_flow != null and figma_flow.has_method("build_view") and bool(figma_flow.build_view(active_view, self, mobile_content)):
+        return
     match active_view:
         "live": _build_mobile_live()
         "operate": _build_mobile_operations()
@@ -831,7 +848,11 @@ func _label(parent_node: Node, name: String, text_value: String, rect: Rect2, si
     var l = Label.new()
     l.name = name
     var fitted := _fit_horizontal_rect(parent_node, rect)
-    var readable_size := maxi(size_px, 9)
+    var text_scale := 1.0
+    var manager = _theme_manager()
+    if manager != null and manager.has_method("get_text_scale"):
+        text_scale = float(manager.get_text_scale())
+    var readable_size := maxi(int(round(float(size_px) * text_scale)), 9)
     var allow_wrap := fitted.size.y >= float(readable_size) * 2.0 + 4.0
 
     l.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -926,11 +947,27 @@ func _content_width() -> float:
 
 func _header(title: String, subtitle: String, right_text = "", status_role = "gold") -> void:
     var w = _content_width()
-    _remember("title", _label(mobile_content, "Title", title, Rect2(18, 18, w - 120, 34), 24 if title == "RESTORA" else 21, "text", 700))
-    status_label = _label(mobile_content, "Status", subtitle, Rect2(18, 48 if title != "RESTORA" else 52, w - 130, 16), 9, status_role, 600)
+    var title_width: float = float(w) - (178.0 if not right_text.is_empty() else 82.0)
+    var subtitle_width: float = float(w) - (178.0 if not right_text.is_empty() else 86.0)
+    _remember("title", _label(mobile_content, "Title", title, Rect2(18, 18, title_width, 34), 24 if title == "RESTORA" else 21, "text", 700))
+    status_label = _label(mobile_content, "Status", subtitle, Rect2(18, 48 if title != "RESTORA" else 52, subtitle_width, 16), 9, status_role, 600)
     _remember("status", status_label)
     if not right_text.is_empty():
-        _remember("right_status", _label(mobile_content, "RightStatus", right_text, Rect2(w - 104, 24, 84, 18), 9 if title != "RESTORA" else 11, "plum" if active_view == "settings" else "text", 600, HORIZONTAL_ALIGNMENT_RIGHT))
+        _remember("right_status", _label(mobile_content, "RightStatus", right_text, Rect2(w - 154, 24, 92, 18), 9 if title != "RESTORA" else 11, "plum" if active_view == "settings" else "text", 600, HORIZONTAL_ALIGNMENT_RIGHT))
+    var alerts := Button.new()
+    alerts.name = "NotificationsButton"
+    alerts.position = Vector2(w - 56, 16)
+    alerts.size = Vector2(38, 38)
+    alerts.focus_mode = Control.FOCUS_ALL
+    alerts.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+    alerts.tooltip_text = "Notifications"
+    alerts.icon = _asset_texture(ICON_ROOT + "decisions.svg")
+    alerts.expand_icon = true
+    alerts.add_theme_stylebox_override("normal", _style(_color("surface_2"), _color("border"), 19))
+    alerts.add_theme_stylebox_override("hover", _style(_color("selected"), _color("plum"), 19))
+    alerts.add_theme_stylebox_override("pressed", _style(_color("selected").darkened(0.04), _color("gold"), 19))
+    alerts.pressed.connect(_show_view.bind("notifications"), CONNECT_DEFERRED)
+    mobile_content.add_child(alerts)
 
 func _build_mobile_live() -> void:
     var w = _content_width()
@@ -1065,6 +1102,10 @@ func _build_mobile_operations() -> void:
         _label(equip, "Body", "Equipment unlocks with the first operating business.", Rect2(16, 46, inner_w - 32, 36), 12, "muted", 500)
         _label(equip, "Meta", "No equipment action required yet.", Rect2(16, 76, inner_w - 32, 14), 10, "muted", 600)
 
+    _frame_button(mobile_content, "BusinessPortfolio", "BUSINESS OVERVIEW", Rect2(18, 690, inner_w, 48), _show_view.bind("business_list"), false, true, 10)
+    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 760.0)
+    mobile_content.size.y = maxf(mobile_content.size.y, 760.0)
+
 func _build_mobile_finance() -> void:
     var w = _content_width()
     _header("FINANCE COMMAND", "LIVE LEDGER • DEBT %s" % _money(_debt()), "", "success" if _debt() == 0 else "gold")
@@ -1116,6 +1157,12 @@ func _build_mobile_finance() -> void:
     var investor_button = _frame_button(mobile_content, "Investor", investor_text, Rect2(34 + action_w * 2.0, 656, action_w, 48), _request_investor, false, true)
     investor_button.disabled = not bool(investor_quote.get("eligible", false)) or bool(investor_quote.get("pending", false))
     investor_button.tooltip_text = ("Potential funding %s for %.1f%% ownership." % [_money(int(investor_quote.get("amount", 0))), float(investor_quote.get("percent", 0.0))]) if bool(investor_quote.get("eligible", false)) else str(investor_quote.get("message", "Investor offer unavailable."))
+
+    var lower_w: float = (float(inner_w) - 8.0) * 0.5
+    _frame_button(mobile_content, "BudgetPlan", "BUDGET", Rect2(18, 720, lower_w, 48), _show_view.bind("budget"), false, false, 10)
+    _frame_button(mobile_content, "FundingDetail", "FUNDING DETAILS", Rect2(26 + lower_w, 720, lower_w, 48), _show_view.bind("funding"), false, true, 10)
+    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 790.0)
+    mobile_content.size.y = maxf(mobile_content.size.y, 790.0)
 
 func _build_mobile_property() -> void:
     var catalog: Array = _building_catalog()
@@ -1273,7 +1320,7 @@ func _build_mobile_world() -> void:
     if active_opportunity:
         _frame_button(mobile_content, "OpportunityCTA", "REVIEW WORLD OPPORTUNITY", Rect2(18, cta_y, inner_w, 48), _open_screen.bind("WorldOpportunitiesPanel"), false, true, 10)
         cta_y += 58.0
-    _frame_button(mobile_content, "WorldCTA", "MANAGE SELECTED REGION", Rect2(18, cta_y, inner_w, 54), _open_screen.bind("RegionsPanel"), false, true, 10)
+    _frame_button(mobile_content, "WorldCTA", "MANAGE SELECTED REGION", Rect2(18, cta_y, inner_w, 54), _show_view.bind("region_overview"), false, true, 10)
     if mobile_content != null:
         mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, cta_y + 82.0)
         mobile_content.size.y = maxf(mobile_content.size.y, cta_y + 82.0)
@@ -1339,19 +1386,19 @@ func _build_mobile_more() -> void:
 
     var tiles = [
         ["HOW TO PLAY","Restore → Operate → Grow","guide",""],
-        ["PROGRESSION","Goals, milestones and victory paths","EmpireProgressionPanel",""],
+        ["EMPLOYEES","Staff, morale and assignments","employee_list","employees"],
+        ["CONTRACTS","Offers, capacity and deadlines","contract_market","contracts"],
+        ["SUPPLY CHAIN","Materials, suppliers and routes","supply_chain","supply_chain"],
         ["REGIONS","Markets and expansion","world","regions"],
-        ["INTELLIGENCE","Company and market signals","intelligence",""],
-        ["CORPORATIONS","Rivals, alliances and ownership","CorporationsPanel","competitors"],
-        ["CONTRACTS","Customers and renewals","ContractPanel","contracts"],
-        ["TECHNOLOGY","Research and upgrades","TechnologyPanel","technology"],
-        ["CORPORATE POWER","Acquisitions, mergers and bidding wars","CorporationsPanel","acquisitions"],
-        ["HEADQUARTERS","Capacity and policy","HeadquartersPanel","headquarters"],
-        ["WORLD POWER","Rankings, influence and executive standing","EmpireIdentityPanel","world_power"],
-        ["HISTORY","Milestones and museum","HistoryPanel",""],
-        ["COLLECTIONS","Recovered assets and legacy rewards","CollectionPanel","collections"],
+        ["INFRASTRUCTURE","Long-term district upgrades","infrastructure_roadmap","infrastructure"],
+        ["COLLECTION","Milestones and legacy rewards","milestones","collections"],
+        ["ALLIANCES","Partners, trust and rivals","alliances","alliances"],
+        ["REPORTS","Performance and strategic signals","reports",""],
+        ["NOTIFICATIONS","Decisions that need attention","notifications",""],
+        ["PROGRESSION","Company level and unlocks","company_progress",""],
         ["SAVE / LOAD","Profiles and recovery","SaveLoadPanel",""],
-        ["SETTINGS","Theme, audio, purchases, privacy","settings",""]
+        ["SETTINGS","Theme, audio, accessibility, privacy","settings",""],
+        ["INTELLIGENCE","Company and market signals","intelligence",""]
     ]
     var rows := ceili(float(tiles.size()) / 2.0)
     var required_height := 196.0 + float(rows) * 100.0 + 18.0
@@ -1372,7 +1419,7 @@ func _build_mobile_more() -> void:
         _label(p, "Body", body_text, Rect2(14,38,col_w - 28,40), 9, "muted", 400)
         var target = str(tiles[i][2])
         var open_button: Button
-        if ["world","intelligence","settings","guide"].has(target):
+        if ["world","intelligence","settings","guide","employee_list","contract_market","supply_chain","infrastructure_roadmap","milestones","alliances","reports","notifications","company_progress"].has(target):
             open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,90), _show_view.bind(target))
         else:
             open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,90), _open_screen.bind(target))
@@ -1469,6 +1516,9 @@ func _build_mobile_settings() -> void:
     _label(save, "Auto", "AUTOSAVE", Rect2(16,38,180,16), 11, "text", 600)
     _label(save, "AutoMeta", "Every 30s + app background", Rect2(16,58,214,14), 9, "muted", 400)
     _frame_button(save, "AutosaveState", "ON", Rect2(inner_w-116,30,98,48), _save_company)
+    _frame_button(mobile_content, "AccessibilityDetail", "ACCESSIBILITY OPTIONS", Rect2(18,852,inner_w,48), _show_view.bind("accessibility"), false, true, 10)
+    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 922.0)
+    mobile_content.size.y = maxf(mobile_content.size.y, 922.0)
 
 func _toggle(parent_node: Node, name: String, pos: Vector2, on: bool, callback: Callable) -> void:
     var track = Panel.new()
@@ -1859,8 +1909,9 @@ func _property_cta() -> void:
         parent.inspect_property()
     elif not _owned() and parent.has_method("acquire_property"):
         parent.acquire_property()
-    elif _stage() != "Operational" and parent.has_method("restore_property"):
-        parent.restore_property()
+    elif _stage() != "Operational":
+        _show_view("restoration_plan")
+        return
     else:
         _show_view("operate")
         return
@@ -2302,6 +2353,24 @@ func _open_screen(screen_name: String) -> void:
     var manager = _screen_manager()
     if manager != null and manager.has_method("show_screen"):
         manager.show_screen(screen_name)
+
+func _unhandled_input(event: InputEvent) -> void:
+    if not event.is_action_pressed("ui_cancel"):
+        return
+    var manager = _screen_manager()
+    if manager != null and manager.has_method("get_active_screen_name") and not str(manager.get_active_screen_name()).is_empty():
+        return
+    var figma_flow = get_node_or_null("FigmaFlowBridge")
+    if figma_flow != null and figma_flow.has_method("supports") and bool(figma_flow.supports(active_view)):
+        if active_view == "pause":
+            _show_view("live")
+        else:
+            _show_view(str(figma_flow.back_target(active_view)))
+    elif active_view != "live":
+        _show_view("live")
+    else:
+        _show_view("pause")
+    get_viewport().set_input_as_handled()
 
 func _set_theme(mode: String) -> void:
     var manager = _theme_manager()

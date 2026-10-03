@@ -7,8 +7,10 @@ signal theme_changed(mode: String)
 const PREFS_PATH := "user://restora_ui.cfg"
 const VALID_MODES := ["dark", "light", "system"]
 
-var _mode := "dark"
-var _resolved_mode := "dark"
+var _mode := "light"
+var _resolved_mode := "light"
+var _high_contrast := false
+var _text_scale := 1.0
 var _theme_cache: Theme
 
 func _ready() -> void:
@@ -27,6 +29,44 @@ func get_resolved_mode() -> String:
 
 func is_light() -> bool:
     return _resolved_mode == "light"
+
+func get_high_contrast() -> bool:
+    return _high_contrast
+
+func set_high_contrast(value: bool) -> void:
+    if _high_contrast == value:
+        return
+    _high_contrast = value
+    _theme_cache = _build_theme()
+    _save_preferences()
+    theme_changed.emit(_mode)
+
+func toggle_high_contrast() -> void:
+    set_high_contrast(not _high_contrast)
+
+func get_text_scale() -> float:
+    return _text_scale
+
+func set_text_scale(value: float) -> void:
+    var normalized := 1.0
+    if value >= 1.25:
+        normalized = 1.30
+    elif value >= 1.10:
+        normalized = 1.15
+    if is_equal_approx(_text_scale, normalized):
+        return
+    _text_scale = normalized
+    _theme_cache = _build_theme()
+    _save_preferences()
+    theme_changed.emit(_mode)
+
+func cycle_text_scale() -> void:
+    if _text_scale < 1.10:
+        set_text_scale(1.15)
+    elif _text_scale < 1.25:
+        set_text_scale(1.30)
+    else:
+        set_text_scale(1.0)
 
 func set_mode(value: String) -> void:
     var normalized := value.strip_edges().to_lower()
@@ -49,54 +89,92 @@ func get_theme_resource() -> Theme:
 
 func color(role: String) -> Color:
     var light := is_light()
+    if _high_contrast:
+        match role:
+            "bg":
+                return Color("fffdf7") if light else Color("0b0b0a")
+            "surface":
+                return Color("ffffff") if light else Color("151513")
+            "surface_2":
+                return Color("f2ead8") if light else Color("22211d")
+            "surface_3":
+                return Color("fff8e9") if light else Color("2a2822")
+            "selected":
+                return Color("f5dfbd") if light else Color("39262f")
+            "border":
+                return Color("85745e") if light else Color("8c806f")
+            "text":
+                return Color("101412") if light else Color("fffdf7")
+            "muted":
+                return Color("4a514d") if light else Color("d0c7b8")
+            "gold", "brass":
+                return Color("76500b") if light else Color("f0c66a")
+            "plum":
+                return Color("592d47") if light else Color("c8779a")
+            "success":
+                return Color("2f684a") if light else Color("9bd6ad")
+            "warning":
+                return Color("824609") if light else Color("f1b267")
+            "danger":
+                return Color("8f2f23") if light else Color("ef8c7c")
+            "info", "world":
+                return Color("315d6a") if light else Color("9ec8d5")
+            "tech":
+                return Color("334f78") if light else Color("9fb8df")
+            "industry":
+                return Color("8b4026") if light else Color("eda17c")
+            "people":
+                return Color("59344b") if light else Color("d597b7")
+            "scrim":
+                return Color(0.94, 0.91, 0.84, 0.97) if light else Color(0.02, 0.02, 0.018, 0.97)
+            _:
+                return Color("101412") if light else Color("fffdf7")
     match role:
         "bg":
-            return Color("e8eeea") if light else Color("0b0d10")
+            return Color("f1ece1") if light else Color("171714")
         "surface":
-            return Color("f8faf7") if light else Color("151a1f")
+            return Color("fffdf7") if light else Color("22211d")
         "surface_2":
-            return Color("dce5df") if light else Color("20262c")
+            return Color("e8dfcf") if light else Color("2d2b25")
         "surface_3":
-            return Color("eef3ef") if light else Color("292f35")
+            return Color("f7f1e6") if light else Color("37342d")
         "selected":
-            return Color("ece5e7") if light else Color("32202a")
+            return Color("eee1d8") if light else Color("3b292f")
         "border":
-            return Color("b8c2bc") if light else Color("3c3831")
+            return Color("c9bda9") if light else Color("514b40")
         "text":
-            return Color("202a27") if light else Color("f2efe8")
+            return Color("292821") if light else Color("f5f0e6")
         "muted":
-            return Color("66716b") if light else Color("928a80")
+            return Color("706a5f") if light else Color("aaa093")
         "gold", "brass":
-            return Color("94611f") if light else Color("c99a4b")
+            return Color("9a6728") if light else Color("d2a85a")
         "plum":
-            return Color("674356") if light else Color("7a405f")
+            return Color("74465a") if light else Color("985b72")
         "success":
-            return Color("4d745f") if light else Color("7fa88a")
+            return Color("52705a") if light else Color("84aa8a")
         "warning":
-            return Color("8e6224") if light else Color("c28a3a")
+            return Color("9a652d") if light else Color("d0984f")
         "danger":
-            return Color("93483b") if light else Color("b85c4a")
+            return Color("98483d") if light else Color("c36b5a")
         "info", "world":
-            return Color("4c6977") if light else Color("6b8494")
+            return Color("4f6d77") if light else Color("7f9da8")
         "tech":
             return Color("536b89") if light else Color("657c9d")
         "industry":
-            return Color("8d5b40") if light else Color("a96f45")
+            return Color("a15f43") if light else Color("c47a55")
         "people":
             return Color("735064") if light else Color("8f5b72")
         "scrim":
-            # Deep management workspaces should read as focused screens, not
-            # translucent legacy modals with the command deck bleeding through.
-            return Color(0.91, 0.93, 0.92, 0.94) if light else Color(0.043, 0.051, 0.063, 0.94)
+            return Color(0.94, 0.91, 0.84, 0.94) if light else Color(0.055, 0.052, 0.045, 0.94)
         _:
-            return Color("202a27") if light else Color("f2efe8")
+            return Color("292821") if light else Color("f5f0e6")
 
 func _resolve_mode() -> String:
     if _mode != "system":
         return _mode
     if DisplayServer.is_dark_mode_supported():
         return "dark" if DisplayServer.is_dark_mode() else "light"
-    return "dark"
+    return "light"
 
 func _on_system_theme_changed() -> void:
     if _mode != "system":
@@ -110,18 +188,22 @@ func _on_system_theme_changed() -> void:
     theme_changed.emit(_mode)
 
 func _load_preferences() -> void:
-    var legacy_light := bool(ProjectSettings.get_setting("renew/ui/light_theme", false))
+    var legacy_light := bool(ProjectSettings.get_setting("renew/ui/light_theme", true))
     _mode = "light" if legacy_light else "dark"
     var file := ConfigFile.new()
     if file.load(PREFS_PATH) == OK:
         var stored := str(file.get_value("appearance", "theme_mode", _mode)).to_lower()
         if VALID_MODES.has(stored):
             _mode = stored
+        _high_contrast = bool(file.get_value("accessibility", "high_contrast", false))
+        _text_scale = clampf(float(file.get_value("accessibility", "text_scale", 1.0)), 1.0, 1.30)
 
 func _save_preferences() -> void:
     var file := ConfigFile.new()
     file.load(PREFS_PATH)
     file.set_value("appearance", "theme_mode", _mode)
+    file.set_value("accessibility", "high_contrast", _high_contrast)
+    file.set_value("accessibility", "text_scale", _text_scale)
     file.save(PREFS_PATH)
 
 func _style(bg: Color, border: Color, radius := 14, shadow_alpha := 0.0) -> StyleBoxFlat:
@@ -150,7 +232,7 @@ func _build_theme() -> Theme:
     body_font.font_names = PackedStringArray(["Inter", "Roboto", "Noto Sans", "Arial"])
     body_font.font_weight = 400
     theme.default_font = body_font
-    theme.default_font_size = 14
+    theme.default_font_size = int(round(14.0 * _text_scale))
     var text := color("text")
     var muted := color("muted")
     var border := color("border")
@@ -158,10 +240,8 @@ func _build_theme() -> Theme:
     var surface_2 := color("surface_2")
     var gold := color("gold")
     var plum := color("plum")
-
     theme.set_stylebox("panel", "Panel", _style(surface, border, 18, 0.24 if not is_light() else 0.08))
     theme.set_stylebox("panel", "PanelContainer", _style(surface, border, 18, 0.22 if not is_light() else 0.07))
-
     theme.set_stylebox("normal", "Button", _button_style(surface_2, border))
     theme.set_stylebox("hover", "Button", _button_style(surface_2.lerp(plum, 0.13), plum))
     theme.set_stylebox("pressed", "Button", _button_style(surface_2.lerp(plum, 0.22), plum))
@@ -171,7 +251,6 @@ func _build_theme() -> Theme:
     theme.set_color("font_pressed_color", "Button", text)
     theme.set_color("font_disabled_color", "Button", muted)
     theme.set_font_size("font_size", "Button", 13)
-
     theme.set_color("font_color", "Label", text)
     theme.set_color("font_color", "CheckButton", text)
     theme.set_color("font_hover_color", "CheckButton", text)
@@ -179,7 +258,6 @@ func _build_theme() -> Theme:
     theme.set_color("font_color", "CheckBox", text)
     theme.set_color("font_color", "OptionButton", text)
     theme.set_color("font_color", "SpinBox", text)
-
     var input := _style(surface, border, 13)
     input.content_margin_left = 12
     input.content_margin_right = 12
@@ -192,15 +270,11 @@ func _build_theme() -> Theme:
     theme.set_color("font_color", "LineEdit", text)
     theme.set_color("caret_color", "LineEdit", gold)
     theme.set_color("selection_color", "LineEdit", Color(plum.r, plum.g, plum.b, 0.26))
-
     var progress_bg := _style(color("surface_2"), border, 7)
     var progress_fill := _style(gold, gold, 7)
     theme.set_stylebox("background", "ProgressBar", progress_bg)
     theme.set_stylebox("fill", "ProgressBar", progress_fill)
     theme.set_color("font_color", "ProgressBar", text)
-
-    # Premium scroll treatment keeps every long management screen inside the
-    # same Figma material system instead of falling back to Godot defaults.
     var scroll_track := StyleBoxFlat.new()
     scroll_track.bg_color = Color(surface_2.r, surface_2.g, surface_2.b, 0.34)
     scroll_track.set_corner_radius_all(5)
@@ -214,5 +288,4 @@ func _build_theme() -> Theme:
         theme.set_stylebox("grabber", scrollbar_type, scroll_grabber)
         theme.set_stylebox("grabber_highlight", scrollbar_type, scroll_hover)
         theme.set_stylebox("grabber_pressed", scrollbar_type, scroll_hover)
-
     return theme

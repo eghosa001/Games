@@ -4,7 +4,7 @@ config/name="Restora"
 config/icon="res://Assets/restora_icon.svg"
 boot_splash/show_image=false
 boot_splash/fullsize=false
-boot_splash/bg_color=Color(0.0431373, 0.0509804, 0.0627451, 1)
+boot_splash/bg_color=Color(0.945, 0.925, 0.875, 1)
 run/main_scene="res://scenes/Main.tscn"
 
 [autoload]
@@ -46,7 +46,7 @@ gdscript/warnings/inference_on_variant=1
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
-environment/defaults/default_clear_color=Color(0.03, 0.05, 0.06, 1)
+environment/defaults/default_clear_color=Color(0.945, 0.925, 0.875, 1)
 
 [input]
 action_restore={"deadzone":0.5,"events":[Object(InputEventKey,"physical_keycode":82)]}

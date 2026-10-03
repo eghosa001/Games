@@ -82,17 +82,18 @@ func _run() -> void:
     var status: Dictionary = overlay.tutorial_status()
     check(not bool(status.get("dismissed", true)), "Fresh game keeps tutorial active")
     check(_step(overlay) == 0, "Tutorial begins at Inspect")
-    check(overlay.panel.visible and not overlay.collapsed_button.visible, "Fresh phone session opens the teaching card automatically")
-    check(overlay.route_button != null and overlay.route_button.visible, "Tutorial provides a direct route to the required screen")
+    check(not overlay.panel.visible and overlay.collapsed_button.visible, "Fresh phone keeps teaching compact and clear of the command deck")
+    check(overlay.collapsed_button.size.y >= 44.0, "Mobile GUIDE chip remains touch reachable")
 
     overlay.hide_tutorial()
     await _wait(2)
     check(bool((overlay.tutorial_status() as Dictionary).get("dismissed", false)), "Tutorial can be dismissed")
-    check(overlay.collapsed_button.visible, "Dismissed mobile tutorial exposes GUIDE chip")
+    check(overlay.collapsed_button.visible, "Dismissed mobile tutorial keeps the GUIDE entry point")
     overlay.open_tutorial()
     await _wait(2)
     check(not bool((overlay.tutorial_status() as Dictionary).get("dismissed", true)), "GUIDE can reopen tutorial")
-    check(overlay.panel.visible, "GUIDE opens the full tutorial on demand")
+    check(str(hud.get("active_view")) == "guide", "Mobile GUIDE opens the authored Figma teaching screen")
+    check(not overlay.panel.visible, "Legacy tutorial card never overlays the Figma guide on phone")
 
     hud.open_figma_view("property")
     await _wait(2)
@@ -117,17 +118,37 @@ func _run() -> void:
 
     var restore_guard := 0
     while str(state.get_value("properties", "stage", "")) != "Operational" and restore_guard < 8:
-        property_cta = _find_button(hud.get("mobile_content"), "RESTORE NEXT STAGE")
-        check(property_cta != null, "Restore action remains reachable")
-        if property_cta == null:
+        if str(hud.get("active_view")) == "property":
+            property_cta = _find_button(hud.get("mobile_content"), "RESTORE NEXT STAGE")
+            check(property_cta != null, "Restore plan remains reachable from Property")
+            if property_cta == null:
+                break
+            property_cta.pressed.emit()
+            await _wait(2)
+
+        check(str(hud.get("active_view")) == "restoration_plan", "Restoration uses the authored plan screen")
+        var review := _find_button(hud.get("mobile_content"), "REVIEW NEXT WORK")
+        check(review != null, "Next restoration work can be reviewed")
+        if review == null:
             break
-        property_cta.pressed.emit()
+        review.pressed.emit()
+        await _wait(2)
+
+        check(str(hud.get("active_view")) == "restoration_confirm", "Restoration opens consequence confirmation")
+        var confirm := _find_button(hud.get("mobile_content"), "CONFIRM WORK")
+        check(confirm != null, "Restoration confirmation is reachable")
+        if confirm == null:
+            break
+        confirm.pressed.emit()
         await _poll_tutorial(overlay)
         restore_guard += 1
-    check(str(state.get_value("properties", "stage", "")) == "Operational", "Restoration can reach Operational")
+
+    check(str(state.get_value("properties", "stage", "")) == "Operational", "Restoration can reach Operational through plan and confirmation")
     await _wait_for_step(overlay, 3)
     check(_step(overlay) == 3, "Operational property advances tutorial to Open Business")
 
+    hud.open_figma_view("property")
+    await _wait(2)
     var open_ops := _find_button(hud.get("mobile_content"), "OPEN OPERATIONS")
     check(open_ops != null, "Open Operations action is reachable")
     if open_ops != null:

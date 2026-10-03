@@ -143,7 +143,9 @@ func restore_state(state: Dictionary) -> void:
     var saved: Variant = state.get("artifacts", {})
     if saved is Dictionary:
         for category in CATEGORIES:
-            if saved.get(category, []) is Array: artifacts[category] = saved[category].duplicate(true)
+            var items = saved.get(category, [])
+            if items is Array:
+                artifacts[category] = items.duplicate(true)
     seen = state.get("seen", {}).duplicate(true)
     last_day = int(state.get("last_day", -1))
 

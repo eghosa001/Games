@@ -126,7 +126,9 @@ func restore_state(state: Dictionary) -> void:
     var saved = state.get("collections", {})
     if saved is Dictionary:
         for type in TYPES:
-            if saved.get(type, []) is Array: collections[type] = saved[type].duplicate(true)
+            var items = saved.get(type, [])
+            if items is Array:
+                collections[type] = items.duplicate(true)
     seen = state.get("seen", {}).duplicate(true)
     active_bonuses = state.get("active_bonuses", {}).duplicate(true)
     events = state.get("events", []).duplicate(true)

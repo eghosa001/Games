@@ -55,16 +55,46 @@ func _run()->void:
 
 func _exercise_opening_flow(game:Node,hud:Node)->void:
     hud.open_figma_view("property");await process_frame
-    for expected in ["INSPECT PROPERTY","ACQUIRE PROPERTY","RESTORE NEXT STAGE","RESTORE NEXT STAGE","RESTORE NEXT STAGE","RESTORE NEXT STAGE"]:
-        var button:=_find_button(hud.get("mobile_content"),expected)
-        check("opening action exists: "+expected,button!=null)
-        if button!=null:button.pressed.emit();await process_frame;await process_frame
+
+    var inspect:=_find_button(hud.get("mobile_content"),"INSPECT PROPERTY")
+    check("opening action exists: INSPECT PROPERTY",inspect!=null)
+    if inspect!=null:
+        inspect.pressed.emit();await process_frame;await process_frame
+
+    var acquire:=_find_button(hud.get("mobile_content"),"ACQUIRE PROPERTY")
+    check("opening action exists: ACQUIRE PROPERTY",acquire!=null)
+    if acquire!=null:
+        acquire.pressed.emit();await process_frame;await process_frame
+
+    var restore_entry:=_find_button(hud.get("mobile_content"),"RESTORE NEXT STAGE")
+    check("opening action exists: RESTORE NEXT STAGE",restore_entry!=null)
+    if restore_entry!=null:
+        restore_entry.pressed.emit();await process_frame;await process_frame
+    check("restoration plan opens",str(hud.get("active_view"))=="restoration_plan")
+
+    # Exercise the actual Figma consequence-check flow for every restoration stage:
+    # Plan -> Review Next Work -> Confirm Work -> next Plan / Completion.
+    for stage_index in range(4):
+        check("restoration stage %d starts on plan" % (stage_index+1),str(hud.get("active_view"))=="restoration_plan")
+        var review:=_find_button(hud.get("mobile_content"),"REVIEW NEXT WORK")
+        check("restoration stage %d review action exists" % (stage_index+1),review!=null)
+        if review==null:break
+        review.pressed.emit();await process_frame;await process_frame
+        check("restoration stage %d opens consequence check" % (stage_index+1),str(hud.get("active_view"))=="restoration_confirm")
+        var confirm:=_find_button(hud.get("mobile_content"),"CONFIRM WORK")
+        check("restoration stage %d confirm action exists" % (stage_index+1),confirm!=null)
+        if confirm==null:break
+        confirm.pressed.emit();await process_frame;await process_frame
+
     var state:=root.get_node_or_null("RenewGameState")
     check("restoration reaches Operational",state!=null and str(state.get_value("properties","stage",""))=="Operational")
-    var open_ops:=_find_button(hud.get("mobile_content"),"OPEN OPERATIONS")
-    check("Open Operations CTA exists",open_ops!=null)
-    if open_ops!=null:open_ops.pressed.emit();await process_frame
+    check("Figma completion screen opens",str(hud.get("active_view"))=="restoration_complete")
+
+    var start_business:=_find_button(hud.get("mobile_content"),"START BUSINESS")
+    check("Start Business CTA exists",start_business!=null)
+    if start_business!=null:start_business.pressed.emit();await process_frame
     check("Operations view opens",str(hud.get("active_view"))=="operate")
+
     var choose:=_find_button(hud.get("mobile_content"),"CHOOSE BUSINESS")
     check("business choice is reachable",choose!=null)
     if choose!=null:
@@ -73,6 +103,7 @@ func _exercise_opening_flow(game:Node,hud:Node)->void:
         check("business purpose option exists",purpose!=null)
         if purpose!=null:purpose.pressed.emit();await process_frame;await process_frame
     check("business becomes operational",bool(game.business_open))
+
     var buy:=_find_button(hud.get("mobile_content"),"BUY INPUTS")
     var produce:=_find_button(hud.get("mobile_content"),"PRODUCE BATCH")
     check("Buy Inputs action present after launch",buy!=null)
