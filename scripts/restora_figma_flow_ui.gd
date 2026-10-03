@@ -41,6 +41,9 @@ var _auto_launch_pending := false
 func supports(view_name: String) -> bool:
     return CUSTOM_VIEWS.has(view_name)
 
+func is_immersive(view_name: String) -> bool:
+    return IMMERSIVE_VIEWS.has(view_name)
+
 func build_view(view_name: String, hud: Node, content: Control) -> bool:
     if not supports(view_name):
         return false
