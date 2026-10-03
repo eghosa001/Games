@@ -282,10 +282,35 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
 func _spec(title: String, subtitle: String, metrics: Array, details: Array, actions: Array, immersive := false) -> Dictionary:
     return {"title": title, "subtitle": subtitle, "metrics": metrics, "details": details, "actions": actions, "immersive": immersive}
 
+func back_target(view_name: String) -> String:
+    match view_name:
+        "property_overview", "restoration_plan": return "property"
+        "restoration_confirm", "before_after": return "restoration_plan"
+        "business_list": return "operate"
+        "business_overview": return "business_list"
+        "production": return "business_overview"
+        "employee_list", "contract_market", "supply_chain", "infrastructure_roadmap", "company_progress", "milestones", "alliances", "reports", "notifications": return "more"
+        "employee_detail", "hiring": return "employee_list"
+        "assign_employee": return "employee_detail"
+        "contract_detail", "active_contracts": return "contract_market"
+        "supplier_compare", "inventory": return "supply_chain"
+        "budget", "funding": return "finance"
+        "region_overview": return "world"
+        "property_acquisition": return "region_overview"
+        "accessibility": return "settings"
+        "new_game", "continue_game": return "launch"
+        "onboarding": return "new_game"
+        "insufficient_funds": return "property"
+        "empty_states": return "more"
+    return "live"
+
 func _render_screen(view_name: String, hud: Node, content: Control, spec: Dictionary) -> void:
     var w := content.size.x if content.size.x > 0 else 382.0
     var inner_w := w - 36.0
     hud.call("_header", str(spec.get("title", "RESTORA")), str(spec.get("subtitle", "")))
+    if not bool(spec.get("immersive", false)) and view_name != "launch":
+        var back := back_target(view_name)
+        hud.call("_frame_button", content, "FlowBack", "‹", Rect2(w - 62.0, 18.0, 44.0, 40.0), Callable(self, "_dispatch").bind(back, hud), false, false, 16)
     var y := 84.0
     var metrics: Array = spec.get("metrics", [])
     if not metrics.is_empty():
