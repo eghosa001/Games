@@ -9,6 +9,8 @@ const VALID_MODES := ["dark", "light", "system"]
 
 var _mode := "light"
 var _resolved_mode := "light"
+var _high_contrast := false
+var _text_scale := 1.0
 var _theme_cache: Theme
 
 func _ready() -> void:
@@ -27,6 +29,44 @@ func get_resolved_mode() -> String:
 
 func is_light() -> bool:
     return _resolved_mode == "light"
+
+func get_high_contrast() -> bool:
+    return _high_contrast
+
+func set_high_contrast(value: bool) -> void:
+    if _high_contrast == value:
+        return
+    _high_contrast = value
+    _theme_cache = _build_theme()
+    _save_preferences()
+    theme_changed.emit(_mode)
+
+func toggle_high_contrast() -> void:
+    set_high_contrast(not _high_contrast)
+
+func get_text_scale() -> float:
+    return _text_scale
+
+func set_text_scale(value: float) -> void:
+    var normalized := 1.0
+    if value >= 1.25:
+        normalized = 1.30
+    elif value >= 1.10:
+        normalized = 1.15
+    if is_equal_approx(_text_scale, normalized):
+        return
+    _text_scale = normalized
+    _theme_cache = _build_theme()
+    _save_preferences()
+    theme_changed.emit(_mode)
+
+func cycle_text_scale() -> void:
+    if _text_scale < 1.10:
+        set_text_scale(1.15)
+    elif _text_scale < 1.25:
+        set_text_scale(1.30)
+    else:
+        set_text_scale(1.0)
 
 func set_mode(value: String) -> void:
     var normalized := value.strip_edges().to_lower()
@@ -49,6 +89,46 @@ func get_theme_resource() -> Theme:
 
 func color(role: String) -> Color:
     var light := is_light()
+    if _high_contrast:
+        match role:
+            "bg":
+                return Color("fffdf7") if light else Color("0b0b0a")
+            "surface":
+                return Color("ffffff") if light else Color("151513")
+            "surface_2":
+                return Color("f2ead8") if light else Color("22211d")
+            "surface_3":
+                return Color("fff8e9") if light else Color("2a2822")
+            "selected":
+                return Color("f5dfbd") if light else Color("39262f")
+            "border":
+                return Color("85745e") if light else Color("8c806f")
+            "text":
+                return Color("101412") if light else Color("fffdf7")
+            "muted":
+                return Color("4a514d") if light else Color("d0c7b8")
+            "gold", "brass":
+                return Color("76500b") if light else Color("f0c66a")
+            "plum":
+                return Color("592d47") if light else Color("c8779a")
+            "success":
+                return Color("2f684a") if light else Color("9bd6ad")
+            "warning":
+                return Color("824609") if light else Color("f1b267")
+            "danger":
+                return Color("8f2f23") if light else Color("ef8c7c")
+            "info", "world":
+                return Color("315d6a") if light else Color("9ec8d5")
+            "tech":
+                return Color("334f78") if light else Color("9fb8df")
+            "industry":
+                return Color("8b4026") if light else Color("eda17c")
+            "people":
+                return Color("59344b") if light else Color("d597b7")
+            "scrim":
+                return Color(0.94, 0.91, 0.84, 0.97) if light else Color(0.02, 0.02, 0.018, 0.97)
+            _:
+                return Color("101412") if light else Color("fffdf7")
     match role:
         "bg":
             return Color("f1ece1") if light else Color("171714")
@@ -115,11 +195,15 @@ func _load_preferences() -> void:
         var stored := str(file.get_value("appearance", "theme_mode", _mode)).to_lower()
         if VALID_MODES.has(stored):
             _mode = stored
+        _high_contrast = bool(file.get_value("accessibility", "high_contrast", false))
+        _text_scale = clampf(float(file.get_value("accessibility", "text_scale", 1.0)), 1.0, 1.30)
 
 func _save_preferences() -> void:
     var file := ConfigFile.new()
     file.load(PREFS_PATH)
     file.set_value("appearance", "theme_mode", _mode)
+    file.set_value("accessibility", "high_contrast", _high_contrast)
+    file.set_value("accessibility", "text_scale", _text_scale)
     file.save(PREFS_PATH)
 
 func _style(bg: Color, border: Color, radius := 14, shadow_alpha := 0.0) -> StyleBoxFlat:
@@ -148,7 +232,7 @@ func _build_theme() -> Theme:
     body_font.font_names = PackedStringArray(["Inter", "Roboto", "Noto Sans", "Arial"])
     body_font.font_weight = 400
     theme.default_font = body_font
-    theme.default_font_size = 14
+    theme.default_font_size = int(round(14.0 * _text_scale))
     var text := color("text")
     var muted := color("muted")
     var border := color("border")
