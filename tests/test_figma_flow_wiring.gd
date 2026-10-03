@@ -200,7 +200,16 @@ func _run() -> void:
         hud.open_figma_view("live")
         hud._process(0.6)
         await process_frame
-        check("queued company level increase opens Figma level-up on Home", str(hud.get("active_view")) == "level_up")
+        check("queued level-up does not replace Home navigation", str(hud.get("active_view")) == "live")
+        hud.open_figma_view("more")
+        await process_frame
+        var progression_notice := (hud.get("mobile_content") as Control).get_node_or_null("Openlevel_up") as Button
+        check("queued level-up is reachable from the Progression tile", progression_notice != null)
+        if progression_notice != null:
+            progression_notice.pressed.emit()
+            await process_frame
+            check("Progression notice opens Figma level-up screen", str(hud.get("active_view")) == "level_up")
+            check("opening level-up clears the pending notice", not bool(hud.get("_pending_level_up")))
 
         hud.open_figma_view("live")
         var day_before_summary := int(state.get_value("player", "day", 1))
