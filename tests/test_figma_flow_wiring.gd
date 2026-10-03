@@ -197,6 +197,7 @@ func _run() -> void:
     if state != null:
         hud.open_figma_view("restoration_complete")
         await process_frame
+        state.set_value("progression", "xp", 100)
         state.set_value("progression", "level", 2)
         hud.set("_last_progress_level", 1)
         hud.set("_pending_level_up", false)
