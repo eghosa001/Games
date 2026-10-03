@@ -589,7 +589,7 @@ func is_recovery_center_open() -> bool:
 
 func _refresh_distress_ui() -> void:
     if distress_status_label == null: return
-    var visible := recovery_center_open and state != STABLE
+    var visible: bool = recovery_center_open and str(state) != STABLE
     if distress_layer != null:
         distress_layer.visible = visible
         distress_layer.process_mode = Node.PROCESS_MODE_INHERIT if visible else Node.PROCESS_MODE_DISABLED
