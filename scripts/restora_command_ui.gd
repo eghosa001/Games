@@ -653,6 +653,28 @@ func _show_view(view_name: String) -> void:
 func open_figma_view(view_name: String) -> void:
     _show_view(view_name)
 
+func handle_system_back() -> bool:
+    var figma_flow = get_node_or_null("FigmaFlowBridge")
+    if figma_flow != null and figma_flow.has_method("supports") and bool(figma_flow.supports(active_view)):
+        if active_view == "pause":
+            _show_view("live")
+            return true
+        if active_view in ["launch", "new_game", "continue_game"]:
+            get_tree().quit()
+            return true
+        if figma_flow.has_method("back_target"):
+            var target := str(figma_flow.back_target(active_view))
+            if not target.is_empty() and target != active_view:
+                _show_view(target)
+                return true
+    if active_view == "live":
+        _show_view("pause")
+        return true
+    if active_view != "live":
+        _show_view("live")
+        return true
+    return false
+
 func _set_tab(index: int) -> void:
     var target_index := clampi(index, 0, 4)
     var views = ["live", "operate", "property", "finance", "more"]
