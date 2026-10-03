@@ -199,6 +199,12 @@ func _run() -> void:
     check("restoration confirmation back chain is stable", str(bridge.back_target("restoration_confirm")) == "restoration_plan")
     check("accessibility back chain is stable", str(bridge.back_target("accessibility")) == "settings")
     check("financial health returns to Finance", str(bridge.back_target("financial_health")) == "finance")
+    hud.open_figma_view("financial_health")
+    await process_frame
+    check("system Back returns financial health to Finance", bool(hud.handle_system_back()) and str(hud.get("active_view")) == "finance")
+    check("system Back returns primary Finance to Home", bool(hud.handle_system_back()) and str(hud.get("active_view")) == "live")
+    check("system Back on Home opens pause instead of quitting", bool(hud.handle_system_back()) and str(hud.get("active_view")) == "pause")
+    check("system Back on pause returns Home", bool(hud.handle_system_back()) and str(hud.get("active_view")) == "live")
     check("corporate strategy returns to More", str(bridge.back_target("corporate_strategy")) == "more")
     check("world power returns to corporate strategy", str(bridge.back_target("world_power")) == "corporate_strategy")
     check("headquarters returns to world power", str(bridge.back_target("headquarters")) == "world_power")
@@ -292,6 +298,7 @@ func _run() -> void:
         var current_unlocks := (hud.get("mobile_content") as Control).get_node_or_null("FlowDetails/Detail1/Text") as Label
         check("company progress names the current strategic layer", current_layer != null and current_layer.text.contains("Acquisitions"))
         check("company progress lists real level-7 unlocks", current_unlocks != null and current_unlocks.text.contains("Corporate Strategy"))
+        check("long strategic context wraps instead of clipping", current_unlocks != null and current_unlocks.autowrap_mode != TextServer.AUTOWRAP_OFF and current_unlocks.size.y > 18.0)
 
         hud.open_figma_view("live")
         var day_before_summary := int(state.get_value("player", "day", 1))
