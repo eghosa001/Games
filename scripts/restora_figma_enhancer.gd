@@ -14,12 +14,13 @@ func _process(_delta: float) -> void:
     var hud := get_parent()
     if hud == null:
         return
-    var content = hud.get("mobile_content")
-    if not content is Control or not is_instance_valid(content):
+    var content_value = hud.get("mobile_content")
+    if not content_value is Control or not is_instance_valid(content_value):
         return
+    var content: Control = content_value as Control
     var view := str(hud.get("active_view"))
-    var content_id := content.get_instance_id()
-    var marker := content.get_node_or_null("FigmaEnhancementMarker")
+    var content_id: int = content.get_instance_id()
+    var marker: Node = content.get_node_or_null("FigmaEnhancementMarker")
     if content_id == _last_content_id and view == _last_view and marker != null:
         return
     _last_content_id = content_id
