@@ -427,13 +427,25 @@ func _render_screen(view_name: String, hud: Node, content: Control, spec: Dictio
         y += float(ceili(float(metrics.size()) / float(cols))) * 84.0 + 10.0
 
     var details: Array = spec.get("details", [])
-    var detail_h := maxf(112.0, 48.0 + float(details.size()) * 44.0)
+    var detail_row_heights: Array[float] = []
+    var detail_rows_total := 0.0
+    var usable_text_width := maxf(160.0, inner_w - 60.0)
+    var approx_chars_per_line := maxi(24, int(floor(usable_text_width / 5.8)))
+    for item in details:
+        var text_value := str(item)
+        var estimated_lines := maxi(1, int(ceil(float(maxi(1, text_value.length())) / float(approx_chars_per_line))))
+        var row_height := maxf(40.0, 22.0 + float(estimated_lines) * 14.0)
+        detail_row_heights.append(row_height)
+        detail_rows_total += row_height + 8.0
+    var detail_h := maxf(112.0, 48.0 + detail_rows_total)
     var detail = hud.call("_panel", content, "FlowDetails", Rect2(18, y, inner_w, detail_h), "surface", "border", 18)
     hud.call("_label", detail, "Head", "DECISION CONTEXT", Rect2(14, 13, inner_w - 28, 14), 10, "gold", 700)
+    var row_y := 42.0
     for i in range(details.size()):
-        var row_y := 42.0 + float(i) * 44.0
-        var row = hud.call("_panel", detail, "Detail%d" % i, Rect2(10, row_y, inner_w - 20, 36), "surface_2", "border", 10)
-        hud.call("_label", row, "Text", str(details[i]), Rect2(10, 9, inner_w - 40, 18), 9, "text", 500)
+        var row_h: float = detail_row_heights[i]
+        var row = hud.call("_panel", detail, "Detail%d" % i, Rect2(10, row_y, inner_w - 20, row_h), "surface_2", "border", 10)
+        hud.call("_label", row, "Text", str(details[i]), Rect2(10, 8, inner_w - 40, row_h - 16.0), 9, "text", 500)
+        row_y += row_h + 8.0
     y += detail_h + 14.0
 
     var actions: Array = spec.get("actions", [])
