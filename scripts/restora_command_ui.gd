@@ -33,6 +33,7 @@ var _refresh_elapsed = 0.0
 var _last_signature = ""
 var _layout_kind = ""
 var _last_progress_level := -1
+var _pending_level_up := false
 var _view_transition: Tween
 
 var _font_regular: SystemFont
@@ -72,16 +73,20 @@ func _process(delta: float) -> void:
     _refresh_elapsed = 0.0
     var sig = _state_signature()
     var current_level := _company_level()
-    if current_level != _last_progress_level:
-        # Do not destroy an in-progress player choice just because progression
-        # advanced in the background. The pending rebuild will happen after the
-        # transient modal closes (business launch already rebuilds explicitly).
-        if _transient_modal_open():
-            return
-        if _last_progress_level > 0 and current_level > _last_progress_level and active_view != "level_up":
-            _show_view("level_up")
-        else:
-            _rebuild_current()
+    if _last_progress_level < 0:
+        _last_progress_level = current_level
+    elif current_level != _last_progress_level:
+        var previous_level := _last_progress_level
+        _last_progress_level = current_level
+        if current_level > previous_level:
+            _pending_level_up = true
+        elif current_level < previous_level:
+            _pending_level_up = false
+    # Level-up is informational, so never let it replace a restoration,
+    # tutorial, business, finance or modal decision already in progress.
+    if _pending_level_up and active_view == "live" and not _transient_modal_open():
+        _pending_level_up = false
+        _show_view("level_up")
         return
     if sig != _last_signature:
         _last_signature = sig
@@ -577,7 +582,8 @@ func _rebuild_current() -> void:
         _build_mobile_host()
         _build_mobile_view()
         _normalize_mobile_content_extent()
-    _last_progress_level = _company_level()
+    if _last_progress_level < 0:
+        _last_progress_level = _company_level()
     _refresh()
     _animate_view_in()
 
@@ -651,7 +657,8 @@ func _rebuild_mobile_content() -> void:
         mobile_scroll.scroll_vertical = 0
     _refresh_bottom_nav()
     _layout_mobile_host()
-    _last_progress_level = _company_level()
+    if _last_progress_level < 0:
+        _last_progress_level = _company_level()
     _last_signature = _state_signature()
     _refresh()
 
