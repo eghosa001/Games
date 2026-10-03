@@ -1073,6 +1073,10 @@ func _build_mobile_operations() -> void:
         _label(equip, "Body", "Equipment unlocks with the first operating business.", Rect2(16, 46, inner_w - 32, 36), 12, "muted", 500)
         _label(equip, "Meta", "No equipment action required yet.", Rect2(16, 76, inner_w - 32, 14), 10, "muted", 600)
 
+    _frame_button(mobile_content, "BusinessPortfolio", "BUSINESS OVERVIEW", Rect2(18, 690, inner_w, 48), _show_view.bind("business_list"), false, true, 10)
+    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 760.0)
+    mobile_content.size.y = maxf(mobile_content.size.y, 760.0)
+
 func _build_mobile_finance() -> void:
     var w = _content_width()
     _header("FINANCE COMMAND", "LIVE LEDGER • DEBT %s" % _money(_debt()), "", "success" if _debt() == 0 else "gold")
@@ -1124,6 +1128,12 @@ func _build_mobile_finance() -> void:
     var investor_button = _frame_button(mobile_content, "Investor", investor_text, Rect2(34 + action_w * 2.0, 656, action_w, 48), _request_investor, false, true)
     investor_button.disabled = not bool(investor_quote.get("eligible", false)) or bool(investor_quote.get("pending", false))
     investor_button.tooltip_text = ("Potential funding %s for %.1f%% ownership." % [_money(int(investor_quote.get("amount", 0))), float(investor_quote.get("percent", 0.0))]) if bool(investor_quote.get("eligible", false)) else str(investor_quote.get("message", "Investor offer unavailable."))
+
+    var lower_w := (inner_w - 8.0) * 0.5
+    _frame_button(mobile_content, "BudgetPlan", "BUDGET", Rect2(18, 720, lower_w, 48), _show_view.bind("budget"), false, false, 10)
+    _frame_button(mobile_content, "FundingDetail", "FUNDING DETAILS", Rect2(26 + lower_w, 720, lower_w, 48), _show_view.bind("funding"), false, true, 10)
+    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 790.0)
+    mobile_content.size.y = maxf(mobile_content.size.y, 790.0)
 
 func _build_mobile_property() -> void:
     var catalog: Array = _building_catalog()
@@ -1477,6 +1487,9 @@ func _build_mobile_settings() -> void:
     _label(save, "Auto", "AUTOSAVE", Rect2(16,38,180,16), 11, "text", 600)
     _label(save, "AutoMeta", "Every 30s + app background", Rect2(16,58,214,14), 9, "muted", 400)
     _frame_button(save, "AutosaveState", "ON", Rect2(inner_w-116,30,98,48), _save_company)
+    _frame_button(mobile_content, "AccessibilityDetail", "ACCESSIBILITY OPTIONS", Rect2(18,852,inner_w,48), _show_view.bind("accessibility"), false, true, 10)
+    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 922.0)
+    mobile_content.size.y = maxf(mobile_content.size.y, 922.0)
 
 func _toggle(parent_node: Node, name: String, pos: Vector2, on: bool, callback: Callable) -> void:
     var track = Panel.new()
@@ -2311,6 +2324,24 @@ func _open_screen(screen_name: String) -> void:
     var manager = _screen_manager()
     if manager != null and manager.has_method("show_screen"):
         manager.show_screen(screen_name)
+
+func _unhandled_input(event: InputEvent) -> void:
+    if not event.is_action_pressed("ui_cancel"):
+        return
+    var manager = _screen_manager()
+    if manager != null and manager.has_method("get_active_screen_name") and not str(manager.get_active_screen_name()).is_empty():
+        return
+    var figma_flow = get_node_or_null("FigmaFlowBridge")
+    if figma_flow != null and figma_flow.has_method("supports") and bool(figma_flow.supports(active_view)):
+        if active_view == "pause":
+            _show_view("live")
+        else:
+            _show_view(str(figma_flow.back_target(active_view)))
+    elif active_view != "live":
+        _show_view("live")
+    else:
+        _show_view("pause")
+    get_viewport().set_input_as_handled()
 
 func _set_theme(mode: String) -> void:
     var manager = _theme_manager()
