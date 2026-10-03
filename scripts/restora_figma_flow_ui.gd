@@ -11,7 +11,7 @@ const CUSTOM_VIEWS := [
     "employee_list", "employee_detail", "hiring", "assign_employee",
     "contract_market", "contract_detail", "active_contracts",
     "supply_chain", "supplier_compare", "inventory",
-    "budget", "funding", "region_overview", "property_acquisition",
+    "budget", "funding", "financial_health", "region_overview", "property_acquisition",
     "infrastructure_roadmap", "company_progress", "milestones", "alliances",
     "corporate_strategy", "world_power", "headquarters", "legacy", "endgame",
     "reports", "notifications", "accessibility", "pause", "day_summary",
@@ -29,7 +29,7 @@ const NAV_ACTIONS := [
     "restoration_confirm", "before_after", "business_list", "business_overview", "production",
     "employee_list", "employee_detail", "hiring", "assign_employee", "contract_market",
     "contract_detail", "active_contracts", "supply_chain", "supplier_compare", "inventory",
-    "budget", "funding", "region_overview", "property_acquisition", "infrastructure_roadmap",
+    "budget", "funding", "financial_health", "region_overview", "property_acquisition", "infrastructure_roadmap",
     "company_progress", "milestones", "alliances", "corporate_strategy", "world_power",
     "headquarters", "legacy", "endgame", "reports", "notifications", "accessibility",
     "pause", "day_summary", "level_up", "restoration_complete", "insufficient_funds",
@@ -224,6 +224,16 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
                 [["CASH", _money(cash)], ["DEBT", _money(debt)], ["REP", str(rep)]],
                 ["Compare debt, repayment and investor options before committing.", "All accepted funding flows through the existing finance command system."],
                 [["TAKE LOAN", "take_loan", true], ["REPAY", "repay_loan", false], ["INVESTOR", "request_investor", false]])
+        "financial_health":
+            var health := _bankruptcy_snapshot()
+            var health_state := str(health.get("state", "stable"))
+            var health_actions: Array = [["FUNDING OPTIONS", "funding", true], ["FINANCE", "finance", false]]
+            if health_state != "stable":
+                health_actions = [["OPEN RECOVERY CENTER", "recovery_center", true], ["FUNDING OPTIONS", "funding", false], ["FINANCE", "finance", false]]
+            return _spec("Financial Health", health_state.replace("_", " ").to_upper(),
+                [["STATE", health_state.replace("_", " ").capitalize()], ["DISTRESS", "%d/100" % int(round(float(health.get("distress_score", 0.0))))], ["RUNWAY", _runway_text(health)]],
+                _financial_health_lines(health),
+                health_actions)
         "region_overview":
             return _spec("Region Overview", current_region,
                 [["REP", str(rep)], ["PRESENCE", str(region_presence)], ["ROUTES", str(trade_routes)]],
@@ -240,14 +250,16 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
                 ["Electricity · capacity", "Roads · logistics", "Security · risk", "Water · business unlocks", "Communications · contracts"],
                 [["UPGRADE REGION", "upgrade_region", true], ["OPEN INFRASTRUCTURE", "infrastructure_manager", false]])
         "company_progress":
-            return _spec("Company Progress", "ONE PROPERTY → REGIONAL ENTERPRISE",
-                [["LEVEL", str(_company_level())], ["REP", str(rep)], ["VALUE", _money(worth)]],
-                ["%d properties owned" % _owned_properties(), "%d staff" % employees, "%d active contracts" % contracts],
-                [["REGIONS", "world", true], ["MILESTONES", "milestones", false], ["PROGRESSION DETAIL", "progression_manager", false]])
+            var current_level := _company_level()
+            var layer_target := _progression_primary_target(current_level)
+            return _spec("Company Progress", _progression_layer_name(current_level).to_upper(),
+                [["LEVEL", str(current_level)], ["REP", str(rep)], ["VALUE", _money(worth)]],
+                _company_progress_lines(current_level, employees, contracts),
+                [["OPEN CURRENT LAYER", layer_target, true], ["MILESTONES", "milestones", false], ["PROGRESSION DETAIL", "progression_manager", false]])
         "milestones":
-            return _spec("Milestones / Collection", "LEGACY AND PRESTIGE",
+            return _spec("Milestones / Collection", "RECORDED COMPANY HISTORY",
                 [["REP", str(rep)], ["LEVEL", str(_company_level())], ["RESTORED", "%d%%" % progress]],
-                ["First Restoration", "Reliable Operator", "Deal Maker", "Regional Builder"],
+                _milestone_lines(),
                 [["OPEN COLLECTION", "collection_manager", true], ["COMPANY PROGRESS", "company_progress", false]])
         "alliances":
             return _spec("Alliances", "TRUST · INFLUENCE · CONFLICT",
@@ -311,10 +323,11 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
                 ["Property · %d%% restored" % progress, "Contracts · %d active" % contracts, "Day %d is now open." % day],
                 [["CONTINUE", "continue_after_day", true], ["REVIEW", "reports", false]], true)
         "level_up":
-            return _spec("Level-Up / Unlock", "COMPANY LEVEL %d" % _company_level(),
-                [["LEVEL", str(_company_level())], ["REP", str(rep)], ["VALUE", _money(worth)]],
-                ["New systems are unlocked by real progression state.", "Explore the next region or return to the company overview."],
-                [["EXPLORE REGIONS", "world", true], ["HOME", "live", false]], true)
+            var reached_level := _company_level()
+            return _spec("Level-Up / Unlock", "COMPANY LEVEL %d · %s" % [reached_level, _progression_layer_name(reached_level).to_upper()],
+                [["LEVEL", str(reached_level)], ["REP", str(rep)], ["VALUE", _money(worth)]],
+                _level_up_lines(reached_level),
+                [["OPEN NEW LAYER", _progression_primary_target(reached_level), true], ["COMPANY PROGRESS", "company_progress", false], ["HOME", "live", false]], true)
         "restoration_complete":
             return _spec("Restoration Complete", property_name,
                 [["VALUE", _money(_property_value())], ["RESTORED", "100%"], ["REP", str(rep)]],
@@ -356,7 +369,7 @@ func back_target(view_name: String) -> String:
         "assign_employee": return "employee_detail"
         "contract_detail", "active_contracts": return "contract_market"
         "supplier_compare", "inventory": return "supply_chain"
-        "budget", "funding": return "finance"
+        "budget", "funding", "financial_health": return "finance"
         "region_overview", "infrastructure_roadmap": return "world"
         "property_acquisition": return "region_overview"
         "company_progress", "milestones", "alliances", "corporate_strategy", "legacy", "endgame", "reports", "notifications": return "more"
@@ -527,6 +540,14 @@ func _dispatch(action: String, hud: Node) -> void:
         "request_investor":
             _game_call("request_investment")
             hud.call("open_figma_view", "funding")
+        "recovery_center":
+            var distress := _bankruptcy_node()
+            if distress != null and distress.has_method("show_recovery_center") and bool(distress.show_recovery_center()):
+                _message("Corporate recovery center opened.")
+            else:
+                _message("No active financial distress requires the recovery center.")
+        "diplomacy_manager":
+            hud.call("_open_screen", "RenewDiplomacyUI")
         "upgrade_region":
             _game_call("upgrade_regional_infrastructure")
             hud.call("open_figma_view", "infrastructure_roadmap")
@@ -650,6 +671,173 @@ func _service_node(service_name: String) -> Node:
         if resolved is Node:
             return resolved
     return null
+
+func _progression_node() -> Node:
+    var game := _game()
+    if game != null:
+        var local := game.get_node_or_null("Systems/StrategicProgression")
+        if local != null:
+            return local
+    return _service_node("RenewProgressionSystem")
+
+func _progression_layer_name(level: int) -> String:
+    var layers := {
+        1: "Restoration & Core Operations",
+        2: "Employees, Contracts & Finance",
+        3: "Regions, Branches & Supply Chain",
+        4: "Competitors, Ownership & Alliances",
+        5: "Diplomacy, Joint Ventures & Trade",
+        6: "Infrastructure, Technology & Research",
+        7: "Acquisitions, Mergers & Corporate Strategy",
+        8: "Rankings, World Power & Headquarters",
+        9: "Museum, Collections & Legacy",
+        10: "Prestige & Endgame"
+    }
+    return str(layers.get(clampi(level, 1, 10), "Company Progress"))
+
+func _progression_features(level: int) -> Array:
+    var progression := _progression_node()
+    if progression != null and progression.has_method("get_features_for_level"):
+        var features = progression.get_features_for_level(level)
+        if features is Array:
+            return features.duplicate(true)
+    var fallback := {
+        1: ["restoration", "core_operations"],
+        2: ["employees", "contracts", "finance"],
+        3: ["regions", "branches", "supply_chain"],
+        4: ["competitors", "ownership", "alliances"],
+        5: ["diplomacy", "joint_ventures", "trade"],
+        6: ["infrastructure", "technology", "research"],
+        7: ["acquisitions", "mergers", "corporate_strategy"],
+        8: ["rankings", "world_power", "headquarters"],
+        9: ["museum", "collections", "legacy"],
+        10: ["prestige", "endgame"]
+    }
+    var features = fallback.get(clampi(level, 1, 10), [])
+    return features.duplicate(true) if features is Array else []
+
+func _feature_text(features: Array) -> String:
+    var names: Array[String] = []
+    for feature in features:
+        names.append(str(feature).replace("_", " ").capitalize())
+    return ", ".join(names)
+
+func _progression_primary_target(level: int) -> String:
+    match clampi(level, 1, 10):
+        1: return "property"
+        2: return "employee_list"
+        3: return "world"
+        4: return "alliances"
+        5: return "diplomacy_manager"
+        6: return "infrastructure_roadmap"
+        7: return "corporate_strategy"
+        8: return "world_power"
+        9: return "legacy"
+        10: return "endgame"
+    return "company_progress"
+
+func _company_progress_lines(level: int, employees: int, contracts: int) -> Array:
+    var lines: Array = [
+        "Current layer · %s." % _progression_layer_name(level),
+        "Current unlocks · %s." % _feature_text(_progression_features(level)),
+        "%d properties owned · %d staff · %d active contract%s." % [_owned_properties(), employees, contracts, "" if contracts == 1 else "s"]
+    ]
+    var progression := _progression_node()
+    if progression != null and progression.has_method("get_progress"):
+        var progress = progression.get_progress()
+        if progress is Dictionary:
+            var next_threshold := int(progress.get("next_threshold", -1))
+            var xp := int(progress.get("xp", 0))
+            if next_threshold >= 0 and level < 10:
+                lines.append("Next · Level %d %s at %d XP · %d XP remaining." % [level + 1, _progression_layer_name(level + 1), next_threshold, maxi(0, next_threshold - xp)])
+            else:
+                lines.append("Maximum company level reached · pursue victory and prestige.")
+            return lines
+    if level < 10:
+        lines.append("Next · Level %d %s." % [level + 1, _progression_layer_name(level + 1)])
+    else:
+        lines.append("Maximum company level reached · pursue victory and prestige.")
+    return lines
+
+func _level_up_lines(level: int) -> Array:
+    var lines: Array = [
+        "Unlocked now · %s." % _feature_text(_progression_features(level)),
+        "Strategic layer · %s." % _progression_layer_name(level)
+    ]
+    if level < 10:
+        lines.append("Next layer · Level %d %s." % [level + 1, _progression_layer_name(level + 1)])
+    else:
+        lines.append("Final company level reached · victory paths and prestige are now the long-term objective.")
+    return lines
+
+func _milestone_lines() -> Array:
+    var raw = _state_value("progression", "milestones", [])
+    var lines: Array = []
+    if raw is Array:
+        for item in raw:
+            if item is Dictionary:
+                lines.append(str((item as Dictionary).get("title", (item as Dictionary).get("id", "Milestone"))))
+            else:
+                lines.append(str(item).replace("_", " ").capitalize())
+    elif raw is Dictionary:
+        var keys: Array = (raw as Dictionary).keys()
+        keys.sort()
+        for key in keys:
+            var record = (raw as Dictionary)[key]
+            if record is Dictionary:
+                var title := str((record as Dictionary).get("title", str(key).replace("_", " ").capitalize()))
+                lines.append(title)
+            else:
+                lines.append(str(key).replace("_", " ").capitalize())
+    if lines.is_empty():
+        lines.append("No major milestone has been recorded yet.")
+    while lines.size() > 4:
+        lines.pop_front()
+    return lines
+
+func _bankruptcy_node() -> Node:
+    var game := _game()
+    if game != null:
+        var local := game.get_node_or_null("Systems/BankruptcySystem")
+        if local != null:
+            return local
+    return get_node_or_null("/root/Renew/Systems/BankruptcySystem")
+
+func _bankruptcy_snapshot() -> Dictionary:
+    var distress := _bankruptcy_node()
+    if distress != null and distress.has_method("status"):
+        var snapshot = distress.status()
+        if snapshot is Dictionary:
+            return snapshot
+    return {"state": "stable", "distress_score": 0.0, "cash_runway": INF, "covenant_breaches": [], "restructuring_plan": {}}
+
+func _runway_text(health: Dictionary) -> String:
+    var runway := float(health.get("cash_runway", INF))
+    return "∞ days" if is_inf(runway) else "%.1f days" % runway
+
+func _financial_health_lines(health: Dictionary) -> Array:
+    var state_name := str(health.get("state", "stable"))
+    var breaches = health.get("covenant_breaches", [])
+    var breach_text := "none"
+    if breaches is Array and not breaches.is_empty():
+        var names: Array[String] = []
+        for breach in breaches:
+            names.append(str(breach).replace("_", " "))
+        breach_text = ", ".join(names)
+    if state_name == "stable":
+        return [
+            "No active financial-distress state is recorded.",
+            "Cash runway · %s · covenant breaches · %s." % [_runway_text(health), breach_text],
+            "Use Funding before liquidity pressure becomes a formal recovery problem."
+        ]
+    var plan = health.get("restructuring_plan", {})
+    var plan_id := str((plan as Dictionary).get("id", "not opened")) if plan is Dictionary else "not opened"
+    return [
+        "Current state · %s · distress score %.1f/100." % [state_name.replace("_", " ").capitalize(), float(health.get("distress_score", 0.0))],
+        "Cash runway · %s · covenant breaches · %s." % [_runway_text(health), breach_text],
+        "Recovery plan · %s." % plan_id,
+        "Open Corporate Recovery for restructuring, refinancing, rescue capital, downsizing or orderly exit actions."
+    ]
 
 func _corporate_strategy_lines() -> Array:
     var ownership = _state_value("ownership", "holdings", [])
