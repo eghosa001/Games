@@ -53,7 +53,7 @@ func _run()->void:
     check("fresh BUSINESS routes to restoration first",fresh_business_content.find_child("ContinueRestoration",true,false)!=null)
     check("fresh BUSINESS does not offer premature business selection",fresh_business_content.find_child("ChooseBusiness",true,false)==null)
     check("fresh BUSINESS keeps commercial controls locked",fresh_business_content.find_child("OpenCommercial",true,false)==null)
-    check("fresh BUSINESS keeps equipment controls locked",fresh_business_content.find_child("OpenEquipment",true,false)==null)
+    check("BUSINESS exposes a direct operations toolkit",fresh_business_content.find_child("BusinessToolkit",true,false)!=null)
 
     var expected:=["HOME","BUSINESS","PROPERTY","FINANCE","MORE"]
     var tabs:Array=hud.get("mode_buttons")
@@ -74,7 +74,8 @@ func _run()->void:
             check("%s content contained" % target,_inside(hud.get("mobile_scroll") as Control,target))
     root.size=Vector2i(390,844);hud.open_figma_view("more");await process_frame
     var content:=hud.get("mobile_content") as Control
-    check("More exposes fourteen premium command tiles including How to Play",content.find_children("MoreTile*","Panel",false,false).size()==14)
+    check("More groups enterprise commands into four readable sections",content.find_children("MoreSection*","Panel",false,false).size()==4)
+    check("More still exposes How to Play",content.find_child("Openguide",true,false) is Button)
     check("3D world is not mounted in production",game.get_node_or_null("World3D")==null)
     check("legacy HOME label absent",not _tree_has_text(content,"HOME"))
 
