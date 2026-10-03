@@ -8,6 +8,18 @@ const MOBILE_SIZE = Vector2i(390,844)
 const TABLET_SIZE = Vector2i(834,1194)
 const DESKTOP_SIZE = Vector2i(1280,720)
 const VIEWS = ["live","property","operate","finance","empire","world","portfolio","intelligence","more","settings"]
+const FIGMA_DETAIL_VIEWS = [
+    "launch","new_game","continue_game","onboarding",
+    "property_overview","restoration_plan","restoration_confirm","before_after",
+    "business_list","business_overview","production",
+    "employee_list","employee_detail","hiring","assign_employee",
+    "contract_market","contract_detail","active_contracts",
+    "supply_chain","supplier_compare","inventory","budget","funding",
+    "region_overview","property_acquisition","infrastructure_roadmap",
+    "company_progress","milestones","alliances","reports","notifications",
+    "accessibility","pause","day_summary","level_up","restoration_complete",
+    "insufficient_funds","offline_error","loading","empty_states"
+]
 const DEEP_SCREENS = [
     "ContractPanel","HeadquartersPanel","TechnologyPanel","AlliancePanel","EmployeePanel",
     "CollectionPanel","LiveOpsPanel","HistoryPanel","NewsPanel","InfrastructurePanel",
@@ -18,7 +30,7 @@ const DEEP_SCREENS = [
     "SaveLoadPanel","RenewDiplomacyUI","CustomerSegmentsUI"
 ]
 const OUTPUT_DIR = "res://artifacts/visual-audit"
-const EXPECTED_CAPTURES = 77
+const EXPECTED_CAPTURES = 117
 
 var game: Node
 var hud: Node
@@ -96,6 +108,23 @@ func _run() -> void:
             manager.hide_all_screens()
             await _settle(1)
 
+    # The new Figma detail/decision flows are light-first. Capture every one
+    # at the production mobile size so clipping, touch layout and rendering
+    # regressions cannot hide behind source-only tests.
+    manager.hide_all_screens()
+    theme.set_mode("light")
+    root.size = MOBILE_SIZE
+    await _settle(2)
+    hud._layout_responsive()
+    skin._run_theme_refresh()
+    await _settle(2)
+    for view in FIGMA_DETAIL_VIEWS:
+        hud.open_figma_view(view)
+        manager.hide_all_screens()
+        skin._run_theme_refresh()
+        await _settle(3)
+        await _capture("light_figma_%s" % view, MOBILE_SIZE)
+
     manager.hide_all_screens()
     theme.set_mode("dark")
     root.size = TABLET_SIZE
@@ -157,6 +186,7 @@ func _write_manifest() -> void:
     file.store_line("RESTORA FIGMA ALL-SCREEN VISUAL AUDIT")
     file.store_line("Primary mobile views: %d x 2 themes" % VIEWS.size())
     file.store_line("Navigable management screens: %d x 2 themes" % DEEP_SCREENS.size())
+    file.store_line("Figma detail/decision screens: %d x light production theme" % FIGMA_DETAIL_VIEWS.size())
     file.store_line("Responsive references: tablet LIVE + desktop LIVE dark/light")
     file.store_line("Expected screenshots: %d" % EXPECTED_CAPTURES)
     file.store_line("")
