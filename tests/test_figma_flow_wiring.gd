@@ -88,6 +88,9 @@ func _run() -> void:
     hud.open_figma_view("property_overview")
     await process_frame
     check("normal Figma detail restores primary navigation", (hud.get("bottom_nav") as Control).visible)
+    var property_detail := hud.get("mobile_content") as Control
+    check("detail screen removes overlapping notification control", property_detail.get_node_or_null("NotificationsButton") == null)
+    check("detail screen keeps one top-right back control", property_detail.get_node_or_null("FlowBack") is Button)
 
     if state != null:
         state.set_value("player", "day", 7)
@@ -184,6 +187,10 @@ func _run() -> void:
         check("budget action persists a real finance plan", plan is Dictionary and int(plan.get("reserve", 0)) == 25)
 
     check("contract detail back chain is stable", str(bridge.back_target("contract_detail")) == "contract_market")
+    check("business employee list returns to Business hub", str(bridge.back_target("employee_list")) == "operate")
+    check("business contract market returns to Business hub", str(bridge.back_target("contract_market")) == "operate")
+    check("business supply chain returns to Business hub", str(bridge.back_target("supply_chain")) == "operate")
+    check("infrastructure returns to World hub", str(bridge.back_target("infrastructure_roadmap")) == "world")
     check("restoration confirmation back chain is stable", str(bridge.back_target("restoration_confirm")) == "restoration_plan")
     check("accessibility back chain is stable", str(bridge.back_target("accessibility")) == "settings")
 
