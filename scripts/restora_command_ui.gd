@@ -1493,7 +1493,7 @@ func _build_more_section(title: String, items: Array, y: float, inner_w: float, 
         _label(section, "RowArrow%d" % i, "›", Rect2(inner_w - 50, row_y + 14, 26, 26), 18, "muted" if locked else "gold", 700, HORIZONTAL_ALIGNMENT_CENTER)
         var target := str(item[2])
         var hit: Button
-        if ["world","intelligence","settings","guide","employee_list","contract_market","supply_chain","infrastructure_roadmap","milestones","alliances","reports","notifications","company_progress","level_up"].has(target):
+        if ["world","intelligence","settings","guide","employee_list","contract_market","supply_chain","infrastructure_roadmap","milestones","alliances","reports","notifications","company_progress","level_up","day_summary"].has(target):
             hit = _transparent_button(section, "Open"+target, Rect2(0, row_y, inner_w, row_h), _show_view.bind(target))
         else:
             hit = _transparent_button(section, "Open"+target, Rect2(0, row_y, inner_w, row_h), _open_screen.bind(target))
