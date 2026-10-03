@@ -542,12 +542,7 @@ func _layout_responsive() -> void:
     if _layout_kind == "mobile":
         var size = _layout_size()
         var canvas_w = minf(MOBILE_DESIGN_W, size.x)
-        var reserved_nav: float = 0.0 if _figma_view_is_immersive() else (MOBILE_NAV_H + MOBILE_NAV_BOTTOM)
-        var scroll_h = maxf(120.0, size.y - reserved_nav)
-        var expected_width = canvas_w
-        if scroll_h < MOBILE_CONTENT_H and is_equal_approx(canvas_w, size.x):
-            expected_width = maxf(240.0, canvas_w - 8.0)
-        if mobile_content != null and not is_equal_approx(mobile_content.custom_minimum_size.x, expected_width):
+        if mobile_content != null and not is_equal_approx(mobile_content.custom_minimum_size.x, canvas_w):
             _rebuild_current()
         else:
             _layout_mobile_host()
@@ -683,11 +678,6 @@ func _build_mobile_host() -> void:
     var canvas_w = minf(MOBILE_DESIGN_W, size.x)
     var x0 = floor((size.x - canvas_w) * 0.5)
     var scroll_h = maxf(120.0, size.y - (MOBILE_NAV_H + MOBILE_NAV_BOTTOM))
-    var content_w = canvas_w
-    # When the canvas consumes the full narrow viewport and vertical scrolling is
-    # required, reserve Godot's 8px scrollbar so the host never grows off-screen.
-    if scroll_h < MOBILE_CONTENT_H and is_equal_approx(canvas_w, size.x):
-        content_w = maxf(240.0, canvas_w - 8.0)
 
     mobile_scroll = ScrollContainer.new()
     mobile_scroll.name = "ProductionScroll"
@@ -696,14 +686,17 @@ func _build_mobile_host() -> void:
     mobile_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
     mobile_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
     mobile_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
+    mobile_scroll.follow_focus = false
     mobile_scroll.clip_contents = true
-    mobile_scroll.scroll_deadzone = 8
+    mobile_scroll.scroll_deadzone = 2
+    mobile_scroll.scroll_vertical_custom_step = 72.0
     root.add_child(mobile_scroll)
 
     mobile_content = Control.new()
     mobile_content.name = "ProductionContent"
-    mobile_content.custom_minimum_size = Vector2(content_w, MOBILE_CONTENT_H)
-    mobile_content.size = Vector2(content_w, MOBILE_CONTENT_H)
+    mobile_content.custom_minimum_size = Vector2(canvas_w, MOBILE_CONTENT_H)
+    mobile_content.size = Vector2(canvas_w, MOBILE_CONTENT_H)
+    mobile_content.mouse_filter = Control.MOUSE_FILTER_PASS
     mobile_scroll.add_child(mobile_content)
 
     _build_bottom_nav(x0, canvas_w, size.y)
@@ -830,9 +823,10 @@ func _style(bg: Color, border: Color, radius: int, border_width = 1) -> StyleBox
     if border_width > 0:
         s.set_border_width(SIDE_TOP, maxi(border_width, 2))
     s.set_corner_radius_all(radius)
-    s.shadow_color = Color(0, 0, 0, 0.26 if not _is_light_theme() else 0.11)
-    s.shadow_size = 9
-    s.shadow_offset = Vector2(0, 4)
+    var mobile_surface := _layout_kind == "mobile"
+    s.shadow_color = Color(0, 0, 0, (0.12 if not _is_light_theme() else 0.055) if mobile_surface else (0.26 if not _is_light_theme() else 0.11))
+    s.shadow_size = 3 if mobile_surface else 9
+    s.shadow_offset = Vector2(0, 1) if mobile_surface else Vector2(0, 4)
     return s
 
 func _solid_round(color: Color, radius: int) -> StyleBoxFlat:
@@ -924,6 +918,7 @@ func _transparent_button(parent_node: Node, name: String, rect: Rect2, callback:
     b.position = fitted.position
     b.size = fitted.size
     b.focus_mode = Control.FOCUS_ALL
+    b.mouse_filter = Control.MOUSE_FILTER_PASS
     b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
     var empty = StyleBoxEmpty.new()
     b.add_theme_stylebox_override("normal", empty)
@@ -949,6 +944,7 @@ func _frame_button(parent_node: Node, name: String, text_value: String, rect: Re
     b.position = fitted.position
     b.size = fitted.size
     b.focus_mode = Control.FOCUS_ALL
+    b.mouse_filter = Control.MOUSE_FILTER_PASS
     b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
     b.add_theme_font_override("font", _font(600))
     b.add_theme_font_size_override("font_size", font_size)
@@ -994,6 +990,7 @@ func _header(title: String, subtitle: String, right_text = "", status_role = "go
     alerts.position = Vector2(w - 56, 16)
     alerts.size = Vector2(38, 38)
     alerts.focus_mode = Control.FOCUS_ALL
+    alerts.mouse_filter = Control.MOUSE_FILTER_PASS
     alerts.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
     alerts.tooltip_text = "Notifications"
     alerts.icon = _asset_texture(ICON_ROOT + "decisions.svg")
@@ -1070,9 +1067,7 @@ func _build_mobile_operations() -> void:
     var business_ready := _business_open()
     var w = _content_width()
     var status_text := "OPERATING" if business_ready else ("READY TO OPEN" if property_ready else "RESTORATION REQUIRED")
-    _header("BUSINESS OPERATIONS", "%s • %s" % [_building_name().to_upper(), status_text], "", "success" if business_ready else "gold")
-    var day_chip = _panel(mobile_content, "DayChip", Rect2(w - 98, 20, 80, 34), "surface_2", "gold", 17)
-    _label(day_chip, "Day", "DAY %d" % _day(), Rect2(12, 10, 56, 14), 9, "gold", 600, HORIZONTAL_ALIGNMENT_CENTER)
+    _header("BUSINESS OPERATIONS", "%s • %s" % [_building_name().to_upper(), status_text], "DAY %d" % _day(), "success" if business_ready else "gold")
     var inner_w = w - 36.0
     var gap = 6.0
     var tile_w = (inner_w - gap) * 0.5
@@ -1127,19 +1122,17 @@ func _build_mobile_operations() -> void:
         var commercial_lock := "Restore the property first." if not property_ready else "Choose a business to unlock pricing, staff, marketing and contracts."
         _remember("commercial_body", _label(commercial, "Body", "LOCKED\n" + commercial_lock, Rect2(16, 44, inner_w - 32, 88), 12, "muted", 500))
 
-    var equip = _panel(mobile_content, "Equipment", Rect2(18, 562, inner_w, 112), "surface", "border", 18)
-    _label(equip, "Head", "EQUIPMENT HEALTH", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
-    if business_ready:
-        _label(equip, "Body", "Fleet Level %d  •  %d inputs  •  %d finished goods" % [maxi(1,_transport_level()), _inputs(), _goods()], Rect2(16, 46, inner_w - 32, 36), 12, "text", 600)
-        _label(equip, "Meta", "No maintenance action required.", Rect2(16, 76, inner_w - 32, 14), 10, "success", 600)
-        _transparent_button(equip, "OpenEquipment", Rect2(0, 0, inner_w, 112), _open_screen.bind("ProductionControlPanel"))
-    else:
-        _label(equip, "Body", "Equipment unlocks with the first operating business.", Rect2(16, 46, inner_w - 32, 36), 12, "muted", 500)
-        _label(equip, "Meta", "No equipment action required yet.", Rect2(16, 76, inner_w - 32, 14), 10, "muted", 600)
-
-    _frame_button(mobile_content, "BusinessPortfolio", "BUSINESS OVERVIEW", Rect2(18, 690, inner_w, 48), _show_view.bind("business_list"), false, true, 10)
-    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 760.0)
-    mobile_content.size.y = maxf(mobile_content.size.y, 760.0)
+    var toolkit = _panel(mobile_content, "BusinessToolkit", Rect2(18, 562, inner_w, 162), "surface", "border", 18)
+    _label(toolkit, "Head", "BUSINESS TOOLKIT", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
+    _label(toolkit, "Meta", "Move directly between the systems that run this business.", Rect2(16, 34, inner_w - 32, 18), 9, "muted", 400)
+    var tool_gap := 8.0
+    var tool_w := (inner_w - 40.0) * 0.5
+    _frame_button(toolkit, "BusinessOverview", "OVERVIEW", Rect2(16, 62, tool_w, 42), _show_view.bind("business_list"), false, true, 9)
+    _frame_button(toolkit, "BusinessTeam", "TEAM", Rect2(24 + tool_w, 62, tool_w, 42), _show_view.bind("employee_list"), false, false, 9)
+    _frame_button(toolkit, "BusinessContracts", "CONTRACTS", Rect2(16, 112, tool_w, 42), _show_view.bind("contract_market"), false, false, 9)
+    _frame_button(toolkit, "BusinessSupply", "SUPPLY", Rect2(24 + tool_w, 112, tool_w, 42), _show_view.bind("supply_chain"), false, false, 9)
+    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 744.0)
+    mobile_content.size.y = maxf(mobile_content.size.y, 744.0)
 
 func _build_mobile_finance() -> void:
     var w = _content_width()
@@ -1412,57 +1405,76 @@ func _build_mobile_intelligence() -> void:
 
 func _build_mobile_more() -> void:
     var w = _content_width()
-    _header("MORE COMMANDS", "MANAGE THE ENTERPRISE")
+    _header("MORE", "ENTERPRISE COMMAND CENTER")
     var inner_w = w - 36.0
-    var company = _panel(mobile_content, "CompanyProfile", Rect2(18, 82, inner_w, 94), "surface", "border", 18)
-    _label(company, "Name", _company_name(), Rect2(16,14,inner_w - 32,20), 15, "text", 700)
-    _label(company, "Meta", "Reputation %d • Company Level %d • Autosave on" % [_rep(), _company_level()], Rect2(16,42,inner_w - 32,14), 10, "muted", 400)
-    _label(company, "Health", "%d ACTIVE CONTRACT%s" % [_active_contracts(), "" if _active_contracts() == 1 else "S"], Rect2(16,68,180,14), 9, "success", 600)
+    var company = _panel(mobile_content, "CompanyProfile", Rect2(18, 82, inner_w, 88), "surface", "border", 18)
+    _label(company, "Name", _company_name(), Rect2(16, 12, inner_w - 32, 20), 15, "text", 700)
+    _label(company, "Meta", "Level %d • Reputation %d • %d active contract%s" % [_company_level(), _rep(), _active_contracts(), "" if _active_contracts() == 1 else "s"], Rect2(16, 38, inner_w - 32, 16), 9, "muted", 500)
+    _label(company, "Status", "AUTOSAVE ON • LOCAL PROGRESS SAFE", Rect2(16, 62, inner_w - 32, 14), 9, "success", 600)
 
     var progression_target := "level_up" if _pending_level_up else "company_progress"
-    var progression_body := "NEW LEVEL UNLOCKED • REVIEW" if _pending_level_up else "Company level and unlocks"
-    var tiles = [
-        ["HOW TO PLAY","Restore → Operate → Grow","guide",""],
-        ["EMPLOYEES","Staff, morale and assignments","employee_list","employees"],
-        ["CONTRACTS","Offers, capacity and deadlines","contract_market","contracts"],
-        ["SUPPLY CHAIN","Materials, suppliers and routes","supply_chain","supply_chain"],
-        ["REGIONS","Markets and expansion","world","regions"],
-        ["INFRASTRUCTURE","Long-term district upgrades","infrastructure_roadmap","infrastructure"],
-        ["COLLECTION","Milestones and legacy rewards","milestones","collections"],
-        ["ALLIANCES","Partners, trust and rivals","alliances","alliances"],
-        ["REPORTS","Performance and strategic signals","reports",""],
-        ["NOTIFICATIONS","Decisions that need attention","notifications",""],
-        ["PROGRESSION",progression_body,progression_target,""],
-        ["SAVE / LOAD","Profiles and recovery","SaveLoadPanel",""],
-        ["SETTINGS","Theme, audio, accessibility, privacy","settings",""],
-        ["INTELLIGENCE","Company and market signals","intelligence",""]
+    var progression_body := "New level unlocked — review" if _pending_level_up else "Company level and unlocks"
+    var sections = [
+        ["OPERATIONS", [
+            ["EMPLOYEES", "Staff, morale and assignments", "employee_list", "employees"],
+            ["CONTRACTS", "Offers, capacity and deadlines", "contract_market", "contracts"],
+            ["SUPPLY CHAIN", "Materials, suppliers and routes", "supply_chain", "supply_chain"]
+        ]],
+        ["GROWTH", [
+            ["REGIONS", "Markets and expansion", "world", "regions"],
+            ["INFRASTRUCTURE", "Long-term district upgrades", "infrastructure_roadmap", "infrastructure"],
+            ["ALLIANCES", "Partners, trust and rivals", "alliances", "alliances"],
+            ["COLLECTION", "Milestones and legacy rewards", "milestones", "collections"]
+        ]],
+        ["INSIGHTS", [
+            ["REPORTS", "Performance and strategic signals", "reports", ""],
+            ["NOTIFICATIONS", "Decisions that need attention", "notifications", ""],
+            ["PROGRESSION", progression_body, progression_target, ""],
+            ["INTELLIGENCE", "Company and market signals", "intelligence", ""]
+        ]],
+        ["SYSTEM", [
+            ["HOW TO PLAY", "Restore → Operate → Grow", "guide", ""],
+            ["SAVE / LOAD", "Profiles and recovery", "SaveLoadPanel", ""],
+            ["SETTINGS", "Theme, audio, accessibility and privacy", "settings", ""]
+        ]]
     ]
-    var rows := ceili(float(tiles.size()) / 2.0)
-    var required_height := 196.0 + float(rows) * 100.0 + 18.0
-    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, required_height)
-    mobile_content.size.y = maxf(mobile_content.size.y, required_height)
-    var gap = 8.0
-    var col_w = (inner_w - gap) * 0.5
-    for i in range(tiles.size()):
-        var col = i % 2
-        var row = floori(float(i) / 2.0)
-        var x = 18.0 + col * (col_w + gap)
-        var y = 196.0 + row * 100.0
-        var required_unlock := str(tiles[i][3])
+    var y := 186.0
+    for section_index in range(sections.size()):
+        y = _build_more_section(str(sections[section_index][0]), sections[section_index][1], y, inner_w, section_index)
+    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, y + 18.0)
+    mobile_content.size.y = maxf(mobile_content.size.y, y + 18.0)
+
+func _build_more_section(title: String, items: Array, y: float, inner_w: float, section_index: int) -> float:
+    var row_h := 58.0
+    var panel_h := 46.0 + float(items.size()) * row_h + 8.0
+    var section = _panel(mobile_content, "MoreSection%d" % section_index, Rect2(18, y, inner_w, panel_h), "surface", "border", 18)
+    _label(section, "Head", title, Rect2(16, 14, inner_w - 32, 14), 10, "gold", 700)
+    for i in range(items.size()):
+        var item: Array = items[i]
+        var required_unlock := str(item[3])
         var locked := not required_unlock.is_empty() and not _has_unlock(required_unlock)
-        var p = _panel(mobile_content, "MoreTile%d" % i, Rect2(x,y,col_w,90), "surface" if locked else ("selected" if i == 0 else "surface"), "border" if locked else ("plum" if i == 0 else "border"), 16)
-        _label(p, "Head", tiles[i][0], Rect2(14,14,col_w - 28,14), 10, "muted" if locked else ("gold" if i == 0 else "text"), 600)
-        var body_text := "Company level %d" % _unlock_level(required_unlock) if locked else str(tiles[i][1])
-        _label(p, "Body", body_text, Rect2(14,38,col_w - 28,40), 9, "muted", 400)
-        var target = str(tiles[i][2])
-        var open_button: Button
+        var row_y := 40.0 + float(i) * row_h
+        if i > 0:
+            var divider := ColorRect.new()
+            divider.position = Vector2(16, row_y - 1)
+            divider.size = Vector2(inner_w - 32, 1)
+            divider.color = _color("border")
+            divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
+            section.add_child(divider)
+        _label(section, "RowTitle%d" % i, str(item[0]), Rect2(16, row_y + 8, inner_w - 76, 16), 10, "muted" if locked else "text", 700)
+        var body_text := "Unlocks at company level %d" % _unlock_level(required_unlock) if locked else str(item[1])
+        _label(section, "RowBody%d" % i, body_text, Rect2(16, row_y + 28, inner_w - 76, 18), 9, "muted", 400)
+        _label(section, "RowArrow%d" % i, "›", Rect2(inner_w - 50, row_y + 14, 26, 26), 18, "muted" if locked else "gold", 700, HORIZONTAL_ALIGNMENT_CENTER)
+        var target := str(item[2])
+        var hit: Button
         if ["world","intelligence","settings","guide","employee_list","contract_market","supply_chain","infrastructure_roadmap","milestones","alliances","reports","notifications","company_progress","level_up"].has(target):
-            open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,90), _show_view.bind(target))
+            hit = _transparent_button(section, "Open"+target, Rect2(0, row_y, inner_w, row_h), _show_view.bind(target))
         else:
-            open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,90), _open_screen.bind(target))
-        open_button.disabled = locked
+            hit = _transparent_button(section, "Open"+target, Rect2(0, row_y, inner_w, row_h), _open_screen.bind(target))
+        hit.disabled = locked
         if locked:
-            open_button.tooltip_text = body_text
+            hit.tooltip_text = body_text
+    return y + panel_h + 12.0
 
 func _build_mobile_guide() -> void:
     if mobile_content != null:
@@ -1579,6 +1591,7 @@ func _transparent_text_button(parent_node: Node, name: String, text_value: Strin
     b.position = fitted.position
     b.size = fitted.size
     b.focus_mode = Control.FOCUS_ALL
+    b.mouse_filter = Control.MOUSE_FILTER_PASS
     b.flat = true
     b.add_theme_font_override("font", _font(600))
     b.add_theme_font_size_override("font_size", 9)
