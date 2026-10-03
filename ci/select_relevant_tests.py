@@ -24,6 +24,10 @@ RESTORA_FLOW_FILES = {
     "scripts/restora_figma_flow_ui.gd",
 }
 
+BANKRUPTCY_FILES = {
+    "scripts/bankruptcy_system.gd",
+}
+
 GROUPS = {
     "tutorial": {
         "patterns": [
@@ -217,6 +221,12 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         path in {"scripts/tutorial.gd", "scripts/tutorial_overlay.gd", "scripts/game_state.gd"}
         for path in changed
     )
+    bankruptcy_changed = any(path in BANKRUPTCY_FILES for path in changed)
+    other_economy_finance_changed = any(
+        path not in BANKRUPTCY_FILES
+        and any(matches(path, pat) for pat in GROUPS["economy_finance"]["patterns"])
+        for path in changed
+    )
 
     for name, cfg in GROUPS.items():
         # RESTORA's mobile/Figma command layer has a dedicated end-to-end flow
@@ -226,6 +236,8 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
             continue
         if name == "tutorial" and restora_flow_changed and not tutorial_code_changed:
             continue
+        if name == "economy_finance" and bankruptcy_changed and not other_economy_finance_changed:
+            continue
         if any(any(matches(path, pat) for pat in cfg["patterns"]) for path in changed):
             groups.append(name)
             tests.update(cfg["tests"])
@@ -233,6 +245,10 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     if restora_flow_changed:
         groups.append("restora_flow")
         tests.add("tests/test_figma_flow_wiring.gd")
+
+    if bankruptcy_changed:
+        groups.append("bankruptcy")
+        tests.add("tests/test_bankruptcy_system.gd")
 
     code_changed = any(
         p.endswith((".gd", ".tscn", ".tres", ".cfg", ".svg"))
