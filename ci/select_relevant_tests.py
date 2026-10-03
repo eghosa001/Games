@@ -213,12 +213,18 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         and path not in RESTORA_FLOW_FILES
         for path in changed
     )
+    tutorial_code_changed = any(
+        path in {"scripts/tutorial.gd", "scripts/tutorial_overlay.gd", "scripts/game_state.gd"}
+        for path in changed
+    )
 
     for name, cfg in GROUPS.items():
         # RESTORA's mobile/Figma command layer has a dedicated end-to-end flow
-        # regression. Do not fan these two files out into the generic UI suite
-        # unless another UI implementation file changed in the same task.
+        # regression. Do not fan these two files out into generic UI/tutorial
+        # suites unless those implementations also changed in the same task.
         if name == "ui" and restora_flow_changed and not other_ui_code_changed:
+            continue
+        if name == "tutorial" and restora_flow_changed and not tutorial_code_changed:
             continue
         if any(any(matches(path, pat) for pat in cfg["patterns"]) for path in changed):
             groups.append(name)
