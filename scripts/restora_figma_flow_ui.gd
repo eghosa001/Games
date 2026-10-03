@@ -653,7 +653,7 @@ func _service_node(service_name: String) -> Node:
 
 func _corporate_strategy_lines() -> Array:
     var ownership = _state_value("ownership", "holdings", [])
-    var holding_count := ownership.size() if ownership is Array else 0
+    var holding_count: int = ownership.size() if ownership is Array else 0
     var acquisition_count := int(_state_value("ownership", "acquisition_count", 0))
     return [
         "%d rival corporation%s currently tracked." % [_rival_count(), "" if _rival_count() == 1 else "s"],
