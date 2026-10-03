@@ -13,7 +13,7 @@ const CUSTOM_VIEWS := [
     "supply_chain", "supplier_compare", "inventory",
     "budget", "funding", "region_overview", "property_acquisition",
     "infrastructure_roadmap", "company_progress", "milestones", "alliances",
-    "corporate_strategy", "world_power", "headquarters", "legacy",
+    "corporate_strategy", "world_power", "headquarters", "legacy", "endgame",
     "reports", "notifications", "accessibility", "pause", "day_summary",
     "level_up", "restoration_complete", "insufficient_funds",
     "offline_error", "loading", "empty_states"
@@ -31,7 +31,7 @@ const NAV_ACTIONS := [
     "contract_detail", "active_contracts", "supply_chain", "supplier_compare", "inventory",
     "budget", "funding", "region_overview", "property_acquisition", "infrastructure_roadmap",
     "company_progress", "milestones", "alliances", "corporate_strategy", "world_power",
-    "headquarters", "legacy", "reports", "notifications", "accessibility",
+    "headquarters", "legacy", "endgame", "reports", "notifications", "accessibility",
     "pause", "day_summary", "level_up", "restoration_complete", "insufficient_funds",
     "offline_error", "loading", "empty_states"
 ]
@@ -277,7 +277,13 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
             return _spec("Legacy", "HISTORY · COLLECTIONS · PRESTIGE",
                 [["COLLECTED", str(legacy.get("collections", 0))], ["PRESTIGE", str(legacy.get("prestige_wins", 0))], ["LEVEL", str(_company_level())]],
                 _legacy_lines(legacy),
-                [["OPEN COLLECTION", "collection_manager", true], ["COMPANY HISTORY", "history_manager", false], ["VICTORY / PRESTIGE", "progression_manager", false]])
+                [["OPEN COLLECTION", "collection_manager", true], ["COMPANY HISTORY", "history_manager", false], ["PRESTIGE / ENDGAME", "endgame" if _company_level() >= 10 else "company_progress", false]])
+        "endgame":
+            var endgame := _endgame_snapshot()
+            return _spec("Prestige / Endgame", "TYCOON · MONOPOLIST · HEGEMON",
+                [["TYCOON", "%d%%" % int(endgame.get("tycoon_pct", 0))], ["MONOPOLIST", "%d%%" % int(endgame.get("monopolist_pct", 0))], ["HEGEMON", "%d%%" % int(endgame.get("hegemon_pct", 0))]],
+                _endgame_lines(endgame),
+                [["CHECK VICTORY", "check_victory", true], ["VICTORY DETAIL", "progression_manager", false], ["SAVE / NEW DYNASTY", "save_load_manager", false]])
         "reports":
             return _spec("Reports", "ANSWERS FOR THE NEXT STRATEGIC MOVE",
                 [["PROFIT", _money(profit)], ["VALUE", _money(worth)], ["DEBT", _money(debt)]],
@@ -353,7 +359,7 @@ func back_target(view_name: String) -> String:
         "budget", "funding": return "finance"
         "region_overview", "infrastructure_roadmap": return "world"
         "property_acquisition": return "region_overview"
-        "company_progress", "milestones", "alliances", "corporate_strategy", "legacy", "reports", "notifications": return "more"
+        "company_progress", "milestones", "alliances", "corporate_strategy", "legacy", "endgame", "reports", "notifications": return "more"
         "world_power": return "corporate_strategy"
         "headquarters": return "world_power"
         "accessibility": return "settings"
@@ -566,6 +572,19 @@ func _dispatch(action: String, hud: Node) -> void:
             hud.call("_open_screen", "HeadquartersPanel")
         "history_manager":
             hud.call("_open_screen", "HistoryPanel")
+        "save_load_manager":
+            hud.call("_open_screen", "SaveLoadPanel")
+        "check_victory":
+            var victory := get_node_or_null("/root/RenewVictorySystem")
+            if victory != null and victory.has_method("check_victory"):
+                var result = victory.check_victory()
+                if result is Dictionary and bool(result.get("ok", false)):
+                    _message("Victory achieved: %s." % str(result.get("path", "campaign")).capitalize())
+                elif result is Dictionary and bool(result.get("already", false)):
+                    _message("This campaign victory is already recorded.")
+                else:
+                    _message("No victory path is complete yet.")
+            hud.call("open_figma_view", "endgame")
         "dashboard_manager":
             hud.call("_open_screen", "DashboardPanel")
         "notifications_manager":
@@ -717,6 +736,33 @@ func _legacy_lines(legacy: Dictionary) -> Array:
         "Collection value · %s." % _money(int(legacy.get("collection_value", 0))),
         "Prestige victories bank permanent bonuses for future dynasties.",
         "History and progression remain readable without resetting the current company."
+    ]
+
+func _endgame_snapshot() -> Dictionary:
+    var victory := get_node_or_null("/root/RenewVictorySystem")
+    if victory == null:
+        return {"tycoon_pct": 0, "monopolist_pct": 0, "hegemon_pct": 0, "prestige_wins": 0, "starting_cash": 0, "starting_reputation": 0, "starting_research": 0}
+    var progress: Dictionary = victory.progress() if victory.has_method("progress") else {}
+    var tycoon: Dictionary = progress.get("tycoon", {}) if progress.get("tycoon", {}) is Dictionary else {}
+    var monopolist: Dictionary = progress.get("monopolist", {}) if progress.get("monopolist", {}) is Dictionary else {}
+    var hegemon: Dictionary = progress.get("hegemon", {}) if progress.get("hegemon", {}) is Dictionary else {}
+    var bonuses: Dictionary = victory.prestige_bonuses() if victory.has_method("prestige_bonuses") else {}
+    return {
+        "tycoon_pct": int(tycoon.get("pct", 0)),
+        "monopolist_pct": int(monopolist.get("pct", 0)),
+        "hegemon_pct": int(hegemon.get("pct", 0)),
+        "prestige_wins": int(victory.prestige_wins()) if victory.has_method("prestige_wins") else 0,
+        "starting_cash": int(bonuses.get("starting_cash", 0)),
+        "starting_reputation": int(bonuses.get("starting_reputation", 0)),
+        "starting_research": int(bonuses.get("starting_research", 0))
+    }
+
+func _endgame_lines(endgame: Dictionary) -> Array:
+    return [
+        "Complete any victory path: build a $1M Tycoon empire, dominate ownership as a Monopolist, or lead alliance challenges as a Hegemon.",
+        "Prestige victories bank permanent bonuses without silently resetting the current campaign.",
+        "Current dynasty bonuses · +%s cash · +%d reputation · +%d research." % [_money(int(endgame.get("starting_cash", 0))), int(endgame.get("starting_reputation", 0)), int(endgame.get("starting_research", 0))],
+        "Starting a new dynasty remains a separate confirmed action in Save / Load."
     ]
 
 func _state_value(domain: String, key: String, default_value):
