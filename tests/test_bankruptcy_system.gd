@@ -28,7 +28,18 @@ func run() -> void:
     root.add_child(distress)
     await process_frame
 
-    distress.state = "covenant_pressure"
+    check(not bool(distress.is_recovery_center_open()), "Healthy company does not show recovery center")
+    distress.state = "cash_crisis"
+    distress.recovery_center_open = false
+    distress._refresh_distress_ui()
+    check(not bool(distress.distress_layer.visible), "Cash-crisis warning does not forcibly block company navigation")
+    check(bool(distress.show_recovery_center()), "Player can explicitly open recovery center during cash crisis")
+    check(bool(distress.distress_layer.visible), "Explicit recovery center request shows recovery controls")
+    distress.hide_recovery_center()
+    check(not bool(distress.distress_layer.visible), "Player can return to company management from recovery center")
+
+    distress._transition("covenant_pressure", "regression covenant pressure")
+    check(bool(distress.is_recovery_center_open()), "Covenant pressure automatically opens critical recovery center")
     check(bool(distress.begin_restructuring("regression").get("ok", false)), "Formal restructuring starts")
     check(str(distress.state) == "restructuring", "State enters restructuring")
 
