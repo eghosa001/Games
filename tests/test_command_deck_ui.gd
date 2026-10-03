@@ -38,9 +38,12 @@ func run() -> void:
     check(employee_head!=null and employee_head.text=="EMPLOYEES", "More exposes Figma employee management")
     check(contract_head!=null and contract_head.text=="CONTRACTS", "More exposes Figma contract management")
     check(supply_head!=null and supply_head.text=="SUPPLY CHAIN", "More exposes Figma supply management")
-    var employee_button:=employee_tile.find_child("Open*", "Button", true, false) as Button if employee_tile!=null else null
-    var infrastructure_button:=infrastructure_tile.find_child("Open*", "Button", true, false) as Button if infrastructure_tile!=null else null
-    var collection_button:=collection_tile.find_child("Open*", "Button", true, false) as Button if collection_tile!=null else null
+    var employee_buttons: Array[Node] = employee_tile.find_children("Open*", "Button", true, false) if employee_tile != null else []
+    var infrastructure_buttons: Array[Node] = infrastructure_tile.find_children("Open*", "Button", true, false) if infrastructure_tile != null else []
+    var collection_buttons: Array[Node] = collection_tile.find_children("Open*", "Button", true, false) if collection_tile != null else []
+    var employee_button := employee_buttons[0] as Button if not employee_buttons.is_empty() else null
+    var infrastructure_button := infrastructure_buttons[0] as Button if not infrastructure_buttons.is_empty() else null
+    var collection_button := collection_buttons[0] as Button if not collection_buttons.is_empty() else null
     check(employee_button!=null and employee_button.disabled, "Employees are progression-gated at founding")
     check(infrastructure_button!=null and infrastructure_button.disabled, "Infrastructure is progression-gated at founding")
     check(collection_button!=null and collection_button.disabled, "Collection is progression-gated at founding")
