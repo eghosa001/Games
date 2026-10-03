@@ -33,7 +33,7 @@ var _refresh_elapsed = 0.0
 var _last_signature = ""
 var _layout_kind = ""
 var _last_progress_level := -1
-var _last_day_seen := -1
+var _pending_level_up := false
 var _view_transition: Tween
 
 var _font_regular: SystemFont
@@ -71,29 +71,19 @@ func _process(delta: float) -> void:
     if _refresh_elapsed < 0.5:
         return
     _refresh_elapsed = 0.0
-    var current_day := _day()
-    if _last_day_seen < 0:
-        _last_day_seen = current_day
-    elif current_day > _last_day_seen:
-        _last_day_seen = current_day
-        if active_view != "day_summary":
-            _show_view("day_summary")
-            return
-    elif current_day < _last_day_seen:
-        _last_day_seen = current_day
     var sig = _state_signature()
     var current_level := _company_level()
-    if current_level != _last_progress_level:
-        # Do not destroy an in-progress player choice just because progression
-        # advanced in the background. The pending rebuild will happen after the
-        # transient modal closes (business launch already rebuilds explicitly).
-        if _transient_modal_open():
-            return
-        if _last_progress_level > 0 and current_level > _last_progress_level and active_view != "level_up":
-            _show_view("level_up")
-        else:
-            _rebuild_current()
-        return
+    if _last_progress_level < 0:
+        _last_progress_level = current_level
+    elif current_level != _last_progress_level:
+        var previous_level := _last_progress_level
+        _last_progress_level = current_level
+        if current_level > previous_level:
+            _pending_level_up = true
+        elif current_level < previous_level:
+            _pending_level_up = false
+    # Level-up is informational. Keep it queued until the player chooses the
+    # Progression notice; navigation must always obey the destination they tap.
     if sig != _last_signature:
         _last_signature = sig
         _refresh()
@@ -107,11 +97,21 @@ func _transient_modal_open() -> bool:
 
 func _bind_runtime_events() -> void:
     var realtime = get_node_or_null("/root/RenewRealTimeEconomySystem")
-    if realtime == null or not realtime.has_signal("service_error"):
+    if realtime == null:
         return
-    var callback := Callable(self, "_on_runtime_service_error")
-    if not realtime.is_connected("service_error", callback):
-        realtime.connect("service_error", callback)
+    if realtime.has_signal("service_error"):
+        var service_callback := Callable(self, "_on_runtime_service_error")
+        if not realtime.is_connected("service_error", service_callback):
+            realtime.connect("service_error", service_callback)
+    var calendar = realtime.get_node_or_null("WorldCalendarSystem")
+    if calendar != null and calendar.has_signal("day_rolled_over"):
+        var calendar_callback := Callable(self, "_on_world_calendar_day_rolled_over")
+        if not calendar.is_connected("day_rolled_over", calendar_callback):
+            calendar.connect("day_rolled_over", calendar_callback)
+
+func _on_world_calendar_day_rolled_over(_summary: Dictionary) -> void:
+    if active_view != "day_summary":
+        _show_view("day_summary")
 
 func _on_runtime_service_error(message: String) -> void:
     var state = _game_state()
@@ -578,7 +578,8 @@ func _rebuild_current() -> void:
         _build_mobile_host()
         _build_mobile_view()
         _normalize_mobile_content_extent()
-    _last_progress_level = _company_level()
+    if _last_progress_level < 0:
+        _last_progress_level = _company_level()
     _refresh()
     _animate_view_in()
 
@@ -600,6 +601,8 @@ func _animate_view_in() -> void:
 func _show_view(view_name: String) -> void:
     var previous_view: String = str(active_view)
     active_view = view_name
+    if view_name == "level_up":
+        _pending_level_up = false
     match view_name:
         "live":
             active_tab = 0
@@ -652,7 +655,8 @@ func _rebuild_mobile_content() -> void:
         mobile_scroll.scroll_vertical = 0
     _refresh_bottom_nav()
     _layout_mobile_host()
-    _last_progress_level = _company_level()
+    if _last_progress_level < 0:
+        _last_progress_level = _company_level()
     _last_signature = _state_signature()
     _refresh()
 
@@ -1415,6 +1419,8 @@ func _build_mobile_more() -> void:
     _label(company, "Meta", "Reputation %d • Company Level %d • Autosave on" % [_rep(), _company_level()], Rect2(16,42,inner_w - 32,14), 10, "muted", 400)
     _label(company, "Health", "%d ACTIVE CONTRACT%s" % [_active_contracts(), "" if _active_contracts() == 1 else "S"], Rect2(16,68,180,14), 9, "success", 600)
 
+    var progression_target := "level_up" if _pending_level_up else "company_progress"
+    var progression_body := "NEW LEVEL UNLOCKED • REVIEW" if _pending_level_up else "Company level and unlocks"
     var tiles = [
         ["HOW TO PLAY","Restore → Operate → Grow","guide",""],
         ["EMPLOYEES","Staff, morale and assignments","employee_list","employees"],
@@ -1426,7 +1432,7 @@ func _build_mobile_more() -> void:
         ["ALLIANCES","Partners, trust and rivals","alliances","alliances"],
         ["REPORTS","Performance and strategic signals","reports",""],
         ["NOTIFICATIONS","Decisions that need attention","notifications",""],
-        ["PROGRESSION","Company level and unlocks","company_progress",""],
+        ["PROGRESSION",progression_body,progression_target,""],
         ["SAVE / LOAD","Profiles and recovery","SaveLoadPanel",""],
         ["SETTINGS","Theme, audio, accessibility, privacy","settings",""],
         ["INTELLIGENCE","Company and market signals","intelligence",""]
@@ -1450,7 +1456,7 @@ func _build_mobile_more() -> void:
         _label(p, "Body", body_text, Rect2(14,38,col_w - 28,40), 9, "muted", 400)
         var target = str(tiles[i][2])
         var open_button: Button
-        if ["world","intelligence","settings","guide","employee_list","contract_market","supply_chain","infrastructure_roadmap","milestones","alliances","reports","notifications","company_progress"].has(target):
+        if ["world","intelligence","settings","guide","employee_list","contract_market","supply_chain","infrastructure_roadmap","milestones","alliances","reports","notifications","company_progress","level_up"].has(target):
             open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,90), _show_view.bind(target))
         else:
             open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,90), _open_screen.bind(target))

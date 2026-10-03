@@ -150,7 +150,7 @@ func _run() -> void:
     hud.open_figma_view("property")
     await _wait(2)
     var open_ops := _find_button(hud.get("mobile_content"), "OPEN OPERATIONS")
-    check(open_ops != null, "Open Operations action is reachable")
+    check(open_ops != null, "Open Operations remains reachable after progression updates")
     if open_ops != null:
         open_ops.pressed.emit()
     await _wait(3)
