@@ -16,15 +16,14 @@ func run()->void:
     var game:=scene.instantiate();root.add_child(game);current_scene=game
     await process_frame;await process_frame
     var hud:=game.get_node("UI/MainHUD")
-    hud.open_figma_view("more");await process_frame
+    hud.open_figma_view("alliances");await process_frame
     var content:=hud.get("mobile_content") as Control
-    var hit:=content.find_child("OpenCorporationsPanel",true,false) as Button
-    check(hit!=null,"Corporations command is present in MORE")
-    var corp:=hit.get_parent() as Control if hit!=null else null
+    var hit:=content.get_node_or_null("FlowAction1") as Button
+    check(hit!=null and hit.text=="CORPORATIONS","Corporations remains reachable from Figma Alliances")
     check(hit!=null and hit.size.y>=44.0,"Corporations command is touch reachable")
     if hit!=null:hit.pressed.emit();await process_frame
     var manager:=root.get_node_or_null("RenewUIScreenManager")
-    check(manager!=null and manager.get_active_screen_name()=="CorporationsPanel","Corporations opens from MORE")
+    check(manager!=null and manager.get_active_screen_name()=="CorporationsPanel","Corporations opens from Figma relationship flow")
     if manager!=null:manager.hide_all_screens()
     var goals:=await _key(game,KEY_G)
     check(goals.find("GOALS")>=0,"GOALS explicit shortcut remains")
