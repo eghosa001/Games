@@ -361,7 +361,7 @@ func _dispatch(action: String, hud: Node) -> void:
         "offline_error", "loading", "empty_states":
             hud.call("open_figma_view", action)
         "create_company":
-            _state_set("company", "name", "Hearth & Beam Restoration Co.")
+            _game_call("start_new_game")
             _state_set("tutorial", "figma_onboarding_seen", true)
             hud.call("open_figma_view", "onboarding")
         "start_home":
