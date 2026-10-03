@@ -146,3 +146,4 @@ func _finish() -> void:
         print("UI ARCHITECTURE TEST: PASS")
     quit(1 if failed > 0 else 0)
 # Focused validation: RESTORA mobile overlap, touch scroll and navigation hierarchy.
+# Focused rerun: typed mobile UX layout fix.

@@ -121,3 +121,4 @@ func _run() -> void:
     print("RUNTIME PARITY: %d checks, %d failures" % [checks, failed])
     quit(1 if failed > 0 else 0)
 # Focused validation: RESTORA mobile overlap, touch scroll and navigation hierarchy.
+# Focused rerun: typed mobile UX layout fix.
