@@ -262,6 +262,20 @@ func _layout_responsive() -> void:
         collapsed_button.hide()
         return
 
+    # On phones, the authored Figma Guide owns teaching. Keep the legacy
+    # tracker active for progression, but never cover the mobile command deck
+    # with its floating card.
+    if narrow:
+        panel.hide()
+        if tutorial.completed or not _compact_guide_allowed():
+            collapsed_button.hide()
+            return
+        collapsed_button.text = "GUIDE  %d/%d" % [mini(int(tutorial.step) + 1, tutorial.steps.size()), tutorial.steps.size()]
+        collapsed_button.size = Vector2(112.0, 48.0)
+        collapsed_button.position = Vector2(maxf(8.0, w - 124.0), maxf(8.0, h - 154.0))
+        collapsed_button.show()
+        return
+
     var compact_by_default := not _expanded_by_user
     if dismissed or compact_by_default:
         panel.hide()
@@ -269,13 +283,7 @@ func _layout_responsive() -> void:
             collapsed_button.hide()
             return
         collapsed_button.text = "GUIDE  %d/%d" % [mini(int(tutorial.step) + 1, tutorial.steps.size()), tutorial.steps.size()]
-        if narrow:
-            if not _compact_guide_allowed():
-                collapsed_button.hide()
-                return
-            collapsed_button.size = Vector2(112.0, 48.0)
-            collapsed_button.position = Vector2(maxf(8.0, w - 124.0), maxf(8.0, h - 154.0))
-        elif w >= 1000.0:
+        if w >= 1000.0:
             collapsed_button.size = Vector2(120.0, 44.0)
             collapsed_button.position = Vector2(maxf(8.0, w - 136.0), 24.0)
         else:
@@ -388,6 +396,15 @@ func _go_to_current_step() -> void:
 
 func open_tutorial() -> void:
     dismissed = false
+    var viewport_size := get_viewport().get_visible_rect().size
+    if viewport_size.x < 700.0:
+        _expanded_by_user = false
+        _save_tutorial_state()
+        var hud := get_node_or_null("/root/Renew/UI/MainHUD")
+        if hud != null and hud.has_method("open_figma_view"):
+            hud.open_figma_view("guide")
+        _layout_responsive()
+        return
     _expanded_by_user = true
     _save_tutorial_state()
     _refresh()
