@@ -28,6 +28,10 @@ BANKRUPTCY_FILES = {
     "scripts/bankruptcy_system.gd",
 }
 
+AUTOSAVE_NAV_FILES = {
+    "scripts/autosave.gd",
+}
+
 GROUPS = {
     "tutorial": {
         "patterns": [
@@ -227,6 +231,12 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         and any(matches(path, pat) for pat in GROUPS["economy_finance"]["patterns"])
         for path in changed
     )
+    autosave_nav_changed = any(path in AUTOSAVE_NAV_FILES for path in changed)
+    other_state_save_changed = any(
+        path not in AUTOSAVE_NAV_FILES
+        and any(matches(path, pat) for pat in GROUPS["state_save"]["patterns"])
+        for path in changed
+    )
 
     for name, cfg in GROUPS.items():
         # RESTORA's mobile/Figma command layer has a dedicated end-to-end flow
@@ -237,6 +247,8 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         if name == "tutorial" and restora_flow_changed and not tutorial_code_changed:
             continue
         if name == "economy_finance" and bankruptcy_changed and not other_economy_finance_changed:
+            continue
+        if name == "state_save" and autosave_nav_changed and not other_state_save_changed:
             continue
         if any(any(matches(path, pat) for pat in cfg["patterns"]) for path in changed):
             groups.append(name)
@@ -249,6 +261,10 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     if bankruptcy_changed:
         groups.append("bankruptcy")
         tests.add("tests/test_bankruptcy_system.gd")
+
+    if autosave_nav_changed:
+        groups.append("android_back_navigation")
+        tests.add("tests/test_android_release_config.gd")
 
     code_changed = any(
         p.endswith((".gd", ".tscn", ".tres", ".cfg", ".svg"))
