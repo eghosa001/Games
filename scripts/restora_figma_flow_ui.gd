@@ -13,6 +13,7 @@ const CUSTOM_VIEWS := [
     "supply_chain", "supplier_compare", "inventory",
     "budget", "funding", "region_overview", "property_acquisition",
     "infrastructure_roadmap", "company_progress", "milestones", "alliances",
+    "corporate_strategy", "world_power", "headquarters", "legacy",
     "reports", "notifications", "accessibility", "pause", "day_summary",
     "level_up", "restoration_complete", "insufficient_funds",
     "offline_error", "loading", "empty_states"
@@ -29,7 +30,8 @@ const NAV_ACTIONS := [
     "employee_list", "employee_detail", "hiring", "assign_employee", "contract_market",
     "contract_detail", "active_contracts", "supply_chain", "supplier_compare", "inventory",
     "budget", "funding", "region_overview", "property_acquisition", "infrastructure_roadmap",
-    "company_progress", "milestones", "alliances", "reports", "notifications", "accessibility",
+    "company_progress", "milestones", "alliances", "corporate_strategy", "world_power",
+    "headquarters", "legacy", "reports", "notifications", "accessibility",
     "pause", "day_summary", "level_up", "restoration_complete", "insufficient_funds",
     "offline_error", "loading", "empty_states"
 ]
@@ -252,6 +254,30 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
                 [["REP", str(rep)], ["RIVALS", str(_rival_count())], ["STATUS", "ACTIVE"]],
                 ["Supplier, civic and competitor relationships affect the same simulation.", "Open the relationship manager for negotiations and alliance actions."],
                 [["OPEN RELATIONSHIPS", "alliance_manager", true], ["CORPORATIONS", "corporations_manager", false]])
+        "corporate_strategy":
+            var strategy_next := "world_power" if _company_level() >= 8 else "company_progress"
+            return _spec("Corporate Strategy", "OWNERSHIP · ACQUISITIONS · CONTROL",
+                [["RIVALS", str(_rival_count())], ["REP", str(rep)], ["LEVEL", str(_company_level())]],
+                _corporate_strategy_lines(),
+                [["OPEN CORPORATIONS", "corporations_manager", true], ["ALLIANCES", "alliances", false], ["NEXT STRATEGIC LAYER", strategy_next, false]])
+        "world_power":
+            var power := _world_power_snapshot()
+            return _spec("World Power", "RANKINGS · INFLUENCE · CAPABILITY",
+                [["POWER", "%d/100" % int(round(float(power.get("total", 0.0))))], ["REGIONS", str(_regional_presence_count())], ["VALUE", _money(worth)]],
+                _world_power_lines(power),
+                [["HEADQUARTERS", "headquarters", true], ["REGIONS", "world", false], ["REPORTS", "reports", false]])
+        "headquarters":
+            var hq := _headquarters_snapshot()
+            return _spec("Headquarters", "EXECUTIVE CAPACITY · STRATEGIC FACILITIES",
+                [["STAGE", str(hq.get("stage", "Small Office"))], ["AREAS", str(hq.get("areas", 0))], ["VALUE", _money(int(hq.get("value", 0)))]],
+                _headquarters_lines(hq),
+                [["OPEN HQ COMMAND", "headquarters_manager", true], ["WORLD POWER", "world_power", false], ["LEGACY", "legacy" if _company_level() >= 9 else "company_progress", false]])
+        "legacy":
+            var legacy := _legacy_snapshot()
+            return _spec("Legacy", "HISTORY · COLLECTIONS · PRESTIGE",
+                [["COLLECTED", str(legacy.get("collections", 0))], ["PRESTIGE", str(legacy.get("prestige_wins", 0))], ["LEVEL", str(_company_level())]],
+                _legacy_lines(legacy),
+                [["OPEN COLLECTION", "collection_manager", true], ["COMPANY HISTORY", "history_manager", false], ["VICTORY / PRESTIGE", "progression_manager", false]])
         "reports":
             return _spec("Reports", "ANSWERS FOR THE NEXT STRATEGIC MOVE",
                 [["PROFIT", _money(profit)], ["VALUE", _money(worth)], ["DEBT", _money(debt)]],
@@ -327,7 +353,9 @@ func back_target(view_name: String) -> String:
         "budget", "funding": return "finance"
         "region_overview", "infrastructure_roadmap": return "world"
         "property_acquisition": return "region_overview"
-        "company_progress", "milestones", "alliances", "reports", "notifications": return "more"
+        "company_progress", "milestones", "alliances", "corporate_strategy", "legacy", "reports", "notifications": return "more"
+        "world_power": return "corporate_strategy"
+        "headquarters": return "world_power"
         "accessibility": return "settings"
         "new_game", "continue_game": return "launch"
         "onboarding": return "new_game"
@@ -534,6 +562,10 @@ func _dispatch(action: String, hud: Node) -> void:
             hud.call("_open_screen", "AlliancePanel")
         "corporations_manager":
             hud.call("_open_screen", "CorporationsPanel")
+        "headquarters_manager":
+            hud.call("_open_screen", "HeadquartersPanel")
+        "history_manager":
+            hud.call("_open_screen", "HistoryPanel")
         "dashboard_manager":
             hud.call("_open_screen", "DashboardPanel")
         "notifications_manager":
@@ -588,6 +620,104 @@ func _game_call(method: String, args: Array = []):
     if game != null and game.has_method(method):
         return game.callv(method, args)
     return null
+
+func _service_node(service_name: String) -> Node:
+    var direct := get_node_or_null("/root/" + service_name)
+    if direct != null:
+        return direct
+    var registry := get_node_or_null("/root/RenewServices")
+    if registry != null and registry.has_method("get_service"):
+        var resolved = registry.get_service(service_name)
+        if resolved is Node:
+            return resolved
+    return null
+
+func _corporate_strategy_lines() -> Array:
+    var ownership = _state_value("ownership", "holdings", [])
+    var holding_count := ownership.size() if ownership is Array else 0
+    var acquisition_count := int(_state_value("ownership", "acquisition_count", 0))
+    return [
+        "%d rival corporation%s currently tracked." % [_rival_count(), "" if _rival_count() == 1 else "s"],
+        "%d ownership position%s recorded in the company ledger." % [holding_count, "" if holding_count == 1 else "s"],
+        "%d completed acquisition%s recorded." % [acquisition_count, "" if acquisition_count == 1 else "s"],
+        "Use Corporations for shares, negotiation, acquisition battles and control decisions."
+    ]
+
+func _world_power_snapshot() -> Dictionary:
+    var ranking := _service_node("RenewGlobalRankingSystem")
+    if ranking != null and ranking.has_method("world_power"):
+        var value = ranking.world_power()
+        if value is Dictionary:
+            return value
+    return {}
+
+func _world_power_lines(power: Dictionary) -> Array:
+    return [
+        "Economic %.0f · Resource %.0f · Industrial %.0f" % [float(power.get("economic", 0.0)), float(power.get("resource", 0.0)), float(power.get("industrial", 0.0))],
+        "Technology %.0f · Logistics %.0f" % [float(power.get("technology", 0.0)), float(power.get("logistics", 0.0))],
+        "Diplomatic %.0f · Alliance %.0f · Cultural %.0f" % [float(power.get("diplomatic", 0.0)), float(power.get("alliance", 0.0)), float(power.get("cultural", 0.0))],
+        "Power is derived from the live economy, infrastructure, technology, logistics, alliances and reputation."
+    ]
+
+func _regional_presence_count() -> int:
+    var presence = _state_value("regions", "player_presence", [])
+    if presence is Array:
+        var total := 0
+        for amount in presence:
+            if int(amount) > 0:
+                total += 1
+        return total
+    return maxi(1, int(_state_value("regions", "selected_region", 0)) + 1)
+
+func _headquarters_snapshot() -> Dictionary:
+    var hq := _service_node("RenewHeadquartersSystem")
+    if hq == null:
+        return {"stage": "Unavailable", "areas": 0, "value": 0, "next_cost": 0, "management": 0, "research": 0, "training": 0}
+    var area_count := 0
+    if hq.has_method("get_area_status"):
+        var areas = hq.get_area_status()
+        if areas is Array:
+            for area in areas:
+                if area is Dictionary and bool(area.get("built", false)):
+                    area_count += 1
+    return {
+        "stage": str(hq.get_stage()) if hq.has_method("get_stage") else "Headquarters",
+        "areas": area_count,
+        "value": int(hq.get("headquarters_value")) if hq.get("headquarters_value") != null else 0,
+        "next_cost": int(hq.stage_cost()) if hq.has_method("stage_cost") else 0,
+        "management": int(hq.management_capacity_bonus()) if hq.has_method("management_capacity_bonus") else 0,
+        "research": int(hq.research_capacity()) if hq.has_method("research_capacity") else 0,
+        "training": int(hq.training_capacity()) if hq.has_method("training_capacity") else 0
+    }
+
+func _headquarters_lines(hq: Dictionary) -> Array:
+    return [
+        "Current campus · %s." % str(hq.get("stage", "Headquarters")),
+        "Executive capacity bonus · %d." % int(hq.get("management", 0)),
+        "Research capacity · %d · training capacity · %d." % [int(hq.get("research", 0)), int(hq.get("training", 0))],
+        "Next headquarters stage cost · %s." % _money(int(hq.get("next_cost", 0)))
+    ]
+
+func _legacy_snapshot() -> Dictionary:
+    var collections := 0
+    var collection_value := 0
+    var collection_system := _service_node("RenewCollectionSystem")
+    if collection_system != null and collection_system.has_method("get_status"):
+        var status = collection_system.get_status()
+        if status is Dictionary:
+            collections = int(status.get("total", 0))
+            collection_value = int(status.get("value", 0))
+    var victory := get_node_or_null("/root/RenewVictorySystem")
+    var wins := int(victory.prestige_wins()) if victory != null and victory.has_method("prestige_wins") else 0
+    return {"collections": collections, "collection_value": collection_value, "prestige_wins": wins}
+
+func _legacy_lines(legacy: Dictionary) -> Array:
+    return [
+        "Collections preserve major properties, contracts, acquisitions, people, technologies and crisis recoveries.",
+        "Collection value · %s." % _money(int(legacy.get("collection_value", 0))),
+        "Prestige victories bank permanent bonuses for future dynasties.",
+        "History and progression remain readable without resetting the current company."
+    ]
 
 func _state_value(domain: String, key: String, default_value):
     var state := _state()
