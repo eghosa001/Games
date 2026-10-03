@@ -824,7 +824,7 @@ func _style(bg: Color, border: Color, radius: int, border_width = 1) -> StyleBox
     if border_width > 0:
         s.set_border_width(SIDE_TOP, maxi(border_width, 2))
     s.set_corner_radius_all(radius)
-    var mobile_surface := _layout_kind == "mobile"
+    var mobile_surface: bool = str(_layout_kind) == "mobile"
     s.shadow_color = Color(0, 0, 0, (0.12 if not _is_light_theme() else 0.055) if mobile_surface else (0.26 if not _is_light_theme() else 0.11))
     s.shadow_size = 3 if mobile_surface else 9
     s.shadow_offset = Vector2(0, 1) if mobile_surface else Vector2(0, 4)
@@ -1127,7 +1127,7 @@ func _build_mobile_operations() -> void:
     _label(toolkit, "Head", "BUSINESS TOOLKIT", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     _label(toolkit, "Meta", "Move directly between the systems that run this business.", Rect2(16, 34, inner_w - 32, 18), 9, "muted", 400)
     var tool_gap := 8.0
-    var tool_w := (inner_w - 40.0) * 0.5
+    var tool_w: float = (float(inner_w) - 40.0) * 0.5
     _frame_button(toolkit, "BusinessOverview", "OVERVIEW", Rect2(16, 62, tool_w, 42), _show_view.bind("business_list"), false, true, 9)
     _frame_button(toolkit, "BusinessTeam", "TEAM", Rect2(24 + tool_w, 62, tool_w, 42), _show_view.bind("employee_list"), false, false, 9)
     _frame_button(toolkit, "BusinessContracts", "CONTRACTS", Rect2(16, 112, tool_w, 42), _show_view.bind("contract_market"), false, false, 9)
