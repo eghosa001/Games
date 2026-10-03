@@ -342,7 +342,7 @@ func _render_screen(view_name: String, hud: Node, content: Control, spec: Dictio
         art.position = Vector2.ZERO
         art.size = Vector2(inner_w, 142)
         art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-        art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        art.stretch_mode = TextureRect.STRETCH_SCALE if artwork == CALDER_ART else TextureRect.STRETCH_KEEP_ASPECT_COVERED
         art.mouse_filter = Control.MOUSE_FILTER_IGNORE
         art_card.add_child(art)
         y += 156.0
