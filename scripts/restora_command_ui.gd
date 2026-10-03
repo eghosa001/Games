@@ -511,7 +511,8 @@ func _layout_responsive() -> void:
     if _layout_kind == "mobile":
         var size = _layout_size()
         var canvas_w = minf(MOBILE_DESIGN_W, size.x)
-        var scroll_h = maxf(120.0, size.y - (MOBILE_NAV_H + MOBILE_NAV_BOTTOM))
+        var reserved_nav: float = 0.0 if _figma_view_is_immersive() else (MOBILE_NAV_H + MOBILE_NAV_BOTTOM)
+        var scroll_h = maxf(120.0, size.y - reserved_nav)
         var expected_width = canvas_w
         if scroll_h < MOBILE_CONTENT_H and is_equal_approx(canvas_w, size.x):
             expected_width = maxf(240.0, canvas_w - 8.0)
@@ -619,6 +620,7 @@ func _rebuild_mobile_content() -> void:
     if mobile_scroll != null:
         mobile_scroll.scroll_vertical = 0
     _refresh_bottom_nav()
+    _layout_mobile_host()
     _last_progress_level = _company_level()
     _last_signature = _state_signature()
     _refresh()
@@ -677,14 +679,21 @@ func _layout_mobile_host() -> void:
     var size = _layout_size()
     var canvas_w = minf(MOBILE_DESIGN_W, size.x)
     var x0 = floor((size.x - canvas_w) * 0.5)
+    var immersive := _figma_view_is_immersive()
+    var reserved_nav: float = 0.0 if immersive else (MOBILE_NAV_H + MOBILE_NAV_BOTTOM)
     mobile_scroll.position = Vector2(x0, 0)
-    mobile_scroll.size = Vector2(canvas_w, maxf(120.0, size.y - (MOBILE_NAV_H + MOBILE_NAV_BOTTOM)))
+    mobile_scroll.size = Vector2(canvas_w, maxf(120.0, size.y - reserved_nav))
+    bottom_nav.visible = not immersive
     bottom_nav.position = Vector2(x0 + 12.0, size.y - MOBILE_NAV_H - MOBILE_NAV_BOTTOM)
     bottom_nav.size = Vector2(canvas_w - 24.0, MOBILE_NAV_H)
 
+func _figma_view_is_immersive() -> bool:
+    var figma_flow = get_node_or_null("FigmaFlowBridge")
+    return figma_flow != null and figma_flow.has_method("is_immersive") and bool(figma_flow.is_immersive(active_view))
+
 func _build_mobile_view() -> void:
     if bottom_nav != null:
-        bottom_nav.visible = true
+        bottom_nav.visible = not _figma_view_is_immersive()
     var figma_flow = get_node_or_null("FigmaFlowBridge")
     if figma_flow != null and figma_flow.has_method("build_view") and bool(figma_flow.build_view(active_view, self, mobile_content)):
         return
