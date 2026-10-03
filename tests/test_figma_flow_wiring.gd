@@ -129,12 +129,15 @@ func _run() -> void:
         await process_frame
         check("employee detail is reachable from employee list", str(hud.get("active_view")) == "employee_detail")
         var before_employee_index := int(bridge.get("_selected_employee_index"))
+        var before_employee_name := str(((hud.get("mobile_content") as Control).get_node_or_null("Status") as Label).text)
         var next_employee := (hud.get("mobile_content") as Control).get_node_or_null("FlowAction2") as Button
         check("multi-employee detail exposes next employee", next_employee != null and next_employee.text == "NEXT EMPLOYEE")
         if next_employee != null:
             next_employee.pressed.emit()
             await process_frame
             check("next employee updates Figma employee selection", int(bridge.get("_selected_employee_index")) != before_employee_index)
+            var refreshed_status := (hud.get("mobile_content") as Control).get_node_or_null("Status") as Label
+            check("same-view employee action refreshes visible Figma content", refreshed_status != null and refreshed_status.text != before_employee_name)
 
     hud.open_figma_view("contract_market")
     await process_frame
@@ -238,6 +241,21 @@ func _run() -> void:
                 continue_day.pressed.emit()
                 await process_frame
                 check("day summary continues without legacy extra day advance", int(state.get_value("player", "day", 0)) == day_before_summary + 1 and str(hud.get("active_view")) == "live")
+
+            hud.open_figma_view("contract_market")
+            await process_frame
+            calendar.emit_signal("day_rolled_over", {"ok": true, "day": day_before_summary + 2})
+            await process_frame
+            check("calendar rollover does not interrupt an active management flow", str(hud.get("active_view")) == "contract_market")
+            check("deferred day summary is queued", bool(hud.get("_pending_day_summary")))
+            hud.open_figma_view("more")
+            await process_frame
+            var queued_day_summary := (hud.get("mobile_content") as Control).find_child("Openday_summary", true, false) as Button
+            check("queued day summary is reachable from More", queued_day_summary != null)
+            if queued_day_summary != null:
+                queued_day_summary.pressed.emit()
+                await process_frame
+                check("opening queued day summary clears the notice", str(hud.get("active_view")) == "day_summary" and not bool(hud.get("_pending_day_summary")))
 
         realtime = root.get_node_or_null("RenewRealTimeEconomySystem")
         check("real-time service exposes Figma error signal", realtime != null and realtime.has_signal("service_error"))
