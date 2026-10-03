@@ -22,6 +22,17 @@ const IMMERSIVE_VIEWS := [
     "launch", "new_game", "continue_game", "onboarding", "pause",
     "day_summary", "level_up", "restoration_complete", "offline_error", "loading"
 ]
+const NAV_ACTIONS := [
+    "live", "operate", "property", "finance", "more", "world", "settings", "guide",
+    "new_game", "continue_game", "onboarding", "property_overview", "restoration_plan",
+    "restoration_confirm", "before_after", "business_list", "business_overview", "production",
+    "employee_list", "employee_detail", "hiring", "assign_employee", "contract_market",
+    "contract_detail", "active_contracts", "supply_chain", "supplier_compare", "inventory",
+    "budget", "funding", "region_overview", "property_acquisition", "infrastructure_roadmap",
+    "company_progress", "milestones", "alliances", "reports", "notifications", "accessibility",
+    "pause", "day_summary", "level_up", "restoration_complete", "insufficient_funds",
+    "offline_error", "loading", "empty_states"
+]
 const CALDER_ART := preload("res://Assets/Art/restora_calder_works.svg")
 const REGION_ART := preload("res://Assets/Art/restora_region_map.svg")
 
@@ -368,17 +379,10 @@ func _render_screen(view_name: String, hud: Node, content: Control, spec: Dictio
     content.size.y = maxf(content.size.y, y + 26.0)
 
 func _dispatch(action: String, hud: Node) -> void:
+    if NAV_ACTIONS.has(action):
+        hud.call("open_figma_view", action)
+        return
     match action:
-        "live", "operate", "property", "finance", "more", "world", "settings", "guide",
-        "new_game", "continue_game", "onboarding", "property_overview", "restoration_plan",
-        "restoration_confirm", "before_after", "business_list", "business_overview", "production",
-        "employee_list", "employee_detail", "hiring", "assign_employee", "contract_market",
-        "contract_detail", "active_contracts", "supply_chain", "supplier_compare", "inventory",
-        "budget", "funding", "region_overview", "property_acquisition", "infrastructure_roadmap",
-        "company_progress", "milestones", "alliances", "reports", "notifications", "accessibility",
-        "pause", "day_summary", "level_up", "restoration_complete", "insufficient_funds",
-        "offline_error", "loading", "empty_states":
-            hud.call("open_figma_view", action)
         "create_company":
             _game_call("start_new_game")
             _state_set("tutorial", "figma_onboarding_seen", true)
