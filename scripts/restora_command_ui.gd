@@ -606,10 +606,11 @@ func _animate_view_in() -> void:
     _view_transition.tween_property(root, "modulate", Color.WHITE, 0.08)
 
 func _show_view(view_name: String) -> void:
-    var previous_view: String = str(active_view)
     active_view = view_name
     if view_name == "level_up":
         _pending_level_up = false
+    if view_name == "day_summary":
+        _pending_day_summary = false
     match view_name:
         "live":
             active_tab = 0
