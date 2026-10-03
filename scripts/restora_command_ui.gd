@@ -1452,10 +1452,14 @@ func _build_mobile_more() -> void:
             ["SUPPLY CHAIN", "Materials, suppliers and routes", "supply_chain", "supply_chain"]
         ]],
         ["GROWTH", [
-            ["REGIONS", "Markets and expansion", "world", "regions"],
-            ["INFRASTRUCTURE", "Long-term district upgrades", "infrastructure_roadmap", "infrastructure"],
-            ["ALLIANCES", "Partners, trust and rivals", "alliances", "alliances"],
-            ["COLLECTION", "Milestones and legacy rewards", "milestones", "collections"]
+            ["REGIONS", "Markets, branches and expansion", "world", "regions"],
+            ["ALLIANCES", "Partners, ownership and competitive relationships", "alliances", "alliances"],
+            ["TECHNOLOGY", "Research and operational upgrades", "TechnologyPanel", "technology"],
+            ["INFRASTRUCTURE", "Long-term district systems", "infrastructure_roadmap", "infrastructure"],
+            ["CORPORATE STRATEGY", "Shares, acquisitions, mergers and rival control", "corporate_strategy", "corporate_strategy"],
+            ["WORLD POWER", "Rankings and global influence", "world_power", "world_power"],
+            ["HEADQUARTERS", "Executive capacity and strategic facilities", "headquarters", "headquarters"],
+            ["LEGACY", "History, collections and prestige", "legacy", "legacy"]
         ]],
         ["INSIGHTS", insight_items],
         ["SYSTEM", [
@@ -1493,7 +1497,7 @@ func _build_more_section(title: String, items: Array, y: float, inner_w: float, 
         _label(section, "RowArrow%d" % i, "›", Rect2(inner_w - 50, row_y + 14, 26, 26), 18, "muted" if locked else "gold", 700, HORIZONTAL_ALIGNMENT_CENTER)
         var target := str(item[2])
         var hit: Button
-        if ["world","intelligence","settings","guide","employee_list","contract_market","supply_chain","infrastructure_roadmap","milestones","alliances","reports","notifications","company_progress","level_up","day_summary"].has(target):
+        if ["world","intelligence","settings","guide","employee_list","contract_market","supply_chain","infrastructure_roadmap","milestones","alliances","reports","notifications","company_progress","level_up","day_summary","corporate_strategy","world_power","headquarters","legacy"].has(target):
             hit = _transparent_button(section, "Open"+target, Rect2(0, row_y, inner_w, row_h), _show_view.bind(target))
         else:
             hit = _transparent_button(section, "Open"+target, Rect2(0, row_y, inner_w, row_h), _open_screen.bind(target))
@@ -1893,7 +1897,22 @@ func _objective_title() -> String:
         return "Produce your first batch"
     if _last_sales() <= 0:
         return "Sell your first goods"
-    return "Reinvest and grow"
+    var level := _company_level()
+    if level < 3:
+        return "Build a reliable operating company"
+    if level < 4:
+        return "Expand beyond the first property"
+    if level < 6:
+        return "Build relationships and market influence"
+    if level < 7:
+        return "Invest in technology and infrastructure"
+    if level < 8:
+        return "Enter corporate strategy"
+    if level < 9:
+        return "Build world power and headquarters"
+    if level < 10:
+        return "Create a lasting corporate legacy"
+    return "Complete a victory path and shape the next dynasty"
 
 func _objective_detail() -> String:
     if not _inspected():
@@ -1910,14 +1929,44 @@ func _objective_detail() -> String:
         return "Produce a batch in Business. Finished goods are the inventory you can sell."
     if _last_sales() <= 0:
         return "Open Commercial Controls in Business and sell the finished goods."
-    return "The core loop is complete. Reinvest profit into capacity, property and expansion."
+    var level := _company_level()
+    if level < 3:
+        return "Use employees, contracts and finance to turn the restored site into a dependable operating company."
+    if level < 4:
+        return "Open regional and supply-chain growth so the company is no longer dependent on one site."
+    if level < 6:
+        return "Manage competitors, ownership, alliances and trade relationships before committing to heavier expansion."
+    if level < 7:
+        return "Build infrastructure and research technology so later corporate moves are supported by real capacity."
+    if level < 8:
+        return "Use Corporate Strategy to manage shares, acquisitions, mergers and control of rival companies."
+    if level < 9:
+        return "Measure world power, strengthen rankings and invest in Headquarters capabilities."
+    if level < 10:
+        return "Turn acquisitions, milestones, collections and history into a permanent corporate legacy."
+    return "Review victory paths, prestige and legacy bonuses before beginning a new dynasty."
 
 func _objective_view() -> String:
     if not _inspected() or not _owned() or _stage() != "Operational":
         return "property"
     if not _business_open() or _inputs() <= 0 or _goods() <= 0 or _last_sales() <= 0:
         return "operate"
-    return "more"
+    var level := _company_level()
+    if level < 3:
+        return "company_progress"
+    if level < 4:
+        return "world"
+    if level < 6:
+        return "alliances"
+    if level < 7:
+        return "infrastructure_roadmap"
+    if level < 8:
+        return "corporate_strategy"
+    if level < 9:
+        return "world_power"
+    if level < 10:
+        return "legacy"
+    return "company_progress"
 
 func _core_phase() -> String:
     if _stage() != "Operational":
