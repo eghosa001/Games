@@ -206,6 +206,32 @@ var log_lines: Array:
         _write("company", "log_lines", value)
 func _ready():
     command_system = GameplayCommandSystem.new(); command_system.name = "GameplayCommandSystem"; add_child(command_system); command_system.initialize()
+
+func start_new_game() -> void:
+    var state = _game_state()
+    if state != null and state.has_method("clear"):
+        state.clear()
+    var services = get_node_or_null("/root/RenewServices")
+    if services != null and services.has_method("capture_persistent_state") and services.has_method("get_service"):
+        var snapshots = services.capture_persistent_state()
+        if snapshots is Dictionary:
+            for service_name in snapshots.keys():
+                var service = services.get_service(str(service_name))
+                if service != null and service.has_method("restore_state"):
+                    service.restore_state({})
+    if command_system != null and is_instance_valid(command_system):
+        command_system.free()
+    command_system = GameplayCommandSystem.new()
+    command_system.name = "GameplayCommandSystem"
+    add_child(command_system)
+    command_system.initialize()
+    var tutorial = get_node_or_null("UI/TutorialOverlay")
+    if tutorial != null and tutorial.has_method("reset_tutorial"):
+        tutorial.reset_tutorial()
+    _write("company", "name", "Hearth & Beam Restoration Co.")
+    _write("company", "message", "A new restoration company is ready.")
+    save_game()
+
 func inspect_property() -> void: command_system.inspect_property()
 func acquire_property() -> void: command_system.acquire_property()
 func restore_property() -> void: command_system.restore_property()
