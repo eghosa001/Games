@@ -629,4 +629,4 @@ func _finance() -> Variant: return get_node_or_null("/root/RenewFinanceSystem")
 func _game_day() -> int:
     var game: Variant = _game()
     return int(game.day) if game != null else 0
-# Final master-prompt validation scope: progression, recovery, and Android Back are validated together.
+# Final master-prompt validation scope v2: progression, recovery, and Android Back are validated together.

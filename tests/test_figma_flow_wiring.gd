@@ -239,7 +239,8 @@ func _run() -> void:
         distress.state = "cash_crisis"
         distress.distress_score = 46.0
         distress.cash_runway = 8.0
-        distress.covenant_breaches = ["debt_service"]
+        distress.covenant_breaches.clear()
+        distress.covenant_breaches.append("debt_service")
         distress.recovery_center_open = false
         distress._refresh_distress_ui()
         hud.open_figma_view("financial_health")
