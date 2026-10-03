@@ -89,6 +89,44 @@ func _run() -> void:
     await process_frame
     check("normal Figma detail restores primary navigation", (hud.get("bottom_nav") as Control).visible)
 
+    if state != null:
+        state.set_value("player", "day", 7)
+        hud.open_figma_view("new_game")
+        await process_frame
+        var unguided := (hud.get("mobile_content") as Control).get_node_or_null("FlowAction1") as Button
+        check("new-game screen exposes explicit unguided start", unguided != null and unguided.text == "START WITHOUT GUIDE")
+        if unguided != null:
+            unguided.pressed.emit()
+            await process_frame
+            check("unguided start creates a fresh company", int(state.get_value("player", "day", -1)) == 1)
+            check("unguided start disables tutorial overlay", bool(state.get_value("progression", "tutorial_completed", false)) and bool(state.get_value("progression", "tutorial_dismissed", false)))
+            check("unguided start routes into the live company", str(hud.get("active_view")) == "live")
+
+    hud.open_figma_view("business_list")
+    await process_frame
+    var business_action := (hud.get("mobile_content") as Control).get_node_or_null("FlowAction0") as Button
+    check("business list does not open a missing business", business_action != null and business_action.text == "START BUSINESS")
+    if business_action != null:
+        business_action.pressed.emit()
+        await process_frame
+        check("empty business list routes to business setup", str(hud.get("active_view")) == "operate")
+
+    hud.open_figma_view("employee_list")
+    await process_frame
+    var employee_action := (hud.get("mobile_content") as Control).get_node_or_null("FlowAction0") as Button
+    check("employee list opens a real employee detail", employee_action != null and employee_action.text == "VIEW EMPLOYEE")
+    if employee_action != null:
+        employee_action.pressed.emit()
+        await process_frame
+        check("employee detail is reachable from employee list", str(hud.get("active_view")) == "employee_detail")
+        var before_employee_index := int(bridge.get("_selected_employee_index"))
+        var next_employee := (hud.get("mobile_content") as Control).get_node_or_null("FlowAction2") as Button
+        check("multi-employee detail exposes next employee", next_employee != null and next_employee.text == "NEXT EMPLOYEE")
+        if next_employee != null:
+            next_employee.pressed.emit()
+            await process_frame
+            check("next employee updates Figma employee selection", int(bridge.get("_selected_employee_index")) != before_employee_index)
+
     for view_name in VIEWS:
         check(view_name + " supported", bool(bridge.supports(view_name)))
         hud.open_figma_view(view_name)

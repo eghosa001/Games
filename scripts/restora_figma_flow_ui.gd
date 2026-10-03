@@ -37,6 +37,7 @@ const CALDER_ART := preload("res://Assets/Art/restora_calder_works.svg")
 const REGION_ART := preload("res://Assets/Art/restora_region_map.svg")
 
 var _auto_launch_pending := false
+var _selected_employee_index := 0
 
 func supports(view_name: String) -> bool:
     return CUSTOM_VIEWS.has(view_name)
@@ -95,7 +96,7 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
                 [["STARTING CASH", _money(cash)], ["DIFFICULTY", "BALANCED"], ["TUTORIAL", "GUIDED"]],
                 ["Heritage challenge · higher prestige, stricter cash decisions.",
                  "Independent planner · live economy with contextual guidance."],
-                [["CREATE COMPANY", "create_company", true], ["CONTINUE WITHOUT GUIDE", "start_home", false]], true)
+                [["CREATE COMPANY", "create_company", true], ["START WITHOUT GUIDE", "start_unguided", false]], true)
         "continue_game":
             return _spec("Continue Game", "YOUR LOCAL COMPANY",
                 [["CASH", _money(cash)], ["VALUE", _money(worth)], ["DAY", str(day)]],
@@ -134,11 +135,12 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
                  "The target state becomes operational rather than merely cosmetic."],
                 [["RETURN TO PLAN", "restoration_plan", true], ["OPEN PROPERTY", "property", false]])
         "business_list":
+            var business_actions: Array = [["OPEN BUSINESS", "business_overview", true], ["PRODUCTION", "production", false]] if _business_open() else [["START BUSINESS", "operate", true], ["PROPERTY", "property", false]]
             return _spec("Business List", "OPERATING PORTFOLIO",
                 [["BUSINESSES", "1" if _business_open() else "0"], ["GOODS", str(goods)], ["PROFIT", _money(profit)]],
                 ["%s · %s" % [property_name, "operating" if _business_open() else "preparing"],
                  "Production, staffing, supply and contracts share the same live economy."],
-                [["OPEN BUSINESS", "business_overview", true], ["PRODUCTION", "production", false]])
+                business_actions)
         "business_overview":
             return _spec("Business Overview", "%s OPERATIONS" % property_name.to_upper(),
                 [["INPUTS", str(inputs)], ["GOODS", str(goods)], ["STAFF", str(employees)]],
@@ -152,16 +154,23 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
                 ["Buy inputs when stock is low.", "Produce through the real command boundary.", "Sell or deliver only inventory that exists."],
                 [["PRODUCE BATCH", "produce", true], ["BUY INPUTS", "buy_inputs", false], ["BUSINESS", "operate", false]])
         "employee_list":
+            var employee_actions: Array = [["HIRE EMPLOYEE", "hiring", true], ["OPEN TEAM MANAGER", "employee_manager", false]]
+            if employees > 0:
+                employee_actions.insert(0, ["VIEW EMPLOYEE", "employee_detail", false])
             return _spec("Employee List", "WORKFORCE · SUMMARY AND GAPS",
                 [["STAFF", str(employees)], ["PAYROLL", _money(_payroll())], ["MORALE", "%d%%" % _morale_percent()]],
                 _employee_lines(),
-                [["HIRE EMPLOYEE", "hiring", true], ["OPEN TEAM MANAGER", "employee_manager", false]])
+                employee_actions)
         "employee_detail":
-            var emp := _first_employee()
+            var emp := _selected_employee()
+            var employee_detail_actions: Array = [["TRAIN", "train_employee", true], ["ASSIGN", "assign_employee", false]]
+            if _roster().size() > 1:
+                employee_detail_actions.append(["NEXT EMPLOYEE", "next_employee", false])
+            employee_detail_actions.append(["TEAM LIST", "employee_list", false])
             return _spec("Employee Detail", str(emp.get("name", "Employee")),
                 [["SKILL", str(emp.get("level", 1))], ["PRODUCTIVITY", "%d%%" % int(round(float(emp.get("productivity", 0.8)) * 100.0))], ["MORALE", "%d%%" % clampi(int(emp.get("morale", 80)), 0, 100)]],
                 ["Role · %s" % str(emp.get("role", "Worker")), "Assignment · %s" % str(emp.get("assignment", "unassigned")), "Use training and assignments to change real capacity."],
-                [["TRAIN", "train_employee", true], ["ASSIGN", "assign_employee", false], ["TEAM LIST", "employee_list", false]])
+                employee_detail_actions)
         "hiring":
             return _spec("Hiring", "CANDIDATES AND CAPACITY",
                 [["CASH", _money(cash)], ["STAFF", str(employees)], ["NEED", "CAPACITY"]],
@@ -395,6 +404,12 @@ func _dispatch(action: String, hud: Node) -> void:
             hud.call("open_figma_view", "onboarding")
         "start_home":
             hud.call("open_figma_view", "live")
+        "start_unguided":
+            _game_call("start_new_game")
+            _state_set("progression", "tutorial_completed", true)
+            _state_set("progression", "tutorial_dismissed", true)
+            _message("New company started. Guidance is available any time from How to Play.")
+            hud.call("open_figma_view", "live")
         "continue_save":
             _game_call("load_game")
             hud.call("open_figma_view", "live")
@@ -430,12 +445,15 @@ func _dispatch(action: String, hud: Node) -> void:
             _game_call("hire_employee")
             hud.call("open_figma_view", "employee_list")
         "train_employee":
-            var id := str(_first_employee().get("id", ""))
+            var id := str(_selected_employee().get("id", ""))
             if not id.is_empty():
                 _game_call("train_employee", [id])
             hud.call("open_figma_view", "employee_detail")
+        "next_employee":
+            _select_next_employee()
+            hud.call("open_figma_view", "employee_detail")
         "confirm_assign":
-            var id := str(_first_employee().get("id", ""))
+            var id := str(_selected_employee().get("id", ""))
             if not id.is_empty():
                 _game_call("assign_employee", [id, "factory_001"])
             hud.call("open_figma_view", "employee_list")
@@ -566,9 +584,20 @@ func _roster() -> Array:
     var value = _state_value("employees", "roster", [])
     return value if value is Array else []
 
-func _first_employee() -> Dictionary:
+func _selected_employee() -> Dictionary:
     var roster := _roster()
-    return roster[0] if not roster.is_empty() and roster[0] is Dictionary else {}
+    if roster.is_empty():
+        _selected_employee_index = 0
+        return {}
+    _selected_employee_index = clampi(_selected_employee_index, 0, roster.size() - 1)
+    return roster[_selected_employee_index] if roster[_selected_employee_index] is Dictionary else {}
+
+func _select_next_employee() -> void:
+    var roster := _roster()
+    if roster.is_empty():
+        _selected_employee_index = 0
+        return
+    _selected_employee_index = (_selected_employee_index + 1) % roster.size()
 
 func _employee_lines() -> Array:
     var out: Array = []
