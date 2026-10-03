@@ -59,8 +59,10 @@ func _run() -> void:
     hud.open_figma_view("operate")
     await process_frame
     content = hud.get("mobile_content") as Control
-    for node_name in ["ProductionControl", "CommercialControls", "Equipment"]:
+    for node_name in ["ProductionControl", "CommercialControls", "BusinessToolkit"]:
         check("BUSINESS surface " + node_name, content.find_child(node_name, true, false) != null)
+    for action_name in ["BusinessOverview", "BusinessTeam", "BusinessContracts", "BusinessSupply"]:
+        check("BUSINESS toolkit link " + action_name, content.find_child(action_name, true, false) is Button)
     hud.open_figma_view("finance")
     await process_frame
     content = hud.get("mobile_content") as Control
@@ -75,9 +77,12 @@ func _run() -> void:
     hud.open_figma_view("more")
     await process_frame
     content = hud.get("mobile_content") as Control
-    check("MORE has fourteen premium command tiles", content.find_children("MoreTile*", "Panel", false, false).size() == 14)
-    var how_to_body := content.get_node_or_null("MoreTile0/Body") as Label
-    check("HOW TO PLAY copy names the full loop", how_to_body != null and how_to_body.text.contains("Grow") and how_to_body.get_line_count() >= 2)
+    check("MORE groups commands into four readable sections", content.find_children("MoreSection*", "Panel", false, false).size() == 4)
+    var how_to_body := content.get_node_or_null("MoreSection3/RowBody0") as Label
+    check("HOW TO PLAY copy names the full loop", how_to_body != null and how_to_body.text.contains("Grow"))
+    var mobile_scroll := hud.get("mobile_scroll") as ScrollContainer
+    check("mobile scroll uses responsive touch deadzone", mobile_scroll != null and mobile_scroll.scroll_deadzone <= 2)
+    check("MORE remains vertically scrollable", mobile_scroll != null and content.size.y > mobile_scroll.size.y)
     hud.open_figma_view("guide")
     await process_frame
     content = hud.get("mobile_content") as Control
