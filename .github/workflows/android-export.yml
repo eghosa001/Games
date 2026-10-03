@@ -2,6 +2,9 @@ name: RENEW Android Export
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - build/restora-mobile-ux-apk-20261003
 
 permissions:
   contents: read
