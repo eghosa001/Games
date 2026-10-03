@@ -78,6 +78,10 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
     var goods := int(hud.call("_goods")) if hud.has_method("_goods") else 0
     var debt := int(hud.call("_debt")) if hud.has_method("_debt") else 0
     var profit := int(hud.call("_last_profit")) if hud.has_method("_last_profit") else 0
+    var current_region := str(hud.call("_current_region_name")) if hud.has_method("_current_region_name") else _current_region()
+    var selected_region := int(hud.call("_selected_region_index")) if hud.has_method("_selected_region_index") else 0
+    var region_presence := int(hud.call("_region_presence", selected_region)) if hud.has_method("_region_presence") else _region_presence()
+    var trade_routes := int(hud.call("_trade_route_count")) if hud.has_method("_trade_route_count") else _trade_routes()
 
     match view_name:
         "launch":
@@ -206,8 +210,8 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
                 ["Compare debt, repayment and investor options before committing.", "All accepted funding flows through the existing finance command system."],
                 [["TAKE LOAN", "take_loan", true], ["REPAY", "repay_loan", false], ["INVESTOR", "request_investor", false]])
         "region_overview":
-            return _spec("Region Overview", _current_region(),
-                [["REP", str(rep)], ["PRESENCE", str(_region_presence())], ["ROUTES", str(_trade_routes())]],
+            return _spec("Region Overview", current_region,
+                [["REP", str(rep)], ["PRESENCE", str(region_presence)], ["ROUTES", str(trade_routes)]],
                 ["Regional demand, infrastructure and presence come from the live world systems.", "Property opportunities remain gated by reputation and capacity."],
                 [["REVIEW PROPERTY", "property_acquisition", true], ["REGION MAP", "world", false]])
         "property_acquisition":
@@ -217,7 +221,7 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
                 [["ACQUIRE / CONTINUE", "property_action", true], ["ARRANGE FUNDING", "funding", false]])
         "infrastructure_roadmap":
             return _spec("Infrastructure", "LONG-TERM DISTRICT SYSTEMS",
-                [["LEVEL", str(_state_value("infrastructure", "level", 1))], ["CASH", _money(cash)], ["REGION", _current_region()]],
+                [["LEVEL", str(_state_value("infrastructure", "level", 1))], ["CASH", _money(cash)], ["REGION", current_region]],
                 ["Electricity · capacity", "Roads · logistics", "Security · risk", "Water · business unlocks", "Communications · contracts"],
                 [["UPGRADE REGION", "upgrade_region", true], ["OPEN INFRASTRUCTURE", "infrastructure_manager", false]])
         "company_progress":
@@ -385,7 +389,6 @@ func _dispatch(action: String, hud: Node) -> void:
     match action:
         "create_company":
             _game_call("start_new_game")
-            _state_set("tutorial", "figma_onboarding_seen", true)
             hud.call("open_figma_view", "onboarding")
         "start_home":
             hud.call("open_figma_view", "live")
