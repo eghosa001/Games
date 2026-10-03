@@ -27,28 +27,20 @@ func run() -> void:
         check(str(hud.get("active_view"))==view, "Figma view opens: "+view)
     hud.open_figma_view("more"); await process_frame
     var more_content:=hud.get("mobile_content") as Control
-    var employee_tile:=more_content.get_node_or_null("MoreTile1") if more_content!=null else null
-    var contract_tile:=more_content.get_node_or_null("MoreTile2") if more_content!=null else null
-    var supply_tile:=more_content.get_node_or_null("MoreTile3") if more_content!=null else null
-    var infrastructure_tile:=more_content.get_node_or_null("MoreTile5") if more_content!=null else null
-    var collection_tile:=more_content.get_node_or_null("MoreTile6") if more_content!=null else null
-    var employee_head:=employee_tile.get_node_or_null("Head") as Label if employee_tile!=null else null
-    var contract_head:=contract_tile.get_node_or_null("Head") as Label if contract_tile!=null else null
-    var supply_head:=supply_tile.get_node_or_null("Head") as Label if supply_tile!=null else null
-    check(employee_head!=null and employee_head.text=="EMPLOYEES", "More exposes Figma employee management")
-    check(contract_head!=null and contract_head.text=="CONTRACTS", "More exposes Figma contract management")
-    check(supply_head!=null and supply_head.text=="SUPPLY CHAIN", "More exposes Figma supply management")
-    var employee_buttons: Array[Node] = employee_tile.find_children("Open*", "Button", true, false) if employee_tile != null else []
-    var infrastructure_buttons: Array[Node] = infrastructure_tile.find_children("Open*", "Button", true, false) if infrastructure_tile != null else []
-    var collection_buttons: Array[Node] = collection_tile.find_children("Open*", "Button", true, false) if collection_tile != null else []
-    var employee_button := employee_buttons[0] as Button if not employee_buttons.is_empty() else null
-    var infrastructure_button := infrastructure_buttons[0] as Button if not infrastructure_buttons.is_empty() else null
-    var collection_button := collection_buttons[0] as Button if not collection_buttons.is_empty() else null
+    check(more_content.find_children("MoreSection*","Panel",false,false).size()==4, "More uses grouped enterprise command sections")
+    var employee_button:=more_content.find_child("Openemployee_list",true,false) as Button
+    var contract_button:=more_content.find_child("Opencontract_market",true,false) as Button
+    var supply_button:=more_content.find_child("Opensupply_chain",true,false) as Button
+    var infrastructure_button:=more_content.find_child("Openinfrastructure_roadmap",true,false) as Button
+    var collection_button:=more_content.find_child("Openmilestones",true,false) as Button
+    check(employee_button!=null, "More exposes Figma employee management")
+    check(contract_button!=null, "More exposes Figma contract management")
+    check(supply_button!=null, "More exposes Figma supply management")
     check(employee_button!=null and employee_button.disabled, "Employees are progression-gated at founding")
     check(infrastructure_button!=null and infrastructure_button.disabled, "Infrastructure is progression-gated at founding")
     check(collection_button!=null and collection_button.disabled, "Collection is progression-gated at founding")
-    var last_more_tile:=more_content.get_node_or_null("MoreTile13") as Control if more_content!=null else null
-    check(last_more_tile!=null and more_content.size.y>=last_more_tile.position.y+last_more_tile.size.y+18.0, "premium More command grid remains scrollable on phone")
+    var last_more_section:=more_content.get_node_or_null("MoreSection3") as Control if more_content!=null else null
+    check(last_more_section!=null and more_content.size.y>=last_more_section.position.y+last_more_section.size.y+18.0, "grouped More commands remain scrollable on phone")
 
     hud.open_figma_view("portfolio"); await process_frame
     var portfolio_content:=hud.get("mobile_content") as Control
