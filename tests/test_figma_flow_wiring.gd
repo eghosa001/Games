@@ -210,7 +210,7 @@ func _run() -> void:
         check("queued level-up does not replace Home navigation", str(hud.get("active_view")) == "live")
         hud.open_figma_view("more")
         await process_frame
-        var progression_notice := (hud.get("mobile_content") as Control).get_node_or_null("Openlevel_up") as Button
+        var progression_notice := (hud.get("mobile_content") as Control).find_child("Openlevel_up", true, false) as Button
         check("queued level-up is reachable from the Progression tile", progression_notice != null)
         if progression_notice != null:
             progression_notice.pressed.emit()
