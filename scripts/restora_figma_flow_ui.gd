@@ -152,7 +152,7 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
         "employee_detail":
             var emp := _first_employee()
             return _spec("Employee Detail", str(emp.get("name", "Employee")),
-                [["SKILL", str(emp.get("level", 1))], ["PRODUCTIVITY", "%d%%" % int(float(emp.get("productivity", 0.8)) * 100.0)], ["MORALE", "%d%%" % int(float(emp.get("morale", 0.8)) * 100.0)]],
+                [["SKILL", str(emp.get("level", 1))], ["PRODUCTIVITY", "%d%%" % int(round(float(emp.get("productivity", 0.8)) * 100.0))], ["MORALE", "%d%%" % clampi(int(emp.get("morale", 80)), 0, 100)]],
                 ["Role · %s" % str(emp.get("role", "Worker")), "Assignment · %s" % str(emp.get("assignment", "unassigned")), "Use training and assignments to change real capacity."],
                 [["TRAIN", "train_employee", true], ["ASSIGN", "assign_employee", false], ["TEAM LIST", "employee_list", false]])
         "hiring":
@@ -353,7 +353,7 @@ func _render_screen(view_name: String, hud: Node, content: Control, spec: Dictio
             var row := floori(float(i) / float(cols))
             var tile = hud.call("_panel", content, "FlowMetric%d" % i, Rect2(18.0 + float(col) * (tile_w + gap), y + float(row) * 84.0, tile_w, 74.0), "surface_2", "border", 12)
             hud.call("_label", tile, "Label", str(m[0]), Rect2(10, 10, tile_w - 20, 14), 9, "muted", 600)
-            hud.call("_label", tile, "Value", str(m[1]), Rect2(10, 30, tile_w - 20, 26), 16, "text", 700)
+            hud.call("_label", tile, "Value", str(m[1]), Rect2(10, 30, tile_w - 20, 26), 14, "text", 700)
         y += float(ceili(float(metrics.size()) / float(cols))) * 84.0 + 10.0
 
     var details: Array = spec.get("details", [])
@@ -586,10 +586,15 @@ func _morale_percent() -> int:
     if roster.is_empty():
         return 100
     var total := 0.0
+    var counted := 0
     for e in roster:
         if e is Dictionary:
-            total += float(e.get("morale", 0.8))
-    return int(round(total / float(roster.size()) * 100.0))
+            var value := float(e.get("morale", 80))
+            total += value * 100.0 if value <= 1.0 else value
+            counted += 1
+    if counted <= 0:
+        return 100
+    return clampi(int(round(total / float(counted))), 0, 100)
 
 func _active_contract_count() -> int:
     var contracts = _state_value("contracts", "active", [])
