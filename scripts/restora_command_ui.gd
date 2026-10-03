@@ -839,7 +839,11 @@ func _label(parent_node: Node, name: String, text_value: String, rect: Rect2, si
     var l = Label.new()
     l.name = name
     var fitted := _fit_horizontal_rect(parent_node, rect)
-    var readable_size := maxi(size_px, 9)
+    var text_scale := 1.0
+    var manager = _theme_manager()
+    if manager != null and manager.has_method("get_text_scale"):
+        text_scale = float(manager.get_text_scale())
+    var readable_size := maxi(int(round(float(size_px) * text_scale)), 9)
     var allow_wrap := fitted.size.y >= float(readable_size) * 2.0 + 4.0
 
     l.mouse_filter = Control.MOUSE_FILTER_IGNORE
