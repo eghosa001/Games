@@ -43,7 +43,10 @@ func _run() -> void:
     var autosave := FileAccess.get_file_as_string("res://scripts/autosave.gd")
     check("autosave handles Android pause", autosave.contains("NOTIFICATION_APPLICATION_PAUSED"))
     check("autosave handles Android back/close", autosave.contains("NOTIFICATION_WM_GO_BACK_REQUEST") and autosave.contains("NOTIFICATION_WM_CLOSE_REQUEST"))
+    check("Android Back saves without forcing process exit", not autosave.contains("what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_WM_GO_BACK_REQUEST"))
     check("autosave uses canonical SaveSystem", autosave.contains("SaveSystem.save_game({})"))
+    var screen_manager := FileAccess.get_file_as_string("res://scripts/ui_screen_manager.gd")
+    check("Android Back routes through managed RESTORA navigation", screen_manager.contains("hud.handle_system_back()"))
 
     var monetization := FileAccess.get_file_as_string("res://scripts/monetization_system.gd")
     var monetization_config := FileAccess.get_file_as_string("res://config/monetization.json")
@@ -57,7 +60,7 @@ func _run() -> void:
     check("no undeclared analytics/tracking implementation exists", not analytics_present)
 
     print("--- ANDROID RELEASE CONFIG SUMMARY ---")
-    print("Checks: %d | Failures: %d" % [37, failures.size()])
+    print("Checks: %d | Failures: %d" % [39, failures.size()])
     for failure in failures:
         print("FAILED: %s" % failure)
     if failures.size() > 0:
