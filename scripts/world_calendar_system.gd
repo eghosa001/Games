@@ -1,5 +1,7 @@
 extends Node
 
+signal day_rolled_over(summary: Dictionary)
+
 const MAX_OFFLINE_CALENDAR_DAYS := 1
 
 var _poll := 0.0
@@ -140,7 +142,9 @@ func _close_one_day() -> Dictionary:
 
     state.set_value("company", "message", "A new real-world trading day has begun. Passive operations continued; active production and sales remain under your control.")
     _log("CALENDAR: day %d opened. Wages, overhead, debt, rivals and world systems settled." % new_day)
-    return {"ok": true, "day": new_day, "wages": wages, "overhead": overhead, "contract_penalty": contract_penalty}
+    var summary := {"ok": true, "day": new_day, "wages": wages, "overhead": overhead, "contract_penalty": contract_penalty}
+    day_rolled_over.emit(summary)
+    return summary
 
 func _settle_contract_deadline(commands, current_day: int) -> int:
     var state = _state(); var contracts = get_node_or_null("/root/RenewContractSystem")
