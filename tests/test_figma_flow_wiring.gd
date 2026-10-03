@@ -172,6 +172,15 @@ func _run() -> void:
     check("restoration confirmation back chain is stable", str(bridge.back_target("restoration_confirm")) == "restoration_plan")
     check("accessibility back chain is stable", str(bridge.back_target("accessibility")) == "settings")
 
+    if state != null:
+        hud.open_figma_view("live")
+        await process_frame
+        state.set_value("progression", "level", 2)
+        hud.set("_last_progress_level", 1)
+        hud._process(0.6)
+        await process_frame
+        check("real company level increase opens Figma level-up screen", str(hud.get("active_view")) == "level_up")
+
     game.queue_free()
     await process_frame
     print("FIGMA FLOW WIRING: %d checks, %d failures" % [checks, failed])
