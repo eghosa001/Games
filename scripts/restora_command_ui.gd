@@ -934,11 +934,26 @@ func _content_width() -> float:
 
 func _header(title: String, subtitle: String, right_text = "", status_role = "gold") -> void:
     var w = _content_width()
-    _remember("title", _label(mobile_content, "Title", title, Rect2(18, 18, w - 120, 34), 24 if title == "RESTORA" else 21, "text", 700))
-    status_label = _label(mobile_content, "Status", subtitle, Rect2(18, 48 if title != "RESTORA" else 52, w - 130, 16), 9, status_role, 600)
+    _remember("title", _label(mobile_content, "Title", title, Rect2(18, 18, w - 142, 34), 24 if title == "RESTORA" else 21, "text", 700))
+    status_label = _label(mobile_content, "Status", subtitle, Rect2(18, 48 if title != "RESTORA" else 52, w - 146, 16), 9, status_role, 600)
     _remember("status", status_label)
     if not right_text.is_empty():
-        _remember("right_status", _label(mobile_content, "RightStatus", right_text, Rect2(w - 104, 24, 84, 18), 9 if title != "RESTORA" else 11, "plum" if active_view == "settings" else "text", 600, HORIZONTAL_ALIGNMENT_RIGHT))
+        _remember("right_status", _label(mobile_content, "RightStatus", right_text, Rect2(w - 154, 24, 92, 18), 9 if title != "RESTORA" else 11, "plum" if active_view == "settings" else "text", 600, HORIZONTAL_ALIGNMENT_RIGHT))
+    var alerts := Button.new()
+    alerts.name = "NotificationsButton"
+    alerts.position = Vector2(w - 56, 16)
+    alerts.size = Vector2(38, 38)
+    alerts.focus_mode = Control.FOCUS_ALL
+    alerts.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+    alerts.tooltip_text = "Notifications"
+    alerts.icon = _asset_texture(ICON_ROOT + "decisions.svg")
+    alerts.expand_icon = true
+    alerts.icon_max_width = 18
+    alerts.add_theme_stylebox_override("normal", _style(_color("surface_2"), _color("border"), 19))
+    alerts.add_theme_stylebox_override("hover", _style(_color("selected"), _color("plum"), 19))
+    alerts.add_theme_stylebox_override("pressed", _style(_color("selected").darkened(0.04), _color("gold"), 19))
+    alerts.pressed.connect(_show_view.bind("notifications"), CONNECT_DEFERRED)
+    mobile_content.add_child(alerts)
 
 func _build_mobile_live() -> void:
     var w = _content_width()
