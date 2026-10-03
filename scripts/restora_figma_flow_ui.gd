@@ -182,10 +182,11 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
                 ["Assign the selected employee to the operating site.", "Assignments feed production productivity and management capacity."],
                 [["ASSIGN TO OPERATIONS", "confirm_assign", true], ["NOT YET", "employee_detail", false]])
         "contract_market":
+            var active_contract_target := "active_contracts" if contracts > 0 else "empty_states"
             return _spec("Contract Marketplace", "AVAILABLE · ACTIVE · COMPLETED",
                 [["ACTIVE", str(contracts)], ["REPUTATION", str(rep)], ["CAPACITY", "%d%%" % _capacity_percent()]],
                 ["Contracts use real production, delivery and penalty rules.", "Review capacity before accepting additional work."],
-                [["REVIEW OFFER", "contract_detail", true], ["ACTIVE CONTRACTS", "active_contracts", false]])
+                [["REVIEW OFFER", "contract_detail", true], ["ACTIVE CONTRACTS", active_contract_target, false]])
         "contract_detail":
             return _spec("Contract Detail", "CAPACITY CHECK",
                 [["ACTIVE", str(contracts)], ["GOODS", str(goods)], ["REP", str(rep)]],
@@ -272,10 +273,11 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
                 ["Save status · local autosave enabled", "Settings and accessibility remain available."],
                 [["SAVE & CONTINUE", "save_resume", true], ["SETTINGS", "settings", false], ["RESUME", "live", false]], true)
         "day_summary":
-            return _spec("End-of-Day Summary", "DAY %d COMPLETE" % day,
+            var completed_day := maxi(1, day - 1)
+            return _spec("End-of-Day Summary", "DAY %d COMPLETE" % completed_day,
                 [["REVENUE", _money(int(hud.call("_last_sales")) if hud.has_method("_last_sales") else 0)], ["PROFIT", _money(profit)], ["REP", str(rep)]],
-                ["Property · %d%% restored" % progress, "Contracts · %d active" % contracts, "Tomorrow · review your next objective"],
-                [["CONTINUE", "advance_day", true], ["REVIEW", "reports", false]], true)
+                ["Property · %d%% restored" % progress, "Contracts · %d active" % contracts, "Day %d is now open." % day],
+                [["CONTINUE", "continue_after_day", true], ["REVIEW", "reports", false]], true)
         "level_up":
             return _spec("Level-Up / Unlock", "COMPANY LEVEL %d" % _company_level(),
                 [["LEVEL", str(_company_level())], ["REP", str(rep)], ["VALUE", _money(worth)]],
@@ -295,17 +297,17 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
         "offline_error":
             return _spec("Offline / Error", "LOCAL PROGRESS IS SAFE",
                 [["DAY", str(day)], ["CASH", _money(cash)], ["SAVE", "LOCAL"]],
-                ["Continue offline with local gameplay.", "Retry network-dependent services when connectivity returns."],
-                [["CONTINUE OFFLINE", "live", true], ["TRY AGAIN", "retry_services", false]], true)
+                [str(_state_value("company", "message", "A background service could not finish.")), "Local company progress remains available while the service recovers."],
+                [["CONTINUE", "live", true], ["TRY AGAIN", "retry_services", false]], true)
         "loading":
             return _spec("Loading", "SYNCHRONIZING COMPANY STATE",
                 [["LOCAL", "SAVED"], ["GAME", "READY"], ["QUEUE", "0"]],
                 ["Loading never hides the fact that local progress is safe.", "The game remains playable when optional online services are unavailable."], [], true)
         "empty_states":
-            return _spec("Empty States", "WHY · NEXT STEP · ACTION",
+            return _spec("Nothing Here Yet", "WHY · NEXT STEP · ACTION",
                 [["STAFF", str(employees)], ["CONTRACTS", str(contracts)], ["BUSINESS", "OPEN" if _business_open() else "NONE"]],
-                ["No employees → hire", "No contracts → build reputation", "No business → finish restoration", "No property → inspect an opportunity"],
-                [["HIRE", "hiring", true], ["CONTRACTS", "contract_market", false], ["PROPERTY", "property", false]])
+                _empty_state_lines(),
+                _empty_state_actions())
     return {}
 
 func _spec(title: String, subtitle: String, metrics: Array, details: Array, actions: Array, immersive := false) -> Dictionary:
@@ -411,8 +413,8 @@ func _dispatch(action: String, hud: Node) -> void:
             _message("New company started. Guidance is available any time from How to Play.")
             hud.call("open_figma_view", "live")
         "continue_save":
-            _game_call("load_game")
-            hud.call("open_figma_view", "live")
+            hud.call("open_figma_view", "loading")
+            call_deferred("_finish_continue_save", hud)
         "confirm_restore":
             var cost := _next_property_cost(hud)
             if cost > _cash():
@@ -489,15 +491,17 @@ func _dispatch(action: String, hud: Node) -> void:
         "upgrade_region":
             _game_call("upgrade_regional_infrastructure")
             hud.call("open_figma_view", "infrastructure_roadmap")
-        "advance_day":
-            _game_call("advance_day")
+        "continue_after_day":
             _game_call("save_game")
             hud.call("open_figma_view", "live")
         "save_resume":
             _game_call("save_game")
             hud.call("open_figma_view", "live")
         "retry_services":
-            hud.call("open_figma_view", "live")
+            if _retry_runtime_services():
+                hud.call("open_figma_view", "live")
+            else:
+                hud.call("open_figma_view", "offline_error")
         "toggle_motion":
             hud.call("_toggle_motion")
             hud.call("open_figma_view", "accessibility")
@@ -529,6 +533,32 @@ func _dispatch(action: String, hud: Node) -> void:
             hud.call("_open_screen", "DashboardPanel")
         "notifications_manager":
             hud.call("_open_screen", "NotificationsCenterPanel")
+
+func _finish_continue_save(hud: Node) -> void:
+    if not is_instance_valid(hud):
+        return
+    _game_call("load_game")
+    hud.set("_last_day_seen", _day())
+    if str(_state_value("company", "message", "")) == "Game loaded.":
+        hud.call("open_figma_view", "live")
+    else:
+        hud.call("open_figma_view", "offline_error")
+
+func _retry_runtime_services() -> bool:
+    var realtime = get_node_or_null("/root/RenewRealTimeEconomySystem")
+    if realtime == null:
+        _message("Runtime economy service is unavailable.")
+        return false
+    var passive: Dictionary = realtime.reconcile_passive_income(true) if realtime.has_method("reconcile_passive_income") else {"ok": false, "message": "Passive economy service unavailable."}
+    if not bool(passive.get("ok", false)):
+        _message(str(passive.get("message", "Passive economy service unavailable.")))
+        return false
+    var calendar: Dictionary = realtime.reconcile_calendar(false) if realtime.has_method("reconcile_calendar") else {"ok": false, "message": "World calendar unavailable."}
+    if not bool(calendar.get("ok", false)):
+        _message(str(calendar.get("message", "World calendar unavailable.")))
+        return false
+    _message("Background services are available.")
+    return true
 
 func _theme_manager() -> Node:
     return get_node_or_null("/root/RestoraThemeManager")
@@ -711,6 +741,30 @@ func _owned_properties() -> int:
 func _rival_count() -> int:
     var rivals = _state_value("competitors", "rivals", [])
     return rivals.size() if rivals is Array else 0
+
+func _empty_state_lines() -> Array:
+    var lines: Array = []
+    if _roster().is_empty():
+        lines.append("No employees yet · hire when operations need more capacity.")
+    if _active_contract_count() <= 0:
+        lines.append("No active contracts · review the marketplace for suitable work.")
+    if not _business_open():
+        lines.append("No operating business · finish restoration and open operations.")
+    if lines.is_empty():
+        lines.append("There is nothing requiring action in this section right now.")
+    return lines
+
+func _empty_state_actions() -> Array:
+    var actions: Array = []
+    if _roster().is_empty():
+        actions.append(["HIRE", "hiring", true])
+    if _active_contract_count() <= 0:
+        actions.append(["FIND CONTRACTS", "contract_market", actions.is_empty()])
+    if not _business_open():
+        actions.append(["START BUSINESS", "operate", actions.is_empty()])
+    if actions.is_empty():
+        actions.append(["HOME", "live", true])
+    return actions
 
 func _notification_lines() -> Array:
     var lines: Array = []

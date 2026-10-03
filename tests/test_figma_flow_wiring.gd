@@ -102,6 +102,12 @@ func _run() -> void:
             check("unguided start disables tutorial overlay", bool(state.get_value("progression", "tutorial_completed", false)) and bool(state.get_value("progression", "tutorial_dismissed", false)))
             check("unguided start routes into the live company", str(hud.get("active_view")) == "live")
 
+    bridge._dispatch("continue_save", hud)
+    check("continue flow shows Figma loading state before restore", str(hud.get("active_view")) == "loading")
+    await process_frame
+    await process_frame
+    check("loading state completes into the restored company", str(hud.get("active_view")) == "live")
+
     hud.open_figma_view("business_list")
     await process_frame
     var business_action := (hud.get("mobile_content") as Control).get_node_or_null("FlowAction0") as Button
@@ -126,6 +132,15 @@ func _run() -> void:
             next_employee.pressed.emit()
             await process_frame
             check("next employee updates Figma employee selection", int(bridge.get("_selected_employee_index")) != before_employee_index)
+
+    hud.open_figma_view("contract_market")
+    await process_frame
+    var active_contracts_button := (hud.get("mobile_content") as Control).get_node_or_null("FlowAction1") as Button
+    check("zero active contracts still exposes the authored empty-state route", active_contracts_button != null)
+    if active_contracts_button != null:
+        active_contracts_button.pressed.emit()
+        await process_frame
+        check("no-contract condition opens Figma empty state", str(hud.get("active_view")) == "empty_states")
 
     for view_name in VIEWS:
         check(view_name + " supported", bool(bridge.supports(view_name)))
@@ -180,6 +195,27 @@ func _run() -> void:
         hud._process(0.6)
         await process_frame
         check("real company level increase opens Figma level-up screen", str(hud.get("active_view")) == "level_up")
+
+        hud.open_figma_view("live")
+        var day_before_summary := int(state.get_value("player", "day", 1))
+        hud.set("_last_day_seen", day_before_summary)
+        state.set_value("player", "day", day_before_summary + 1)
+        hud._process(0.6)
+        await process_frame
+        check("real day rollover opens Figma end-of-day summary", str(hud.get("active_view")) == "day_summary")
+        var continue_day := (hud.get("mobile_content") as Control).get_node_or_null("FlowAction0") as Button
+        check("day summary continue is reachable", continue_day != null)
+        if continue_day != null:
+            continue_day.pressed.emit()
+            await process_frame
+            check("day summary continues without legacy extra day advance", int(state.get_value("player", "day", 0)) == day_before_summary + 1 and str(hud.get("active_view")) == "live")
+
+        var realtime := root.get_node_or_null("RenewRealTimeEconomySystem")
+        check("real-time service exposes Figma error signal", realtime != null and realtime.has_signal("service_error"))
+        if realtime != null and realtime.has_signal("service_error"):
+            realtime.emit_signal("service_error", "Focused service failure")
+            await process_frame
+            check("runtime service failure opens Figma offline/error state", str(hud.get("active_view")) == "offline_error")
 
     game.queue_free()
     await process_frame
