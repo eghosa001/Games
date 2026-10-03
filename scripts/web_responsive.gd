@@ -108,11 +108,13 @@ func _apply_scene_visibility() -> void:
     # from covering the primary HUD at startup.
     var bankruptcy := renew.get_node_or_null("Systems/BankruptcySystem")
     var distress_state := "stable"
+    var recovery_center_open := false
     if bankruptcy != null:
         distress_state = str(bankruptcy.get("state"))
+        recovery_center_open = bool(bankruptcy.is_recovery_center_open()) if bankruptcy.has_method("is_recovery_center_open") else distress_state != "stable"
     var distress_controls := bankruptcy.get_node_or_null("BankruptcyControls") if bankruptcy != null else null
     if distress_controls is CanvasLayer:
-        distress_controls.visible = distress_state != "stable"
+        distress_controls.visible = recovery_center_open
 
     # CorporateControl is a legacy world renderer. The Empire tab owns that
     # information surface now, so the renderer is shown only there on desktop
