@@ -82,12 +82,8 @@ func _process(delta: float) -> void:
             _pending_level_up = true
         elif current_level < previous_level:
             _pending_level_up = false
-    # Level-up is informational, so never let it replace a restoration,
-    # tutorial, business, finance or modal decision already in progress.
-    if _pending_level_up and active_view == "live" and not _transient_modal_open():
-        _pending_level_up = false
-        _show_view("level_up")
-        return
+    # Level-up is informational. Keep it queued until the player chooses the
+    # Progression notice; navigation must always obey the destination they tap.
     if sig != _last_signature:
         _last_signature = sig
         _refresh()
@@ -605,6 +601,8 @@ func _animate_view_in() -> void:
 func _show_view(view_name: String) -> void:
     var previous_view: String = str(active_view)
     active_view = view_name
+    if view_name == "level_up":
+        _pending_level_up = false
     match view_name:
         "live":
             active_tab = 0
@@ -1421,6 +1419,8 @@ func _build_mobile_more() -> void:
     _label(company, "Meta", "Reputation %d • Company Level %d • Autosave on" % [_rep(), _company_level()], Rect2(16,42,inner_w - 32,14), 10, "muted", 400)
     _label(company, "Health", "%d ACTIVE CONTRACT%s" % [_active_contracts(), "" if _active_contracts() == 1 else "S"], Rect2(16,68,180,14), 9, "success", 600)
 
+    var progression_target := "level_up" if _pending_level_up else "company_progress"
+    var progression_body := "NEW LEVEL UNLOCKED • REVIEW" if _pending_level_up else "Company level and unlocks"
     var tiles = [
         ["HOW TO PLAY","Restore → Operate → Grow","guide",""],
         ["EMPLOYEES","Staff, morale and assignments","employee_list","employees"],
@@ -1432,7 +1432,7 @@ func _build_mobile_more() -> void:
         ["ALLIANCES","Partners, trust and rivals","alliances","alliances"],
         ["REPORTS","Performance and strategic signals","reports",""],
         ["NOTIFICATIONS","Decisions that need attention","notifications",""],
-        ["PROGRESSION","Company level and unlocks","company_progress",""],
+        ["PROGRESSION",progression_body,progression_target,""],
         ["SAVE / LOAD","Profiles and recovery","SaveLoadPanel",""],
         ["SETTINGS","Theme, audio, accessibility, privacy","settings",""],
         ["INTELLIGENCE","Company and market signals","intelligence",""]
@@ -1456,7 +1456,7 @@ func _build_mobile_more() -> void:
         _label(p, "Body", body_text, Rect2(14,38,col_w - 28,40), 9, "muted", 400)
         var target = str(tiles[i][2])
         var open_button: Button
-        if ["world","intelligence","settings","guide","employee_list","contract_market","supply_chain","infrastructure_roadmap","milestones","alliances","reports","notifications","company_progress"].has(target):
+        if ["world","intelligence","settings","guide","employee_list","contract_market","supply_chain","infrastructure_roadmap","milestones","alliances","reports","notifications","company_progress","level_up"].has(target):
             open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,90), _show_view.bind(target))
         else:
             open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,90), _open_screen.bind(target))
