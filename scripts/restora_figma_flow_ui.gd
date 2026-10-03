@@ -3,6 +3,7 @@ extends Node
 ## Functional bridge for the complete RESTORA Figma UX.
 ## It adds the secondary/detail screens from the approved mobile flow while
 ## leaving gameplay truth in Main and the existing domain systems.
+## Master-prompt integration: progression, financial health and strategic guidance stay read-only here.
 
 const CUSTOM_VIEWS := [
     "launch", "new_game", "continue_game", "onboarding",
