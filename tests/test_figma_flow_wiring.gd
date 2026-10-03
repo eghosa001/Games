@@ -67,7 +67,13 @@ func _run() -> void:
         game.start_new_game()
         await process_frame
         check("new game resets day", int(state.get_value("player", "day", -1)) == 1)
-        check("new game resets employee roster", (state.get_value("employees", "roster", []) as Array).is_empty())
+        var fresh_roster := state.get_value("employees", "roster", []) as Array
+        var stale_employee_present := false
+        for employee in fresh_roster:
+            if employee is Dictionary and str((employee as Dictionary).get("id", "")) == "stale":
+                stale_employee_present = true
+        check("new game restores the three-person founding roster", fresh_roster.size() == 3)
+        check("new game removes stale employees", not stale_employee_present)
         check("new game restores founding cash", int(state.get_value("economy", "cash", 0)) == 35000)
         var finance := root.get_node_or_null("RenewFinanceSystem")
         var production := root.get_node_or_null("RenewProductionSystem")
