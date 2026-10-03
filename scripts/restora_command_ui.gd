@@ -634,7 +634,7 @@ func _show_view(view_name: String) -> void:
             active_tab = 1
         "property", "portfolio", "property_overview", "restoration_plan", "restoration_confirm", "before_after", "property_acquisition":
             active_tab = 2
-        "finance", "budget", "funding":
+        "finance", "budget", "funding", "financial_health":
             active_tab = 3
         _:
             active_tab = 4
