@@ -34,6 +34,7 @@ var _last_signature = ""
 var _layout_kind = ""
 var _last_progress_level := -1
 var _pending_level_up := false
+var _pending_day_summary := false
 var _view_transition: Tween
 
 var _font_regular: SystemFont
@@ -110,8 +111,19 @@ func _bind_runtime_events() -> void:
             calendar.connect("day_rolled_over", calendar_callback)
 
 func _on_world_calendar_day_rolled_over(_summary: Dictionary) -> void:
-    if active_view != "day_summary":
+    # A calendar rollover is important, but it must never steal an in-progress
+    # management flow, confirmation, or native modal. Queue the summary and let
+    # the player open it from More when they are busy.
+    if active_view == "day_summary":
+        return
+    if active_view == "live" and not _transient_modal_open() and not _native_screen_open():
         _show_view("day_summary")
+        return
+    _pending_day_summary = true
+
+func _native_screen_open() -> bool:
+    var manager = _screen_manager()
+    return manager != null and manager.has_method("get_active_screen_name") and not str(manager.get_active_screen_name()).is_empty()
 
 func _on_runtime_service_error(message: String) -> void:
     var state = _game_state()
@@ -611,11 +623,11 @@ func _show_view(view_name: String) -> void:
             active_tab = 4
 
     # On phones the shell/navigation is persistent. Rebuild only the changing
-    # page body instead of destroying and recreating the entire UI tree.
+    # page body instead of destroying and recreating the entire UI tree. Same-
+    # view rebuilds are intentional: many Figma actions mutate authoritative
+    # state and then return to the current screen, so skipping the rebuild leaves
+    # stale values visible even though the command succeeded.
     if _layout_kind == "mobile" and _layout_class() == "mobile" and mobile_content != null and bottom_nav != null:
-        if previous_view == view_name and mobile_content.get_child_count() > 0:
-            _refresh_bottom_nav()
-            return
         _rebuild_mobile_content()
         return
 
@@ -627,7 +639,16 @@ func open_figma_view(view_name: String) -> void:
 func _set_tab(index: int) -> void:
     var target_index := clampi(index, 0, 4)
     var views = ["live", "operate", "property", "finance", "more"]
-    _show_view(views[target_index])
+    var target_view: String = str(views[target_index])
+    # Re-tapping the active primary tab is a lightweight "back to top" action;
+    # it should not rebuild the page. Explicit gameplay actions still call
+    # _show_view() directly and therefore refresh same-view state.
+    if active_view == target_view and _layout_kind == "mobile":
+        if mobile_scroll != null:
+            mobile_scroll.scroll_vertical = 0
+        _refresh_bottom_nav()
+        return
+    _show_view(target_view)
 
 func _rebuild_mobile_content() -> void:
     if mobile_content == null:
@@ -988,8 +1009,8 @@ func _header(title: String, subtitle: String, right_text = "", status_role = "go
         _remember("right_status", _label(mobile_content, "RightStatus", right_text, Rect2(w - 154, 24, 92, 18), 9 if title != "RESTORA" else 11, "plum" if active_view == "settings" else "text", 600, HORIZONTAL_ALIGNMENT_RIGHT))
     var alerts := Button.new()
     alerts.name = "NotificationsButton"
-    alerts.position = Vector2(w - 56, 16)
-    alerts.size = Vector2(38, 38)
+    alerts.position = Vector2(w - 62, 16)
+    alerts.size = Vector2(44, 44)
     alerts.focus_mode = Control.FOCUS_ALL
     alerts.mouse_filter = Control.MOUSE_FILTER_PASS
     alerts.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -1415,6 +1436,14 @@ func _build_mobile_more() -> void:
 
     var progression_target := "level_up" if _pending_level_up else "company_progress"
     var progression_body := "New level unlocked — review" if _pending_level_up else "Company level and unlocks"
+    var insight_items: Array = [
+        ["REPORTS", "Performance and strategic signals", "reports", ""],
+        ["NOTIFICATIONS", "Decisions that need attention", "notifications", ""],
+        ["PROGRESSION", progression_body, progression_target, ""],
+        ["INTELLIGENCE", "Company and market signals", "intelligence", ""]
+    ]
+    if _pending_day_summary:
+        insight_items.insert(0, ["DAY SUMMARY", "Latest completed day is ready to review", "day_summary", ""])
     var sections = [
         ["OPERATIONS", [
             ["EMPLOYEES", "Staff, morale and assignments", "employee_list", "employees"],
@@ -1427,12 +1456,7 @@ func _build_mobile_more() -> void:
             ["ALLIANCES", "Partners, trust and rivals", "alliances", "alliances"],
             ["COLLECTION", "Milestones and legacy rewards", "milestones", "collections"]
         ]],
-        ["INSIGHTS", [
-            ["REPORTS", "Performance and strategic signals", "reports", ""],
-            ["NOTIFICATIONS", "Decisions that need attention", "notifications", ""],
-            ["PROGRESSION", progression_body, progression_target, ""],
-            ["INTELLIGENCE", "Company and market signals", "intelligence", ""]
-        ]],
+        ["INSIGHTS", insight_items],
         ["SYSTEM", [
             ["HOW TO PLAY", "Restore → Operate → Grow", "guide", ""],
             ["SAVE / LOAD", "Profiles and recovery", "SaveLoadPanel", ""],
