@@ -207,10 +207,33 @@ var log_lines: Array:
 func _ready():
     command_system = GameplayCommandSystem.new(); command_system.name = "GameplayCommandSystem"; add_child(command_system); command_system.initialize()
 
+func _reset_runtime_service(target_path: String, script_path: String) -> void:
+    var target = get_node_or_null(target_path)
+    if target == null or not target.has_method("restore_state") or not ResourceLoader.exists(script_path):
+        return
+    var script = load(script_path)
+    if script == null:
+        return
+    var fresh = script.new()
+    if fresh != null and fresh.has_method("capture_state"):
+        var snapshot = fresh.capture_state()
+        if snapshot is Dictionary and not snapshot.is_empty():
+            target.restore_state(snapshot)
+    if fresh != null:
+        fresh.free()
+
 func start_new_game() -> void:
     var state = _game_state()
     if state != null and state.has_method("clear"):
         state.clear()
+
+    # These autoloads own live runtime ledgers in addition to their GameState
+    # mirrors. Reset them from clean script defaults before rebuilding commands
+    # so a fresh company cannot inherit old cash, inventory or contracts.
+    _reset_runtime_service("/root/RenewFinanceSystem", "res://scripts/finance_system_fixed.gd")
+    _reset_runtime_service("/root/RenewProductionSystem", "res://scripts/production_system.gd")
+    _reset_runtime_service("/root/RenewContractSystem", "res://scripts/contract_system.gd")
+
     var services = get_node_or_null("/root/RenewServices")
     if services != null and services.has_method("capture_persistent_state") and services.has_method("get_service"):
         var snapshots = services.capture_persistent_state()
@@ -219,12 +242,24 @@ func start_new_game() -> void:
                 var service = services.get_service(str(service_name))
                 if service != null and service.has_method("restore_state"):
                     service.restore_state({})
+
     if command_system != null and is_instance_valid(command_system):
         command_system.free()
     command_system = GameplayCommandSystem.new()
     command_system.name = "GameplayCommandSystem"
     add_child(command_system)
     command_system.initialize()
+
+    # Re-sync the canonical mirrors after all runtime owners are clean.
+    var finance = _finance()
+    if finance != null:
+        _write("economy", "cash", int(finance.cash))
+        _write("finance", "debt", int(finance.debt))
+        _write("finance", "loan_payment", int(finance.loan_payment))
+    var production = get_node_or_null("/root/RenewProductionSystem")
+    if production != null:
+        _write("production", "finished_goods", int(production.finished_goods))
+
     var tutorial = get_node_or_null("UI/TutorialOverlay")
     if tutorial != null and tutorial.has_method("reset_tutorial"):
         tutorial.reset_tutorial()
