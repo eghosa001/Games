@@ -938,8 +938,10 @@ func _content_width() -> float:
 
 func _header(title: String, subtitle: String, right_text = "", status_role = "gold") -> void:
     var w = _content_width()
-    _remember("title", _label(mobile_content, "Title", title, Rect2(18, 18, w - 142, 34), 24 if title == "RESTORA" else 21, "text", 700))
-    status_label = _label(mobile_content, "Status", subtitle, Rect2(18, 48 if title != "RESTORA" else 52, w - 146, 16), 9, status_role, 600)
+    var title_width: float = float(w) - (178.0 if not right_text.is_empty() else 82.0)
+    var subtitle_width: float = float(w) - (178.0 if not right_text.is_empty() else 86.0)
+    _remember("title", _label(mobile_content, "Title", title, Rect2(18, 18, title_width, 34), 24 if title == "RESTORA" else 21, "text", 700))
+    status_label = _label(mobile_content, "Status", subtitle, Rect2(18, 48 if title != "RESTORA" else 52, subtitle_width, 16), 9, status_role, 600)
     _remember("status", status_label)
     if not right_text.is_empty():
         _remember("right_status", _label(mobile_content, "RightStatus", right_text, Rect2(w - 154, 24, 92, 18), 9 if title != "RESTORA" else 11, "plum" if active_view == "settings" else "text", 600, HORIZONTAL_ALIGNMENT_RIGHT))
