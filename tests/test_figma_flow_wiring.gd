@@ -106,7 +106,6 @@ func _run() -> void:
     if not bool(hud._inspected()):
         game.inspect_property()
     if not bool(hud._owned()):
-        var state := root.get_node_or_null("RenewGameState")
         if state != null:
             state.set_value("economy", "cash", 1000000)
         game.acquire_property()
