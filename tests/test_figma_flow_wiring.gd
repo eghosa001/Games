@@ -10,7 +10,7 @@ const VIEWS := [
     "employee_list", "employee_detail", "hiring", "assign_employee",
     "contract_market", "contract_detail", "active_contracts",
     "supply_chain", "supplier_compare", "inventory",
-    "budget", "funding", "region_overview", "property_acquisition",
+    "budget", "funding", "financial_health", "region_overview", "property_acquisition",
     "infrastructure_roadmap", "company_progress", "milestones", "alliances",
     "corporate_strategy", "world_power", "headquarters", "legacy", "endgame",
     "reports", "notifications", "accessibility", "pause", "day_summary",
@@ -198,6 +198,7 @@ func _run() -> void:
     check("infrastructure returns to World hub", str(bridge.back_target("infrastructure_roadmap")) == "world")
     check("restoration confirmation back chain is stable", str(bridge.back_target("restoration_confirm")) == "restoration_plan")
     check("accessibility back chain is stable", str(bridge.back_target("accessibility")) == "settings")
+    check("financial health returns to Finance", str(bridge.back_target("financial_health")) == "finance")
     check("corporate strategy returns to More", str(bridge.back_target("corporate_strategy")) == "more")
     check("world power returns to corporate strategy", str(bridge.back_target("world_power")) == "corporate_strategy")
     check("headquarters returns to world power", str(bridge.back_target("headquarters")) == "world_power")
@@ -218,6 +219,41 @@ func _run() -> void:
     check("More exposes progression-gated legacy", legacy_button != null)
     check("More exposes progression-gated prestige endgame", endgame_button != null)
     check("More exposes progression-gated diplomacy and trade", diplomacy_button != null)
+    var financial_health_button := (hud.get("mobile_content") as Control).find_child("Openfinancial_health", true, false) as Button
+    check("More exposes live financial health", financial_health_button != null)
+
+    hud.open_figma_view("finance")
+    await process_frame
+    var finance_health_button := (hud.get("mobile_content") as Control).find_child("OpenFinancialHealth", true, false) as Button
+    check("Finance exposes financial health detail", finance_health_button != null)
+
+    var distress := game.get_node_or_null("Systems/BankruptcySystem")
+    check("Bankruptcy system available to Figma flow", distress != null)
+    if distress != null:
+        distress.state = "cash_crisis"
+        distress.distress_score = 46.0
+        distress.cash_runway = 8.0
+        distress.covenant_breaches = ["debt_service"]
+        distress.recovery_center_open = false
+        distress._refresh_distress_ui()
+        hud.open_figma_view("financial_health")
+        await process_frame
+        check("cash crisis remains navigable until player opens recovery center", not bool(distress.distress_layer.visible))
+        var health_content := hud.get("mobile_content") as Control
+        var health_state := health_content.get_node_or_null("FlowMetric0/Value") as Label
+        check("financial health reads real distress state", health_state != null and health_state.text.to_lower().contains("cash crisis"))
+        var open_recovery := health_content.get_node_or_null("FlowAction0") as Button
+        check("distressed financial health exposes recovery center", open_recovery != null and open_recovery.text == "OPEN RECOVERY CENTER")
+        if open_recovery != null:
+            open_recovery.pressed.emit()
+            await process_frame
+            check("recovery center opens from Figma financial health", bool(distress.is_recovery_center_open()) and bool(distress.distress_layer.visible))
+            distress.hide_recovery_center()
+        distress.state = "stable"
+        distress.distress_score = 0.0
+        distress.cash_runway = INF
+        distress.covenant_breaches.clear()
+        distress._refresh_distress_ui()
 
     if state != null:
         hud.open_figma_view("restoration_complete")
@@ -243,6 +279,19 @@ func _run() -> void:
             await process_frame
             check("Progression notice opens Figma level-up screen", str(hud.get("active_view")) == "level_up")
             check("opening level-up clears the pending notice", not bool(hud.get("_pending_level_up")))
+            var unlock_text := (hud.get("mobile_content") as Control).get_node_or_null("FlowDetails/Detail0/Text") as Label
+            check("level-up names the real systems unlocked at level 2", unlock_text != null and unlock_text.text.contains("Employees") and unlock_text.text.contains("Finance"))
+
+        state.set_value("progression", "xp", 3000)
+        state.set_value("progression", "level", 7)
+        hud.set("_last_progress_level", 7)
+        hud.set("_pending_level_up", false)
+        hud.open_figma_view("company_progress")
+        await process_frame
+        var current_layer := (hud.get("mobile_content") as Control).get_node_or_null("FlowDetails/Detail0/Text") as Label
+        var current_unlocks := (hud.get("mobile_content") as Control).get_node_or_null("FlowDetails/Detail1/Text") as Label
+        check("company progress names the current strategic layer", current_layer != null and current_layer.text.contains("Acquisitions"))
+        check("company progress lists real level-7 unlocks", current_unlocks != null and current_unlocks.text.contains("Corporate Strategy"))
 
         hud.open_figma_view("live")
         var day_before_summary := int(state.get_value("player", "day", 1))
