@@ -70,13 +70,17 @@ func _process(delta: float) -> void:
         return
     _refresh_elapsed = 0.0
     var sig = _state_signature()
-    if _company_level() != _last_progress_level:
+    var current_level := _company_level()
+    if current_level != _last_progress_level:
         # Do not destroy an in-progress player choice just because progression
         # advanced in the background. The pending rebuild will happen after the
         # transient modal closes (business launch already rebuilds explicitly).
         if _transient_modal_open():
             return
-        _rebuild_current()
+        if _last_progress_level > 0 and current_level > _last_progress_level and active_view != "level_up":
+            _show_view("level_up")
+        else:
+            _rebuild_current()
         return
     if sig != _last_signature:
         _last_signature = sig
