@@ -88,7 +88,7 @@ func _exercise_opening_flow(game:Node,hud:Node)->void:
 
     var state:=root.get_node_or_null("RenewGameState")
     check("restoration reaches Operational",state!=null and str(state.get_value("properties","stage",""))=="Operational")
-    check("Figma completion screen opens",str(hud.get("active_view"))=="restoration_complete")
+    check("Figma completion screen opens without level-up interruption",str(hud.get("active_view"))=="restoration_complete")
 
     var start_business:=_find_button(hud.get("mobile_content"),"START BUSINESS")
     check("Start Business CTA exists",start_business!=null)
