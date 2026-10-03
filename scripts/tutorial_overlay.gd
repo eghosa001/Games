@@ -262,18 +262,12 @@ func _layout_responsive() -> void:
         collapsed_button.hide()
         return
 
-    # On phones, the authored Figma Guide owns teaching. Keep the legacy
-    # tracker active for progression, but never cover the mobile command deck
-    # with its floating card.
+    # On phones, teaching is integrated into the authored onboarding and
+    # HOW TO PLAY screen. Keep tutorial progression active in the background,
+    # but never float a GUIDE chip over gameplay or the persistent bottom nav.
     if narrow:
         panel.hide()
-        if tutorial.completed or not _compact_guide_allowed():
-            collapsed_button.hide()
-            return
-        collapsed_button.text = "GUIDE  %d/%d" % [mini(int(tutorial.step) + 1, tutorial.steps.size()), tutorial.steps.size()]
-        collapsed_button.size = Vector2(112.0, 48.0)
-        collapsed_button.position = Vector2(maxf(8.0, w - 124.0), maxf(8.0, h - 154.0))
-        collapsed_button.show()
+        collapsed_button.hide()
         return
 
     var compact_by_default := not _expanded_by_user

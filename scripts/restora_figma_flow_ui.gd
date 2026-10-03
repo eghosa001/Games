@@ -317,17 +317,17 @@ func back_target(view_name: String) -> String:
     match view_name:
         "property_overview", "restoration_plan": return "property"
         "restoration_confirm", "before_after": return "restoration_plan"
-        "business_list": return "operate"
+        "business_list", "employee_list", "contract_market", "supply_chain": return "operate"
         "business_overview": return "business_list"
         "production": return "business_overview"
-        "employee_list", "contract_market", "supply_chain", "infrastructure_roadmap", "company_progress", "milestones", "alliances", "reports", "notifications": return "more"
         "employee_detail", "hiring": return "employee_list"
         "assign_employee": return "employee_detail"
         "contract_detail", "active_contracts": return "contract_market"
         "supplier_compare", "inventory": return "supply_chain"
         "budget", "funding": return "finance"
-        "region_overview": return "world"
+        "region_overview", "infrastructure_roadmap": return "world"
         "property_acquisition": return "region_overview"
+        "company_progress", "milestones", "alliances", "reports", "notifications": return "more"
         "accessibility": return "settings"
         "new_game", "continue_game": return "launch"
         "onboarding": return "new_game"
@@ -339,14 +339,19 @@ func _render_screen(view_name: String, hud: Node, content: Control, spec: Dictio
     var w := content.size.x if content.size.x > 0 else 382.0
     var inner_w := w - 36.0
     hud.call("_header", str(spec.get("title", "RESTORA")), str(spec.get("subtitle", "")))
+    # Figma/detail screens use the top-right slot for Back. Remove the standard
+    # notification control first so the two touch targets never overlap.
+    var header_notifications := content.get_node_or_null("NotificationsButton")
+    if header_notifications != null:
+        header_notifications.free()
     if not bool(spec.get("immersive", false)) and view_name != "launch":
         var back := back_target(view_name)
-        hud.call("_frame_button", content, "FlowBack", "‹", Rect2(w - 62.0, 18.0, 44.0, 40.0), Callable(self, "_dispatch").bind(back, hud), false, false, 16)
-    var y := 84.0
+        hud.call("_frame_button", content, "FlowBack", "‹", Rect2(w - 62.0, 16.0, 44.0, 44.0), Callable(self, "_dispatch").bind(back, hud), false, false, 16)
+    var y := 82.0
     var artwork: Texture2D = null
-    if ["launch","new_game","property_overview","restoration_plan","before_after","restoration_complete"].has(view_name):
+    if ["launch","new_game","property_overview","before_after"].has(view_name):
         artwork = CALDER_ART
-    elif ["region_overview","property_acquisition","infrastructure_roadmap"].has(view_name):
+    elif ["region_overview","property_acquisition"].has(view_name):
         artwork = REGION_ART
     if artwork != null:
         var art_card = hud.call("_panel", content, "FlowArtworkCard", Rect2(18, y, inner_w, 142), "surface", "border", 16)

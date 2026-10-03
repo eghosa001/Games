@@ -153,3 +153,5 @@ func _finish()->void:
     print("FIGMA MOBILE QA: %d checks | %d failures" % [checks,failures.size()])
     for failure in failures:print("FAILED: "+failure)
     quit(1 if not failures.is_empty() else 0)
+# Focused validation: RESTORA mobile overlap, touch scroll and navigation hierarchy.
+# Focused rerun: typed mobile UX layout fix.

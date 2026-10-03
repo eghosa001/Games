@@ -32,6 +32,10 @@ func _run() -> void:
     check(nav != null, "bottom navigation exists")
     check(nav.position == Vector2(12, 758), "bottom navigation matches phone position")
     check(nav.size == Vector2(366, 70), "bottom navigation matches phone size")
+    var scroll := hud.get("mobile_scroll") as ScrollContainer
+    var mobile_content := hud.get("mobile_content") as Control
+    check(scroll != null and scroll.scroll_deadzone <= 2, "touch scrolling uses a low deadzone")
+    check(scroll != null and mobile_content != null and is_equal_approx(scroll.size.x, mobile_content.size.x), "scroll content keeps full phone width")
 
     var buttons: Array = hud.get("mode_buttons")
     var expected := ["HOME", "BUSINESS", "PROPERTY", "FINANCE", "MORE"]
@@ -68,9 +72,18 @@ func _run() -> void:
     await process_frame
     check(int(hud.get("active_tab")) == 3 and str(hud.get("active_view")) == "finance", "Finance navigation opens the ledger")
 
+    hud.open_figma_view("operate")
+    await process_frame
+    var business_content := hud.get("mobile_content") as Control
+    for action_name in ["BusinessOverview", "BusinessTeam", "BusinessContracts", "BusinessSupply"]:
+        check(business_content.find_child(action_name, true, false) is Button, "Business hub exposes " + action_name)
+
     hud.open_figma_view("more")
     await process_frame
-    var how_to_play := hud.get("mobile_content").find_child("Openguide", true, false) as Button
+    var more_content := hud.get("mobile_content") as Control
+    check(more_content.find_children("MoreSection*", "Panel", false, false).size() == 4, "More uses four grouped command sections")
+    check(more_content.size.y > (hud.get("mobile_scroll") as ScrollContainer).size.y, "More has a real vertical scroll range")
+    var how_to_play := more_content.find_child("Openguide", true, false) as Button
     check(how_to_play != null, "More exposes permanent How to Play guidance")
     if how_to_play != null:
         how_to_play.pressed.emit()
@@ -81,3 +94,5 @@ func _run() -> void:
     await process_frame
     print("BOTTOM NAV: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
+# Focused validation: RESTORA mobile overlap, touch scroll and navigation hierarchy.
+# Focused rerun: typed mobile UX layout fix.

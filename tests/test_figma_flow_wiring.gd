@@ -88,6 +88,9 @@ func _run() -> void:
     hud.open_figma_view("property_overview")
     await process_frame
     check("normal Figma detail restores primary navigation", (hud.get("bottom_nav") as Control).visible)
+    var property_detail := hud.get("mobile_content") as Control
+    check("detail screen removes overlapping notification control", property_detail.get_node_or_null("NotificationsButton") == null)
+    check("detail screen keeps one top-right back control", property_detail.get_node_or_null("FlowBack") is Button)
 
     if state != null:
         state.set_value("player", "day", 7)
@@ -184,12 +187,17 @@ func _run() -> void:
         check("budget action persists a real finance plan", plan is Dictionary and int(plan.get("reserve", 0)) == 25)
 
     check("contract detail back chain is stable", str(bridge.back_target("contract_detail")) == "contract_market")
+    check("business employee list returns to Business hub", str(bridge.back_target("employee_list")) == "operate")
+    check("business contract market returns to Business hub", str(bridge.back_target("contract_market")) == "operate")
+    check("business supply chain returns to Business hub", str(bridge.back_target("supply_chain")) == "operate")
+    check("infrastructure returns to World hub", str(bridge.back_target("infrastructure_roadmap")) == "world")
     check("restoration confirmation back chain is stable", str(bridge.back_target("restoration_confirm")) == "restoration_plan")
     check("accessibility back chain is stable", str(bridge.back_target("accessibility")) == "settings")
 
     if state != null:
         hud.open_figma_view("restoration_complete")
         await process_frame
+        state.set_value("progression", "xp", 100)
         state.set_value("progression", "level", 2)
         hud.set("_last_progress_level", 1)
         hud.set("_pending_level_up", false)
@@ -203,7 +211,7 @@ func _run() -> void:
         check("queued level-up does not replace Home navigation", str(hud.get("active_view")) == "live")
         hud.open_figma_view("more")
         await process_frame
-        var progression_notice := (hud.get("mobile_content") as Control).get_node_or_null("Openlevel_up") as Button
+        var progression_notice := (hud.get("mobile_content") as Control).find_child("Openlevel_up", true, false) as Button
         check("queued level-up is reachable from the Progression tile", progression_notice != null)
         if progression_notice != null:
             progression_notice.pressed.emit()
@@ -242,3 +250,5 @@ func _run() -> void:
     await process_frame
     print("FIGMA FLOW WIRING: %d checks, %d failures" % [checks, failed])
     quit(1 if failed > 0 else 0)
+# Focused validation: RESTORA mobile overlap, touch scroll and navigation hierarchy.
+# Focused rerun: typed mobile UX layout fix.
