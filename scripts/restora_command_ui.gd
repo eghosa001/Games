@@ -954,7 +954,6 @@ func _header(title: String, subtitle: String, right_text = "", status_role = "go
     alerts.tooltip_text = "Notifications"
     alerts.icon = _asset_texture(ICON_ROOT + "decisions.svg")
     alerts.expand_icon = true
-    alerts.icon_max_width = 18
     alerts.add_theme_stylebox_override("normal", _style(_color("surface_2"), _color("border"), 19))
     alerts.add_theme_stylebox_override("hover", _style(_color("selected"), _color("plum"), 19))
     alerts.add_theme_stylebox_override("pressed", _style(_color("selected").darkened(0.04), _color("gold"), 19))
