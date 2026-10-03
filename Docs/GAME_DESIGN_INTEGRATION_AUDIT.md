@@ -89,13 +89,11 @@ The progression system previously stored XP, level and generic IDs such as `comp
 
 This preserves existing generic level IDs while giving UI and gameplay code a stable progression contract.
 
-## Highest-priority remaining integration work
+## Highest-priority remaining validation work
 
-1. **Make mobile discovery progression-driven.** Advanced menu entries should appear as semantic milestones unlock, while underlying direct system APIs remain available for tests and save compatibility.
-2. **Give acquisitions/corporate strategy an explicit late-game player entry point.** The acquisition system is mounted and tested, but there is no equally obvious dedicated acquisition panel in the main mobile navigation.
-3. **Add one end-to-end strategic journey test.** It should prove a path from a restored first property through operations, contracts, regional expansion, alliances/diplomacy, infrastructure/technology, acquisition/corporate power, headquarters and legacy—not merely assert each service exists.
-4. **Strengthen long-run balance by progression stage.** Existing soak tests should additionally assert that unlock pacing, cash generation, debt pressure, competitive pressure and late-game costs remain viable around each company-level band.
-5. **Keep physical-device QA as a real release gate.** Do not label Android/mobile release fully proven from headless automation alone.
+1. **Prove the strategic journey during deliberate release validation.** The mobile path is now wired from the restored first property through operations, regional growth, diplomacy/trade, infrastructure/technology, corporate strategy, world power, headquarters, legacy and prestige. A broader end-to-end strategic playthrough remains appropriate only when release validation is explicitly requested.
+2. **Strengthen long-run balance by progression stage.** Existing soak tests should additionally assert that unlock pacing, cash generation, debt pressure, competitive pressure and late-game costs remain viable around each company-level band when long-run balance validation is deliberately run.
+3. **Keep physical-device QA as a real release gate.** Do not label Android/mobile release fully proven from headless automation alone.
 
 ## Post-audit implementation update — 2026-10-03
 
