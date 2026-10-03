@@ -48,7 +48,7 @@ func _art(name_value: String, texture: Texture2D, size_value: Vector2) -> Textur
     art.texture = texture
     art.size = size_value
     art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    art.stretch_mode = TextureRect.STRETCH_SCALE if texture == CALDER_ART else TextureRect.STRETCH_KEEP_ASPECT_COVERED
     art.mouse_filter = Control.MOUSE_FILTER_IGNORE
     return art
 
