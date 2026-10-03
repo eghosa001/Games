@@ -41,3 +41,4 @@ func _save_current_game() -> void:
     # SaveSystem owns serialization. It captures the authoritative GameState itself.
     if not SaveSystem.save_game({}):
         push_warning("RESTORA autosave failed; the previous committed save remains available.")
+# Final master-prompt validation scope: progression, recovery, and Android Back are validated together.

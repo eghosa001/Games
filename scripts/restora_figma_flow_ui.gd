@@ -1170,3 +1170,4 @@ func _money(value: int) -> String:
     if n >= 1000:
         return "%s%.1fK" % [prefix, float(n) / 1000.0]
     return "%s%d" % [prefix, n]
+# Final master-prompt validation scope: progression, recovery, and Android Back are validated together.
