@@ -120,3 +120,4 @@ func _run() -> void:
     await process_frame
     print("RUNTIME PARITY: %d checks, %d failures" % [checks, failed])
     quit(1 if failed > 0 else 0)
+# Focused validation: RESTORA mobile overlap, touch scroll and navigation hierarchy.

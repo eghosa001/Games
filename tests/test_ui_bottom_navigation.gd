@@ -94,3 +94,4 @@ func _run() -> void:
     await process_frame
     print("BOTTOM NAV: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
+# Focused validation: RESTORA mobile overlap, touch scroll and navigation hierarchy.

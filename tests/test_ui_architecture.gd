@@ -145,3 +145,4 @@ func _finish() -> void:
     else:
         print("UI ARCHITECTURE TEST: PASS")
     quit(1 if failed > 0 else 0)
+# Focused validation: RESTORA mobile overlap, touch scroll and navigation hierarchy.
