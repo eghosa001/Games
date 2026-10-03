@@ -76,6 +76,13 @@ func _run() -> void:
         check("new game resets live production inventory", production != null and int(production.get("finished_goods")) == 0)
         check("new game resets live contracts", contracts != null and (contracts.get("active_contracts") as Dictionary).is_empty())
 
+    hud.open_figma_view("new_game")
+    await process_frame
+    check("Figma New Game hides primary navigation", not (hud.get("bottom_nav") as Control).visible)
+    hud.open_figma_view("property_overview")
+    await process_frame
+    check("normal Figma detail restores primary navigation", (hud.get("bottom_nav") as Control).visible)
+
     for view_name in VIEWS:
         check(view_name + " supported", bool(bridge.supports(view_name)))
         hud.open_figma_view(view_name)
