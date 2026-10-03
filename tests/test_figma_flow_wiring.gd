@@ -252,7 +252,7 @@ func _run() -> void:
             hud.open_figma_view("more")
             await process_frame
             var queued_day_summary := (hud.get("mobile_content") as Control).find_child("Openday_summary", true, false) as Button
-            check("queued day summary is reachable from More", queued_day_summary != null)
+            check("queued day summary is reachable through the Figma route from More", queued_day_summary != null)
             if queued_day_summary != null:
                 queued_day_summary.pressed.emit()
                 await process_frame
