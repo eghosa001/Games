@@ -188,13 +188,19 @@ func _run() -> void:
     check("accessibility back chain is stable", str(bridge.back_target("accessibility")) == "settings")
 
     if state != null:
-        hud.open_figma_view("live")
+        hud.open_figma_view("restoration_complete")
         await process_frame
         state.set_value("progression", "level", 2)
         hud.set("_last_progress_level", 1)
+        hud.set("_pending_level_up", false)
         hud._process(0.6)
         await process_frame
-        check("real company level increase opens Figma level-up screen", str(hud.get("active_view")) == "level_up")
+        check("level-up does not interrupt restoration completion", str(hud.get("active_view")) == "restoration_complete")
+        check("level-up is queued while a task screen is active", bool(hud.get("_pending_level_up")))
+        hud.open_figma_view("live")
+        hud._process(0.6)
+        await process_frame
+        check("queued company level increase opens Figma level-up on Home", str(hud.get("active_view")) == "level_up")
 
         hud.open_figma_view("live")
         var day_before_summary := int(state.get_value("player", "day", 1))
