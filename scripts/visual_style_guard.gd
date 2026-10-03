@@ -131,8 +131,12 @@ func _sync_distress_overlay() -> void:
     var controls := bankruptcy.get_node_or_null("BankruptcyControls") as CanvasLayer
     if controls == null:
         return
-    var distress_state := str(bankruptcy.get("state"))
-    controls.visible = distress_state != "stable"
+    var should_show := false
+    if bankruptcy.has_method("is_recovery_center_open"):
+        should_show = bool(bankruptcy.is_recovery_center_open())
+    else:
+        should_show = str(bankruptcy.get("state")) != "stable"
+    controls.visible = should_show
 
 func _theme_active_ui() -> void:
     if _premium_theme == null:
