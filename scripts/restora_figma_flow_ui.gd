@@ -22,6 +22,8 @@ const IMMERSIVE_VIEWS := [
     "launch", "new_game", "continue_game", "onboarding", "pause",
     "day_summary", "level_up", "restoration_complete", "offline_error", "loading"
 ]
+const CALDER_ART := preload("res://Assets/Art/restora_calder_works.svg")
+const REGION_ART := preload("res://Assets/Art/restora_region_map.svg")
 
 var _auto_launch_pending := false
 
@@ -312,6 +314,23 @@ func _render_screen(view_name: String, hud: Node, content: Control, spec: Dictio
         var back := back_target(view_name)
         hud.call("_frame_button", content, "FlowBack", "‹", Rect2(w - 62.0, 18.0, 44.0, 40.0), Callable(self, "_dispatch").bind(back, hud), false, false, 16)
     var y := 84.0
+    var artwork: Texture2D = null
+    if ["launch","new_game","property_overview","restoration_plan","before_after","restoration_complete"].has(view_name):
+        artwork = CALDER_ART
+    elif ["region_overview","property_acquisition","infrastructure_roadmap"].has(view_name):
+        artwork = REGION_ART
+    if artwork != null:
+        var art_card = hud.call("_panel", content, "FlowArtworkCard", Rect2(18, y, inner_w, 142), "surface", "border", 16)
+        var art := TextureRect.new()
+        art.name = "FlowArtwork"
+        art.texture = artwork
+        art.position = Vector2.ZERO
+        art.size = Vector2(inner_w, 142)
+        art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        art_card.add_child(art)
+        y += 156.0
     var metrics: Array = spec.get("metrics", [])
     if not metrics.is_empty():
         var gap := 6.0
