@@ -1,5 +1,7 @@
 extends Node
 
+signal service_error(message: String)
+
 # Real-world economy clock for passive empire assets.
 # Active businesses remain player-driven: buying inputs, producing, pricing and
 # selling are never performed by passive settlement.
@@ -133,21 +135,35 @@ func reconcile_passive_income(force: bool = false) -> Dictionary:
             # the same elapsed period cannot be charged repeatedly every frame.
             var failed_clock := _clock_state(); failed_clock["last_passive_settlement_unix"] = now; failed_clock["last_passive_amount"] = 0; failed_clock["last_passive_elapsed_seconds"] = billable_seconds; failed_clock["passive_daily_net"] = daily_net; _save_clock(failed_clock)
             _sync_finance()
-            return {"ok": false, "settled": 0, "elapsed": billable_seconds, "message": str(result.get("message", "Passive operating deficit could not be paid."))}
+            var failure_message := str(result.get("message", "Passive operating deficit could not be paid."))
+            service_error.emit(failure_message)
+            return {"ok": false, "settled": 0, "elapsed": billable_seconds, "message": failure_message}
         _sync_finance()
     var clock := _clock_state(); clock["passive_fractional_carry"] = new_carry; clock["last_passive_settlement_unix"] = now; clock["last_passive_amount"] = settled; clock["last_passive_elapsed_seconds"] = billable_seconds; clock["passive_daily_net"] = daily_net
     _record_return_summary(clock, settled, billable_seconds, rate)
     _save_clock(clock)
     return {"ok": true, "settled": settled, "elapsed": billable_seconds, "daily_net": daily_net, "hourly_net": daily_net / 24.0, "businesses": int(rate.get("businesses", 0)), "resource_sites": int(rate.get("resource_sites", 0)), "return_summary": clock.get("last_return_summary", {})}
 
+func _service_failure(message: String) -> Dictionary:
+    service_error.emit(message)
+    return {"ok": false, "message": message}
+
 func sell_goods() -> Dictionary:
-    return active_market.sell_goods() if active_market != null else {"ok": false, "message": "Active market unavailable."}
+    return active_market.sell_goods() if active_market != null else _service_failure("Active market unavailable.")
 func deliver_contract() -> Dictionary:
-    return active_market.deliver_contract() if active_market != null else {"ok": false, "message": "Active market unavailable."}
+    return active_market.deliver_contract() if active_market != null else _service_failure("Active market unavailable.")
 func demand_snapshot() -> Dictionary:
-    return active_market.demand_snapshot() if active_market != null else {"ok": false, "remaining": 0}
+    if active_market != null:
+        return active_market.demand_snapshot()
+    service_error.emit("Active market unavailable.")
+    return {"ok": false, "remaining": 0, "message": "Active market unavailable."}
 func reconcile_calendar(force_one_day: bool = false) -> Dictionary:
-    return world_calendar.reconcile_calendar(force_one_day) if world_calendar != null else {"ok": false, "message": "World calendar unavailable."}
+    if world_calendar == null:
+        return _service_failure("World calendar unavailable.")
+    var result: Dictionary = world_calendar.reconcile_calendar(force_one_day)
+    if not bool(result.get("ok", false)):
+        service_error.emit(str(result.get("message", "World calendar reconciliation failed.")))
+    return result
 
 func status() -> Dictionary:
     var rate: Dictionary = passive_daily_run_rate()
