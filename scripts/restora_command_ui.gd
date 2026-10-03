@@ -33,7 +33,6 @@ var _refresh_elapsed = 0.0
 var _last_signature = ""
 var _layout_kind = ""
 var _last_progress_level := -1
-var _last_day_seen := -1
 var _view_transition: Tween
 
 var _font_regular: SystemFont
@@ -71,16 +70,6 @@ func _process(delta: float) -> void:
     if _refresh_elapsed < 0.5:
         return
     _refresh_elapsed = 0.0
-    var current_day := _day()
-    if _last_day_seen < 0:
-        _last_day_seen = current_day
-    elif current_day > _last_day_seen:
-        _last_day_seen = current_day
-        if active_view != "day_summary":
-            _show_view("day_summary")
-            return
-    elif current_day < _last_day_seen:
-        _last_day_seen = current_day
     var sig = _state_signature()
     var current_level := _company_level()
     if current_level != _last_progress_level:
@@ -107,11 +96,21 @@ func _transient_modal_open() -> bool:
 
 func _bind_runtime_events() -> void:
     var realtime = get_node_or_null("/root/RenewRealTimeEconomySystem")
-    if realtime == null or not realtime.has_signal("service_error"):
+    if realtime == null:
         return
-    var callback := Callable(self, "_on_runtime_service_error")
-    if not realtime.is_connected("service_error", callback):
-        realtime.connect("service_error", callback)
+    if realtime.has_signal("service_error"):
+        var service_callback := Callable(self, "_on_runtime_service_error")
+        if not realtime.is_connected("service_error", service_callback):
+            realtime.connect("service_error", service_callback)
+    var calendar = realtime.get_node_or_null("WorldCalendarSystem")
+    if calendar != null and calendar.has_signal("day_rolled_over"):
+        var calendar_callback := Callable(self, "_on_world_calendar_day_rolled_over")
+        if not calendar.is_connected("day_rolled_over", calendar_callback):
+            calendar.connect("day_rolled_over", calendar_callback)
+
+func _on_world_calendar_day_rolled_over(_summary: Dictionary) -> void:
+    if active_view != "day_summary":
+        _show_view("day_summary")
 
 func _on_runtime_service_error(message: String) -> void:
     var state = _game_state()
