@@ -1148,7 +1148,7 @@ func _build_mobile_finance() -> void:
     investor_button.disabled = not bool(investor_quote.get("eligible", false)) or bool(investor_quote.get("pending", false))
     investor_button.tooltip_text = ("Potential funding %s for %.1f%% ownership." % [_money(int(investor_quote.get("amount", 0))), float(investor_quote.get("percent", 0.0))]) if bool(investor_quote.get("eligible", false)) else str(investor_quote.get("message", "Investor offer unavailable."))
 
-    var lower_w := (inner_w - 8.0) * 0.5
+    var lower_w: float = (float(inner_w) - 8.0) * 0.5
     _frame_button(mobile_content, "BudgetPlan", "BUDGET", Rect2(18, 720, lower_w, 48), _show_view.bind("budget"), false, false, 10)
     _frame_button(mobile_content, "FundingDetail", "FUNDING DETAILS", Rect2(26 + lower_w, 720, lower_w, 48), _show_view.bind("funding"), false, true, 10)
     mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 790.0)
