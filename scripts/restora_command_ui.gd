@@ -50,7 +50,10 @@ func _ready() -> void:
         manager.theme_changed.connect(_on_theme_changed)
     if not get_viewport().size_changed.is_connected(_layout_responsive):
         get_viewport().size_changed.connect(_layout_responsive)
-    _show_view("live")
+    if OS.has_feature("standalone") and not OS.has_feature("editor"):
+        _show_view("launch")
+    else:
+        _show_view("live")
     call_deferred("_bind_runtime_after_parent_ready")
 
 func _bind_runtime_after_parent_ready() -> void:
@@ -568,11 +571,11 @@ func _show_view(view_name: String) -> void:
     match view_name:
         "live":
             active_tab = 0
-        "operate":
+        "operate", "business_list", "business_overview", "production", "employee_list", "employee_detail", "hiring", "assign_employee", "contract_market", "contract_detail", "active_contracts", "supply_chain", "supplier_compare", "inventory":
             active_tab = 1
-        "property", "portfolio", "empire", "intelligence":
+        "property", "portfolio", "property_overview", "restoration_plan", "restoration_confirm", "before_after", "property_acquisition":
             active_tab = 2
-        "finance":
+        "finance", "budget", "funding":
             active_tab = 3
         _:
             active_tab = 4
@@ -680,6 +683,11 @@ func _layout_mobile_host() -> void:
     bottom_nav.size = Vector2(canvas_w - 24.0, MOBILE_NAV_H)
 
 func _build_mobile_view() -> void:
+    if bottom_nav != null:
+        bottom_nav.visible = true
+    var figma_flow = get_node_or_null("FigmaFlowBridge")
+    if figma_flow != null and figma_flow.has_method("build_view") and bool(figma_flow.build_view(active_view, self, mobile_content)):
+        return
     match active_view:
         "live": _build_mobile_live()
         "operate": _build_mobile_operations()
@@ -1273,7 +1281,7 @@ func _build_mobile_world() -> void:
     if active_opportunity:
         _frame_button(mobile_content, "OpportunityCTA", "REVIEW WORLD OPPORTUNITY", Rect2(18, cta_y, inner_w, 48), _open_screen.bind("WorldOpportunitiesPanel"), false, true, 10)
         cta_y += 58.0
-    _frame_button(mobile_content, "WorldCTA", "MANAGE SELECTED REGION", Rect2(18, cta_y, inner_w, 54), _open_screen.bind("RegionsPanel"), false, true, 10)
+    _frame_button(mobile_content, "WorldCTA", "MANAGE SELECTED REGION", Rect2(18, cta_y, inner_w, 54), _show_view.bind("region_overview"), false, true, 10)
     if mobile_content != null:
         mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, cta_y + 82.0)
         mobile_content.size.y = maxf(mobile_content.size.y, cta_y + 82.0)
@@ -1339,19 +1347,19 @@ func _build_mobile_more() -> void:
 
     var tiles = [
         ["HOW TO PLAY","Restore → Operate → Grow","guide",""],
-        ["PROGRESSION","Goals, milestones and victory paths","EmpireProgressionPanel",""],
+        ["EMPLOYEES","Staff, morale and assignments","employee_list","employees"],
+        ["CONTRACTS","Offers, capacity and deadlines","contract_market","contracts"],
+        ["SUPPLY CHAIN","Materials, suppliers and routes","supply_chain","supply_chain"],
         ["REGIONS","Markets and expansion","world","regions"],
-        ["INTELLIGENCE","Company and market signals","intelligence",""],
-        ["CORPORATIONS","Rivals, alliances and ownership","CorporationsPanel","competitors"],
-        ["CONTRACTS","Customers and renewals","ContractPanel","contracts"],
-        ["TECHNOLOGY","Research and upgrades","TechnologyPanel","technology"],
-        ["CORPORATE POWER","Acquisitions, mergers and bidding wars","CorporationsPanel","acquisitions"],
-        ["HEADQUARTERS","Capacity and policy","HeadquartersPanel","headquarters"],
-        ["WORLD POWER","Rankings, influence and executive standing","EmpireIdentityPanel","world_power"],
-        ["HISTORY","Milestones and museum","HistoryPanel",""],
-        ["COLLECTIONS","Recovered assets and legacy rewards","CollectionPanel","collections"],
+        ["INFRASTRUCTURE","Long-term district upgrades","infrastructure_roadmap","infrastructure"],
+        ["COLLECTION","Milestones and legacy rewards","milestones","collections"],
+        ["ALLIANCES","Partners, trust and rivals","alliances","alliances"],
+        ["REPORTS","Performance and strategic signals","reports",""],
+        ["NOTIFICATIONS","Decisions that need attention","notifications",""],
+        ["PROGRESSION","Company level and unlocks","company_progress",""],
         ["SAVE / LOAD","Profiles and recovery","SaveLoadPanel",""],
-        ["SETTINGS","Theme, audio, purchases, privacy","settings",""]
+        ["SETTINGS","Theme, audio, accessibility, privacy","settings",""],
+        ["INTELLIGENCE","Company and market signals","intelligence",""]
     ]
     var rows := ceili(float(tiles.size()) / 2.0)
     var required_height := 196.0 + float(rows) * 100.0 + 18.0
@@ -1372,7 +1380,7 @@ func _build_mobile_more() -> void:
         _label(p, "Body", body_text, Rect2(14,38,col_w - 28,40), 9, "muted", 400)
         var target = str(tiles[i][2])
         var open_button: Button
-        if ["world","intelligence","settings","guide"].has(target):
+        if ["world","intelligence","settings","guide","employee_list","contract_market","supply_chain","infrastructure_roadmap","milestones","alliances","reports","notifications","company_progress"].has(target):
             open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,90), _show_view.bind(target))
         else:
             open_button = _transparent_button(p, "Open"+target, Rect2(0,0,col_w,90), _open_screen.bind(target))
@@ -1859,8 +1867,9 @@ func _property_cta() -> void:
         parent.inspect_property()
     elif not _owned() and parent.has_method("acquire_property"):
         parent.acquire_property()
-    elif _stage() != "Operational" and parent.has_method("restore_property"):
-        parent.restore_property()
+    elif _stage() != "Operational":
+        _show_view("restoration_plan")
+        return
     else:
         _show_view("operate")
         return
