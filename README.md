@@ -41,11 +41,11 @@ Implemented systems now include:
 godot --headless --path . --script res://tests/test_runner.gd
 ```
 
-The full suite lives in `tests/` (`tests/TEST_SUITE.md` indexes every file). The normal
-pull-request/main CI runs the core regression set, master game-plan coverage, mobile QA and
-the rendered quality gate. Long soak, extreme soak and exhaustive matrix suites remain
-available for deeper release validation rather than running on every commit. Browser QA is
-a separate deployed-build check.
+The full suite lives in `tests/` (`tests/TEST_SUITE.md` indexes every file). Normal
+pull-request/main CI is change-scoped and runs only the tests selected for the files and
+behavior changed. Broad core, master-plan, mobile, visual, soak and exhaustive suites remain
+available for deliberate validation when explicitly requested. Browser and Android release
+checks remain separate from ordinary gameplay iteration.
 
 ### Run it
 
@@ -133,6 +133,9 @@ The branch controls use **CTRL** deliberately so F6/F7/F8 remain dedicated to wo
 ## Development roadmap
 
 See `Docs/V1_IMPLEMENTATION.md` for the implementation plan and current milestone status.
+`Docs/RESTORA_MASTER_IMPLEMENTATION_PROMPT.md` is the current end-to-end implementation
+brief for gameplay, progression, economy, UI/UX, mobile, accessibility, persistence,
+performance, Android/release work and focused QA.
 
 ## Design principle
 
