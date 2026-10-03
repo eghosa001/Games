@@ -242,23 +242,7 @@ func start_new_game() -> void:
                 var service = services.get_service(str(service_name))
                 if service == null or not service.has_method("restore_state"):
                     continue
-                var reset_snapshot: Dictionary = {}
-                # Collection and corporate-legacy restore paths require their
-                # category dictionaries to exist. Build their defaults from a
-                # clean instance so the live UI keeps its existing node refs.
-                if str(service_name) in ["RenewCollectionSystem", "RenewCorporateLegacy"]:
-                    var script = service.get_script()
-                    if script != null:
-                        var fresh_service = script.new()
-                        if fresh_service != null:
-                            if fresh_service.has_method("_ready"):
-                                fresh_service.call("_ready")
-                            if fresh_service.has_method("capture_state"):
-                                var fresh_state = fresh_service.capture_state()
-                                if fresh_state is Dictionary:
-                                    reset_snapshot = fresh_state.duplicate(true)
-                            fresh_service.free()
-                service.restore_state(reset_snapshot)
+                service.restore_state({})
 
     if command_system != null and is_instance_valid(command_system):
         command_system.free()
