@@ -33,6 +33,7 @@ var _refresh_elapsed = 0.0
 var _last_signature = ""
 var _layout_kind = ""
 var _last_progress_level := -1
+var _last_day_seen := -1
 var _view_transition: Tween
 
 var _font_regular: SystemFont
@@ -63,12 +64,23 @@ func _bind_runtime_after_parent_ready() -> void:
     if _property_system() != null:
         _last_signature = ""
         _rebuild_current()
+    _bind_runtime_events()
 
 func _process(delta: float) -> void:
     _refresh_elapsed += delta
     if _refresh_elapsed < 0.5:
         return
     _refresh_elapsed = 0.0
+    var current_day := _day()
+    if _last_day_seen < 0:
+        _last_day_seen = current_day
+    elif current_day > _last_day_seen:
+        _last_day_seen = current_day
+        if active_view != "day_summary":
+            _show_view("day_summary")
+            return
+    elif current_day < _last_day_seen:
+        _last_day_seen = current_day
     var sig = _state_signature()
     var current_level := _company_level()
     if current_level != _last_progress_level:
@@ -92,6 +104,21 @@ func _transient_modal_open() -> bool:
     if mobile_content.get_node_or_null("BusinessChoiceModal") != null:
         return true
     return mobile_content.get_node_or_null("CommercialActionModal") != null
+
+func _bind_runtime_events() -> void:
+    var realtime = get_node_or_null("/root/RenewRealTimeEconomySystem")
+    if realtime == null or not realtime.has_signal("service_error"):
+        return
+    var callback := Callable(self, "_on_runtime_service_error")
+    if not realtime.is_connected("service_error", callback):
+        realtime.connect("service_error", callback)
+
+func _on_runtime_service_error(message: String) -> void:
+    var state = _game_state()
+    if state != null and state.has_method("set_value") and not message.is_empty():
+        state.set_value("company", "message", message)
+    if active_view != "offline_error":
+        _show_view("offline_error")
 
 func _theme_manager():
     return get_node_or_null("/root/RestoraThemeManager")
