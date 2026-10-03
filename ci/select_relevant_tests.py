@@ -19,6 +19,11 @@ SMOKE = {
     "tests/release/test_release_smoke.gd",
 }
 
+RESTORA_FLOW_FILES = {
+    "scripts/restora_command_ui.gd",
+    "scripts/restora_figma_flow_ui.gd",
+}
+
 GROUPS = {
     "tutorial": {
         "patterns": [
@@ -201,10 +206,27 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         if path.startswith("tests/") and path.endswith(".gd") and path not in EXCLUDED_HEAVY:
             tests.add(path)
 
+    restora_flow_changed = any(path in RESTORA_FLOW_FILES for path in changed)
+    other_ui_code_changed = any(
+        path.startswith("scripts/")
+        and path.endswith("_ui.gd")
+        and path not in RESTORA_FLOW_FILES
+        for path in changed
+    )
+
     for name, cfg in GROUPS.items():
+        # RESTORA's mobile/Figma command layer has a dedicated end-to-end flow
+        # regression. Do not fan these two files out into the generic UI suite
+        # unless another UI implementation file changed in the same task.
+        if name == "ui" and restora_flow_changed and not other_ui_code_changed:
+            continue
         if any(any(matches(path, pat) for pat in cfg["patterns"]) for path in changed):
             groups.append(name)
             tests.update(cfg["tests"])
+
+    if restora_flow_changed:
+        groups.append("restora_flow")
+        tests.add("tests/test_figma_flow_wiring.gd")
 
     code_changed = any(
         p.endswith((".gd", ".tscn", ".tres", ".cfg", ".svg"))
