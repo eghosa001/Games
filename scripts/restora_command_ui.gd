@@ -439,6 +439,7 @@ func _unlock_level(unlock_id: String) -> int:
         "finance": 2, "contracts": 2, "employees": 2,
         "branches": 3, "regions": 3, "supply_chain": 3,
         "competitors": 4, "alliances": 4, "ownership": 4,
+        "diplomacy": 5, "joint_ventures": 5, "trade": 5,
         "technology": 6, "research": 6, "infrastructure": 6,
         "acquisitions": 7, "mergers": 7, "corporate_strategy": 7,
         "headquarters": 8, "rankings": 8, "world_power": 8,
@@ -1454,12 +1455,14 @@ func _build_mobile_more() -> void:
         ["GROWTH", [
             ["REGIONS", "Markets, branches and expansion", "world", "regions"],
             ["ALLIANCES", "Partners, ownership and competitive relationships", "alliances", "alliances"],
+            ["DIPLOMACY / TRADE", "Treaties, joint ventures and strategic trade", "RenewDiplomacyUI", "diplomacy"],
             ["TECHNOLOGY", "Research and operational upgrades", "TechnologyPanel", "technology"],
             ["INFRASTRUCTURE", "Long-term district systems", "infrastructure_roadmap", "infrastructure"],
             ["CORPORATE STRATEGY", "Shares, acquisitions, mergers and rival control", "corporate_strategy", "corporate_strategy"],
             ["WORLD POWER", "Rankings and global influence", "world_power", "world_power"],
             ["HEADQUARTERS", "Executive capacity and strategic facilities", "headquarters", "headquarters"],
-            ["LEGACY", "History, collections and prestige", "legacy", "legacy"]
+            ["LEGACY", "History and permanent collections", "legacy", "legacy"],
+            ["PRESTIGE / ENDGAME", "Victory paths and the next dynasty", "endgame", "prestige"]
         ]],
         ["INSIGHTS", insight_items],
         ["SYSTEM", [
@@ -1497,7 +1500,7 @@ func _build_more_section(title: String, items: Array, y: float, inner_w: float, 
         _label(section, "RowArrow%d" % i, "›", Rect2(inner_w - 50, row_y + 14, 26, 26), 18, "muted" if locked else "gold", 700, HORIZONTAL_ALIGNMENT_CENTER)
         var target := str(item[2])
         var hit: Button
-        if ["world","intelligence","settings","guide","employee_list","contract_market","supply_chain","infrastructure_roadmap","milestones","alliances","reports","notifications","company_progress","level_up","day_summary","corporate_strategy","world_power","headquarters","legacy"].has(target):
+        if ["world","intelligence","settings","guide","employee_list","contract_market","supply_chain","infrastructure_roadmap","milestones","alliances","reports","notifications","company_progress","level_up","day_summary","corporate_strategy","world_power","headquarters","legacy","endgame"].has(target):
             hit = _transparent_button(section, "Open"+target, Rect2(0, row_y, inner_w, row_h), _show_view.bind(target))
         else:
             hit = _transparent_button(section, "Open"+target, Rect2(0, row_y, inner_w, row_h), _open_screen.bind(target))
@@ -1966,7 +1969,7 @@ func _objective_view() -> String:
         return "world_power"
     if level < 10:
         return "legacy"
-    return "company_progress"
+    return "endgame"
 
 func _core_phase() -> String:
     if _stage() != "Operational":
