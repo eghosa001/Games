@@ -10,7 +10,7 @@
   <circle cx="1020" cy="105" r="62" fill="#e7bb67" opacity=".72"/>
   <path d="M0 390Q190 330 350 385T690 365t330 5q100 5 180-30v300H0Z" fill="#6f765b"/>
   <g fill="#746b59" opacity=".55"><path d="M0 355h175v80H0zM980 330h220v105H980z"/><path d="M42 310h88v45H42zm980-50h115v70h-115z"/></g>
-  <g transform="translate(150 105)" filter="url(#shadow)">
+  <g transform="translate(150 105)">
     <path d="M0 420V125L280 50l285 75v295Z" fill="url(#old)" stroke="#443d34" stroke-width="7"/>
     <path d="M0 125 280 50l285 75" fill="none" stroke="#302d29" stroke-width="14"/>
     <path d="M555 420V105h330v315Z" fill="url(#brick)" stroke="#4c2b25" stroke-width="7"/>
