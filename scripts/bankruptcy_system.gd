@@ -47,6 +47,7 @@ var distress_layer: CanvasLayer
 var distress_panel: PanelContainer
 var distress_status_label: Label
 var distress_action_grid: GridContainer
+var recovery_center_open := false
 var distress_refresh_clock := 0.0
 
 func _ready() -> void:
@@ -405,7 +406,7 @@ func runtime_distressed_acquisition() -> Dictionary:
     return {"ok": false, "message": "No registered acquisition target is available for a distressed sale."}
 
 func status() -> Dictionary:
-    return {"system_version": SYSTEM_VERSION, "state": state, "previous_state": previous_state, "distress_score": distress_score, "cash_runway": cash_runway, "covenant_breaches": covenant_breaches.duplicate(), "restructuring_plan": restructuring_plan.duplicate(true), "recovery_days": recovery_days, "crisis_days": crisis_days, "covenant_days": covenant_days, "restructuring_days": restructuring_days, "event_count": events.size()}
+    return {"system_version": SYSTEM_VERSION, "state": state, "previous_state": previous_state, "distress_score": distress_score, "cash_runway": cash_runway, "covenant_breaches": covenant_breaches.duplicate(), "restructuring_plan": restructuring_plan.duplicate(true), "recovery_days": recovery_days, "crisis_days": crisis_days, "covenant_days": covenant_days, "restructuring_days": restructuring_days, "event_count": events.size(), "recovery_center_open": recovery_center_open}
 
 func capture_state() -> Dictionary:
     return {"system_version": SYSTEM_VERSION, "state": state, "previous_state": previous_state, "distress_score": distress_score, "cash_runway": cash_runway, "covenant_breaches": covenant_breaches.duplicate(), "restructuring_plan": restructuring_plan.duplicate(true), "asset_sale_history": asset_sale_history.duplicate(true), "investment_history": investment_history.duplicate(true), "downsizing_history": downsizing_history.duplicate(true), "refinancing_history": refinancing_history.duplicate(true), "administration_history": administration_history.duplicate(true), "liquidation_history": liquidation_history.duplicate(true), "events": events.duplicate(true), "recovery_days": recovery_days, "crisis_days": crisis_days, "covenant_days": covenant_days, "restructuring_days": restructuring_days, "next_plan_id": next_plan_id}
@@ -419,6 +420,7 @@ func restore_state(snapshot: Dictionary) -> void:
         for item in raw: covenant_breaches.append(str(item))
     restructuring_plan = snapshot.get("restructuring_plan", {}).duplicate(true); asset_sale_history = snapshot.get("asset_sale_history", []).duplicate(true); investment_history = snapshot.get("investment_history", []).duplicate(true); downsizing_history = snapshot.get("downsizing_history", []).duplicate(true); refinancing_history = snapshot.get("refinancing_history", []).duplicate(true); administration_history = snapshot.get("administration_history", []).duplicate(true); liquidation_history = snapshot.get("liquidation_history", []).duplicate(true); events = snapshot.get("events", []).duplicate(true)
     recovery_days = int(snapshot.get("recovery_days", recovery_days)); crisis_days = int(snapshot.get("crisis_days", crisis_days)); covenant_days = int(snapshot.get("covenant_days", covenant_days)); restructuring_days = int(snapshot.get("restructuring_days", restructuring_days)); next_plan_id = int(snapshot.get("next_plan_id", next_plan_id))
+    recovery_center_open = _state_requires_recovery_center()
     _refresh_distress_ui()
 
 func _start_plan(reason: String) -> void:
@@ -521,6 +523,15 @@ func _build_distress_ui() -> void:
     _distress_button("LIQUIDATE", runtime_liquidation)
     _distress_button("DISTRESSED ACQUISITION", runtime_distressed_acquisition)
     _distress_button("MARK RECOVERY", mark_recovery)
+
+    var close_button := Button.new()
+    close_button.name = "RecoveryContinueButton"
+    close_button.text = "CONTINUE MANAGING COMPANY"
+    close_button.custom_minimum_size = Vector2(0, 52)
+    close_button.focus_mode = Control.FOCUS_NONE
+    close_button.add_theme_font_size_override("font_size", 12)
+    close_button.pressed.connect(hide_recovery_center)
+    box.add_child(close_button)
     _layout_distress_ui()
 
 func _distress_button(text: String, callback: Callable) -> void:
@@ -553,16 +564,40 @@ func _layout_distress_ui() -> void:
     if distress_action_grid != null:
         distress_action_grid.columns = 1 if size.x < 390.0 else (2 if mobile else 3)
 
+func _state_requires_recovery_center() -> bool:
+    return state in [COVENANT_PRESSURE, RESTRUCTURING, INSOLVENT, ADMINISTRATION, LIQUIDATION, ACQUIRED]
+
+func show_recovery_center() -> bool:
+    if state == STABLE:
+        recovery_center_open = false
+        _refresh_distress_ui()
+        return false
+    recovery_center_open = true
+    _refresh_distress_ui()
+    return true
+
+func hide_recovery_center() -> void:
+    recovery_center_open = false
+    _refresh_distress_ui()
+
+func is_recovery_center_open() -> bool:
+    return recovery_center_open and state != STABLE
+
 func _refresh_distress_ui() -> void:
     if distress_status_label == null: return
+    var visible := recovery_center_open and state != STABLE
     if distress_layer != null:
-        distress_layer.visible = state != STABLE
-        distress_layer.process_mode = Node.PROCESS_MODE_INHERIT if state != STABLE else Node.PROCESS_MODE_DISABLED
+        distress_layer.visible = visible
+        distress_layer.process_mode = Node.PROCESS_MODE_INHERIT if visible else Node.PROCESS_MODE_DISABLED
     distress_status_label.text = "STATE: %s\nDistress score %.1f • runway %s days • breaches %s\nRecovery plan: %s" % [str(state).to_upper(), distress_score, "∞" if is_inf(cash_runway) else str(snapped(cash_runway, 0.1)), ", ".join(covenant_breaches) if covenant_breaches.size() > 0 else "none", str(restructuring_plan.get("id", "none"))]
 
 func _transition(next_state: String, reason: String) -> void:
     if state == next_state: return
     previous_state = state; state = next_state
+    if state == STABLE:
+        recovery_center_open = false
+    elif _state_requires_recovery_center():
+        recovery_center_open = true
     _event("state_transition", "%s -> %s: %s" % [previous_state, state, reason], {"from": previous_state, "to": state, "reason": reason})
     _log_game("DISTRESS: %s -> %s (%s)." % [previous_state.to_upper(), state.to_upper(), reason])
     _refresh_distress_ui()
