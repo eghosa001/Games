@@ -129,7 +129,8 @@ func _run() -> void:
         await process_frame
         check("employee detail is reachable from employee list", str(hud.get("active_view")) == "employee_detail")
         var before_employee_index := int(bridge.get("_selected_employee_index"))
-        var before_employee_name := str(((hud.get("mobile_content") as Control).get_node_or_null("Status") as Label).text)
+        var before_employee_status := (hud.get("mobile_content") as Control).get_node_or_null("Status") as Label
+        var before_employee_name := before_employee_status.text if before_employee_status != null else ""
         var next_employee := (hud.get("mobile_content") as Control).get_node_or_null("FlowAction2") as Button
         check("multi-employee detail exposes next employee", next_employee != null and next_employee.text == "NEXT EMPLOYEE")
         if next_employee != null:
