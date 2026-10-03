@@ -54,9 +54,21 @@ func _run() -> void:
     var bridge := game.get_node_or_null("UI/MainHUD/FigmaFlowBridge")
     check("Main HUD available", hud != null)
     check("Figma flow bridge mounted", bridge != null)
+    check("standard new-game command exists", game.has_method("start_new_game"))
     if hud == null or bridge == null:
         quit(1)
         return
+
+    var state := root.get_node_or_null("RenewGameState")
+    if state != null:
+        state.set_value("player", "day", 99)
+        state.set_value("economy", "cash", 1)
+        state.set_value("employees", "roster", [{"id":"stale","name":"Stale Worker"}])
+        game.start_new_game()
+        await process_frame
+        check("new game resets day", int(state.get_value("player", "day", -1)) == 1)
+        check("new game resets employee roster", (state.get_value("employees", "roster", []) as Array).is_empty())
+        check("new game restores founding cash", int(state.get_value("economy", "cash", 0)) > 1)
 
     for view_name in VIEWS:
         check(view_name + " supported", bool(bridge.supports(view_name)))
@@ -86,7 +98,6 @@ func _run() -> void:
             state.set_value("economy", "cash", 1000000)
         game.acquire_property()
     var before := int(hud._building_progress())
-    var state := root.get_node_or_null("RenewGameState")
     if state != null:
         state.set_value("economy", "cash", 1000000)
     bridge._dispatch("confirm_restore", hud)
