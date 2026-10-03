@@ -51,6 +51,7 @@ func _run() -> void:
         await process_frame
         check("active screen is %s" % screen_name, manager.get_active_screen_name() == screen_name)
         check("only one managed screen visible after %s" % screen_name, _visible_screen_count(manager) == 1)
+        check("command HUD is hidden behind %s" % screen_name, not bool(hud.visible))
 
     # Regression: switching away from a screen whose user-facing close action
     # delegates to the manager must not recursively clear the newly active screen.
@@ -83,6 +84,7 @@ func _run() -> void:
     manager.hide_all_screens()
     await process_frame
     check("hide_all_screens clears every managed screen", _visible_screen_count(manager) == 0)
+    check("command HUD returns after managed screen closes", bool(hud.visible))
 
     var world_view := scene.get_node_or_null("World/WorldView")
     var region_controller := scene.get_node_or_null("World/RegionController")
