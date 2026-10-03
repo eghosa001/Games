@@ -12,7 +12,7 @@ const VIEWS := [
     "supply_chain", "supplier_compare", "inventory",
     "budget", "funding", "region_overview", "property_acquisition",
     "infrastructure_roadmap", "company_progress", "milestones", "alliances",
-    "corporate_strategy", "world_power", "headquarters", "legacy",
+    "corporate_strategy", "world_power", "headquarters", "legacy", "endgame",
     "reports", "notifications", "accessibility", "pause", "day_summary",
     "level_up", "restoration_complete", "insufficient_funds",
     "offline_error", "loading", "empty_states"
@@ -202,6 +202,7 @@ func _run() -> void:
     check("world power returns to corporate strategy", str(bridge.back_target("world_power")) == "corporate_strategy")
     check("headquarters returns to world power", str(bridge.back_target("headquarters")) == "world_power")
     check("legacy returns to More", str(bridge.back_target("legacy")) == "more")
+    check("endgame returns to More", str(bridge.back_target("endgame")) == "more")
 
     hud.open_figma_view("more")
     await process_frame
@@ -209,10 +210,14 @@ func _run() -> void:
     var power_button := (hud.get("mobile_content") as Control).find_child("Openworld_power", true, false) as Button
     var headquarters_button := (hud.get("mobile_content") as Control).find_child("Openheadquarters", true, false) as Button
     var legacy_button := (hud.get("mobile_content") as Control).find_child("Openlegacy", true, false) as Button
+    var endgame_button := (hud.get("mobile_content") as Control).find_child("Openendgame", true, false) as Button
+    var diplomacy_button := (hud.get("mobile_content") as Control).find_child("OpenRenewDiplomacyUI", true, false) as Button
     check("More exposes progression-gated corporate strategy", strategy_button != null)
     check("More exposes progression-gated world power", power_button != null)
     check("More exposes progression-gated headquarters", headquarters_button != null)
     check("More exposes progression-gated legacy", legacy_button != null)
+    check("More exposes progression-gated prestige endgame", endgame_button != null)
+    check("More exposes progression-gated diplomacy and trade", diplomacy_button != null)
 
     if state != null:
         hud.open_figma_view("restoration_complete")
