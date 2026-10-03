@@ -4,6 +4,7 @@ extends Node
 ## Models a playable corporate distress lifecycle rather than a single bankruptcy flag:
 ## stable -> cash crisis -> covenant pressure -> restructuring -> recovery
 ## or insolvency -> administration -> liquidation/acquisition.
+## Recovery presentation is contextual: warnings remain navigable; critical states may open the recovery center.
 
 const SYSTEM_VERSION := 3
 const STABLE := "stable"
