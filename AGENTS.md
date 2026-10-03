@@ -17,7 +17,7 @@ Use the shortest safe execution path:
 - use subagents only when genuinely parallel work exists and a real runner is available;
 - otherwise parallelize safe tool calls;
 - run only risk-relevant focused tests during implementation;
-- run full required gates once on the final candidate;
+- keep routine validation change-scoped; run broad/full gates only when the owner explicitly requests them;
 - avoid repeated CI polling and unnecessary commits/deployments;
 - stop code churn once an external configuration blocker is conclusively identified.
 
