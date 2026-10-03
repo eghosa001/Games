@@ -62,10 +62,13 @@ func _process(delta: float) -> void:
     if day != last_game_day:
         last_game_day = day
         evaluate_runtime()
-    distress_refresh_clock += delta
-    if distress_refresh_clock >= 0.25:
+    if recovery_center_open:
+        distress_refresh_clock += delta
+        if distress_refresh_clock >= 0.50:
+            distress_refresh_clock = 0.0
+            _refresh_distress_ui()
+    else:
         distress_refresh_clock = 0.0
-        _refresh_distress_ui()
 
 func evaluate(finance: Node, daily_cash_burn: float = 0.0) -> Dictionary:
     if finance == null:
