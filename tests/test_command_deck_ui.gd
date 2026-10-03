@@ -27,14 +27,23 @@ func run() -> void:
         check(str(hud.get("active_view"))==view, "Figma view opens: "+view)
     hud.open_figma_view("more"); await process_frame
     var more_content:=hud.get("mobile_content") as Control
-    var progression_tile:=more_content.get_node_or_null("MoreTile1") if more_content!=null else null
-    var corporate_power_tile:=more_content.get_node_or_null("MoreTile7") if more_content!=null else null
-    var world_power_tile:=more_content.get_node_or_null("MoreTile9") if more_content!=null else null
-    var collections_tile:=more_content.get_node_or_null("MoreTile11") if more_content!=null else null
-    check(progression_tile!=null and progression_tile.get_node_or_null("OpenEmpireProgressionPanel")!=null, "More exposes campaign progression")
-    check(corporate_power_tile!=null and (corporate_power_tile.get_node_or_null("OpenCorporationsPanel") as Button).disabled, "Corporate Power is progression-gated")
-    check(world_power_tile!=null and (world_power_tile.get_node_or_null("OpenEmpireIdentityPanel") as Button).disabled, "World Power is progression-gated")
-    check(collections_tile!=null and (collections_tile.get_node_or_null("OpenCollectionPanel") as Button).disabled, "Collections are progression-gated")
+    var employee_tile:=more_content.get_node_or_null("MoreTile1") if more_content!=null else null
+    var contract_tile:=more_content.get_node_or_null("MoreTile2") if more_content!=null else null
+    var supply_tile:=more_content.get_node_or_null("MoreTile3") if more_content!=null else null
+    var infrastructure_tile:=more_content.get_node_or_null("MoreTile5") if more_content!=null else null
+    var collection_tile:=more_content.get_node_or_null("MoreTile6") if more_content!=null else null
+    var employee_head:=employee_tile.get_node_or_null("Head") as Label if employee_tile!=null else null
+    var contract_head:=contract_tile.get_node_or_null("Head") as Label if contract_tile!=null else null
+    var supply_head:=supply_tile.get_node_or_null("Head") as Label if supply_tile!=null else null
+    check(employee_head!=null and employee_head.text=="EMPLOYEES", "More exposes Figma employee management")
+    check(contract_head!=null and contract_head.text=="CONTRACTS", "More exposes Figma contract management")
+    check(supply_head!=null and supply_head.text=="SUPPLY CHAIN", "More exposes Figma supply management")
+    var employee_button:=employee_tile.find_child("Open*", "Button", true, false) as Button if employee_tile!=null else null
+    var infrastructure_button:=infrastructure_tile.find_child("Open*", "Button", true, false) as Button if infrastructure_tile!=null else null
+    var collection_button:=collection_tile.find_child("Open*", "Button", true, false) as Button if collection_tile!=null else null
+    check(employee_button!=null and employee_button.disabled, "Employees are progression-gated at founding")
+    check(infrastructure_button!=null and infrastructure_button.disabled, "Infrastructure is progression-gated at founding")
+    check(collection_button!=null and collection_button.disabled, "Collection is progression-gated at founding")
     var last_more_tile:=more_content.get_node_or_null("MoreTile13") as Control if more_content!=null else null
     check(last_more_tile!=null and more_content.size.y>=last_more_tile.position.y+last_more_tile.size.y+18.0, "premium More command grid remains scrollable on phone")
 
