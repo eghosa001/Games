@@ -40,6 +40,14 @@ func _ui_root() -> Node:
     var game_root := get_tree().root.get_node_or_null("Renew")
     return game_root.get_node_or_null("UI") if game_root != null else null
 
+func _set_command_hud_visible(value: bool) -> void:
+    var ui := _ui_root()
+    var hud := ui.get_node_or_null("MainHUD") if ui != null else null
+    if hud is CanvasLayer:
+        (hud as CanvasLayer).visible = value
+    elif hud is CanvasItem:
+        (hud as CanvasItem).visible = value
+
 func _coordinator() -> Node:
     return RenewServices.get_service("RenewUIRegionCoordinator")
 
@@ -213,7 +221,7 @@ func _set_modal_backdrop(value: bool) -> void:
         _modal_backdrop.modulate.a = 0.0
         _backdrop_tween = create_tween()
         _backdrop_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-        _backdrop_tween.tween_property(_modal_backdrop, "modulate:a", 1.0, 0.12)
+        _backdrop_tween.tween_property(_modal_backdrop, "modulate:a", 1.0, 0.07)
     else:
         _modal_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
         _modal_backdrop.process_mode = Node.PROCESS_MODE_DISABLED
@@ -237,14 +245,14 @@ func _animate_screen_in(node: Node) -> void:
         control.scale = Vector2.ONE
         return
     control.modulate.a = 0.0
-    control.scale = Vector2(0.988, 0.988)
-    control.position.y += 8.0
-    var target_y := control.position.y - 8.0
+    control.scale = Vector2(0.994, 0.994)
+    control.position.y += 4.0
+    var target_y := control.position.y - 4.0
     _screen_tween = create_tween().set_parallel(true)
     _screen_tween.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-    _screen_tween.tween_property(control, "modulate:a", 1.0, 0.12)
-    _screen_tween.tween_property(control, "scale", Vector2.ONE, 0.15)
-    _screen_tween.tween_property(control, "position:y", target_y, 0.14)
+    _screen_tween.tween_property(control, "modulate:a", 1.0, 0.07)
+    _screen_tween.tween_property(control, "scale", Vector2.ONE, 0.08)
+    _screen_tween.tween_property(control, "position:y", target_y, 0.08)
 
 func hide_all_screens() -> void:
     if _active_screen != null and is_instance_valid(_active_screen):
@@ -253,6 +261,7 @@ func hide_all_screens() -> void:
     _active_screen = null
     _active_screen_name = ""
     _set_modal_backdrop(false)
+    _set_command_hud_visible(true)
     var coordinator := _coordinator()
     if coordinator != null:
         coordinator.set_active_screen("")
@@ -264,6 +273,7 @@ func _hide_all_screens_full() -> void:
         _set_node_visible(node, false)
         _previous_visible[node.name] = false
     _set_modal_backdrop(false)
+    _set_command_hud_visible(true)
     var coordinator := _coordinator()
     if coordinator != null:
         coordinator.set_active_screen("")
@@ -289,6 +299,7 @@ func _enforce_single_screen() -> void:
         _active_screen = null
         _active_screen_name = ""
         _set_modal_backdrop(false)
+        _set_command_hud_visible(true)
         var coordinator := _coordinator()
         if coordinator != null:
             coordinator.set_active_screen("")
@@ -298,6 +309,7 @@ func _enforce_single_screen() -> void:
         if node != _active_screen and _is_node_visible(node):
             _set_node_visible(node, false)
             _previous_visible[node.name] = false
+    _set_command_hud_visible(false)
     _set_modal_backdrop(true)
     var active_coordinator := _coordinator()
     if active_coordinator != null:
@@ -331,6 +343,7 @@ func show_screen(screen_name: String) -> bool:
 
     _active_screen = target
     _active_screen_name = canonical_name
+    _set_command_hud_visible(false)
     _set_node_visible(target, true)
     _previous_visible[target.name] = true
     _ensure_close_button(target)
