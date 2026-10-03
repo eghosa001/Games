@@ -19,24 +19,21 @@ func _run() -> void:
     check("theme manager script loads", theme_script != null)
     var manager = theme_script.new()
     manager.set_mode("dark")
-    check("dark graphite background is available", manager.color("bg").to_html(false) == "0b0d10")
-    check("dark brass accent is available", manager.color("gold").to_html(false) == "c99a4b")
+    check("dark heritage background is available", manager.color("bg").to_html(false) == "171714")
+    check("dark brass accent is available", manager.color("gold").to_html(false) == "d2a85a")
     check("dark focused-screen scrim is opaque enough", manager.color("scrim").a >= 0.90)
     manager.set_mode("light")
-    check("light cool-neutral background is available", manager.color("bg").to_html(false) == "e8eeea")
-    check("light bronze accent is available", manager.color("gold").to_html(false) == "94611f")
+    check("light limestone background is available", manager.color("bg").to_html(false) == "f1ece1")
+    check("light bronze accent is available", manager.color("gold").to_html(false) == "9a6728")
     check("light focused-screen scrim is opaque enough", manager.color("scrim").a >= 0.90)
     check("theme resource builds", manager.get_theme_resource() != null)
     manager.free()
-
     var project := FileAccess.get_file_as_string("res://project.godot")
-    var scene := FileAccess.get_file_as_string("res://scenes/Main.tscn")
     var screens := FileAccess.get_file_as_string("res://scripts/ui_screen_manager.gd")
     var hud := FileAccess.get_file_as_string("res://scripts/restora_command_ui.gd")
     var skin := FileAccess.get_file_as_string("res://scripts/premium_ui_skin.gd")
     var settings := hud
     var audio := FileAccess.get_file_as_string("res://scripts/audio_manager.gd")
-
     check("theme manager is an autoload", project.contains('RestoraThemeManager="*res://scripts/theme_manager.gd"'))
     check("settings is integrated in production HUD", hud.contains('func _build_mobile_settings()'))
     check("obsolete SettingsPanel is not registered", not screens.contains('"SettingsPanel"'))
@@ -51,7 +48,6 @@ func _run() -> void:
     check("settings exposes terms of service", settings.contains("terms_of_service_url") and settings.contains('\"Terms\"'))
     check("audio exposes persistent music level", audio.contains("func set_music_level"))
     check("audio exposes persistent SFX level", audio.contains("func set_sfx_level"))
-
     var live_manager := get_root().get_node_or_null("RestoraThemeManager")
     var scene_resource := load("res://scenes/Main.tscn") as PackedScene
     var game := scene_resource.instantiate() if scene_resource != null else null
@@ -66,15 +62,7 @@ func _run() -> void:
             await process_frame
             var expected_theme: Theme = live_manager.get_theme_resource()
             var ui := game.get_node_or_null("UI")
-            var mounted := [
-                "TechnologyPanel", "HistoryPanel", "NewsPanel", "AlliancePanel",
-                "HeadquartersPanel", "CollectionPanel", "LiveOpsPanel", "CustomerSegmentsUI",
-                "RenewDiplomacyUI", "InfrastructurePanel", "ContractPanel", "EmployeePanel",
-                "DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel",
-                "RegionsPanel", "WorldOpportunitiesPanel", "BusinessOperationsPanel",
-                "ProductionControlPanel", "SupplyChainPanel", "EmpireExpansionPanel",
-                "EmpireIntelligencePanel", "SaveLoadPanel"
-            ]
+            var mounted := ["TechnologyPanel", "HistoryPanel", "NewsPanel", "AlliancePanel", "HeadquartersPanel", "CollectionPanel", "LiveOpsPanel", "CustomerSegmentsUI", "RenewDiplomacyUI", "InfrastructurePanel", "ContractPanel", "EmployeePanel", "DashboardPanel", "FinancePanel", "PortfolioPanel", "CorporationsPanel", "RegionsPanel", "WorldOpportunitiesPanel", "BusinessOperationsPanel", "ProductionControlPanel", "SupplyChainPanel", "EmpireExpansionPanel", "EmpireIntelligencePanel", "SaveLoadPanel"]
             var themed := 0
             for screen_name in mounted:
                 var screen = ui.get_node_or_null(screen_name) if ui != null else null
@@ -93,7 +81,6 @@ func _run() -> void:
             live_manager.set_mode("dark")
         game.queue_free()
         await process_frame
-
     print("--- THEME & SETTINGS SUMMARY ---")
     print("Checks: %d | Failures: %d" % [checks, failed])
     quit(1 if failed > 0 else 0)

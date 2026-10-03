@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="620" viewBox="0 0 1000 620">
+  <defs><linearGradient id="paper" x2="0" y2="1"><stop stop-color="#f3ead8"/><stop offset="1" stop-color="#d9cbb0"/></linearGradient><filter id="grain"><feTurbulence baseFrequency=".75" numOctaves="2" seed="7" type="fractalNoise"/><feColorMatrix values="0 0 0 0 .32 0 0 0 0 .25 0 0 0 0 .16 0 0 0 .08 0"/></filter></defs>
+  <rect width="1000" height="620" fill="url(#paper)"/><rect width="1000" height="620" filter="url(#grain)" opacity=".38"/>
+  <path d="M480-20c-55 80-30 138 17 188 42 45 25 95-15 142-44 52-37 112 24 158 42 32 49 90 18 172" fill="none" stroke="#6e8d91" stroke-width="70" opacity=".88"/>
+  <g fill="#8c5a43" stroke="#5c4638" stroke-width="3"><path d="M55 85h250v165H55z"/><path d="M80 280h310v225H80z"/><path d="M650 55h275v195H650z"/><path d="M615 290h320v245H615z"/></g>
+  <g fill="#b98158"><path d="M70 100h220v24H70zm25 45h180v20H95zm-5 43h210v22H90zM100 300h265v24H100zm-15 48h280v22H85zm30 48h220v22H115zm-10 48h250v22H105zM670 78h230v23H670zm-5 46h210v22H665zm35 46h190v22H700zM640 314h270v24H640zm10 50h245v22H650zm-15 48h280v22H635zm40 48h210v22H675z"/></g>
+  <g fill="#efe3ca" stroke="#5c4638" stroke-width="3"><circle cx="235" cy="175" r="31"/><circle cx="765" cy="165" r="31"/><circle cx="230" cy="400" r="31"/><circle cx="770" cy="410" r="31"/></g>
+  <g fill="#52705a"><circle cx="235" cy="175" r="15"/><circle cx="230" cy="400" r="15"/></g><g fill="#9a6728"><circle cx="765" cy="165" r="15"/><circle cx="770" cy="410" r="15"/></g>
+  <g fill="none" stroke="#74465a" stroke-width="8" stroke-dasharray="14 12"><path d="M235 175Q465 85 765 165"/><path d="M230 400Q480 515 770 410"/></g>
+  <g font-family="sans-serif" font-size="18" font-weight="700" fill="#332e27"><text x="92" y="68">FOUNDRY WARD</text><text x="678" y="38">OLD QUAY</text><text x="104" y="548">MILL DISTRICT</text><text x="686" y="574">CIVIC QUARTER</text></g>
+  <rect x="18" y="18" width="964" height="584" rx="14" fill="none" stroke="#8b785d" stroke-width="4"/>
+</svg>

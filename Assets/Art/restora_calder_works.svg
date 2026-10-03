@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="640" viewBox="0 0 1200 640">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#eadfc9"/><stop offset="1" stop-color="#c7b79d"/></linearGradient>
+    <linearGradient id="brick" x2="1" y2="1"><stop stop-color="#8e4e39"/><stop offset="1" stop-color="#5e332c"/></linearGradient>
+    <linearGradient id="old" x2="1" y2="1"><stop stop-color="#655b4d"/><stop offset="1" stop-color="#3e3a33"/></linearGradient>
+    <linearGradient id="glass" x2="0" y2="1"><stop stop-color="#9db0ab"/><stop offset="1" stop-color="#435b5a"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="9" stdDeviation="8" flood-opacity=".28"/></filter>
+  </defs>
+  <rect width="1200" height="640" fill="url(#sky)"/>
+  <circle cx="1020" cy="105" r="62" fill="#e7bb67" opacity=".72"/>
+  <path d="M0 390Q190 330 350 385T690 365t330 5q100 5 180-30v300H0Z" fill="#6f765b"/>
+  <g fill="#746b59" opacity=".55"><path d="M0 355h175v80H0zM980 330h220v105H980z"/><path d="M42 310h88v45H42zm980-50h115v70h-115z"/></g>
+  <g transform="translate(150 105)" filter="url(#shadow)">
+    <path d="M0 420V125L280 50l285 75v295Z" fill="url(#old)" stroke="#443d34" stroke-width="7"/>
+    <path d="M0 125 280 50l285 75" fill="none" stroke="#302d29" stroke-width="14"/>
+    <path d="M555 420V105h330v315Z" fill="url(#brick)" stroke="#4c2b25" stroke-width="7"/>
+    <path d="m535 105 185-82 185 82" fill="#443d34" stroke="#302d29" stroke-width="13"/>
+    <path d="M675 105V12h90v93" fill="#7e4434" stroke="#4c2b25" stroke-width="6"/>
+    <circle cx="720" cy="55" r="28" fill="#e4d5b9" stroke="#352f29" stroke-width="7"/><path d="m720 55 0-17m0 17 14 9" stroke="#352f29" stroke-width="5" stroke-linecap="round"/>
+    <g fill="#222a29" stroke="#938571" stroke-width="5">
+      <rect x="48" y="170" width="90" height="72"/><rect x="180" y="170" width="90" height="72"/><rect x="312" y="170" width="90" height="72"/><rect x="444" y="170" width="72" height="72"/>
+      <rect x="48" y="285" width="90" height="72"/><rect x="180" y="285" width="90" height="72"/><rect x="312" y="285" width="90" height="72"/><rect x="444" y="285" width="72" height="72"/>
+    </g>
+    <g fill="url(#glass)" stroke="#d0b88a" stroke-width="5">
+      <rect x="592" y="150" width="70" height="78"/><rect x="692" y="150" width="70" height="78"/><rect x="792" y="150" width="62" height="78"/>
+      <rect x="592" y="272" width="70" height="78"/><rect x="692" y="272" width="70" height="78"/><rect x="792" y="272" width="62" height="78"/>
+    </g>
+    <g stroke="#b5a891" stroke-width="7" opacity=".9"><path d="M20 120v290m70-305v305m70-323v323m70-342v342m70-360v360m70-342v342m70-323v323m70-305v305"/><path d="M5 150h535M5 250h535M5 350h535"/></g>
+    <g fill="#c8793d"><circle cx="85" cy="143" r="10"/><circle cx="260" cy="242" r="10"/><circle cx="405" cy="342" r="10"/></g>
+    <rect x="621" y="375" width="202" height="45" rx="4" fill="#e6d8b8" stroke="#5e4433" stroke-width="4"/>
+    <text x="722" y="404" text-anchor="middle" font-family="serif" font-size="21" font-weight="700" fill="#4b3429">THE CALDER WORKS</text>
+  </g>
+  <path d="M0 555h1200v85H0z" fill="#8a755c"/><path d="M0 562h1200" stroke="#d3b06d" stroke-width="5" stroke-dasharray="32 22" opacity=".55"/>
+</svg>

@@ -19,38 +19,34 @@ func _run()->void:
     if p==null:
         quit(1)
         return
-
     var game:=p.instantiate()
     root.add_child(game)
     current_scene=game
     await process_frame
     await process_frame
-
     var hud:=game.get_node("UI/MainHUD")
     var runtime:=hud.get("root") as Control
     check("management runtime root",runtime!=null and runtime.name=="RestoraFigmaRuntime")
-
     var content:=hud.get("mobile_content") as Control
     var hero:=content.get_node_or_null("ExecutiveHero") as Control
     check("home hero exists",hero!=null)
     check("home hero is readable size",hero!=null and hero.size.y>=170.0)
     check("compact command overview exists",content.get_node_or_null("CommandOverview")!=null)
     check("property overview link exists",content.find_child("OpenHomeProperties",true,false) is Button)
-
     var nav:=hud.get("bottom_nav") as Control
     check("mobile nav stays inside viewport",nav!=null and Rect2(Vector2.ZERO,Vector2(root.size)).encloses(nav.get_global_rect()))
-
     var theme:=root.get_node_or_null("RestoraThemeManager")
-    check("graphite dark palette",theme!=null and theme.color("bg").to_html(false)=="0b0d10")
-    check("aged brass accent",theme!=null and theme.color("gold").to_html(false)=="c99a4b")
-    check("plum selection",theme!=null and theme.color("plum").to_html(false)=="7a405f")
-
+    if theme!=null:
+        theme.set_mode("light")
+        await process_frame
+    check("warm limestone palette",theme!=null and theme.color("bg").to_html(false)=="f1ece1")
+    check("aged brass accent",theme!=null and theme.color("gold").to_html(false)=="9a6728")
+    check("plum selection",theme!=null and theme.color("plum").to_html(false)=="74465a")
     hud.open_figma_view("property")
     await process_frame
     content=hud.get("mobile_content") as Control
     check("property catalog shows nine rows",content.find_children("BuildingRow*","Panel",true,false).size()==9)
-    check("property view is status-only",content.find_child("BuildingStageArt",true,false)==null and content.find_child("PropertyVisual",true,false)==null)
-
+    check("property view includes restoration artwork",content.find_child("PropertyVisual",true,false) is TextureRect)
     hud.open_figma_view("live")
     await process_frame
     root.size=Vector2i(1280,720)
@@ -68,7 +64,6 @@ func _run()->void:
     hud._refresh()
     await process_frame
     check("desktop objective updates after inspection",objective_title!=null and objective_title.text.begins_with("Acquire "))
-
     game.queue_free()
     await process_frame
     quit(1 if failed > 0 else 0)
