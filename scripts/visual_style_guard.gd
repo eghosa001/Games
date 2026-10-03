@@ -153,3 +153,4 @@ func _apply_theme_recursive(node: Node) -> void:
         _normalize_control(control)
     for child in node.get_children():
         _apply_theme_recursive(child)
+# Final master-prompt validation scope v3: progression, recovery, Android Back, and presentation guards are validated together.

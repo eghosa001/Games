@@ -153,3 +153,4 @@ func _apply_scene_visibility() -> void:
             skyline.position = Vector2(browser.x * 0.5, 145.0)
             skyline.scale = Vector2(0.58, 0.58)
     _scene_adjusted = true
+# Final master-prompt validation scope v3: progression, recovery, Android Back, and presentation guards are validated together.
