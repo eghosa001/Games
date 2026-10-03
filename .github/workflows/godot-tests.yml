@@ -44,15 +44,12 @@ jobs:
           set -euo pipefail
 
           full=false
-          reason="iterative change"
+          reason="change-scoped validation"
 
-          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/heads/main" ]]; then
-            full=true
-            reason="main branch validation"
-          elif [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "ready_for_review" ]]; then
-            full=true
-            reason="final PR validation"
-          elif [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.validation_mode }}" == "full" ]]; then
+          # Ordinary pushes and PR updates always run only tests mapped to the
+          # changed files. Full validation is intentionally opt-in so routine
+          # RESTORA work never expands into unrelated suites.
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.validation_mode }}" == "full" ]]; then
             full=true
             reason="manual full validation"
           fi
@@ -64,7 +61,6 @@ jobs:
           if [[ "$full" == "false" ]]; then
             if [[ "${{ github.event_name }}" == "pull_request" && "${{ github.event.action }}" == "synchronize" && -n "${{ github.event.before }}" ]]; then
               # During active iteration, validate only the newly pushed delta.
-              # The full PR/project is validated when marked Ready for review.
               base="${{ github.event.before }}"
             elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
               base="${{ github.event.pull_request.base.sha }}"
