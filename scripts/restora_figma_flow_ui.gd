@@ -234,7 +234,7 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
                 [["OPEN CENTER", "notifications_manager", true], ["HOME", "live", false]])
         "accessibility":
             return _spec("Accessibility", "TUNE RESTORA TO HOW YOU PLAY",
-                [["TEXT", "%d%%" % int(round(float(ProjectSettings.get_setting("renew/ui/text_scale", 1.0)) * 100.0))], ["MOTION", "REDUCED" if bool(ProjectSettings.get_setting("renew/ui/reduce_motion", false)) else "FULL"], ["CONTRAST", "HIGH" if bool(ProjectSettings.get_setting("renew/ui/high_contrast", false)) else "STANDARD"]],
+                [["TEXT", "%d%%" % int(round(_text_scale() * 100.0))], ["MOTION", "REDUCED" if bool(ProjectSettings.get_setting("renew/ui/reduce_motion", false)) else "FULL"], ["CONTRAST", "HIGH" if _high_contrast() else "STANDARD"]],
                 ["Color meaning is always paired with text.", "Important touch targets remain at least 44px.", "Reduced motion affects focused-screen transitions."],
                 [["TEXT SIZE", "cycle_text_scale", false], ["REDUCED MOTION", "toggle_motion", false], ["HIGH CONTRAST", "toggle_contrast", false], ["SETTINGS", "settings", true]])
         "pause":
@@ -455,15 +455,16 @@ func _dispatch(action: String, hud: Node) -> void:
             hud.call("_toggle_motion")
             hud.call("open_figma_view", "accessibility")
         "toggle_contrast":
-            var next := not bool(ProjectSettings.get_setting("renew/ui/high_contrast", false))
-            ProjectSettings.set_setting("renew/ui/high_contrast", next)
-            _message("High contrast %s." % ("enabled" if next else "disabled"))
+            var theme = _theme_manager()
+            if theme != null and theme.has_method("toggle_high_contrast"):
+                theme.toggle_high_contrast()
+                _message("High contrast %s." % ("enabled" if bool(theme.get_high_contrast()) else "disabled"))
             hud.call("open_figma_view", "accessibility")
         "cycle_text_scale":
-            var current := float(ProjectSettings.get_setting("renew/ui/text_scale", 1.0))
-            var next := 1.15 if current < 1.1 else (1.3 if current < 1.25 else 1.0)
-            ProjectSettings.set_setting("renew/ui/text_scale", next)
-            _message("Text scale set to %d%%." % int(round(next * 100.0)))
+            var theme = _theme_manager()
+            if theme != null and theme.has_method("cycle_text_scale"):
+                theme.cycle_text_scale()
+                _message("Text scale set to %d%%." % int(round(float(theme.get_text_scale()) * 100.0)))
             hud.call("open_figma_view", "accessibility")
         "employee_manager":
             hud.call("_open_screen", "EmployeePanel")
@@ -481,6 +482,17 @@ func _dispatch(action: String, hud: Node) -> void:
             hud.call("_open_screen", "DashboardPanel")
         "notifications_manager":
             hud.call("_open_screen", "NotificationsCenterPanel")
+
+func _theme_manager() -> Node:
+    return get_node_or_null("/root/RestoraThemeManager")
+
+func _high_contrast() -> bool:
+    var theme = _theme_manager()
+    return bool(theme.get_high_contrast()) if theme != null and theme.has_method("get_high_contrast") else false
+
+func _text_scale() -> float:
+    var theme = _theme_manager()
+    return float(theme.get_text_scale()) if theme != null and theme.has_method("get_text_scale") else 1.0
 
 func _game() -> Node:
     return get_tree().root.get_node_or_null("Renew")
