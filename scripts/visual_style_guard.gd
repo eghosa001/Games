@@ -53,7 +53,10 @@ func _normalize_control(control: Control) -> void:
         button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, MIN_TOUCH_TARGET)
         if button.get_theme_font_size("font_size") < MIN_BUTTON_FONT:
             button.add_theme_font_size_override("font_size", MIN_BUTTON_FONT)
-        button.focus_mode = Control.FOCUS_NONE
+        # Keep authored keyboard/controller focus on premium controls.
+        # Legacy controls that intentionally opt out remain FOCUS_NONE.
+        if button.focus_mode != Control.FOCUS_NONE or button.has_theme_stylebox_override("focus"):
+            button.focus_mode = Control.FOCUS_ALL
 
     # Preserve deliberately large authored typography while lifting only text
     # that would otherwise become too small on a physical phone.
