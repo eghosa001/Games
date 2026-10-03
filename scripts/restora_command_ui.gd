@@ -448,6 +448,21 @@ func _unlock_level(unlock_id: String) -> int:
     }
     return int(levels.get(unlock_id, 1))
 
+func _bankruptcy_system() -> Node:
+    if parent != null:
+        var local := parent.get_node_or_null("Systems/BankruptcySystem")
+        if local != null:
+            return local
+    return get_node_or_null("/root/Renew/Systems/BankruptcySystem")
+
+func _bankruptcy_status() -> Dictionary:
+    var distress := _bankruptcy_system()
+    if distress != null and distress.has_method("status"):
+        var snapshot = distress.status()
+        if snapshot is Dictionary:
+            return snapshot
+    return {"state": "stable", "distress_score": 0.0, "cash_runway": INF, "covenant_breaches": []}
+
 func _make_fonts() -> void:
     _font_regular = SystemFont.new()
     _font_regular.font_names = PackedStringArray(["Inter", "Roboto", "Noto Sans", "Arial"])
@@ -1160,7 +1175,11 @@ func _build_mobile_operations() -> void:
 
 func _build_mobile_finance() -> void:
     var w = _content_width()
-    _header("FINANCE COMMAND", "LIVE LEDGER • DEBT %s" % _money(_debt()), "", "success" if _debt() == 0 else "gold")
+    var distress := _bankruptcy_status()
+    var distress_state := str(distress.get("state", "stable"))
+    var finance_role := "warning" if distress_state != "stable" else ("success" if _debt() == 0 else "gold")
+    var finance_status := " • %s" % distress_state.replace("_", " ").to_upper() if distress_state != "stable" else ""
+    _header("FINANCE COMMAND", "LIVE LEDGER • DEBT %s%s" % [_money(_debt()), finance_status], "", finance_role)
     var inner_w = w - 36.0
     var gap = 6.0
     var tile_w = (inner_w - gap) * 0.5
@@ -1169,10 +1188,16 @@ func _build_mobile_finance() -> void:
     _stat_tile(mobile_content, "revenue", 18, 198, tile_w, "REVENUE", _money(maxi(0, _last_sales())), "LIVE")
     _stat_tile(mobile_content, "equity", 18 + tile_w + gap, 198, tile_w, "EQUITY", _money(maxi(0, _worth() - _debt())), "BALANCED")
 
-    var credit = _panel(mobile_content, "CreditHealth", Rect2(18, 320, inner_w, 88), "surface", "border", 18)
-    _label(credit, "Head", "CREDIT HEALTH", Rect2(16, 14, 180, 14), 10, "gold", 600)
+    var credit = _panel(mobile_content, "CreditHealth", Rect2(18, 320, inner_w, 88), "surface", "warning" if distress_state != "stable" else "border", 18)
+    _label(credit, "Head", "FINANCIAL HEALTH", Rect2(16, 14, 180, 14), 10, "gold", 600)
     _label(credit, "Score", _credit_score_text(), Rect2(16, 38, inner_w - 32, 24), 17, "text", 700)
-    _label(credit, "Meta", "Books balanced • Investor confidence %s" % ("strong" if _rep() >= 60 else "building"), Rect2(16, 64, inner_w - 32, 14), 10, "success", 600)
+    var health_meta := "Books balanced • Investor confidence %s • Tap for detail" % ("strong" if _rep() >= 60 else "building")
+    var health_role := "success"
+    if distress_state != "stable":
+        health_meta = "%s • distress %.0f/100 • tap for recovery guidance" % [distress_state.replace("_", " ").to_upper(), float(distress.get("distress_score", 0.0))]
+        health_role = "warning"
+    _label(credit, "Meta", health_meta, Rect2(16, 64, inner_w - 32, 14), 9, health_role, 600)
+    _transparent_button(credit, "OpenFinancialHealth", Rect2(0, 0, inner_w, 88), _show_view.bind("financial_health"))
 
     var tx = _panel(mobile_content, "Transactions", Rect2(18, 424, inner_w, 214), "surface", "border", 18)
     _label(tx, "Head", "RECENT TRANSACTIONS", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
@@ -1438,7 +1463,11 @@ func _build_mobile_more() -> void:
 
     var progression_target := "level_up" if _pending_level_up else "company_progress"
     var progression_body := "New level unlocked — review" if _pending_level_up else "Company level and unlocks"
+    var financial_health := _bankruptcy_status()
+    var financial_state := str(financial_health.get("state", "stable")).replace("_", " ").capitalize()
+    var financial_body := "Stable balance-sheet and liquidity overview" if str(financial_health.get("state", "stable")) == "stable" else "%s • recovery guidance available" % financial_state
     var insight_items: Array = [
+        ["FINANCIAL HEALTH", financial_body, "financial_health", ""],
         ["REPORTS", "Performance and strategic signals", "reports", ""],
         ["NOTIFICATIONS", "Decisions that need attention", "notifications", ""],
         ["PROGRESSION", progression_body, progression_target, ""],
@@ -1500,7 +1529,7 @@ func _build_more_section(title: String, items: Array, y: float, inner_w: float, 
         _label(section, "RowArrow%d" % i, "›", Rect2(inner_w - 50, row_y + 14, 26, 26), 18, "muted" if locked else "gold", 700, HORIZONTAL_ALIGNMENT_CENTER)
         var target := str(item[2])
         var hit: Button
-        if ["world","intelligence","settings","guide","employee_list","contract_market","supply_chain","infrastructure_roadmap","milestones","alliances","reports","notifications","company_progress","level_up","day_summary","corporate_strategy","world_power","headquarters","legacy","endgame"].has(target):
+        if ["world","intelligence","settings","guide","employee_list","contract_market","supply_chain","infrastructure_roadmap","milestones","alliances","reports","notifications","company_progress","level_up","day_summary","financial_health","corporate_strategy","world_power","headquarters","legacy","endgame"].has(target):
             hit = _transparent_button(section, "Open"+target, Rect2(0, row_y, inner_w, row_h), _show_view.bind(target))
         else:
             hit = _transparent_button(section, "Open"+target, Rect2(0, row_y, inner_w, row_h), _open_screen.bind(target))
