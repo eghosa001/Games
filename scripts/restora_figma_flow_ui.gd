@@ -538,6 +538,8 @@ func _finish_continue_save(hud: Node) -> void:
     if not is_instance_valid(hud):
         return
     _game_call("load_game")
+    hud.set("_last_progress_level", _company_level())
+    hud.set("_pending_level_up", false)
     if str(_state_value("company", "message", "")) == "Game loaded.":
         hud.call("open_figma_view", "live")
     else:
