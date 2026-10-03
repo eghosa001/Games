@@ -30,7 +30,10 @@ func _on_autosave_timeout() -> void:
 func _notification(what: int) -> void:
     if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_WM_GO_BACK_REQUEST:
         _save_current_game()
-        if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_WM_GO_BACK_REQUEST:
+        # Android Back is navigation first. RenewUIScreenManager/MainHUD owns the
+        # screen hierarchy; autosave protects progress but must not terminate the
+        # process before those UI handlers can close a screen or return Home.
+        if what == NOTIFICATION_WM_CLOSE_REQUEST:
             get_tree().quit()
 
 func _save_current_game() -> void:
