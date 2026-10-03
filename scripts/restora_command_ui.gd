@@ -652,8 +652,9 @@ func _rebuild_mobile_content() -> void:
     _layout_mobile_host()
     if _last_progress_level < 0:
         _last_progress_level = _company_level()
+    # The new tree was just authored from authoritative state; refreshing it
+    # again in the same frame only adds latency on mobile navigation.
     _last_signature = _state_signature()
-    _refresh()
 
 func _refresh_bottom_nav() -> void:
     for i in range(mode_buttons.size()):
