@@ -97,6 +97,20 @@ This preserves existing generic level IDs while giving UI and gameplay code a st
 4. **Strengthen long-run balance by progression stage.** Existing soak tests should additionally assert that unlock pacing, cash generation, debt pressure, competitive pressure and late-game costs remain viable around each company-level band.
 5. **Keep physical-device QA as a real release gate.** Do not label Android/mobile release fully proven from headless automation alone.
 
+## Post-audit implementation update — 2026-10-03
+
+The mobile strategic journey now follows the semantic company-level progression rather than ending after the first operating loop.
+
+- Home **Next Move** advances through operations, regional growth, relationships/trade, infrastructure/technology, corporate strategy, world power/headquarters, legacy and prestige.
+- **More → Growth** now exposes progression-gated entry points for regions, alliances, diplomacy/trade, technology, infrastructure, corporate strategy, world power, headquarters, legacy and prestige/endgame.
+- Corporate Strategy, World Power, Headquarters, Legacy and Prestige/Endgame now have dedicated Figma-flow summary screens that read authoritative system state and hand off to the existing corporation, headquarters, collection, history, progression and save/load workspaces.
+- Acquisitions remain owned by the existing corporation/ownership/acquisition systems; the new mobile surfaces do not duplicate transaction logic.
+- World Power values come from `RenewGlobalRankingSystem.world_power()`; Headquarters values/actions come from `RenewHeadquartersSystem`; collection and prestige values come from their existing authoritative systems.
+- Bankruptcy/restructuring remains an event-driven recovery layer that appears only under real financial distress; no parallel recovery simulation was added.
+- Exhaustive 117-screen visual capture is now manual-only. Routine UI work uses change-scoped focused tests under the owner-locked CI policy.
+
+Still deliberately outstanding for release certification: physical-device performance/memory/touch QA, signed Android store-candidate validation, account-side store configuration, and broader long-run balance validation when explicitly requested.
+
 ## Definition of “fully integrated” going forward
 
 A feature should not be marked complete merely because its file, service or panel loads. For game-design completion, require all of the following:
