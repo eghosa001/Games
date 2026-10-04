@@ -18,6 +18,8 @@ var primary_button: Button
 var notices_button: Button
 var close_button: Button
 var refresh_clock := 0.0
+var last_signature := ""
+var applied_refreshes := 0
 
 const SURFACE := Color("0b1630", 0.96)
 const CONTENT := Color("111f42", 0.88)
@@ -224,7 +226,7 @@ func _layout_mobile(width: float, pad: float) -> void:
     for button in [close_button, notices_button, primary_button]:
         button.add_theme_font_size_override("font_size", 10)
 
-func _refresh(_force: bool) -> void:
+func _refresh(force: bool) -> void:
     var state = _state()
     var finance = _finance()
     if state == null:
@@ -233,18 +235,36 @@ func _refresh(_force: bool) -> void:
     var worth := 0.0
     if finance != null and finance.has_method("valuation"):
         worth = maxf(0.0, float(finance.call("valuation")))
-    overview_label.text = "Day %d  •  Cash $%s\nWorth $%s  •  Reputation %d" % [int(state.get_value("player", "day", 1)), _money(cash), _money(int(worth)), int(state.get_value("player", "reputation", 0))]
+    var day := int(state.get_value("player", "day", 1))
+    var reputation := int(state.get_value("player", "reputation", 0))
+    var overview_text := "Day %d  •  Cash $%s\nWorth $%s  •  Reputation %d" % [day, _money(cash), _money(int(worth)), reputation]
+
     var goal := _next_goal(state)
-    objective_label.text = "NEXT MOVE\n" + str(goal["text"])
-    primary_button.text = str(goal["action"])
+    var objective_text := "NEXT MOVE\n" + str(goal["text"])
+    var primary_text := str(goal["action"])
+
     var contracts := 0
     var world = get_node_or_null("/root/RenewContractSystem")
     if world != null and world.has_method("list_active_contracts"):
         contracts = (world.list_active_contracts() as Array).size()
-    ops_label.text = "OPERATIONS\n%d contracts  •  %d research  •  %d goods" % [contracts, int(state.get_value("technology", "research_points", 0)), int(state.get_value("production", "finished_goods", 0))]
+    var research := int(state.get_value("technology", "research_points", 0))
+    var goods := int(state.get_value("production", "finished_goods", 0))
+    var ops_text := "OPERATIONS\n%d contracts  •  %d research  •  %d goods" % [contracts, research, goods]
+
     var logs: Array = state.get_value("company", "log_lines", [])
     var recent: Array = logs.slice(maxi(0, logs.size() - 4), logs.size())
-    events_label.text = "SIGNALS\n" + ("No recent activity recorded." if recent.is_empty() else "\n".join(recent))
+    var events_text := "SIGNALS\n" + ("No recent activity recorded." if recent.is_empty() else "\n".join(recent))
+    var signature := "%s|%s|%s|%s|%s" % [overview_text, objective_text, primary_text, ops_text, events_text]
+    if not force and signature == last_signature:
+        return
+    last_signature = signature
+    applied_refreshes += 1
+
+    overview_label.text = overview_text
+    objective_label.text = objective_text
+    primary_button.text = primary_text
+    ops_label.text = ops_text
+    events_label.text = events_text
     status_label.text = "LIVE ENTERPRISE"
     if hero != null:
         hero.queue_redraw()
