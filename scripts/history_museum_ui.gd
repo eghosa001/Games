@@ -21,12 +21,14 @@ var tabs_scroll: ScrollContainer
 var close_button: Button
 var active_tab: String = "museum"
 var visible_archive := false
+var _refresh_queued := false
 
 const TABS := {"museum":"Museum Gallery", "timeline":"Timeline", "people":"Historic People", "business":"Business History", "innovation":"Technology", "legacy":"Legacy"}
 
 func _ready() -> void:
     layer = 100
     _build_ui()
+    _bind_legacy_updates()
     _set_visible(false)
     if not get_viewport().size_changed.is_connected(_layout): get_viewport().size_changed.connect(_layout)
     _layout()
@@ -42,7 +44,9 @@ func toggle_archive() -> void:
     if visible_archive: close_screen()
     else: open_screen()
 func open_screen() -> void:
-    _set_visible(true); _refresh()
+    _bind_legacy_updates()
+    _set_visible(true)
+    _refresh()
 func close_screen() -> void:
     _set_visible(false)
 func _set_visible(value: bool) -> void:
@@ -85,6 +89,24 @@ func _select_tab(id: String) -> void:
 
 func _legacy(): return RuntimeResolver.resolve("RenewCorporateLegacy", "Systems/RenewCorporateLegacy")
 func _hq(): return RuntimeResolver.resolve("RenewHeadquartersSystem", "Systems/RenewHeadquartersSystem")
+
+func _bind_legacy_updates() -> void:
+    var legacy = _legacy()
+    if legacy != null and legacy.has_signal("legacy_changed"):
+        var callback := Callable(self, "_on_legacy_changed")
+        if not legacy.is_connected("legacy_changed", callback):
+            legacy.connect("legacy_changed", callback)
+
+func _on_legacy_changed() -> void:
+    if not visible_archive or _refresh_queued:
+        return
+    _refresh_queued = true
+    call_deferred("_run_queued_refresh")
+
+func _run_queued_refresh() -> void:
+    _refresh_queued = false
+    if visible_archive:
+        _refresh()
 
 func _refresh() -> void:
     var legacy = _legacy()
