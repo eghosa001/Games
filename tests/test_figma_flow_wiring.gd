@@ -261,9 +261,23 @@ func _run() -> void:
     check("More exposes progression-gated prestige endgame", endgame_button != null)
     check("More exposes progression-gated diplomacy and trade", diplomacy_button != null)
 
+    var strategic_progression := game.get_node_or_null("Systems/StrategicProgression")
     if state != null:
-        state.set_value("progression", "level", 7)
-        state.set_value("progression", "xp", 3000)
+        state.set_value("progression", "level", 2)
+        state.set_value("progression", "xp", 100)
+        state.set_value("progression", "unlocks", [])
+    if strategic_progression != null and strategic_progression.has_method("award_xp"):
+        strategic_progression.award_xp(1900, "focused Level 7 acquisition route test")
+    hud.open_figma_view("more")
+    await process_frame
+    var level7_acquisition_button := (hud.get("mobile_content") as Control).find_child("Openacquisitions", true, false) as Button
+    check("real progression unlocks acquisitions at Level 7", strategic_progression != null and strategic_progression.has_method("has_unlock") and bool(strategic_progression.has_unlock("acquisitions")))
+    check("Level 7 More acquisitions row is enabled", level7_acquisition_button != null and not level7_acquisition_button.disabled)
+    if level7_acquisition_button != null and not level7_acquisition_button.disabled:
+        level7_acquisition_button.pressed.emit()
+        await process_frame
+        check("Level 7 More acquisitions row opens Figma acquisition surface", str(hud.get("active_view")) == "acquisitions")
+
     hud.open_figma_view("corporate_strategy")
     await process_frame
     var acquisition_route := (hud.get("mobile_content") as Control).get_node_or_null("FlowAction0") as Button
