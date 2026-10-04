@@ -78,6 +78,27 @@ func _run() -> void:
                 if has_theme:
                     themed += 1
             check("all mounted primary screens inherit light theme", themed == mounted.size())
+
+            live_manager.set_text_scale(1.0)
+            await process_frame
+            await process_frame
+            var save_panel := ui.get_node_or_null("SaveLoadPanel") if ui != null else null
+            var native_buttons: Array[Node] = save_panel.find_children("*", "Button", true, false) if save_panel != null else []
+            var native_labels: Array[Node] = save_panel.find_children("*", "Label", true, false) if save_panel != null else []
+            var sample_button := native_buttons[0] as Button if not native_buttons.is_empty() and native_buttons[0] is Button else null
+            var sample_label := native_labels[0] as Label if not native_labels.is_empty() and native_labels[0] is Label else null
+            var button_size_100 := sample_button.get_theme_font_size("font_size") if sample_button != null else 0
+            var label_size_100 := sample_label.get_theme_font_size("font_size") if sample_label != null else 0
+
+            live_manager.set_text_scale(1.30)
+            await process_frame
+            await process_frame
+            var button_size_130 := sample_button.get_theme_font_size("font_size") if sample_button != null else 0
+            var label_size_130 := sample_label.get_theme_font_size("font_size") if sample_label != null else 0
+            check("native management buttons honor text scale", sample_button != null and button_size_130 > button_size_100)
+            check("native management labels honor text scale", sample_label != null and label_size_130 > label_size_100)
+
+            live_manager.set_text_scale(1.0)
             live_manager.set_mode("dark")
         game.queue_free()
         await process_frame
