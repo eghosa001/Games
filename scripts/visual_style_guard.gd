@@ -32,7 +32,20 @@ func _process(delta: float) -> void:
         _distress_refresh = 0.0
         _sync_distress_overlay()
 
+func _is_figma_runtime(node: Node) -> bool:
+    var current := node
+    while current != null:
+        if current.name == "RestoraFigmaRuntime":
+            return true
+        current = current.get_parent()
+    return false
+
 func _on_node_added(node: Node) -> void:
+    # The Figma command UI authors its own styles and touch geometry. Re-running
+    # the global recursive premium guard for every node it creates turns a tap
+    # into a large UI-tree restyle on slower Android devices.
+    if _is_figma_runtime(node):
+        return
     if node is Control:
         var control := node as Control
         if _premium_theme != null:
@@ -147,6 +160,8 @@ func _theme_active_ui() -> void:
     _apply_theme_recursive(ui)
 
 func _apply_theme_recursive(node: Node) -> void:
+    if _is_figma_runtime(node):
+        return
     if node is Control:
         var control := node as Control
         control.theme = _premium_theme
