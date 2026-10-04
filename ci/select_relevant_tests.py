@@ -53,6 +53,10 @@ CONTRACT_UI_REFRESH_FILES = {
     "scripts/contracts_ui.gd",
 }
 
+IDENTITY_UI_REFRESH_FILES = {
+    "scripts/empire_identity_ui.gd",
+}
+
 GROUPS = {
     "tutorial": {
         "patterns": [
@@ -243,6 +247,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         and path not in SAVE_LOAD_DYNASTY_FILES
         and path not in NATIVE_ACCESSIBILITY_FILES
         and path not in CONTRACT_UI_REFRESH_FILES
+        and path not in IDENTITY_UI_REFRESH_FILES
         for path in changed
     )
     tutorial_code_changed = any(
@@ -261,6 +266,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     audio_feedback_changed = any(path in AUDIO_FEEDBACK_FILES for path in changed)
     save_integrity_changed = any(path in SAVE_INTEGRITY_FILES for path in changed)
     contract_ui_refresh_changed = any(path in CONTRACT_UI_REFRESH_FILES for path in changed)
+    identity_ui_refresh_changed = any(path in IDENTITY_UI_REFRESH_FILES for path in changed)
     other_state_save_changed = any(
         path not in AUTOSAVE_NAV_FILES
         and path not in SAVE_LOAD_DYNASTY_FILES
@@ -280,6 +286,8 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         if name == "ui" and native_accessibility_changed and not other_ui_code_changed:
             continue
         if name == "ui" and contract_ui_refresh_changed and not other_ui_code_changed:
+            continue
+        if name == "ui" and identity_ui_refresh_changed and not other_ui_code_changed:
             continue
         if name == "tutorial" and restora_flow_changed and not tutorial_code_changed:
             continue
@@ -326,6 +334,10 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     if contract_ui_refresh_changed:
         groups.append("contract_ui_refresh")
         tests.add("tests/test_contract_ui_refresh.gd")
+
+    if identity_ui_refresh_changed:
+        groups.append("identity_ui_refresh")
+        tests.add("tests/test_identity_ui_refresh.gd")
 
     code_changed = any(
         p.endswith((".gd", ".tscn", ".tres", ".cfg", ".svg"))
