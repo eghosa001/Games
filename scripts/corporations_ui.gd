@@ -20,6 +20,8 @@ var raise_bid_button: Button
 var walk_button: Button
 var close_button: Button
 var refresh_clock := 0.0
+var last_signature := ""
+var applied_refreshes := 0
 
 const SURFACE := Color("0d2028")
 const BORDER := Color("274852")
@@ -207,9 +209,14 @@ func _place_pair(left: Button, right: Button, side: float, y: float, half: float
     right.position = Vector2(side + half + gap, y)
     right.size = Vector2(half, height)
 
-func _refresh(_force: bool) -> void:
+func _refresh(force: bool) -> void:
     var model = _rivals()
     if model == null or not model.has_method("ai_status"):
+        var offline_signature := "offline"
+        if not force and last_signature == offline_signature:
+            return
+        last_signature = offline_signature
+        applied_refreshes += 1
         status_label.text = "NETWORK OFFLINE"
         list_label.text = "Rival data unavailable."
         detail_label.text = "Reconnect to the corporate intelligence feed."
@@ -218,26 +225,36 @@ func _refresh(_force: bool) -> void:
     var state = get_node_or_null("/root/RenewGameState")
     var selected := int(state.get_value("competitors", "selected_rival", 0)) if state != null else 0
     var rival_array: Array = model.get("rivals") if model.get("rivals") is Array else []
-    var rows: Array = []
+    var rows: Array[String] = []
     for i in range(rival_array.size()):
-        var status: Dictionary = model.ai_status(i)
-        if status.is_empty(): continue
+        var rival_status: Dictionary = model.ai_status(i)
+        if rival_status.is_empty():
+            continue
         var marker := "›" if i == selected else "·"
-        var gone := " • ABSORBED" if bool(status.get("eliminated", false)) else ""
-        var sale := " • FIRE SALE" if bool(status.get("war_sale", false)) else ""
-        rows.append("%s %s — %s | %.0f%% share%s%s" % [marker, str(status.get("name", "?")), str(status.get("tier", "?")), float(status.get("market_share", 0.0)) * 100.0, gone, sale])
-    list_label.text = "\n".join(rows) if not rows.is_empty() else "No corporations tracked."
-    list_label.custom_minimum_size.y = maxf(180.0, float(maxi(1, rows.size())) * 32.0)
+        var gone := " • ABSORBED" if bool(rival_status.get("eliminated", false)) else ""
+        var sale := " • FIRE SALE" if bool(rival_status.get("war_sale", false)) else ""
+        rows.append("%s %s — %s | %.0f%% share%s%s" % [marker, str(rival_status.get("name", "?")), str(rival_status.get("tier", "?")), float(rival_status.get("market_share", 0.0)) * 100.0, gone, sale])
 
-    var level_text := " • ACQUISITIONS UNLOCKED" if _has_unlock("acquisitions") else " • STRATEGY LEVEL"
-    status_label.text = "%d RIVAL%s%s" % [rival_array.size(), "" if rival_array.size() == 1 else "S", level_text]
-
+    var list_text := "\n".join(rows) if not rows.is_empty() else "No corporations tracked."
+    var acquisition_unlocked := _has_unlock("acquisitions")
+    var level_text := " • ACQUISITIONS UNLOCKED" if acquisition_unlocked else " • STRATEGY LEVEL"
+    var status_text := "%d RIVAL%s%s" % [rival_array.size(), "" if rival_array.size() == 1 else "S", level_text]
+    var detail_text := "Select a corporation to inspect its relationship, shares and acquisition options."
     if selected >= 0 and selected < rival_array.size():
-        var status: Dictionary = model.ai_status(selected)
-        var holding_text := _selected_holding_text(str(rival_array[selected].get("id", "")), str(rival_array[selected].get("name", "rival")))
-        detail_label.text = "%s\nRelationship %d  •  Share price $%s%s" % [str(status.get("name", "?")), int(status.get("relationship", 0)), _money(int(model.share_price(selected)) if model.has_method("share_price") else 0), holding_text]
-    else:
-        detail_label.text = "Select a corporation to inspect its relationship, shares and acquisition options."
+        var selected_status: Dictionary = model.ai_status(selected)
+        var rival_id := str(rival_array[selected].get("id", ""))
+        var holding_text := _selected_holding_text(rival_id, str(rival_array[selected].get("name", "rival")))
+        detail_text = "%s\nRelationship %d  •  Share price $%s%s" % [str(selected_status.get("name", "?")), int(selected_status.get("relationship", 0)), _money(int(model.share_price(selected)) if model.has_method("share_price") else 0), holding_text]
+
+    var signature := "%d|%s|%s|%s" % [selected, status_text, list_text, detail_text]
+    if not force and signature == last_signature:
+        return
+    last_signature = signature
+    applied_refreshes += 1
+    list_label.text = list_text
+    list_label.custom_minimum_size.y = maxf(180.0, float(maxi(1, rows.size())) * 32.0)
+    status_label.text = status_text
+    detail_label.text = detail_text
     _layout()
 
 func _selected_holding_text(rival_id: String, _rival_name: String) -> String:
