@@ -16,6 +16,7 @@ var empty_label: Label
 var title_label: Label
 var subtitle_label: Label
 var _refresh_queued := false
+var applied_refreshes := 0
 
 const TYPES := ["all", "historic_properties", "rare_machinery", "landmark_businesses", "unique_technologies", "special_contracts", "famous_employees", "world_event_artifacts"]
 const BG := Color("071319")
@@ -127,6 +128,7 @@ func _run_queued_refresh() -> void:
 func _refresh() -> void:
     if system == null: system = RuntimeResolver.resolve("RenewCollectionSystem", "Systems/RenewCollectionSystem")
     if system == null or content == null: return
+    applied_refreshes += 1
     var status: Dictionary = system.get_status(); var bonuses: Dictionary = status.get("bonuses", {}); var total := int(status.get("total", 0)); var value := int(status.get("value", 0))
     summary.text = "COLLECTION VALUE  $%s    •    ITEMS  %d    •    ACTIVE REWARDS  %s" % [_money(value), total, _bonus_text(bonuses)]
     count_label.text = "%d ITEMS" % total
