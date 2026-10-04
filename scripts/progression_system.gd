@@ -162,8 +162,19 @@ func award_profit(profit:int)->Dictionary:
     if profit<=0:return {"ok":false,"xp":get_xp(),"level":get_level()}
     return award_xp(max(1,int(floor(float(profit)/100.0))),"profit of $%d"%profit)
 func has_unlock(unlock_id:String)->bool:
+    if unlock_id.is_empty():return true
     var state=_state();if state==null:return false
-    var unlocks=state.get_value("progression","unlocks",[]);return unlocks is Array and unlock_id in unlocks
+    var unlocks=state.get_value("progression","unlocks",[])
+    if unlocks is Array and unlock_id in unlocks:return true
+    # Semantic company level is authoritative even if a legacy/restored save
+    # contains a stale unlock cache. This prevents valid Level 2+ systems from
+    # remaining inaccessible after load.
+    var level:=maxi(1,get_level())
+    for reached_level in range(1,level+1):
+        if unlock_id=="company_level_%d"%reached_level:return true
+        var features=get_features_for_level(reached_level)
+        if features is Array and unlock_id in features:return true
+    return false
 func get_unlocked_features()->Array:
     var state=_state();if state==null:return []
     var unlocks=state.get_value("progression","unlocks",[])
