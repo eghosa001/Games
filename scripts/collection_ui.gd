@@ -15,6 +15,7 @@ var count_label: Label
 var empty_label: Label
 var title_label: Label
 var subtitle_label: Label
+var _refresh_queued := false
 
 const TYPES := ["all", "historic_properties", "rare_machinery", "landmark_businesses", "unique_technologies", "special_contracts", "famous_employees", "world_event_artifacts"]
 const BG := Color("071319")
@@ -30,6 +31,7 @@ func _ready() -> void:
     system = RuntimeResolver.resolve("RenewCollectionSystem", "Systems/RenewCollectionSystem")
     main = get_tree().current_scene
     _build_ui()
+    _bind_collection_updates()
     _set_visible(false)
     if get_viewport() != null and not get_viewport().size_changed.is_connected(_layout_responsive):
         get_viewport().size_changed.connect(_layout_responsive)
@@ -37,6 +39,7 @@ func _ready() -> void:
 
 func open_screen() -> void:
     if system == null: system = RuntimeResolver.resolve("RenewCollectionSystem", "Systems/RenewCollectionSystem")
+    _bind_collection_updates()
     _set_visible(true)
     _refresh()
 
@@ -101,6 +104,25 @@ func _set_visible(value: bool) -> void:
 func _select(type: String) -> void:
     selected_type = type
     _refresh()
+
+func _bind_collection_updates() -> void:
+    if system == null:
+        system = RuntimeResolver.resolve("RenewCollectionSystem", "Systems/RenewCollectionSystem")
+    if system != null and system.has_signal("collection_changed"):
+        var callback := Callable(self, "_on_collection_changed")
+        if not system.is_connected("collection_changed", callback):
+            system.connect("collection_changed", callback)
+
+func _on_collection_changed() -> void:
+    if panel == null or not panel.visible or _refresh_queued:
+        return
+    _refresh_queued = true
+    call_deferred("_run_queued_refresh")
+
+func _run_queued_refresh() -> void:
+    _refresh_queued = false
+    if panel != null and panel.visible:
+        _refresh()
 
 func _refresh() -> void:
     if system == null: system = RuntimeResolver.resolve("RenewCollectionSystem", "Systems/RenewCollectionSystem")
