@@ -1,4 +1,6 @@
 extends Node
+
+signal collection_changed
 ## class_name removed: "RenewCollectionSystem" conflicts with project.godot autoload.
 
 ## Corporate collections are permanent, gameplay-relevant assets rather than badges.
@@ -44,6 +46,7 @@ func collect(type: String, title: String, details: Dictionary = {}, reward: Dict
     seen[key] = item
     events.append({"day": actual_day, "type": "collection_acquired", "title": title, "collection_type": type})
     _recalculate_bonuses()
+    collection_changed.emit()
     return {"ok": true, "item": item, "already_collected": false}
 
 func list_collection(type: String) -> Array:
@@ -133,6 +136,7 @@ func restore_state(state: Dictionary) -> void:
     active_bonuses = state.get("active_bonuses", {}).duplicate(true)
     events = state.get("events", []).duplicate(true)
     last_day = int(state.get("last_day", -1))
+    collection_changed.emit()
 
 func _total_count() -> int:
     var total: Variant = 0
