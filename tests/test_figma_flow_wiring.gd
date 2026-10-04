@@ -60,6 +60,20 @@ func _run() -> void:
         quit(1)
         return
 
+    hud.open_figma_view("live")
+    var nav_business := hud.get_node_or_null("RestoraFigmaRuntime/PrimaryNavigation/ProductionTabs/Nav_BUSINESS") as Button
+    check("Business navigation button is available", nav_business != null)
+    if nav_business != null:
+        nav_business.pressed.emit()
+        check("primary navigation changes view synchronously", str(hud.get("active_view")) == "operate")
+    hud.open_figma_view("live")
+    await process_frame
+    var live_content := hud.get("mobile_content") as Control
+    var title := live_content.get_node_or_null("Title") as Label if live_content != null else null
+    var hero := live_content.get_node_or_null("ExecutiveHero") as Control if live_content != null else null
+    check("mobile title starts near the top edge", title != null and title.position.y <= 10.0)
+    check("first home content begins in compact header rhythm", hero != null and hero.position.y <= 66.0)
+
     var state := root.get_node_or_null("RenewGameState")
     var screen_manager := root.get_node_or_null("RenewUIScreenManager")
     check("central screen manager available", screen_manager != null)
