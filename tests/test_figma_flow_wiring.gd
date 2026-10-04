@@ -232,6 +232,15 @@ func _run() -> void:
     if state != null:
         state.set_value("progression", "level", 7)
         state.set_value("progression", "xp", 3000)
+    hud.open_figma_view("more")
+    await process_frame
+    var unlocked_acquisition_button := (hud.get("mobile_content") as Control).find_child("Openacquisitions", true, false) as Button
+    check("Level 7 More acquisitions route is enabled", unlocked_acquisition_button != null and not unlocked_acquisition_button.disabled)
+    if unlocked_acquisition_button != null:
+        unlocked_acquisition_button.pressed.emit()
+        await process_frame
+        check("More acquisitions row opens Figma acquisition surface", str(hud.get("active_view")) == "acquisitions")
+
     hud.open_figma_view("corporate_strategy")
     await process_frame
     var acquisition_route := (hud.get("mobile_content") as Control).get_node_or_null("FlowAction0") as Button
