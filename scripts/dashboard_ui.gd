@@ -172,11 +172,11 @@ func _layout_desktop(width: float, pad: float) -> void:
     overview_label.position = Vector2(right_x + inner, top + 18)
     overview_label.size = Vector2(right_w - inner * 2, 44)
     objective_label.position = Vector2(right_x + inner, top + 72)
-    objective_label.size = Vector2(right_w - inner * 2, 58)
-    ops_label.position = Vector2(right_x + inner, top + 142)
+    objective_label.size = Vector2(right_w - inner * 2, 82)
+    ops_label.position = Vector2(right_x + inner, top + 166)
     ops_label.size = Vector2(right_w - inner * 2, 56)
-    events_label.position = Vector2(right_x + inner, top + 214)
-    events_label.size = Vector2(right_w - inner * 2, maxf(72.0, available_h - 230.0))
+    events_label.position = Vector2(right_x + inner, top + 234)
+    events_label.size = Vector2(right_w - inner * 2, maxf(72.0, available_h - 250.0))
 
     var gap := 9.0
     var action_w := (right_w - gap * 2.0) / 3.0
@@ -207,13 +207,13 @@ func _layout_mobile(width: float, pad: float) -> void:
     overview_label.size = Vector2(text_w, 34)
     overview_label.add_theme_font_size_override("font_size", 11)
     objective_label.position = Vector2(pad + inner, content_y + 49)
-    objective_label.size = Vector2(text_w, 45)
-    objective_label.add_theme_font_size_override("font_size", 11)
-    ops_label.position = Vector2(pad + inner, content_y + 99)
+    objective_label.size = Vector2(text_w, 66)
+    objective_label.add_theme_font_size_override("font_size", 10)
+    ops_label.position = Vector2(pad + inner, content_y + 120)
     ops_label.size = Vector2(text_w, 40)
     ops_label.add_theme_font_size_override("font_size", 10)
-    events_label.position = Vector2(pad + inner, content_y + 143)
-    events_label.size = Vector2(text_w, maxf(26.0, content_h - 151.0))
+    events_label.position = Vector2(pad + inner, content_y + 164)
+    events_label.size = Vector2(text_w, maxf(26.0, content_h - 172.0))
     events_label.add_theme_font_size_override("font_size", 10)
 
     var gap := 7.0
@@ -243,7 +243,7 @@ func _refresh(force: bool) -> void:
     var overview_text := "Day %d  •  Cash $%s\nWorth $%s  •  Reputation %d" % [day, _money(cash), _money(int(worth)), reputation]
 
     var goal := _next_goal(state)
-    var objective_text := "NEXT MOVE\n" + str(goal["text"])
+    var objective_text := "NEXT MOVE\n%s\n%s" % [str(goal.get("text", "")), str(goal.get("detail", ""))]
     var primary_text := str(goal["action"])
 
     var contracts := 0
