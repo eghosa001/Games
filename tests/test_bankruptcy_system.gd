@@ -24,6 +24,16 @@ func run() -> void:
 
     var finance: Node = Finance.new()
     root.add_child(finance)
+
+    var History = load("res://scripts/history_system.gd")
+    var Legacy = load("res://scripts/corporate_legacy_system.gd")
+    var history: Node = History.new()
+    history.name = "RenewHistorySystem"
+    root.add_child(history)
+    var legacy: Node = Legacy.new()
+    legacy.name = "RenewCorporateLegacy"
+    root.add_child(legacy)
+
     var distress: Node = Bankruptcy.new()
     root.add_child(distress)
     await process_frame
@@ -51,6 +61,38 @@ func run() -> void:
     check(bool(distress.mark_recovery().get("ok", false)), "Restructuring can enter recovery")
     check(str(distress.state) == "recovery", "Recovery state is active")
 
+    var plan_id := str(distress.restructuring_plan.get("id", ""))
+    var stabilized: Dictionary = distress.evaluate(finance, 0.0)
+    check(str(stabilized.get("state", "")) == "stable", "Sustained healthy finance completes recovery")
+    var recovery_history := history.get_timeline("crisis", 20)
+    var history_match := false
+    for event in recovery_history:
+        if event is Dictionary and str(event.get("title", "")) == "Corporate recovery completed":
+            var details = event.get("details", {})
+            if details is Dictionary and str(details.get("plan_id", "")) == plan_id:
+                history_match = true
+                break
+    check(history_match, "Completed recovery is preserved in permanent history")
+    var recovery_legacy := legacy.list_category("crisis_recoveries")
+    var legacy_match := false
+    for item in recovery_legacy:
+        if item is Dictionary:
+            var details = item.get("details", {})
+            if details is Dictionary and str(details.get("plan_id", "")) == plan_id:
+                legacy_match = true
+                break
+    check(legacy_match, "Completed recovery becomes a corporate legacy artifact")
+    var recovery_event_count := 0
+    for item in distress.events:
+        if item is Dictionary and str(item.get("kind", "")) == "recovery_completed":
+            recovery_event_count += 1
+    distress.evaluate(finance, 0.0)
+    var recovery_event_count_after := 0
+    for item in distress.events:
+        if item is Dictionary and str(item.get("kind", "")) == "recovery_completed":
+            recovery_event_count_after += 1
+    check(recovery_event_count == 1 and recovery_event_count_after == 1, "Recovery completion is recorded exactly once")
+
     var snapshot: Dictionary = distress.capture_state()
     var restored: Node = Bankruptcy.new()
     root.add_child(restored)
@@ -67,5 +109,7 @@ func run() -> void:
     distress.free()
     restored.free()
     finance.free()
+    history.free()
+    legacy.free()
     print("BANKRUPTCY SYSTEM RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
