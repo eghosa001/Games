@@ -56,6 +56,7 @@ var _font_regular: SystemFont
 var _font_semibold: SystemFont
 var _font_bold: SystemFont
 var _theme_refresh_queued := false
+var _figma_rebuild_depth := 0
 var _pulse := 0.0
 var _redraw_clock := 0.0
 var _screen_clock := 0.0
@@ -108,7 +109,15 @@ func _install() -> void:
     _refresh_active_screen()
     queue_redraw()
 
+func begin_figma_rebuild() -> void:
+    _figma_rebuild_depth += 1
+
+func end_figma_rebuild() -> void:
+    _figma_rebuild_depth = maxi(0, _figma_rebuild_depth - 1)
+
 func _queue_theme_refresh() -> void:
+    if _figma_rebuild_depth > 0:
+        return
     if _theme_refresh_queued:
         return
     _theme_refresh_queued = true

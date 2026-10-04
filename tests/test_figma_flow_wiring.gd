@@ -64,6 +64,7 @@ func _run() -> void:
     var nav_business := hud.get_node_or_null("RestoraFigmaRuntime/PrimaryNavigation/ProductionTabs/Nav_BUSINESS") as Button
     check("Business navigation button is available", nav_business != null)
     if nav_business != null:
+        check("primary navigation activates on touch-down", nav_business.action_mode == BaseButton.ACTION_MODE_BUTTON_PRESS)
         nav_business.pressed.emit()
         check("primary navigation changes view synchronously", str(hud.get("active_view")) == "operate")
     hud.open_figma_view("live")
@@ -73,6 +74,15 @@ func _run() -> void:
     var hero := live_content.get_node_or_null("ExecutiveHero") as Control if live_content != null else null
     check("mobile title starts near the top edge", title != null and title.position.y <= 10.0)
     check("first home content begins in compact header rhythm", hero != null and hero.position.y <= 66.0)
+    hud.open_figma_view("corporate_strategy")
+    await process_frame
+    var flow_content := hud.get("mobile_content") as Control
+    var flow_back := flow_content.get_node_or_null("FlowBack") as Button if flow_content != null else null
+    var flow_details := flow_content.get_node_or_null("FlowDetails") as Control if flow_content != null else null
+    check("Figma back navigation activates on touch-down", flow_back != null and flow_back.action_mode == BaseButton.ACTION_MODE_BUTTON_PRESS)
+    check("Figma detail content uses compact top rhythm", flow_details != null and flow_details.position.y < 250.0)
+    hud.open_figma_view("live")
+    await process_frame
 
     var state := root.get_node_or_null("RenewGameState")
     var screen_manager := root.get_node_or_null("RenewUIScreenManager")

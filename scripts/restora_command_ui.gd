@@ -36,6 +36,7 @@ var _last_progress_level := -1
 var _pending_level_up := false
 var _pending_day_summary := false
 var _view_transition: Tween
+var _texture_cache: Dictionary = {}
 
 var _font_regular: SystemFont
 var _font_semibold: SystemFont
@@ -502,9 +503,13 @@ func _color(role: String) -> Color:
         _: return Color("f2efe8")
 
 func _asset_texture(path: String) -> Texture2D:
-    if not ResourceLoader.exists(path):
-        return null
-    return load(path) as Texture2D
+    if _texture_cache.has(path):
+        return _texture_cache[path] as Texture2D
+    var texture: Texture2D = null
+    if ResourceLoader.exists(path):
+        texture = ResourceLoader.load(path) as Texture2D
+    _texture_cache[path] = texture
+    return texture
 
 func _add_texture(parent_node: Node, name: String, rect: Rect2, texture: Texture2D, alpha := 1.0) -> TextureRect:
     if texture == null:
@@ -538,6 +543,22 @@ func _build_root() -> void:
     root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
     root.mouse_filter = Control.MOUSE_FILTER_PASS
     add_child(root)
+
+func _begin_figma_rebuild_suppression() -> void:
+    var skin := get_node_or_null("PremiumUISkin")
+    if skin != null and skin.has_method("begin_figma_rebuild"):
+        skin.call("begin_figma_rebuild")
+    var guard := get_node_or_null("/root/RenewVisualStyleGuard")
+    if guard != null and guard.has_method("begin_figma_rebuild"):
+        guard.call("begin_figma_rebuild")
+
+func _end_figma_rebuild_suppression() -> void:
+    var skin := get_node_or_null("PremiumUISkin")
+    if skin != null and skin.has_method("end_figma_rebuild"):
+        skin.call("end_figma_rebuild")
+    var guard := get_node_or_null("/root/RenewVisualStyleGuard")
+    if guard != null and guard.has_method("end_figma_rebuild"):
+        guard.call("end_figma_rebuild")
 
 func _clear_root() -> void:
     refs.clear()
@@ -585,6 +606,7 @@ func _layout_class() -> String:
     return "mobile"
 
 func _rebuild_current() -> void:
+    _begin_figma_rebuild_suppression()
     _clear_root()
     background = ColorRect.new()
     background.name = "MainHUDBackground"
@@ -604,6 +626,7 @@ func _rebuild_current() -> void:
         _normalize_mobile_content_extent()
     if _last_progress_level < 0:
         _last_progress_level = _company_level()
+    _end_figma_rebuild_suppression()
     _refresh()
     _animate_view_in()
 
@@ -694,6 +717,7 @@ func _rebuild_mobile_content() -> void:
     if mobile_content == null:
         _rebuild_current()
         return
+    _begin_figma_rebuild_suppression()
     refs.clear()
     feedback_label = null
     status_label = null
@@ -717,6 +741,7 @@ func _rebuild_mobile_content() -> void:
     # The new tree was just authored from authoritative state; refreshing it
     # again in the same frame only adds latency on mobile navigation.
     _last_signature = _state_signature()
+    _end_figma_rebuild_suppression()
 
 func _refresh_bottom_nav() -> void:
     for i in range(mode_buttons.size()):
@@ -829,6 +854,7 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
         button.custom_minimum_size = Vector2(item_w, 58)
         button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
         button.focus_mode = Control.FOCUS_ALL
+        button.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
         button.add_theme_stylebox_override("normal", _nav_style(i == active_tab))
         button.add_theme_stylebox_override("hover", _nav_style(i == active_tab, true))
         button.add_theme_stylebox_override("pressed", _nav_style(true))
@@ -1053,6 +1079,7 @@ func _header(title: String, subtitle: String, right_text = "", status_role = "go
     alerts.position = Vector2(w - 62, 8)
     alerts.size = Vector2(44, 44)
     alerts.focus_mode = Control.FOCUS_ALL
+    alerts.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
     alerts.mouse_filter = Control.MOUSE_FILTER_PASS
     alerts.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
     alerts.tooltip_text = "Notifications"
@@ -1559,6 +1586,7 @@ func _build_more_section(title: String, items: Array, y: float, inner_w: float, 
             hit = _transparent_button(section, "Open"+target, Rect2(0, row_y, inner_w, row_h), _show_view.bind(target))
         else:
             hit = _transparent_button(section, "Open"+target, Rect2(0, row_y, inner_w, row_h), _open_screen.bind(target))
+        hit.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
         hit.disabled = locked
         if locked:
             hit.tooltip_text = body_text

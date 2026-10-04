@@ -401,8 +401,10 @@ func _render_screen(view_name: String, hud: Node, content: Control, spec: Dictio
         header_notifications.free()
     if not bool(spec.get("immersive", false)) and view_name != "launch":
         var back := back_target(view_name)
-        hud.call("_frame_button", content, "FlowBack", "‹", Rect2(w - 62.0, 16.0, 44.0, 44.0), Callable(self, "_dispatch").bind(back, hud), false, false, 16)
-    var y := 82.0
+        var back_button = hud.call("_frame_button", content, "FlowBack", "‹", Rect2(w - 62.0, 8.0, 44.0, 44.0), Callable(self, "_dispatch").bind(back, hud), false, false, 16)
+        if back_button is BaseButton:
+            (back_button as BaseButton).action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+    var y := 66.0
     var artwork: Texture2D = null
     if ["launch","new_game","property_overview","before_after"].has(view_name):
         artwork = CALDER_ART
@@ -463,6 +465,8 @@ func _render_screen(view_name: String, hud: Node, content: Control, spec: Dictio
         var button = hud.call("_frame_button", content, "FlowAction%d" % i, str(action[0]), Rect2(18, y, inner_w, 48), Callable(self, "_dispatch").bind(str(action[1]), hud), false, primary, 10)
         if button is Button:
             (button as Button).tooltip_text = str(action[0])
+            if NAV_ACTIONS.has(str(action[1])):
+                (button as Button).action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
         y += 58.0
 
     content.custom_minimum_size.y = maxf(content.custom_minimum_size.y, y + 26.0)

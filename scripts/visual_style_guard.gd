@@ -15,6 +15,7 @@ const MIN_BODY_FONT := 12
 
 var _premium_theme: Theme
 var _refresh_queued := false
+var _figma_rebuild_depth := 0
 var _distress_refresh := 0.0
 
 func _ready() -> void:
@@ -32,7 +33,20 @@ func _process(delta: float) -> void:
         _distress_refresh = 0.0
         _sync_distress_overlay()
 
+func _is_figma_runtime(node: Node) -> bool:
+    var current := node
+    while current != null:
+        if current.name == "RestoraFigmaRuntime":
+            return true
+        current = current.get_parent()
+    return false
+
 func _on_node_added(node: Node) -> void:
+    # The Figma command UI authors its own styles and touch geometry. Re-running
+    # the global recursive premium guard for every node it creates turns a tap
+    # into a large UI-tree restyle on slower Android devices.
+    if _is_figma_runtime(node):
+        return
     if node is Control:
         var control := node as Control
         if _premium_theme != null:
@@ -89,7 +103,15 @@ func _normalize_mobile_shell_background(control: Control) -> void:
     control.set_anchor(SIDE_RIGHT, 0.0, true)
     control.set_anchor(SIDE_BOTTOM, 0.0, true)
 
+func begin_figma_rebuild() -> void:
+    _figma_rebuild_depth += 1
+
+func end_figma_rebuild() -> void:
+    _figma_rebuild_depth = maxi(0, _figma_rebuild_depth - 1)
+
 func _queue_refresh() -> void:
+    if _figma_rebuild_depth > 0:
+        return
     if _refresh_queued:
         return
     _refresh_queued = true
@@ -147,6 +169,8 @@ func _theme_active_ui() -> void:
     _apply_theme_recursive(ui)
 
 func _apply_theme_recursive(node: Node) -> void:
+    if _is_figma_runtime(node):
+        return
     if node is Control:
         var control := node as Control
         control.theme = _premium_theme
