@@ -10,6 +10,11 @@ const DEFAULT_SFX_LEVEL := 0.84
 const TAU_F: float = TAU
 const MUSIC_SCALE_STEPS: Array[int] = [0, 2, 4, 7, 9, 7, 4, 2]
 const STATE_WATCH_INTERVAL: float = 0.16
+const SUCCESS_COOLDOWN_MS := 180
+const FAILURE_COOLDOWN_MS := 220
+const DAY_END_COOLDOWN_MS := 450
+const RESTORATION_COOLDOWN_MS := 300
+const CONSTRUCTION_COOLDOWN_MS := 300
 
 var _music_player: AudioStreamPlayer
 var _music_playback: AudioStreamGeneratorPlayback
@@ -25,6 +30,7 @@ var _music_note: int = 0
 var _music_note_time: float = 0.0
 var _music_seed: float = 0.0
 var _last_tap_ms: int = -1000
+var _last_feedback_ms: Dictionary = {}
 var _music_level := DEFAULT_MUSIC_LEVEL
 var _sfx_level := DEFAULT_SFX_LEVEL
 var _state_watch_clock: float = 0.0
@@ -233,10 +239,20 @@ func _sfx_stream(duration: float) -> AudioStreamGenerator:
     return stream
 
 func _begin_sfx(duration: float) -> AudioStreamGeneratorPlayback:
-    if _sfx_players.is_empty():
+    if _sfx_players.is_empty() or _sfx_level <= 0.001:
         return null
-    var player: AudioStreamPlayer = _sfx_players[_sfx_cursor]
-    _sfx_cursor = (_sfx_cursor + 1) % _sfx_players.size()
+    var player: AudioStreamPlayer = null
+    var chosen_index := -1
+    for offset in range(_sfx_players.size()):
+        var index := (_sfx_cursor + offset) % _sfx_players.size()
+        var candidate: AudioStreamPlayer = _sfx_players[index]
+        if not candidate.is_playing():
+            player = candidate
+            chosen_index = index
+            break
+    if player == null:
+        return null
+    _sfx_cursor = (chosen_index + 1) % _sfx_players.size()
     player.stream = _sfx_stream(duration)
     player.volume_db = _sfx_db()
     player.playback_type = AudioServer.PLAYBACK_TYPE_STREAM
@@ -244,6 +260,16 @@ func _begin_sfx(duration: float) -> AudioStreamGeneratorPlayback:
     if not player.is_playing():
         return null
     return player.get_stream_playback() as AudioStreamGeneratorPlayback
+
+func _allow_feedback(kind: String, cooldown_ms: int) -> bool:
+    if _sfx_level <= 0.001:
+        return false
+    var now := Time.get_ticks_msec()
+    var previous := int(_last_feedback_ms.get(kind, -1000000))
+    if now - previous < cooldown_ms:
+        return false
+    _last_feedback_ms[kind] = now
+    return true
 
 func _render_sequence(notes: Array, total_duration: float, amplitude: float, harmonic: float = 0.15, spacing: float = 0.055) -> void:
     var playback: AudioStreamGeneratorPlayback = _begin_sfx(total_duration)
@@ -289,22 +315,32 @@ func play_ui_tap() -> void:
     _tone(playback, 0.055, 680.0, 0.075, 120.0, 0.22, 0.006, -0.08)
 
 func play_success() -> void:
+    if not _allow_feedback("success", SUCCESS_COOLDOWN_MS):
+        return
     _render_sequence([523.25, 659.25, 783.99], 0.24, 0.075, 0.28, 0.065)
 
 func play_failure() -> void:
+    if not _allow_feedback("failure", FAILURE_COOLDOWN_MS):
+        return
     var playback: AudioStreamGeneratorPlayback = _begin_sfx(0.24)
     _tone(playback, 0.20, 247.0, 0.085, -72.0, 0.35, 0.018, 0.0)
 
 func play_day_end() -> void:
+    if not _allow_feedback("day_end", DAY_END_COOLDOWN_MS):
+        return
     _render_sequence([659.25, 783.99, 987.77, 1174.66], 0.38, 0.065, 0.32, 0.075)
 
 func play_restoration() -> void:
+    if not _allow_feedback("restoration", RESTORATION_COOLDOWN_MS):
+        return
     var playback: AudioStreamGeneratorPlayback = _begin_sfx(0.30)
     _tone(playback, 0.10, 280.0, 0.055, 90.0, 0.25, 0.045, -0.2)
     _tone(playback, 0.11, 410.0, 0.060, 130.0, 0.22, 0.025, 0.1)
     _tone(playback, 0.12, 620.0, 0.065, 80.0, 0.30, 0.01, -0.05)
 
 func play_construction() -> void:
+    if not _allow_feedback("construction", CONSTRUCTION_COOLDOWN_MS):
+        return
     var playback: AudioStreamGeneratorPlayback = _begin_sfx(0.34)
     _tone(playback, 0.16, 132.0, 0.035, 34.0, 0.24, 0.025, -0.12)
     _tone(playback, 0.10, 214.0, 0.034, 46.0, 0.22, 0.020, 0.12)
