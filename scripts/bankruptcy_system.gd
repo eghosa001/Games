@@ -121,8 +121,9 @@ func evaluate(finance: Node, daily_cash_burn: float = 0.0) -> Dictionary:
             return status()
         recovery_days += 1
         if recovery_days >= DAYS_TO_STABLE and distress_score < RECOVERY_SCORE:
-            _transition(STABLE, "recovery sustained and distress cleared")
             restructuring_plan["completed_day"] = _game_day()
+            _transition(STABLE, "recovery sustained and distress cleared")
+            _record_completed_recovery()
         return status()
 
     if state == RESTRUCTURING:
@@ -440,6 +441,56 @@ func _ensure_plan(reason: String) -> void:
 
 func _has_restructuring_actions() -> bool:
     return not restructuring_plan.is_empty() and int(restructuring_plan.get("actions", 0)) > 0
+
+func _service(service_name: String) -> Node:
+    var registry := get_node_or_null("/root/RenewServices")
+    if registry != null and registry.has_method("get_service"):
+        var resolved = registry.get_service(service_name)
+        if resolved is Node:
+            return resolved
+    var direct := get_node_or_null("/root/" + service_name)
+    return direct as Node if direct is Node else null
+
+func _recovery_details() -> Dictionary:
+    return {
+        "plan_id": str(restructuring_plan.get("id", "recovery")),
+        "reason": str(restructuring_plan.get("reason", "")),
+        "created_day": int(restructuring_plan.get("created_day", 0)),
+        "completed_day": int(restructuring_plan.get("completed_day", _game_day())),
+        "actions": int(restructuring_plan.get("actions", 0)),
+        "asset_sales": int(restructuring_plan.get("asset_sales", 0)),
+        "rescue_investment": int(restructuring_plan.get("investment", 0)),
+        "downsizing": int(restructuring_plan.get("downsizing", 0)),
+        "daily_savings": int(restructuring_plan.get("daily_savings", 0)),
+        "refinancing": int(restructuring_plan.get("refinancing", 0)),
+        "final_distress_score": distress_score
+    }
+
+func _record_completed_recovery() -> void:
+    if restructuring_plan.is_empty():
+        return
+    var details := _recovery_details()
+    var plan_id := str(details.get("plan_id", "recovery"))
+    _event("recovery_completed", "Corporate recovery completed", details)
+    _log_game("RECOVERY COMPLETE: restructuring plan %s restored financial stability." % plan_id)
+
+    var history := _service("RenewHistorySystem")
+    if history != null and history.has_method("record"):
+        history.record(
+            "crisis",
+            _game_day(),
+            "Corporate recovery completed",
+            details,
+            "bankruptcy_recovery|%s" % plan_id
+        )
+
+    var legacy := _service("RenewCorporateLegacy")
+    if legacy != null and legacy.has_method("record_crisis_recovery"):
+        legacy.record_crisis_recovery(
+            "Corporate recovery — %s" % plan_id,
+            details,
+            _game_day()
+        )
 
 func _estimate_daily_burn(game: Node, finance: Node) -> float:
     var profit: Variant = float(finance.last_profit)
