@@ -61,6 +61,8 @@ func _run() -> void:
         return
 
     var state := root.get_node_or_null("RenewGameState")
+    var screen_manager := root.get_node_or_null("RenewUIScreenManager")
+    check("central screen manager available", screen_manager != null)
     if state != null:
         state.set_value("player", "day", 99)
         state.set_value("economy", "cash", 1)
@@ -211,6 +213,36 @@ func _run() -> void:
     check("headquarters returns to world power", str(bridge.back_target("headquarters")) == "world_power")
     check("legacy returns to More", str(bridge.back_target("legacy")) == "more")
     check("endgame returns to More", str(bridge.back_target("endgame")) == "more")
+
+    if state != null:
+        state.set_value("progression", "level", 1)
+        state.set_value("progression", "xp", 0)
+    hud.open_figma_view("more")
+    await process_frame
+    var executive_locked := (hud.get("mobile_content") as Control).find_child("OpenRenewManagementPolicyUI", true, false) as Button
+    check("Executive Desk is visible for anticipation at level 1", executive_locked != null)
+    check("Executive Desk stays locked during the opening loop", executive_locked != null and executive_locked.disabled)
+    if state != null:
+        state.set_value("progression", "level", 2)
+        state.set_value("progression", "xp", 100)
+    hud.open_figma_view("more")
+    await process_frame
+    var executive_button := (hud.get("mobile_content") as Control).find_child("OpenRenewManagementPolicyUI", true, false) as Button
+    check("Executive Desk unlocks with level-2 management systems", executive_button != null and not executive_button.disabled)
+    if executive_button != null:
+        executive_button.pressed.emit()
+        await process_frame
+        var executive_ui := root.get_node_or_null("RenewManagementPolicyUI")
+        check("Executive Desk opens through central screen manager", screen_manager != null and str(screen_manager.get_active_screen_name()) == "RenewManagementPolicyUI")
+        check("Executive Desk native panel becomes visible", executive_ui != null and bool(executive_ui.get("open")) and bool(executive_ui.visible))
+        check("command HUD hides behind Executive Desk", not bool(hud.visible))
+        var executive_close := executive_ui.get("close_button") as Button if executive_ui != null else null
+        check("Executive Desk close action is reachable", executive_close != null)
+        if executive_close != null:
+            executive_close.pressed.emit()
+            await process_frame
+            check("Executive Desk closes through central screen manager", screen_manager != null and str(screen_manager.get_active_screen_name()).is_empty())
+            check("command HUD returns after Executive Desk closes", bool(hud.visible))
 
     hud.open_figma_view("more")
     await process_frame
