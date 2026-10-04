@@ -551,7 +551,8 @@ func _clear_root() -> void:
     hero_goal = null
     hero_action = null
     for child in root.get_children():
-        child.free()
+        root.remove_child(child)
+        child.queue_free()
 
 func _on_theme_changed(_mode: String) -> void:
     _rebuild_current()
@@ -699,7 +700,8 @@ func _rebuild_mobile_content() -> void:
     hero_goal = null
     hero_action = null
     for child in mobile_content.get_children():
-        child.free()
+        mobile_content.remove_child(child)
+        child.queue_free()
 
     var content_w := mobile_content.custom_minimum_size.x
     mobile_content.custom_minimum_size = Vector2(content_w, MOBILE_CONTENT_H)
