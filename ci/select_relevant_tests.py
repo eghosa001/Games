@@ -61,6 +61,10 @@ CORPORATE_UI_REFRESH_FILES = {
     "scripts/corporations_ui.gd",
 }
 
+DASHBOARD_UI_REFRESH_FILES = {
+    "scripts/dashboard_ui.gd",
+}
+
 GROUPS = {
     "tutorial": {
         "patterns": [
@@ -253,6 +257,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         and path not in CONTRACT_UI_REFRESH_FILES
         and path not in IDENTITY_UI_REFRESH_FILES
         and path not in CORPORATE_UI_REFRESH_FILES
+        and path not in DASHBOARD_UI_REFRESH_FILES
         for path in changed
     )
     tutorial_code_changed = any(
@@ -273,6 +278,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     contract_ui_refresh_changed = any(path in CONTRACT_UI_REFRESH_FILES for path in changed)
     identity_ui_refresh_changed = any(path in IDENTITY_UI_REFRESH_FILES for path in changed)
     corporate_ui_refresh_changed = any(path in CORPORATE_UI_REFRESH_FILES for path in changed)
+    dashboard_ui_refresh_changed = any(path in DASHBOARD_UI_REFRESH_FILES for path in changed)
     other_state_save_changed = any(
         path not in AUTOSAVE_NAV_FILES
         and path not in SAVE_LOAD_DYNASTY_FILES
@@ -296,6 +302,8 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         if name == "ui" and identity_ui_refresh_changed and not other_ui_code_changed:
             continue
         if name == "ui" and corporate_ui_refresh_changed and not other_ui_code_changed:
+            continue
+        if name == "ui" and dashboard_ui_refresh_changed and not other_ui_code_changed:
             continue
         if name == "tutorial" and restora_flow_changed and not tutorial_code_changed:
             continue
@@ -352,6 +360,10 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     if corporate_ui_refresh_changed:
         groups.append("corporate_ui_refresh")
         tests.add("tests/test_corporations_refresh.gd")
+
+    if dashboard_ui_refresh_changed:
+        groups.append("dashboard_ui_refresh")
+        tests.add("tests/test_dashboard_refresh.gd")
 
     code_changed = any(
         p.endswith((".gd", ".tscn", ".tres", ".cfg", ".svg"))
