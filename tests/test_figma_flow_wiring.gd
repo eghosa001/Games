@@ -242,7 +242,7 @@ func _run() -> void:
         check("corporate strategy opens acquisition progression surface", str(hud.get("active_view")) == "acquisitions")
         var acquisition_system := game.get_node_or_null("Systems/AcquisitionSystem")
         var acquisition_metric := (hud.get("mobile_content") as Control).get_node_or_null("FlowMetric0/Value") as Label
-        var target_count := acquisition_system.targets.size() if acquisition_system != null and acquisition_system.get("targets") is Dictionary else 0
+        var target_count: int = int((acquisition_system.get("targets") as Dictionary).size()) if acquisition_system != null and acquisition_system.get("targets") is Dictionary else 0
         check("acquisition screen reads authoritative target count", acquisition_metric != null and int(acquisition_metric.text) == target_count)
         var corporate_network := (hud.get("mobile_content") as Control).get_node_or_null("FlowAction0") as Button
         check("acquisition screen hands real transactions to Corporate Network", corporate_network != null and corporate_network.text == "OPEN CORPORATE NETWORK")
