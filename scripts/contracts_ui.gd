@@ -174,7 +174,7 @@ func _refresh(force: bool = false) -> void:
     if contracts != null and contracts.has_method("get_future_contract_offer"):
         offer = contracts.get_future_contract_offer(reputation)
     offer_detail.text = _offer_summary(offer)
-    _rebuild_offers(offer)
+    _sync_offer_actions(offer)
     empty_label.visible = active.is_empty()
     var signature := "%d:%d" % [active.size(), reputation]
     for contract in active:
@@ -205,15 +205,17 @@ func _offer_summary(offer: Dictionary) -> String:
     var pressure := float(offer.get("competitor_bid_pressure", 0.0))
     return "STANDARD OFFER  •  %d units  •  $%d/unit  •  %d days  •  competitor pressure %.0f%%" % [quantity, price, duration, pressure * 100.0]
 
-func _rebuild_offers(offer: Dictionary) -> void:
-    for child in offer_grid.get_children(): child.queue_free()
+func _sync_offer_actions(offer: Dictionary) -> void:
+    if offer_grid.get_child_count() == 0:
+        _add_offer("STANDARD", "sign_contract")
+        _add_offer("EXCLUSIVE +25%", "sign_exclusive_contract")
+        _add_offer("CONSTRUCTION +10%", "sign_construction_contract")
+        _add_offer("GOVERNMENT +15%", "sign_government_contract")
+        _add_offer("EXPORT +35%", "sign_export_contract")
     var eligible := bool(offer.get("eligible", false))
-    _add_offer("STANDARD", "sign_contract")
-    _add_offer("EXCLUSIVE +25%", "sign_exclusive_contract")
-    _add_offer("CONSTRUCTION +10%", "sign_construction_contract")
-    _add_offer("GOVERNMENT +15%", "sign_government_contract")
-    _add_offer("EXPORT +35%", "sign_export_contract")
-    for child in offer_grid.get_children(): child.disabled = not eligible
+    for child in offer_grid.get_children():
+        if child is BaseButton:
+            (child as BaseButton).disabled = not eligible
 
 func _add_contract_row(contract: Dictionary) -> void:
     var id := str(contract.get("id", ""))
