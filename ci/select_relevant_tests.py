@@ -36,6 +36,11 @@ SAVE_LOAD_DYNASTY_FILES = {
     "scripts/save_load_ui.gd",
 }
 
+NATIVE_ACCESSIBILITY_FILES = {
+    "scripts/premium_ui_skin.gd",
+    "scripts/theme_manager.gd",
+}
+
 GROUPS = {
     "tutorial": {
         "patterns": [
@@ -224,6 +229,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         and path.endswith("_ui.gd")
         and path not in RESTORA_FLOW_FILES
         and path not in SAVE_LOAD_DYNASTY_FILES
+        and path not in NATIVE_ACCESSIBILITY_FILES
         for path in changed
     )
     tutorial_code_changed = any(
@@ -238,6 +244,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     )
     autosave_nav_changed = any(path in AUTOSAVE_NAV_FILES for path in changed)
     save_load_dynasty_changed = any(path in SAVE_LOAD_DYNASTY_FILES for path in changed)
+    native_accessibility_changed = any(path in NATIVE_ACCESSIBILITY_FILES for path in changed)
     other_state_save_changed = any(
         path not in AUTOSAVE_NAV_FILES
         and path not in SAVE_LOAD_DYNASTY_FILES
@@ -252,6 +259,8 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         if name == "ui" and restora_flow_changed and not other_ui_code_changed:
             continue
         if name == "ui" and save_load_dynasty_changed and not other_ui_code_changed:
+            continue
+        if name == "ui" and native_accessibility_changed and not other_ui_code_changed:
             continue
         if name == "tutorial" and restora_flow_changed and not tutorial_code_changed:
             continue
@@ -280,6 +289,10 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     if save_load_dynasty_changed:
         groups.append("save_load_dynasty")
         tests.add("tests/test_save_load_dynasty_ui.gd")
+
+    if native_accessibility_changed:
+        groups.append("native_accessibility")
+        tests.add("tests/test_theme_settings.gd")
 
     code_changed = any(
         p.endswith((".gd", ".tscn", ".tres", ".cfg", ".svg"))
