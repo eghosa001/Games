@@ -7,6 +7,7 @@ var failed := 0
 
 const SAVE_PATH := "user://renew_save.json"
 const BACKUP_PATH := "user://renew_save.backup.json"
+const TEMP_PATH := "user://renew_save.tmp.json"
 
 func _init() -> void:
     call_deferred("run")
@@ -56,6 +57,21 @@ func run() -> void:
         _wipe()
         quit(1)
         return
+
+    var staged_payload: Dictionary = Save._sanitize_json_value(state.capture())
+    var staged_json := JSON.stringify(staged_payload)
+    check(Save._write_verified_temp(staged_payload), "Complete staged save passes read-back verification")
+    _write_raw(TEMP_PATH, staged_json.left(maxi(1, staged_json.length() / 2)))
+    check(not Save._verify_staged_file(staged_json), "Truncated staged save is rejected before commit")
+    _write_raw(TEMP_PATH, JSON.stringify({"schema_version": 8, "domains": {"player": {}}}))
+    check(not Save._verify_staged_file(JSON.stringify({"schema_version": 8, "domains": {"player": {}}})), "Structurally incomplete staged save is rejected")
+    if FileAccess.file_exists(TEMP_PATH):
+        DirAccess.remove_absolute(ProjectSettings.globalize_path(TEMP_PATH))
+    var save_source := FileAccess.get_file_as_string("res://scripts/save_system.gd")
+    var verify_pos := save_source.find("if not _write_verified_temp(payload):")
+    var rename_pos := save_source.find("DirAccess.rename_absolute(temp_absolute, save_absolute)")
+    check(verify_pos >= 0 and rename_pos > verify_pos, "Temp verification occurs before primary replacement")
+
     game.cash = 250000
     game.day = 1
     game.inspect_property()
