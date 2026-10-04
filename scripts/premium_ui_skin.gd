@@ -56,6 +56,7 @@ var _font_regular: SystemFont
 var _font_semibold: SystemFont
 var _font_bold: SystemFont
 var _theme_refresh_queued := false
+var _figma_rebuild_depth := 0
 var _pulse := 0.0
 var _redraw_clock := 0.0
 var _screen_clock := 0.0
@@ -69,8 +70,8 @@ func _ready() -> void:
     _theme = manager.get_theme_resource() if manager != null and manager.has_method("get_theme_resource") else load(THEME_PATH) as Theme
     if manager != null and not manager.theme_changed.is_connected(_on_theme_changed):
         manager.theme_changed.connect(_on_theme_changed)
-    if not get_tree().node_added.is_connected(_on_theme_node_added):
-        get_tree().node_added.connect(_on_theme_node_added)
+    if not get_tree().tree_changed.is_connected(_queue_theme_refresh):
+        get_tree().tree_changed.connect(_queue_theme_refresh)
     call_deferred("_install")
 
 func _make_fonts() -> void:
@@ -108,16 +109,15 @@ func _install() -> void:
     _refresh_active_screen()
     queue_redraw()
 
-func _on_theme_node_added(node: Node) -> void:
-    # Figma command pages are already fully authored and can create dozens of
-    # controls per route. Ignore those additions so they do not trigger a global
-    # native-UI restyle before the destination can render.
-    if _is_figma_runtime(node):
-        return
-    if node is CanvasItem or node is CanvasLayer:
-        _queue_theme_refresh()
+func begin_figma_rebuild() -> void:
+    _figma_rebuild_depth += 1
+
+func end_figma_rebuild() -> void:
+    _figma_rebuild_depth = maxi(0, _figma_rebuild_depth - 1)
 
 func _queue_theme_refresh() -> void:
+    if _figma_rebuild_depth > 0:
+        return
     if _theme_refresh_queued:
         return
     _theme_refresh_queued = true
