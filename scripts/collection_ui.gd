@@ -201,3 +201,4 @@ func _grouped(value: int) -> String:
     while digits.length() > 3:
         out = "," + digits.substr(digits.length() - 3, 3) + out; digits = digits.substr(0, digits.length() - 3)
     return ("-" if negative else "") + digits + out
+# Archive live-refresh final validation scope: service signals, debounced visible refresh, hidden-screen inactivity, and focused CI.

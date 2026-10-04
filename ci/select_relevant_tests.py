@@ -470,3 +470,4 @@ def main() -> int:
 if __name__ == "__main__":
     raise SystemExit(main())
 # World Intelligence final validation scope: content-sensitive cache invalidation.
+# Archive live-refresh final validation scope: service signals, debounced visible refresh, hidden-screen inactivity, and focused CI.

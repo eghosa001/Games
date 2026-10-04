@@ -78,3 +78,4 @@ func _run() -> void:
 
     print("CORPORATE REFRESH RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
+# Archive live-refresh final validation scope: service signals, debounced visible refresh, hidden-screen inactivity, and focused CI.

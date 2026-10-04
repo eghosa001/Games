@@ -146,3 +146,4 @@ func _total_count() -> int:
 func _day() -> int:
     var scene: Variant = get_tree().current_scene if get_tree() != null else null
     return int(scene.get("day")) if scene != null else 1
+# Archive live-refresh final validation scope: service signals, debounced visible refresh, hidden-screen inactivity, and focused CI.

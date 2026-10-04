@@ -202,3 +202,4 @@ func _layout() -> void:
     tabs_scroll.custom_minimum_size.x = 0
     for child in tabs.get_children():
         if child is Button: child.custom_minimum_size = Vector2(108 if compact else 118, 44)
+# Archive live-refresh final validation scope: service signals, debounced visible refresh, hidden-screen inactivity, and focused CI.
