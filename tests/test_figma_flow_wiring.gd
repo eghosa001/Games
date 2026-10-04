@@ -247,6 +247,8 @@ func _run() -> void:
         var corporate_network := (hud.get("mobile_content") as Control).get_node_or_null("FlowAction0") as Button
         check("acquisition screen hands real transactions to Corporate Network", corporate_network != null and corporate_network.text == "OPEN CORPORATE NETWORK")
 
+    hud.open_figma_view("more")
+    await process_frame
     var financial_health_button := (hud.get("mobile_content") as Control).find_child("Openfinancial_health", true, false) as Button
     check("More exposes live financial health", financial_health_button != null)
 
