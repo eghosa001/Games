@@ -45,6 +45,10 @@ AUDIO_FEEDBACK_FILES = {
     "scripts/audio_manager.gd",
 }
 
+SAVE_INTEGRITY_FILES = {
+    "scripts/save_system.gd",
+}
+
 GROUPS = {
     "tutorial": {
         "patterns": [
@@ -250,9 +254,11 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     save_load_dynasty_changed = any(path in SAVE_LOAD_DYNASTY_FILES for path in changed)
     native_accessibility_changed = any(path in NATIVE_ACCESSIBILITY_FILES for path in changed)
     audio_feedback_changed = any(path in AUDIO_FEEDBACK_FILES for path in changed)
+    save_integrity_changed = any(path in SAVE_INTEGRITY_FILES for path in changed)
     other_state_save_changed = any(
         path not in AUTOSAVE_NAV_FILES
         and path not in SAVE_LOAD_DYNASTY_FILES
+        and path not in SAVE_INTEGRITY_FILES
         and any(matches(path, pat) for pat in GROUPS["state_save"]["patterns"])
         for path in changed
     )
@@ -274,6 +280,8 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         if name == "state_save" and autosave_nav_changed and not other_state_save_changed:
             continue
         if name == "state_save" and save_load_dynasty_changed and not other_state_save_changed:
+            continue
+        if name == "state_save" and save_integrity_changed and not other_state_save_changed:
             continue
         if any(any(matches(path, pat) for pat in cfg["patterns"]) for path in changed):
             groups.append(name)
@@ -302,6 +310,10 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     if audio_feedback_changed:
         groups.append("audio_feedback")
         tests.add("tests/test_audio_feedback_throttle.gd")
+
+    if save_integrity_changed:
+        groups.append("save_integrity")
+        tests.add("tests/test_v94_save_edges.gd")
 
     code_changed = any(
         p.endswith((".gd", ".tscn", ".tres", ".cfg", ".svg"))
