@@ -208,3 +208,4 @@ func _record_unlocks(old_level:int,new_level:int)->void:
         for feature in get_features_for_level(level):
             if feature not in unlocks:unlocks.append(feature)
     state.set_value("progression","unlocks",unlocks)
+# Executive Desk final validation scope: navigation, progression unlocks, managed-screen exclusivity, and HUD restoration.

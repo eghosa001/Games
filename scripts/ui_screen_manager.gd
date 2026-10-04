@@ -469,3 +469,4 @@ func _find_close_button(node: Node) -> Button:
         var found := _find_close_button(children[i])
         if found != null: return found
     return null
+# Executive Desk final validation scope: navigation, progression unlocks, managed-screen exclusivity, and HUD restoration.

@@ -2683,3 +2683,4 @@ func _open_terms() -> void:
 
 func _save_company() -> void:
     if parent != null and parent.has_method("save_game"): parent.save_game()
+# Executive Desk final validation scope: navigation, progression unlocks, managed-screen exclusivity, and HUD restoration.

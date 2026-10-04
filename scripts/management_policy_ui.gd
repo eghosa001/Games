@@ -239,3 +239,4 @@ func _money(value:int)->String:
     while digits.length()>3:
         out=","+digits.substr(digits.length()-3,3)+out; digits=digits.substr(0,digits.length()-3)
     return ("-" if value<0 else "")+digits+out
+# Executive Desk final validation scope: navigation, progression unlocks, managed-screen exclusivity, and HUD restoration.

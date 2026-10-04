@@ -408,3 +408,4 @@ func _run() -> void:
 # Focused validation: RESTORA mobile overlap, touch scroll and navigation hierarchy.
 # Focused rerun: typed mobile UX layout fix.
 # Final master-flow validation: levels 1-10 strategic progression.
+# Executive Desk final validation scope: navigation, progression unlocks, managed-screen exclusivity, and HUD restoration.
