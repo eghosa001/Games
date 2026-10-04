@@ -305,6 +305,11 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     world_intelligence_refresh_changed = any(path in WORLD_INTELLIGENCE_REFRESH_FILES for path in changed)
     progression_ui_refresh_changed = any(path in PROGRESSION_UI_REFRESH_FILES for path in changed)
     archive_live_refresh_changed = any(path in ARCHIVE_LIVE_REFRESH_FILES for path in changed)
+    other_corporate_empire_changed = any(
+        path not in ARCHIVE_LIVE_REFRESH_FILES
+        and any(matches(path, pat) for pat in GROUPS["corporate_empire"]["patterns"])
+        for path in changed
+    )
     executive_desk_ui_changed = any(path in EXECUTIVE_DESK_UI_FILES for path in changed)
     other_state_save_changed = any(
         path not in AUTOSAVE_NAV_FILES
@@ -343,6 +348,8 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         if name == "tutorial" and restora_flow_changed and not tutorial_code_changed:
             continue
         if name == "corporate_empire" and corporate_ui_refresh_changed:
+            continue
+        if name == "corporate_empire" and archive_live_refresh_changed and not other_corporate_empire_changed:
             continue
         if name == "economy_finance" and bankruptcy_changed and not other_economy_finance_changed:
             continue
