@@ -143,7 +143,7 @@ func _build_ui() -> void:
     confirm_row.name = "ConfirmRow"
     confirm_row.add_theme_constant_override("separation", 8)
     root.add_child(confirm_row)
-    confirm_button = _button("CONFIRM NEW DYNASTY", _confirm_new)
+    confirm_button = _button("CONFIRM RESET & NEW DYNASTY", _confirm_new)
     cancel_button = _button("CANCEL", _cancel_new)
     confirm_row.add_child(confirm_button); confirm_row.add_child(cancel_button)
     confirm_row.visible = false
@@ -173,17 +173,59 @@ func _refresh() -> void:
     var victory := get_node_or_null("/root/RenewVictorySystem")
     var can_start: bool = victory != null and victory.has_method("stored_victory") and not victory.stored_victory().is_empty()
     new_button.disabled = not can_start
+    var preview: Dictionary = _dynasty_preview(victory) if can_start else {}
     if can_start:
-        status.text = "Company data is ready. Save or restore the current campaign, or begin a new dynasty using your earned legacy bonuses."
+        status.text = "VICTORY BANKED • %s. LEGACY BONUSES: +%s cash • +%d reputation • +%d research. New dynasty starts with %s cash • %d reputation • %d research points." % [
+            str(preview.get("path", "Victory")).capitalize(),
+            _money(int(preview.get("bonus_cash", 0))),
+            int(preview.get("bonus_reputation", 0)),
+            int(preview.get("bonus_research", 0)),
+            _money(int(preview.get("starting_cash", 25000))),
+            int(preview.get("starting_reputation", 0)),
+            int(preview.get("starting_research", 20))
+        ]
+        new_button.tooltip_text = "Review the exact heir bonuses, then confirm separately. The current campaign is not reset by opening this confirmation."
     else:
         status.text = "Company data is ready. Save or restore the current campaign. A new dynasty unlocks after a campaign victory."
+        new_button.tooltip_text = "Win a campaign before founding a new dynasty."
     if confirm_new:
-        warning.text = "STARTING A NEW DYNASTY RESETS THE CURRENT CAMPAIGN. Your earned legacy bonuses are retained. Confirm only if you intend to leave this company."
+        warning.text = "CURRENT CAMPAIGN WILL RESET ONLY AFTER CONFIRMATION. New dynasty starts with %s cash • %d reputation • %d research points. Permanent prestige remains banked. Cancel to keep this company unchanged." % [
+            _money(int(preview.get("starting_cash", 25000))),
+            int(preview.get("starting_reputation", 0)),
+            int(preview.get("starting_research", 20))
+        ]
         warning.visible = true
         confirm_button.get_parent().visible = true
     else:
         warning.visible = false
         confirm_button.get_parent().visible = false
+
+func _dynasty_preview(victory: Node) -> Dictionary:
+    if victory == null:
+        return {}
+    var prior: Dictionary = victory.stored_victory() if victory.has_method("stored_victory") else {}
+    var bonuses: Dictionary = victory.prestige_bonuses() if victory.has_method("prestige_bonuses") else {}
+    var bonus_cash := int(bonuses.get("starting_cash", 0))
+    var bonus_reputation := int(bonuses.get("starting_reputation", 0))
+    var bonus_research := int(bonuses.get("starting_research", 0))
+    return {
+        "path": str(prior.get("path", "victory")),
+        "bonus_cash": bonus_cash,
+        "bonus_reputation": bonus_reputation,
+        "bonus_research": bonus_research,
+        "starting_cash": 25000 + bonus_cash,
+        "starting_reputation": bonus_reputation,
+        "starting_research": 20 + bonus_research
+    }
+
+func _money(value: int) -> String:
+    var absolute := absi(value)
+    var prefix := "-$" if value < 0 else "$"
+    if absolute >= 1000000:
+        return "%s%.2fM" % [prefix, float(absolute) / 1000000.0]
+    if absolute >= 1000:
+        return "%s%.1fK" % [prefix, float(absolute) / 1000.0]
+    return "%s%d" % [prefix, absolute]
 
 func _message(default_text: String) -> void:
     if parent != null and str(parent.get("message")) != "":
