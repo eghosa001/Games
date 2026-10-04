@@ -51,6 +51,36 @@ func _card(head:String,body:String,tint:=ACCENT)->void:
     var box:=VBoxContainer.new(); box.add_theme_constant_override("separation",5); card.add_child(box)
     box.add_child(_label(head.to_upper(),11,tint)); box.add_child(_label(body,13,TEXT))
 
+func _data_signature(day:int,rep:int,power:Dictionary,rows:Array,stories:Array)->String:
+    var power_parts:Array[String]=[]
+    for key in ["total","economic","industrial","technology","logistics","diplomatic","alliance","cultural"]:
+        power_parts.append("%s=%.3f"%[key,float(power.get(key,0.0))])
+    var identity_parts:Array[String]=[]
+    for row in rows:
+        if row is Dictionary:
+            identity_parts.append("%s|%s|%d|%d|%s"%[
+                str(row.get("id",row.get("title",""))),
+                str(row.get("title","")),
+                int(row.get("claimed",0)),
+                int(row.get("total",0)),
+                str(row.get("next",""))
+            ])
+        else:
+            identity_parts.append(str(row))
+    var story_parts:Array[String]=[]
+    for story in stories:
+        if story is Dictionary:
+            story_parts.append("%s|%s|%s|%s|%s"%[
+                str(story.get("id","")),
+                str(story.get("section","")),
+                str(story.get("headline","")),
+                str(story.get("body","")),
+                str(story.get("kicker",""))
+            ])
+        else:
+            story_parts.append(str(story))
+    return "%d|%d|%s|%s|%s"%[day,rep,";".join(power_parts),"§".join(identity_parts),"§".join(story_parts)]
+
 func _refresh(force:=false)->void:
     var g:=_game(); if g==null:return
     var rep:=int(g.get("reputation")) if "reputation" in g else 0
@@ -59,7 +89,7 @@ func _refresh(force:=false)->void:
     var identity:=_identity(); var rows:Array=identity.progress() if identity!=null and identity.has_method("progress") else []
     var news:=_news(); var issue:Dictionary=news.get_current_issue() if news!=null and news.has_method("get_current_issue") else {}
     var stories:Array=issue.get("stories",[])
-    var sig:="%d|%d|%.1f|%d|%d"%[day,rep,float(power.get("total",0.0)),rows.size(),stories.size()]
+    var sig:=_data_signature(day,rep,power,rows,stories)
     if not force and sig==signature:return
     signature=sig
     summary.text="DAY %d  •  WORLD POWER %.0f/100  •  REP %d"%[day,float(power.get("total",0.0)),rep]
