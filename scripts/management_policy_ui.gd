@@ -28,6 +28,8 @@ func _ready() -> void:
     _build()
     _layout()
     _refresh()
+    visible = false
+    open = false
     if not get_viewport().size_changed.is_connected(_layout):
         get_viewport().size_changed.connect(_layout)
 
@@ -83,7 +85,7 @@ func _build() -> void:
     header.add_child(title)
     close_button = _button("CLOSE")
     close_button.custom_minimum_size = Vector2(88,48)
-    close_button.pressed.connect(_toggle)
+    close_button.pressed.connect(_close)
     header.add_child(close_button)
     box.add_child(_label("DELEGATION & EXCEPTIONS",12,ACCENT))
     summary = _label("",13,MUTED)
@@ -135,20 +137,53 @@ func _label(text:String,size:int,color:Color) -> Label:
     l.add_theme_font_size_override("font_size",size); l.add_theme_color_override("font_color",color)
     return l
 
-func _toggle() -> void:
-    open = not open
-    panel.visible=open; scrim.visible=open
-    launcher.visible=false
+func open_screen() -> void:
+    visible = true
+    open = true
+    panel.visible = true
+    scrim.visible = true
+    launcher.visible = false
+    refresh_clock = 0.0
+    _layout()
     _refresh()
+
+func close_screen() -> void:
+    open = false
+    if panel != null:
+        panel.visible = false
+    if scrim != null:
+        scrim.visible = false
+    launcher.visible = false
+    visible = false
+
+func _toggle() -> void:
+    var manager = get_node_or_null("/root/RenewUIScreenManager")
+    if open:
+        if manager != null and manager.has_method("hide_all_screens"):
+            manager.hide_all_screens()
+        else:
+            close_screen()
+    else:
+        if manager != null and manager.has_method("show_screen"):
+            manager.show_screen("RenewManagementPolicyUI")
+        else:
+            open_screen()
+
+func _close() -> void:
+    var manager = get_node_or_null("/root/RenewUIScreenManager")
+    if manager != null and manager.has_method("hide_all_screens"):
+        manager.hide_all_screens()
+    else:
+        close_screen()
 
 func _on_scrim_input(event: InputEvent) -> void:
     if not open:
         return
     if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-        _toggle()
+        _close()
         get_viewport().set_input_as_handled()
     elif event is InputEventScreenTouch and event.pressed:
-        _toggle()
+        _close()
         get_viewport().set_input_as_handled()
 
 func _cycle(kind:String) -> void:
@@ -173,7 +208,16 @@ func _refresh() -> void:
     pricing.text="PRICING   •   "+str(policy.get_policy("pricing")).to_upper()
     maintenance.text="MAINTENANCE   •   "+str(policy.get_policy("maintenance")).to_upper()
     reserve.text="CASH RESERVE   •   $"+_money(int(policy.cash_reserve))
-    alert_text.text=policy.alert_summary(6)
+    var alerts: Array = policy.get_alerts() if policy.has_method("get_alerts") else []
+    if alerts.is_empty():
+        alert_text.text = "No material operating exceptions detected."
+    else:
+        var lines: Array[String] = []
+        for i in range(mini(6, alerts.size())):
+            var item = alerts[i]
+            if item is Dictionary:
+                lines.append("%s — %s" % [str(item.get("title", "Alert")), str(item.get("detail", ""))])
+        alert_text.text = "\n".join(lines)
 
 func _process(delta:float) -> void:
     if not open:return
