@@ -66,8 +66,10 @@ func _run() -> void:
         check(str(network.get("last_signature")) != signature_after_force, "Selected-rival change updates corporate signature")
         check(str(network.detail_label.text).contains(str(rivals.ai_status(selected_after).get("name", ""))), "Corporate detail follows authoritative selected rival")
     else:
-        check(true, "Single-rival fixture does not require selection transition")
-        check(true, "Single-rival fixture keeps authoritative detail")
+        var single_detail_before := str(network.detail_label.text)
+        network._refresh(false)
+        check(int(network.get("applied_refreshes")) == applied_after_force, "Single-rival unchanged poll still skips UI relayout")
+        check(str(network.detail_label.text) == single_detail_before, "Single-rival unchanged poll preserves authoritative detail")
 
     if manager != null:
         manager.hide_all_screens()
