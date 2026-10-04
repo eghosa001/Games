@@ -57,6 +57,10 @@ IDENTITY_UI_REFRESH_FILES = {
     "scripts/empire_identity_ui.gd",
 }
 
+CORPORATE_UI_REFRESH_FILES = {
+    "scripts/corporations_ui.gd",
+}
+
 GROUPS = {
     "tutorial": {
         "patterns": [
@@ -248,6 +252,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         and path not in NATIVE_ACCESSIBILITY_FILES
         and path not in CONTRACT_UI_REFRESH_FILES
         and path not in IDENTITY_UI_REFRESH_FILES
+        and path not in CORPORATE_UI_REFRESH_FILES
         for path in changed
     )
     tutorial_code_changed = any(
@@ -267,6 +272,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     save_integrity_changed = any(path in SAVE_INTEGRITY_FILES for path in changed)
     contract_ui_refresh_changed = any(path in CONTRACT_UI_REFRESH_FILES for path in changed)
     identity_ui_refresh_changed = any(path in IDENTITY_UI_REFRESH_FILES for path in changed)
+    corporate_ui_refresh_changed = any(path in CORPORATE_UI_REFRESH_FILES for path in changed)
     other_state_save_changed = any(
         path not in AUTOSAVE_NAV_FILES
         and path not in SAVE_LOAD_DYNASTY_FILES
@@ -289,7 +295,11 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
             continue
         if name == "ui" and identity_ui_refresh_changed and not other_ui_code_changed:
             continue
+        if name == "ui" and corporate_ui_refresh_changed and not other_ui_code_changed:
+            continue
         if name == "tutorial" and restora_flow_changed and not tutorial_code_changed:
+            continue
+        if name == "corporate_empire" and corporate_ui_refresh_changed:
             continue
         if name == "economy_finance" and bankruptcy_changed and not other_economy_finance_changed:
             continue
@@ -338,6 +348,10 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     if identity_ui_refresh_changed:
         groups.append("identity_ui_refresh")
         tests.add("tests/test_identity_ui_refresh.gd")
+
+    if corporate_ui_refresh_changed:
+        groups.append("corporate_ui_refresh")
+        tests.add("tests/test_corporations_refresh.gd")
 
     code_changed = any(
         p.endswith((".gd", ".tscn", ".tres", ".cfg", ".svg"))
