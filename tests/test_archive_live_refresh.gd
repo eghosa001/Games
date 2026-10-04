@@ -29,12 +29,14 @@ func _run() -> void:
     await process_frame
 
     var manager := root.get_node_or_null("RenewUIScreenManager")
-    var legacy := root.get_node_or_null("RenewCorporateLegacy")
-    var collection_system := root.get_node_or_null("RenewCollectionSystem")
+    var services := root.get_node_or_null("RenewServices")
+    var legacy = services.get_service("RenewCorporateLegacy") if services != null and services.has_method("get_service") else null
+    var collection_system = services.get_service("RenewCollectionSystem") if services != null and services.has_method("get_service") else null
     var history := game.get_node_or_null("UI/HistoryPanel")
     var collection := game.get_node_or_null("UI/CollectionPanel")
 
     check(manager != null, "Screen manager available")
+    check(services != null, "RESTORA service registry available")
     check(legacy != null, "Corporate legacy system available")
     check(collection_system != null, "Collection system available")
     check(history != null, "History panel available")
