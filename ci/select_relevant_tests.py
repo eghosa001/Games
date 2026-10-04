@@ -41,6 +41,10 @@ NATIVE_ACCESSIBILITY_FILES = {
     "scripts/theme_manager.gd",
 }
 
+AUDIO_FEEDBACK_FILES = {
+    "scripts/audio_manager.gd",
+}
+
 GROUPS = {
     "tutorial": {
         "patterns": [
@@ -245,6 +249,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     autosave_nav_changed = any(path in AUTOSAVE_NAV_FILES for path in changed)
     save_load_dynasty_changed = any(path in SAVE_LOAD_DYNASTY_FILES for path in changed)
     native_accessibility_changed = any(path in NATIVE_ACCESSIBILITY_FILES for path in changed)
+    audio_feedback_changed = any(path in AUDIO_FEEDBACK_FILES for path in changed)
     other_state_save_changed = any(
         path not in AUTOSAVE_NAV_FILES
         and path not in SAVE_LOAD_DYNASTY_FILES
@@ -293,6 +298,10 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     if native_accessibility_changed:
         groups.append("native_accessibility")
         tests.add("tests/test_theme_settings.gd")
+
+    if audio_feedback_changed:
+        groups.append("audio_feedback")
+        tests.add("tests/test_audio_feedback_throttle.gd")
 
     code_changed = any(
         p.endswith((".gd", ".tscn", ".tres", ".cfg", ".svg"))
