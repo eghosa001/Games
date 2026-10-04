@@ -544,6 +544,22 @@ func _build_root() -> void:
     root.mouse_filter = Control.MOUSE_FILTER_PASS
     add_child(root)
 
+func _begin_figma_rebuild_suppression() -> void:
+    var skin := get_node_or_null("PremiumUISkin")
+    if skin != null and skin.has_method("begin_figma_rebuild"):
+        skin.call("begin_figma_rebuild")
+    var guard := get_node_or_null("/root/RenewVisualStyleGuard")
+    if guard != null and guard.has_method("begin_figma_rebuild"):
+        guard.call("begin_figma_rebuild")
+
+func _end_figma_rebuild_suppression() -> void:
+    var skin := get_node_or_null("PremiumUISkin")
+    if skin != null and skin.has_method("end_figma_rebuild"):
+        skin.call("end_figma_rebuild")
+    var guard := get_node_or_null("/root/RenewVisualStyleGuard")
+    if guard != null and guard.has_method("end_figma_rebuild"):
+        guard.call("end_figma_rebuild")
+
 func _clear_root() -> void:
     refs.clear()
     mode_buttons.clear()
@@ -590,6 +606,7 @@ func _layout_class() -> String:
     return "mobile"
 
 func _rebuild_current() -> void:
+    _begin_figma_rebuild_suppression()
     _clear_root()
     background = ColorRect.new()
     background.name = "MainHUDBackground"
@@ -609,6 +626,7 @@ func _rebuild_current() -> void:
         _normalize_mobile_content_extent()
     if _last_progress_level < 0:
         _last_progress_level = _company_level()
+    _end_figma_rebuild_suppression()
     _refresh()
     _animate_view_in()
 
@@ -699,6 +717,7 @@ func _rebuild_mobile_content() -> void:
     if mobile_content == null:
         _rebuild_current()
         return
+    _begin_figma_rebuild_suppression()
     refs.clear()
     feedback_label = null
     status_label = null
@@ -722,6 +741,7 @@ func _rebuild_mobile_content() -> void:
     # The new tree was just authored from authoritative state; refreshing it
     # again in the same frame only adds latency on mobile navigation.
     _last_signature = _state_signature()
+    _end_figma_rebuild_suppression()
 
 func _refresh_bottom_nav() -> void:
     for i in range(mode_buttons.size()):
