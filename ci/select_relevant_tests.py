@@ -32,6 +32,10 @@ AUTOSAVE_NAV_FILES = {
     "scripts/autosave.gd",
 }
 
+SAVE_LOAD_DYNASTY_FILES = {
+    "scripts/save_load_ui.gd",
+}
+
 GROUPS = {
     "tutorial": {
         "patterns": [
@@ -219,6 +223,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         path.startswith("scripts/")
         and path.endswith("_ui.gd")
         and path not in RESTORA_FLOW_FILES
+        and path not in SAVE_LOAD_DYNASTY_FILES
         for path in changed
     )
     tutorial_code_changed = any(
@@ -232,8 +237,10 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         for path in changed
     )
     autosave_nav_changed = any(path in AUTOSAVE_NAV_FILES for path in changed)
+    save_load_dynasty_changed = any(path in SAVE_LOAD_DYNASTY_FILES for path in changed)
     other_state_save_changed = any(
         path not in AUTOSAVE_NAV_FILES
+        and path not in SAVE_LOAD_DYNASTY_FILES
         and any(matches(path, pat) for pat in GROUPS["state_save"]["patterns"])
         for path in changed
     )
@@ -244,11 +251,15 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         # suites unless those implementations also changed in the same task.
         if name == "ui" and restora_flow_changed and not other_ui_code_changed:
             continue
+        if name == "ui" and save_load_dynasty_changed and not other_ui_code_changed:
+            continue
         if name == "tutorial" and restora_flow_changed and not tutorial_code_changed:
             continue
         if name == "economy_finance" and bankruptcy_changed and not other_economy_finance_changed:
             continue
         if name == "state_save" and autosave_nav_changed and not other_state_save_changed:
+            continue
+        if name == "state_save" and save_load_dynasty_changed and not other_state_save_changed:
             continue
         if any(any(matches(path, pat) for pat in cfg["patterns"]) for path in changed):
             groups.append(name)
@@ -265,6 +276,10 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     if autosave_nav_changed:
         groups.append("android_back_navigation")
         tests.add("tests/test_android_release_config.gd")
+
+    if save_load_dynasty_changed:
+        groups.append("save_load_dynasty")
+        tests.add("tests/test_save_load_dynasty_ui.gd")
 
     code_changed = any(
         p.endswith((".gd", ".tscn", ".tres", ".cfg", ".svg"))
