@@ -84,6 +84,10 @@ EXECUTIVE_DESK_UI_FILES = {
     "scripts/management_policy_ui.gd",
 }
 
+SCREEN_MANAGER_CLOSE_FILES = {
+    "scripts/ui_screen_manager.gd",
+}
+
 GROUPS = {
     "tutorial": {
         "patterns": [
@@ -281,6 +285,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         and path not in PROGRESSION_UI_REFRESH_FILES
         and path not in ARCHIVE_LIVE_REFRESH_FILES
         and path not in EXECUTIVE_DESK_UI_FILES
+        and path not in SCREEN_MANAGER_CLOSE_FILES
         for path in changed
     )
     tutorial_code_changed = any(
@@ -311,6 +316,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         for path in changed
     )
     executive_desk_ui_changed = any(path in EXECUTIVE_DESK_UI_FILES for path in changed)
+    screen_manager_close_changed = any(path in SCREEN_MANAGER_CLOSE_FILES for path in changed)
     other_state_save_changed = any(
         path not in AUTOSAVE_NAV_FILES
         and path not in SAVE_LOAD_DYNASTY_FILES
@@ -344,6 +350,8 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         if name == "ui" and archive_live_refresh_changed and not other_ui_code_changed:
             continue
         if name == "ui" and executive_desk_ui_changed and not other_ui_code_changed:
+            continue
+        if name == "ui" and screen_manager_close_changed and not other_ui_code_changed:
             continue
         if name == "tutorial" and restora_flow_changed and not tutorial_code_changed:
             continue
@@ -422,6 +430,10 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     if executive_desk_ui_changed:
         groups.append("executive_desk_ui")
         tests.add("tests/test_figma_flow_wiring.gd")
+
+    if screen_manager_close_changed:
+        groups.append("native_screen_close_sync")
+        tests.add("tests/test_native_screen_close_sync.gd")
 
     code_changed = any(
         p.endswith((".gd", ".tscn", ".tres", ".cfg", ".svg"))
