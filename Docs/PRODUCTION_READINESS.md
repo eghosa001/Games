@@ -1,16 +1,16 @@
-# RENEW — Production Readiness
+# RESTORA — Production Readiness
 
 ## Automated release standard
 
-RENEW now has one canonical automated release decision: `.github/workflows/renew-release-gate.yml`.
+RESTORA has one canonical automated release decision: `.github/workflows/renew-release-gate.yml`.
 
 A commit on `main` is **automation-ready for the continuously deployed web release** only when all of the following succeed for the same commit SHA:
 
-1. **RENEW Godot Tests** — core regression tests, master game-plan coverage, mobile QA and the rendered visual-quality gate. The normal per-commit workflow deliberately skips the long soak, extreme soak, exhaustive UI matrix, visual UI matrix and other long-running suites.
+1. **RESTORA Godot Tests** — core regression tests, master game-plan coverage, mobile QA and the rendered visual-quality gate. The normal per-commit workflow deliberately skips the long soak, extreme soak, exhaustive UI matrix, visual UI matrix and other long-running suites.
 2. **Godot Web Export** — import, release validation, clean Web export and deployment checks.
 3. **Live Browser QA** — the post-Web-export browser run against the deployed GitHub Pages build, including desktop/opening-loop/mobile screenshots, runtime-error detection and pixel-region assertions.
 
-**RENEW Android Export is intentionally on-demand.** It is required for an Android/store release candidate, but it is not part of the always-on main-branch web gate. This keeps routine CI fast while preventing the automatic gate from waiting for an Android push run that does not exist.
+**RESTORA Android Export is intentionally on-demand.** It is required for an Android/store release candidate, but it is not part of the always-on main-branch web gate. This keeps routine CI fast while preventing the automatic gate from waiting for an Android push run that does not exist.
 
 The release gate deliberately requires the **post-deployment** Live Browser QA (`workflow_run`), not only the earlier push-triggered browser check. This prevents a stale Pages build from being accepted as evidence for a new commit.
 
@@ -58,8 +58,8 @@ Automated readiness does **not** mean store-ready by itself. Before a public And
 
 The simulation architecture is regression-gated, but a public release candidate is accepted only when:
 
-- **RENEW Release Gate is green for the exact candidate SHA** for the continuously deployed web build,
-- **RENEW Android Export is green for the exact candidate SHA** before any Android/store release,
+- **RESTORA Release Gate is green for the exact candidate SHA** for the continuously deployed web build,
+- **RESTORA Android Export is green for the exact candidate SHA** before any Android/store release,
 - the deep validation appropriate to the release has been run (including long-session/balance suites for major releases), and
 - the physical-device/human QA checklist for that candidate has been completed.
 
