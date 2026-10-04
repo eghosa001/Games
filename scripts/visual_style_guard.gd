@@ -15,6 +15,7 @@ const MIN_BODY_FONT := 12
 
 var _premium_theme: Theme
 var _refresh_queued := false
+var _figma_rebuild_depth := 0
 var _distress_refresh := 0.0
 
 func _ready() -> void:
@@ -102,7 +103,15 @@ func _normalize_mobile_shell_background(control: Control) -> void:
     control.set_anchor(SIDE_RIGHT, 0.0, true)
     control.set_anchor(SIDE_BOTTOM, 0.0, true)
 
+func begin_figma_rebuild() -> void:
+    _figma_rebuild_depth += 1
+
+func end_figma_rebuild() -> void:
+    _figma_rebuild_depth = maxi(0, _figma_rebuild_depth - 1)
+
 func _queue_refresh() -> void:
+    if _figma_rebuild_depth > 0:
+        return
     if _refresh_queued:
         return
     _refresh_queued = true
