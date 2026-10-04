@@ -16,6 +16,8 @@ var sell_button: Button
 var lease_button: Button
 var close_button: Button
 var refresh_clock := 0.0
+var last_signature := ""
+var applied_refreshes := 0
 
 const SURFACE := Color("0d1917")
 const SURFACE_2 := Color("10251f")
@@ -227,17 +229,23 @@ func _state_text(entry: Dictionary) -> String:
         return "REPAIRING"
     return "CLEANING"
 
-func _refresh(_force: bool) -> void:
+func _refresh(force: bool) -> void:
     var state = _state()
     if state == null:
         return
     var catalog := _catalog()
     var selected := clampi(int(state.get_value("properties", "selected_property", 0)), 0, maxi(0, catalog.size() - 1))
+    var day := int(state.get_value("player", "day", 1))
+    var signature := "%d|%d|%d" % [selected, day, str(catalog).hash()]
+    if not force and signature == last_signature:
+        return
+    last_signature = signature
+    applied_refreshes += 1
+
     var owned_count := 0
     var restored_count := 0
     var inspected_count := 0
     var rows: Array = []
-    var day := int(state.get_value("player", "day", 1))
 
     for i in range(catalog.size()):
         if not (catalog[i] is Dictionary):
