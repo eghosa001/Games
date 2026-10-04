@@ -61,3 +61,4 @@ func _run() -> void:
     ui.free()
     print("WORLD INTELLIGENCE REFRESH RESULT: %d passed, %d failed" % [passed, failed])
     quit(1 if failed > 0 else 0)
+# World Intelligence final validation scope: content-sensitive cache invalidation.

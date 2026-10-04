@@ -435,3 +435,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+# World Intelligence final validation scope: content-sensitive cache invalidation.

@@ -137,3 +137,4 @@ func _layout()->void:
     var close:=panel.get_node("CloseButton") as Button;close.position=Vector2(width-94,7);close.size=Vector2(84,46)
     summary.position=Vector2(14,44);summary.size=Vector2(width-28,24)
     scroll.position=Vector2(12,72);scroll.size=Vector2(width-24,height-82);content.custom_minimum_size.x=width-24
+# World Intelligence final validation scope: content-sensitive cache invalidation.
