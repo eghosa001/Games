@@ -49,6 +49,10 @@ SAVE_INTEGRITY_FILES = {
     "scripts/save_system.gd",
 }
 
+CONTRACT_UI_REFRESH_FILES = {
+    "scripts/contracts_ui.gd",
+}
+
 GROUPS = {
     "tutorial": {
         "patterns": [
@@ -238,6 +242,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         and path not in RESTORA_FLOW_FILES
         and path not in SAVE_LOAD_DYNASTY_FILES
         and path not in NATIVE_ACCESSIBILITY_FILES
+        and path not in CONTRACT_UI_REFRESH_FILES
         for path in changed
     )
     tutorial_code_changed = any(
@@ -255,6 +260,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     native_accessibility_changed = any(path in NATIVE_ACCESSIBILITY_FILES for path in changed)
     audio_feedback_changed = any(path in AUDIO_FEEDBACK_FILES for path in changed)
     save_integrity_changed = any(path in SAVE_INTEGRITY_FILES for path in changed)
+    contract_ui_refresh_changed = any(path in CONTRACT_UI_REFRESH_FILES for path in changed)
     other_state_save_changed = any(
         path not in AUTOSAVE_NAV_FILES
         and path not in SAVE_LOAD_DYNASTY_FILES
@@ -272,6 +278,8 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         if name == "ui" and save_load_dynasty_changed and not other_ui_code_changed:
             continue
         if name == "ui" and native_accessibility_changed and not other_ui_code_changed:
+            continue
+        if name == "ui" and contract_ui_refresh_changed and not other_ui_code_changed:
             continue
         if name == "tutorial" and restora_flow_changed and not tutorial_code_changed:
             continue
@@ -314,6 +322,10 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     if save_integrity_changed:
         groups.append("save_integrity")
         tests.add("tests/test_v94_save_edges.gd")
+
+    if contract_ui_refresh_changed:
+        groups.append("contract_ui_refresh")
+        tests.add("tests/test_contract_ui_refresh.gd")
 
     code_changed = any(
         p.endswith((".gd", ".tscn", ".tres", ".cfg", ".svg"))
