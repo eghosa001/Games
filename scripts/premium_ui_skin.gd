@@ -21,6 +21,13 @@ func _is_light_mode() -> bool:
     var manager = _theme_manager()
     return bool(manager.is_light()) if manager != null and manager.has_method("is_light") else false
 
+func _text_scale() -> float:
+    var manager = _theme_manager()
+    return clampf(float(manager.get_text_scale()), 1.0, 1.30) if manager != null and manager.has_method("get_text_scale") else 1.0
+
+func _scaled_font_size(base_size: int) -> int:
+    return maxi(9, int(round(float(base_size) * _text_scale())))
+
 func _deep() -> Color: return _theme_color("bg", Color("0b0d10"))
 func _surface() -> Color: return _theme_color("surface", Color("151a1f"))
 func _surface_2() -> Color: return _theme_color("surface_2", Color("20262c"))
@@ -296,7 +303,7 @@ func _style_button(button: Button) -> void:
     button.add_theme_constant_override("outline_size", 1)
     if _font_semibold != null:
         button.add_theme_font_override("font", _font_semibold)
-    button.add_theme_font_size_override("font_size", 13)
+    button.add_theme_font_size_override("font_size", _scaled_font_size(13))
     button.focus_mode = Control.FOCUS_ALL
     button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
     button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 48.0)
@@ -309,19 +316,19 @@ func _style_label(label: Label) -> void:
         label.add_theme_color_override("font_color", _text())
         if _font_bold != null:
             label.add_theme_font_override("font", _font_bold)
-        label.add_theme_font_size_override("font_size", maxi(20, label.get_theme_font_size("font_size")))
+        label.add_theme_font_size_override("font_size", maxi(_scaled_font_size(20), label.get_theme_font_size("font_size")))
         label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.58))
         label.add_theme_constant_override("shadow_offset_y", 2)
     elif name_upper.contains("VALUE") or name_upper.contains("TOTAL") or name_upper.contains("AMOUNT"):
         if _font_semibold != null:
             label.add_theme_font_override("font", _font_semibold)
         label.add_theme_color_override("font_color", _gold())
-        label.add_theme_font_size_override("font_size", maxi(14, label.get_theme_font_size("font_size")))
+        label.add_theme_font_size_override("font_size", maxi(_scaled_font_size(14), label.get_theme_font_size("font_size")))
     else:
         if _font_regular != null:
             label.add_theme_font_override("font", _font_regular)
         label.add_theme_color_override("font_color", Color(_text().r, _text().g, _text().b, 0.93))
-        label.add_theme_font_size_override("font_size", maxi(11, label.get_theme_font_size("font_size")))
+        label.add_theme_font_size_override("font_size", maxi(_scaled_font_size(11), label.get_theme_font_size("font_size")))
 
 func _style_progress(progress: ProgressBar) -> void:
     var accent := _sector_accent(progress.name)
@@ -476,7 +483,7 @@ func _ensure_context_rail(screen: Node, active_name: String) -> void:
     eyebrow.name = "Eyebrow"
     eyebrow.text = "RESTORA // EXECUTIVE NETWORK"
     eyebrow.add_theme_color_override("font_color", _muted())
-    eyebrow.add_theme_font_size_override("font_size", 10)
+    eyebrow.add_theme_font_size_override("font_size", _scaled_font_size(10))
     rail.add_child(eyebrow)
 
     var title := Label.new()
@@ -484,7 +491,7 @@ func _ensure_context_rail(screen: Node, active_name: String) -> void:
     title.text = _humanize(active_name)
     title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     title.add_theme_color_override("font_color", _text())
-    title.add_theme_font_size_override("font_size", 26)
+    title.add_theme_font_size_override("font_size", _scaled_font_size(26))
     rail.add_child(title)
 
     var subtitle := Label.new()
@@ -492,14 +499,14 @@ func _ensure_context_rail(screen: Node, active_name: String) -> void:
     subtitle.text = _context_tagline(active_name)
     subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     subtitle.add_theme_color_override("font_color", _sector_accent(active_name))
-    subtitle.add_theme_font_size_override("font_size", 11)
+    subtitle.add_theme_font_size_override("font_size", _scaled_font_size(11))
     rail.add_child(subtitle)
 
     var pulse_label := Label.new()
     pulse_label.name = "PulseLabel"
     pulse_label.text = "COMPANY PULSE"
     pulse_label.add_theme_color_override("font_color", _muted())
-    pulse_label.add_theme_font_size_override("font_size", 9)
+    pulse_label.add_theme_font_size_override("font_size", _scaled_font_size(9))
     rail.add_child(pulse_label)
 
     var specs := [["MomentumBar", "MOMENTUM"], ["ReputationBar", "REPUTATION"], ["ReadinessBar", "READINESS"]]
@@ -508,7 +515,7 @@ func _ensure_context_rail(screen: Node, active_name: String) -> void:
         label.name = str(spec[0]) + "Label"
         label.text = str(spec[1])
         label.add_theme_color_override("font_color", _muted())
-        label.add_theme_font_size_override("font_size", 9)
+        label.add_theme_font_size_override("font_size", _scaled_font_size(9))
         rail.add_child(label)
         var bar := ProgressBar.new()
         bar.name = str(spec[0])
