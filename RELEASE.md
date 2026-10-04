@@ -43,7 +43,8 @@
 - [x] App name: Restora.
 - [x] Short description: "Build an empire from a neglected warehouse."
 - [ ] Capture final screenshots from the release build.
-- [ ] Publish privacy policy and terms of service.
+- [x] Privacy policy and terms source pages are included and wired in-game.
+- [ ] Verify the public privacy/terms URLs on the final release host before store submission.
 
 ## 🚀 Alpha / Soft Launch (POST-BUILD)
 - [ ] If this is a personal Play developer account created after 13 November 2023, complete closed testing with at least 12 testers continuously opted in for 14 days before applying for production access.
@@ -55,3 +56,12 @@
 ---
 
 **Current Status:** The V1 game code and presentation systems are feature-complete for an internal release candidate. Remaining items require a runnable Godot build and/or physical-device or store-publishing work; they cannot be truthfully completed through static repository editing alone. Existing automated tests remain in the repository, but this completion pass does not claim a fresh runtime test execution.
+
+
+## Code-side production readiness
+- [x] Progression-gated More navigation uses the Figma route for Acquisitions / Mergers.
+- [x] Level-7 acquisition access is regression-checked through the authoritative StrategicProgression system.
+- [x] Privacy/terms source pages and in-game links are present.
+- [x] Monetization remains disabled until real provider/account configuration is supplied.
+
+Physical-device performance, signed Play AAB verification, store listing assets and Play Console/account work remain external release gates and are not claimed complete here.
