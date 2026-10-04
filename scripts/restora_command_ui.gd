@@ -1500,6 +1500,7 @@ func _build_mobile_more() -> void:
     var sections = [
         ["OPERATIONS", [
             ["EMPLOYEES", "Staff, morale and assignments", "employee_list", "employees"],
+            ["EXECUTIVE POLICIES", "Procurement, pricing, maintenance and cash-reserve rules", "RenewManagementPolicyUI", "employees"],
             ["CONTRACTS", "Offers, capacity and deadlines", "contract_market", "contracts"],
             ["SUPPLY CHAIN", "Materials, suppliers and routes", "supply_chain", "supply_chain"]
         ]],
