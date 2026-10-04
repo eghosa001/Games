@@ -1,6 +1,8 @@
 extends Node
 class_name RenewCorporateLegacySystem
 
+signal legacy_changed
+
 const RuntimeResolver = preload("res://scripts/runtime_dependency_resolver.gd")
 const CATEGORIES := ["founding", "products", "employees", "contracts", "acquisitions", "failures", "awards", "rankings", "technologies", "alliances", "crisis_recoveries"]
 const MAX_ITEMS := 500
@@ -28,6 +30,7 @@ func record(category: String, title: String, details: Dictionary = {}, day: int 
     artifacts[category].append(item)
     if artifacts[category].size() > MAX_ITEMS: artifacts[category].pop_front()
     seen[key] = item
+    legacy_changed.emit()
     return item
 
 func list_category(category: String) -> Array:
@@ -148,6 +151,7 @@ func restore_state(state: Dictionary) -> void:
                 artifacts[category] = items.duplicate(true)
     seen = state.get("seen", {}).duplicate(true)
     last_day = int(state.get("last_day", -1))
+    legacy_changed.emit()
 
 func _total_count() -> int:
     var total: Variant = 0
