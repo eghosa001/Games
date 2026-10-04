@@ -60,6 +60,7 @@ func run() -> void:
 
     check(bool(distress.mark_recovery().get("ok", false)), "Restructuring can enter recovery")
     check(str(distress.state) == "recovery", "Recovery state is active")
+    var recovery_snapshot: Dictionary = distress.capture_state()
 
     var plan_id := str(distress.restructuring_plan.get("id", ""))
     var stabilized: Dictionary = distress.evaluate(finance, 0.0)
@@ -93,11 +94,10 @@ func run() -> void:
             recovery_event_count_after += 1
     check(recovery_event_count == 1 and recovery_event_count_after == 1, "Recovery completion is recorded exactly once")
 
-    var snapshot: Dictionary = distress.capture_state()
     var restored: Node = Bankruptcy.new()
     root.add_child(restored)
     await process_frame
-    restored.restore_state(snapshot)
+    restored.restore_state(recovery_snapshot)
     check(str(restored.state) == "recovery", "Distress state survives restore")
     check(restored.investment_history.size() == 1, "Rescue history survives restore")
 
