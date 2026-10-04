@@ -73,6 +73,13 @@ PROGRESSION_UI_REFRESH_FILES = {
     "scripts/empire_progression_ui.gd",
 }
 
+ARCHIVE_LIVE_REFRESH_FILES = {
+    "scripts/history_museum_ui.gd",
+    "scripts/collection_ui.gd",
+    "scripts/corporate_legacy_system.gd",
+    "scripts/collection_system.gd",
+}
+
 EXECUTIVE_DESK_UI_FILES = {
     "scripts/management_policy_ui.gd",
 }
@@ -272,6 +279,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         and path not in DASHBOARD_UI_REFRESH_FILES
         and path not in WORLD_INTELLIGENCE_REFRESH_FILES
         and path not in PROGRESSION_UI_REFRESH_FILES
+        and path not in ARCHIVE_LIVE_REFRESH_FILES
         and path not in EXECUTIVE_DESK_UI_FILES
         for path in changed
     )
@@ -296,6 +304,7 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     dashboard_ui_refresh_changed = any(path in DASHBOARD_UI_REFRESH_FILES for path in changed)
     world_intelligence_refresh_changed = any(path in WORLD_INTELLIGENCE_REFRESH_FILES for path in changed)
     progression_ui_refresh_changed = any(path in PROGRESSION_UI_REFRESH_FILES for path in changed)
+    archive_live_refresh_changed = any(path in ARCHIVE_LIVE_REFRESH_FILES for path in changed)
     executive_desk_ui_changed = any(path in EXECUTIVE_DESK_UI_FILES for path in changed)
     other_state_save_changed = any(
         path not in AUTOSAVE_NAV_FILES
@@ -326,6 +335,8 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         if name == "ui" and world_intelligence_refresh_changed and not other_ui_code_changed:
             continue
         if name == "ui" and progression_ui_refresh_changed and not other_ui_code_changed:
+            continue
+        if name == "ui" and archive_live_refresh_changed and not other_ui_code_changed:
             continue
         if name == "ui" and executive_desk_ui_changed and not other_ui_code_changed:
             continue
@@ -396,6 +407,10 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
     if progression_ui_refresh_changed:
         groups.append("progression_ui_refresh")
         tests.add("tests/test_empire_progression_refresh.gd")
+
+    if archive_live_refresh_changed:
+        groups.append("archive_live_refresh")
+        tests.add("tests/test_archive_live_refresh.gd")
 
     if executive_desk_ui_changed:
         groups.append("executive_desk_ui")
