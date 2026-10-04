@@ -12,7 +12,7 @@ const VIEWS := [
     "supply_chain", "supplier_compare", "inventory",
     "budget", "funding", "financial_health", "region_overview", "property_acquisition",
     "infrastructure_roadmap", "company_progress", "milestones", "alliances",
-    "corporate_strategy", "world_power", "headquarters", "legacy", "endgame",
+    "corporate_strategy", "acquisitions", "world_power", "headquarters", "legacy", "endgame",
     "reports", "notifications", "accessibility", "pause", "day_summary",
     "level_up", "restoration_complete", "insufficient_funds",
     "offline_error", "loading", "empty_states"
@@ -206,6 +206,7 @@ func _run() -> void:
     check("system Back on Home opens pause instead of quitting", bool(hud.handle_system_back()) and str(hud.get("active_view")) == "pause")
     check("system Back on pause returns Home", bool(hud.handle_system_back()) and str(hud.get("active_view")) == "live")
     check("corporate strategy returns to More", str(bridge.back_target("corporate_strategy")) == "more")
+    check("acquisitions return to corporate strategy", str(bridge.back_target("acquisitions")) == "corporate_strategy")
     check("world power returns to corporate strategy", str(bridge.back_target("world_power")) == "corporate_strategy")
     check("headquarters returns to world power", str(bridge.back_target("headquarters")) == "world_power")
     check("legacy returns to More", str(bridge.back_target("legacy")) == "more")
@@ -213,18 +214,39 @@ func _run() -> void:
 
     hud.open_figma_view("more")
     await process_frame
+    var acquisition_button := (hud.get("mobile_content") as Control).find_child("Openacquisitions", true, false) as Button
     var strategy_button := (hud.get("mobile_content") as Control).find_child("Opencorporate_strategy", true, false) as Button
     var power_button := (hud.get("mobile_content") as Control).find_child("Openworld_power", true, false) as Button
     var headquarters_button := (hud.get("mobile_content") as Control).find_child("Openheadquarters", true, false) as Button
     var legacy_button := (hud.get("mobile_content") as Control).find_child("Openlegacy", true, false) as Button
     var endgame_button := (hud.get("mobile_content") as Control).find_child("Openendgame", true, false) as Button
     var diplomacy_button := (hud.get("mobile_content") as Control).find_child("OpenRenewDiplomacyUI", true, false) as Button
+    check("More exposes progression-gated acquisitions and mergers", acquisition_button != null)
     check("More exposes progression-gated corporate strategy", strategy_button != null)
     check("More exposes progression-gated world power", power_button != null)
     check("More exposes progression-gated headquarters", headquarters_button != null)
     check("More exposes progression-gated legacy", legacy_button != null)
     check("More exposes progression-gated prestige endgame", endgame_button != null)
     check("More exposes progression-gated diplomacy and trade", diplomacy_button != null)
+
+    if state != null:
+        state.set_value("progression", "level", 7)
+        state.set_value("progression", "xp", 3000)
+    hud.open_figma_view("corporate_strategy")
+    await process_frame
+    var acquisition_route := (hud.get("mobile_content") as Control).get_node_or_null("FlowAction0") as Button
+    check("corporate strategy leads explicitly to acquisitions and mergers", acquisition_route != null and acquisition_route.text == "ACQUISITIONS / MERGERS")
+    if acquisition_route != null:
+        acquisition_route.pressed.emit()
+        await process_frame
+        check("corporate strategy opens acquisition progression surface", str(hud.get("active_view")) == "acquisitions")
+        var acquisition_system := game.get_node_or_null("Systems/AcquisitionSystem")
+        var acquisition_metric := (hud.get("mobile_content") as Control).get_node_or_null("FlowMetric0/Value") as Label
+        var target_count := acquisition_system.targets.size() if acquisition_system != null and acquisition_system.get("targets") is Dictionary else 0
+        check("acquisition screen reads authoritative target count", acquisition_metric != null and int(acquisition_metric.text) == target_count)
+        var corporate_network := (hud.get("mobile_content") as Control).get_node_or_null("FlowAction0") as Button
+        check("acquisition screen hands real transactions to Corporate Network", corporate_network != null and corporate_network.text == "OPEN CORPORATE NETWORK")
+
     var financial_health_button := (hud.get("mobile_content") as Control).find_child("Openfinancial_health", true, false) as Button
     check("More exposes live financial health", financial_health_button != null)
 
@@ -299,6 +321,8 @@ func _run() -> void:
         var current_unlocks := (hud.get("mobile_content") as Control).get_node_or_null("FlowDetails/Detail1/Text") as Label
         check("company progress names the current strategic layer", current_layer != null and current_layer.text.contains("Acquisitions"))
         check("company progress lists real level-7 unlocks", current_unlocks != null and current_unlocks.text.contains("Corporate Strategy"))
+        var completed_layers := (hud.get("mobile_content") as Control).get_node_or_null("FlowDetails/Detail2/Text") as Label
+        check("company progress communicates completed layers", completed_layers != null and completed_layers.text.contains("Level 1–6"))
         check("long strategic context wraps instead of clipping", current_unlocks != null and current_unlocks.autowrap_mode != TextServer.AUTOWRAP_OFF and current_unlocks.size.y > 18.0)
 
         hud.open_figma_view("live")
