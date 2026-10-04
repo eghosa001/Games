@@ -23,13 +23,9 @@ static func save_game(_state: Dictionary) -> bool:
         return false
 
     payload = _sanitize_json_value(payload)
-    var json := JSON.stringify(payload)
-    var temp := FileAccess.open(TEMP_PATH, FileAccess.WRITE)
-    if temp == null:
+    if not _write_verified_temp(payload):
+        _cleanup_temp_files()
         return false
-    temp.store_string(json)
-    temp.flush()
-    temp = null
 
     var had_primary := FileAccess.file_exists(SAVE_PATH)
     var save_absolute := ProjectSettings.globalize_path(SAVE_PATH)
@@ -75,6 +71,32 @@ static func save_game(_state: Dictionary) -> bool:
 
     _cleanup_temp_files()
     return true
+
+static func _write_verified_temp(payload: Dictionary) -> bool:
+    var json := JSON.stringify(payload)
+    var temp := FileAccess.open(TEMP_PATH, FileAccess.WRITE)
+    if temp == null:
+        return false
+    temp.store_string(json)
+    temp.flush()
+    temp = null
+    return _verify_staged_file(json)
+
+static func _verify_staged_file(expected_json: String) -> bool:
+    if expected_json.is_empty() or not FileAccess.file_exists(TEMP_PATH):
+        return false
+    var staged := FileAccess.open(TEMP_PATH, FileAccess.READ)
+    if staged == null:
+        return false
+    var readback := staged.get_as_text()
+    staged = null
+    if readback != expected_json:
+        return false
+    var parsed = JSON.parse_string(readback)
+    if not parsed is Dictionary:
+        return false
+    var restored = _restore_json_value(parsed)
+    return restored is Dictionary and validate_save(restored)
 
 static func _cleanup_temp_files(remove_backup_temp: bool = true) -> void:
     if FileAccess.file_exists(TEMP_PATH):
