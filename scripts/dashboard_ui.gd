@@ -51,6 +51,9 @@ func _game():
 func _state():
     return get_node_or_null("/root/RenewGameState")
 
+func _command_hud():
+    return get_node_or_null("/root/Renew/UI/MainHUD")
+
 func _finance():
     return get_node_or_null("/root/RenewFinanceSystem")
 
@@ -269,25 +272,50 @@ func _refresh(force: bool) -> void:
     if hero != null:
         hero.queue_redraw()
 
+func _objective_action_label(target: String) -> String:
+    var labels := {
+        "property": "OPEN PROPERTY",
+        "operate": "OPEN BUSINESS",
+        "company_progress": "OPEN PROGRESS",
+        "world": "OPEN WORLD",
+        "alliances": "OPEN ALLIANCES",
+        "infrastructure_roadmap": "OPEN INFRASTRUCTURE",
+        "corporate_strategy": "OPEN STRATEGY",
+        "world_power": "OPEN WORLD POWER",
+        "legacy": "OPEN LEGACY",
+        "endgame": "OPEN ENDGAME"
+    }
+    return str(labels.get(target, "OPEN NEXT MOVE"))
+
 func _next_goal(state: Variant) -> Dictionary:
+    var hud = _command_hud()
+    if hud != null and hud.has_method("_objective_title") and hud.has_method("_objective_detail") and hud.has_method("_objective_view"):
+        var target := str(hud.call("_objective_view"))
+        return {
+            "text": str(hud.call("_objective_title")),
+            "detail": str(hud.call("_objective_detail")),
+            "action": _objective_action_label(target),
+            "target": target
+        }
+    # Defensive fallback for isolated tests where the command HUD is not mounted.
     if not bool(state.get_value("properties", "owned", false)):
-        return {"text": "Acquire the abandoned property.", "action": "ACQUIRE", "method": "acquire_property"}
+        return {"text": "Acquire the abandoned property.", "detail": "Review the property before committing capital.", "action": "OPEN PROPERTY", "target": "property"}
     if str(state.get_value("properties", "stage", "")) != "Operational":
-        return {"text": "Restore the property to Operational.", "action": "RESTORE", "method": "restore_property"}
+        return {"text": "Restore the property to Operational.", "detail": "Finish restoration before starting operations.", "action": "OPEN PROPERTY", "target": "property"}
     if not bool(state.get_value("businesses", "business_open", false)):
-        return {"text": "Open your first business.", "action": "OPEN BUSINESS", "method": "open_business"}
-    if int(state.get_value("economy", "total_profit", 0)) <= 0:
-        return {"text": "Produce and sell for your first profit.", "action": "PRODUCE", "method": "produce_goods"}
-    return {"text": "Expand the empire: branches, regions, alliances.", "action": "ADVANCE DAY", "method": "advance_day"}
+        return {"text": "Open your first business.", "detail": "Choose a business purpose for the restored property.", "action": "OPEN BUSINESS", "target": "operate"}
+    return {"text": "Review company progress.", "detail": "Use the semantic company level to choose the next strategic layer.", "action": "OPEN PROGRESS", "target": "company_progress"}
 
 func _primary() -> void:
-    var game = _game()
     var state = _state()
-    if game == null or state == null:
+    var hud = _command_hud()
+    if state == null or hud == null or not hud.has_method("open_figma_view"):
         return
-    var method := str(_next_goal(state).get("method", "advance_day"))
-    if game.has_method(method):
-        game.call(method)
+    var target := str(_next_goal(state).get("target", "live"))
+    var manager = get_node_or_null("/root/RenewUIScreenManager")
+    if manager != null and manager.has_method("hide_all_screens"):
+        manager.hide_all_screens()
+    hud.open_figma_view(target)
 
 func _notices() -> void:
     var game = _game()
