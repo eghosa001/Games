@@ -22,6 +22,7 @@ var close_button: Button
 var active_tab: String = "museum"
 var visible_archive := false
 var _refresh_queued := false
+var applied_refreshes := 0
 
 const TABS := {"museum":"Museum Gallery", "timeline":"Timeline", "people":"Historic People", "business":"Business History", "innovation":"Technology", "legacy":"Legacy"}
 
@@ -115,6 +116,7 @@ func _refresh() -> void:
         for child in content.get_children(): child.queue_free()
         _empty("History records cannot be displayed until the corporate memory system is available.")
         return
+    applied_refreshes += 1
     var s: Dictionary = legacy.summary(); var hq = _hq(); var hq_text := "HQ: unavailable"
     if hq != null: hq_text = "HQ: %s" % hq.get_stage()
     var museum_state := "MUSEUM ACTIVE" if (hq != null and hq.museum_available()) else "MUSEUM LOCKED"
