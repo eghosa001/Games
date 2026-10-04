@@ -35,26 +35,26 @@ func _run() -> void:
     var rows: Array = [{"id":"builder","title":"Builder","claimed":1,"total":3,"next":250.0}]
     var stories: Array = [{"id":"story_1","section":"World","headline":"Stable markets","body":"Demand remains firm.","kicker":"Desk"}]
 
-    var baseline := ui._data_signature(12, 40, power, rows, stories)
+    var baseline: String = str(ui._data_signature(12, 40, power, rows, stories))
     check(baseline == ui._data_signature(12, 40, power.duplicate(true), rows.duplicate(true), stories.duplicate(true)), "Identical intelligence content keeps one signature")
 
-    var changed_power := power.duplicate(true)
+    var changed_power: Dictionary = power.duplicate(true)
     changed_power["economic"] = 70.0
     changed_power["industrial"] = 50.0
     check(float(changed_power["total"]) == float(power["total"]), "Power fixture preserves total score")
     check(ui._data_signature(12, 40, changed_power, rows, stories) != baseline, "Power dimension change invalidates intelligence cache")
 
-    var changed_rows := rows.duplicate(true)
+    var changed_rows: Array = rows.duplicate(true)
     changed_rows[0]["claimed"] = 2
     check(changed_rows.size() == rows.size(), "Identity fixture preserves row count")
     check(ui._data_signature(12, 40, power, changed_rows, stories) != baseline, "Identity progress change invalidates intelligence cache")
 
-    var changed_stories := stories.duplicate(true)
+    var changed_stories: Array = stories.duplicate(true)
     changed_stories[0]["headline"] = "Supply shock hits freight"
     check(changed_stories.size() == stories.size(), "News fixture preserves story count")
     check(ui._data_signature(12, 40, power, rows, changed_stories) != baseline, "Headline change invalidates intelligence cache")
 
-    var changed_body := stories.duplicate(true)
+    var changed_body: Array = stories.duplicate(true)
     changed_body[0]["body"] = "Demand weakened despite the same headline."
     check(ui._data_signature(12, 40, power, rows, changed_body) != baseline, "News body change invalidates intelligence cache")
 
