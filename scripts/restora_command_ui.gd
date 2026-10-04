@@ -838,7 +838,7 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
         if locked:
             button.tooltip_text = "Unlocks at Company Level %d" % _unlock_level(required_unlock)
         button.focus_mode = Control.FOCUS_ALL
-        button.pressed.connect(_set_tab.bind(i), CONNECT_DEFERRED)
+        button.pressed.connect(_set_tab.bind(i))
         tabs.add_child(button)
         mode_buttons.append(button)
 
@@ -993,7 +993,7 @@ func _transparent_button(parent_node: Node, name: String, rect: Rect2, callback:
     focus.set_corner_radius_all(16)
     b.add_theme_stylebox_override("focus", focus)
     if callback.is_valid():
-        b.pressed.connect(callback, CONNECT_DEFERRED)
+        b.pressed.connect(callback)
     parent_node.add_child(b)
     return b
 
@@ -1020,7 +1020,7 @@ func _frame_button(parent_node: Node, name: String, text_value: String, rect: Re
     b.add_theme_color_override("font_hover_color", fg)
     b.add_theme_color_override("font_pressed_color", fg)
     if callback.is_valid():
-        b.pressed.connect(callback, CONNECT_DEFERRED)
+        b.pressed.connect(callback)
     parent_node.add_child(b)
     return b
 
@@ -1041,14 +1041,14 @@ func _header(title: String, subtitle: String, right_text = "", status_role = "go
     var w = _content_width()
     var title_width: float = float(w) - (178.0 if not right_text.is_empty() else 82.0)
     var subtitle_width: float = float(w) - (178.0 if not right_text.is_empty() else 86.0)
-    _remember("title", _label(mobile_content, "Title", title, Rect2(18, 18, title_width, 34), 24 if title == "RESTORA" else 21, "text", 700))
-    status_label = _label(mobile_content, "Status", subtitle, Rect2(18, 48 if title != "RESTORA" else 52, subtitle_width, 16), 9, status_role, 600)
+    _remember("title", _label(mobile_content, "Title", title, Rect2(18, 8, title_width, 30), 24 if title == "RESTORA" else 21, "text", 700))
+    status_label = _label(mobile_content, "Status", subtitle, Rect2(18, 37 if title != "RESTORA" else 39, subtitle_width, 16), 9, status_role, 600)
     _remember("status", status_label)
     if not right_text.is_empty():
-        _remember("right_status", _label(mobile_content, "RightStatus", right_text, Rect2(w - 154, 24, 92, 18), 9 if title != "RESTORA" else 11, "plum" if active_view == "settings" else "text", 600, HORIZONTAL_ALIGNMENT_RIGHT))
+        _remember("right_status", _label(mobile_content, "RightStatus", right_text, Rect2(w - 154, 14, 92, 18), 9 if title != "RESTORA" else 11, "plum" if active_view == "settings" else "text", 600, HORIZONTAL_ALIGNMENT_RIGHT))
     var alerts := Button.new()
     alerts.name = "NotificationsButton"
-    alerts.position = Vector2(w - 62, 16)
+    alerts.position = Vector2(w - 62, 8)
     alerts.size = Vector2(44, 44)
     alerts.focus_mode = Control.FOCUS_ALL
     alerts.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -1059,7 +1059,7 @@ func _header(title: String, subtitle: String, right_text = "", status_role = "go
     alerts.add_theme_stylebox_override("normal", _style(_color("surface_2"), _color("border"), 19))
     alerts.add_theme_stylebox_override("hover", _style(_color("selected"), _color("plum"), 19))
     alerts.add_theme_stylebox_override("pressed", _style(_color("selected").darkened(0.04), _color("gold"), 19))
-    alerts.pressed.connect(_show_view.bind("notifications"), CONNECT_DEFERRED)
+    alerts.pressed.connect(_show_view.bind("notifications"))
     mobile_content.add_child(alerts)
 
 func _build_mobile_live() -> void:
@@ -1067,7 +1067,7 @@ func _build_mobile_live() -> void:
     _header("RESTORA", "RESTORE → OPERATE → GROW", "DAY %d" % _day())
     var inner_w = w - 36.0
 
-    var hero = _panel(mobile_content, "ExecutiveHero", Rect2(18, 82, inner_w, 176), "surface", "border", 22)
+    var hero = _panel(mobile_content, "ExecutiveHero", Rect2(18, 66, inner_w, 176), "surface", "border", 22)
     var rail = Panel.new()
     rail.position = Vector2(-1, -1)
     rail.size = Vector2(6, 176)
@@ -1276,7 +1276,7 @@ func _build_mobile_property() -> void:
     var inner_w = w - 36.0
     _header("PROPERTIES", "%d TOTAL • %d OWNED" % [catalog.size(), _owned_building_count()])
 
-    var selected = _panel(mobile_content, "SelectedProperty", Rect2(18, 82, inner_w, 214), "selected", "plum", 20)
+    var selected = _panel(mobile_content, "SelectedProperty", Rect2(18, 66, inner_w, 214), "selected", "plum", 20)
     _label(selected, "Head", "SELECTED PROPERTY", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 700)
     _label(selected, "Name", building_name, Rect2(16, 38, inner_w - 32, 26), 19, "text", 700)
     _label(selected, "Type", "%s • %s" % [building_type, "OWNED" if building_owned else ("SURVEYED" if building_inspected else "AVAILABLE")], Rect2(16, 69, inner_w - 32, 16), 10, "muted", 500)
@@ -1331,7 +1331,7 @@ func _build_mobile_empire() -> void:
     var w = _content_width()
     _header("EMPIRE EXPANSION", "ASSET STRATEGY • LIVE")
     var inner_w = w - 36.0
-    var cap = _panel(mobile_content, "ManagementCapacity", Rect2(18, 82, inner_w, 88), "surface", "border", 18)
+    var cap = _panel(mobile_content, "ManagementCapacity", Rect2(18, 66, inner_w, 88), "surface", "border", 18)
     _label(cap, "Head", "MANAGEMENT CAPACITY", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     _remember("capacity_value", _label(cap, "Value", _capacity_text(), Rect2(16, 38, inner_w - 32, 24), 18, "text", 700))
     _label(cap, "Meta", "Reputation %d • %d assets unlocked" % [_rep(), _unlocked_asset_count()], Rect2(16, 66, inner_w - 32, 14), 10, "success", 600)
@@ -1367,7 +1367,7 @@ func _build_mobile_world() -> void:
 
     var region_rows := maxi(1, regions.size())
     var catalog_h := 60.0 + float(region_rows) * 50.0
-    var catalog = _panel(mobile_content, "RegionalCatalog", Rect2(18, 82, inner_w, catalog_h), "surface", "border", 20)
+    var catalog = _panel(mobile_content, "RegionalCatalog", Rect2(18, 66, inner_w, catalog_h), "surface", "border", 20)
     _label(catalog, "Head", "REGIONS & MARKETS", Rect2(14, 14, inner_w - 28, 14), 10, "gold", 700)
     _label(catalog, "Meta", "Select a market to inspect demand, presence and infrastructure.", Rect2(14, 34, inner_w - 28, 16), 9, "muted", 400)
     if regions.is_empty():
@@ -1460,7 +1460,7 @@ func _build_mobile_intelligence() -> void:
     var w = _content_width()
     _header("EMPIRE INTELLIGENCE", "POWER %d • %d REGIONS • %d RIVALS" % [_power_total(), _region_presence_count(), _rival_count()])
     var inner_w = w - 36.0
-    var company = _panel(mobile_content, "Company", Rect2(18, 82, inner_w, 82), "surface", "border", 18)
+    var company = _panel(mobile_content, "Company", Rect2(18, 66, inner_w, 82), "surface", "border", 18)
     _label(company, "Name", _company_name(), Rect2(16,14,inner_w - 32,20), 15, "text", 700)
     _label(company, "Meta", "DAY %d • CASH %s • REP %d" % [_day(), _money(_cash()), _rep()], Rect2(16,44,inner_w - 32,14), 10, "muted", 600)
 
@@ -1478,7 +1478,7 @@ func _build_mobile_more() -> void:
     var w = _content_width()
     _header("MORE", "ENTERPRISE COMMAND CENTER")
     var inner_w = w - 36.0
-    var company = _panel(mobile_content, "CompanyProfile", Rect2(18, 82, inner_w, 88), "surface", "border", 18)
+    var company = _panel(mobile_content, "CompanyProfile", Rect2(18, 66, inner_w, 88), "surface", "border", 18)
     _label(company, "Name", _company_name(), Rect2(16, 12, inner_w - 32, 20), 15, "text", 700)
     _label(company, "Meta", "Level %d • Reputation %d • %d active contract%s" % [_company_level(), _rep(), _active_contracts(), "" if _active_contracts() == 1 else "s"], Rect2(16, 38, inner_w - 32, 16), 9, "muted", 500)
     _label(company, "Status", "AUTOSAVE ON • LOCAL PROGRESS SAFE", Rect2(16, 62, inner_w - 32, 14), 9, "success", 600)
@@ -1571,7 +1571,7 @@ func _build_mobile_guide() -> void:
     var inner_w := w - 36.0
     _header("HOW RESTORA WORKS", "ONE LOOP • THREE PHASES")
 
-    var intro := _panel(mobile_content, "GuideIntro", Rect2(18, 82, inner_w, 116), "selected", "plum", 18)
+    var intro := _panel(mobile_content, "GuideIntro", Rect2(18, 66, inner_w, 116), "selected", "plum", 18)
     _label(intro, "Head", "THE CORE IDEA", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
     _label(intro, "Body", "Take an abandoned property, restore it, turn it into a working business, earn from it, then reinvest to grow.", Rect2(16, 42, inner_w - 32, 58), 12, "text", 500)
 
@@ -1607,7 +1607,7 @@ func _build_mobile_settings() -> void:
     _header("SETTINGS", "PERSONALIZE RESTORA", mode)
     var inner_w = w - 36.0
 
-    var appearance = _panel(mobile_content, "Appearance", Rect2(18,82,inner_w,160), "surface", "border", 18)
+    var appearance = _panel(mobile_content, "Appearance", Rect2(18,66,inner_w,160), "surface", "border", 18)
     _label(appearance, "Head", "APPEARANCE", Rect2(16,14,180,14), 10, "gold", 600)
     _label(appearance, "Theme", "THEME", Rect2(16,44,100,16), 11, "text", 600)
     var btn_gap = 6.0
@@ -1683,7 +1683,7 @@ func _transparent_text_button(parent_node: Node, name: String, text_value: Strin
     b.add_theme_font_size_override("font_size", 9)
     b.add_theme_color_override("font_color", _color(role))
     b.add_theme_color_override("font_hover_color", _color(role).lightened(0.08))
-    if callback.is_valid(): b.pressed.connect(callback, CONNECT_DEFERRED)
+    if callback.is_valid(): b.pressed.connect(callback)
     parent_node.add_child(b)
     return b
 
@@ -2628,7 +2628,7 @@ func _build_mobile_rewards() -> void:
     var w = _content_width()
     _header("REWARDED OFFERS", "OPTIONAL • NO FORCED ADS")
     var inner_w = w - 36.0
-    var intro = _panel(mobile_content, "RewardIntro", Rect2(18,82,inner_w,116), "surface", "border", 18)
+    var intro = _panel(mobile_content, "RewardIntro", Rect2(18,66,inner_w,116), "surface", "border", 18)
     _label(intro, "Head", "YOUR CHOICE", Rect2(16,14,180,14), 10, "gold", 600)
     _label(intro, "Body", "Sponsored rewards are optional. Core restoration, production and expansion never require an ad.", Rect2(16,40,inner_w-32,58), 11, "text", 400)
 
