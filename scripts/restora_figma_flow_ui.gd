@@ -14,7 +14,7 @@ const CUSTOM_VIEWS := [
     "supply_chain", "supplier_compare", "inventory",
     "budget", "funding", "financial_health", "region_overview", "property_acquisition",
     "infrastructure_roadmap", "company_progress", "milestones", "alliances",
-    "corporate_strategy", "world_power", "headquarters", "legacy", "endgame",
+    "corporate_strategy", "acquisitions", "world_power", "headquarters", "legacy", "endgame",
     "reports", "notifications", "accessibility", "pause", "day_summary",
     "level_up", "restoration_complete", "insufficient_funds",
     "offline_error", "loading", "empty_states"
@@ -31,7 +31,7 @@ const NAV_ACTIONS := [
     "employee_list", "employee_detail", "hiring", "assign_employee", "contract_market",
     "contract_detail", "active_contracts", "supply_chain", "supplier_compare", "inventory",
     "budget", "funding", "financial_health", "region_overview", "property_acquisition", "infrastructure_roadmap",
-    "company_progress", "milestones", "alliances", "corporate_strategy", "world_power",
+    "company_progress", "milestones", "alliances", "corporate_strategy", "acquisitions", "world_power",
     "headquarters", "legacy", "endgame", "reports", "notifications", "accessibility",
     "pause", "day_summary", "level_up", "restoration_complete", "insufficient_funds",
     "offline_error", "loading", "empty_states"
@@ -272,7 +272,13 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
             return _spec("Corporate Strategy", "OWNERSHIP · ACQUISITIONS · CONTROL",
                 [["RIVALS", str(_rival_count())], ["REP", str(rep)], ["LEVEL", str(_company_level())]],
                 _corporate_strategy_lines(),
-                [["OPEN CORPORATIONS", "corporations_manager", true], ["ALLIANCES", "alliances", false], ["NEXT STRATEGIC LAYER", strategy_next, false]])
+                [["ACQUISITIONS / MERGERS", "acquisitions", true], ["OWNERSHIP / RIVALS", "corporations_manager", false], ["ALLIANCES", "alliances", false], ["NEXT STRATEGIC LAYER", strategy_next, false]])
+        "acquisitions":
+            var acquisition := _acquisition_snapshot()
+            return _spec("Acquisitions / Mergers", "DUE DILIGENCE · NEGOTIATION · CONTROL",
+                [["TARGETS", str(acquisition.get("targets", 0))], ["DEALS", str(acquisition.get("acquisitions", 0))], ["MERGERS", str(acquisition.get("mergers", 0))]],
+                _acquisition_lines(acquisition),
+                [["OPEN CORPORATE NETWORK", "corporations_manager", true], ["CORPORATE STRATEGY", "corporate_strategy", false]])
         "world_power":
             var power := _world_power_snapshot()
             return _spec("World Power", "RANKINGS · INFLUENCE · CAPABILITY",
@@ -374,6 +380,7 @@ func back_target(view_name: String) -> String:
         "region_overview", "infrastructure_roadmap": return "world"
         "property_acquisition": return "region_overview"
         "company_progress", "milestones", "alliances", "corporate_strategy", "legacy", "endgame", "reports", "notifications": return "more"
+        "acquisitions": return "corporate_strategy"
         "world_power": return "corporate_strategy"
         "headquarters": return "world_power"
         "accessibility": return "settings"
@@ -753,6 +760,7 @@ func _company_progress_lines(level: int, employees: int, contracts: int) -> Arra
     var lines: Array = [
         "Current layer · %s." % _progression_layer_name(level),
         "Current unlocks · %s." % _feature_text(_progression_features(level)),
+        _completed_layers_text(level),
         "%d properties owned · %d staff · %d active contract%s." % [_owned_properties(), employees, contracts, "" if contracts == 1 else "s"]
     ]
     var progression := _progression_node()
@@ -781,6 +789,77 @@ func _level_up_lines(level: int) -> Array:
         lines.append("Next layer · Level %d %s." % [level + 1, _progression_layer_name(level + 1)])
     else:
         lines.append("Final company level reached · victory paths and prestige are now the long-term objective.")
+    return lines
+
+func _completed_layers_text(level: int) -> String:
+    if level <= 1:
+        return "Completed layers · none yet — finish the restoration and core-operations foundation."
+    var last_completed := level - 1
+    return "Completed layers · Level 1–%d · latest: %s." % [last_completed, _progression_layer_name(last_completed)]
+
+func _acquisition_node() -> Node:
+    var game := _game()
+    if game != null:
+        var local := game.get_node_or_null("Systems/AcquisitionSystem")
+        if local != null:
+            return local
+    return get_node_or_null("/root/Renew/Systems/AcquisitionSystem")
+
+func _acquisition_snapshot() -> Dictionary:
+    var system := _acquisition_node()
+    if system == null:
+        return {"targets": 0, "acquisitions": 0, "mergers": 0, "available": 0, "selected": {}}
+    var targets: Dictionary = system.get("targets") if system.get("targets") is Dictionary else {}
+    var acquisition_history: Array = system.get_acquisition_history() if system.has_method("get_acquisition_history") else []
+    var merger_history: Array = system.get_merger_history() if system.has_method("get_merger_history") else []
+    var available := 0
+    var selected: Dictionary = {}
+    var ids: Array = targets.keys()
+    ids.sort()
+    for target_id in ids:
+        var target = targets[target_id]
+        if not target is Dictionary:
+            continue
+        var record: Dictionary = target as Dictionary
+        var status := str(record.get("status", "independent"))
+        if status not in ["acquired", "merged"] and not status.begins_with("merged_into:"):
+            available += 1
+            if selected.is_empty():
+                selected = record.duplicate(true)
+                selected["id"] = str(target_id)
+    return {
+        "targets": targets.size(),
+        "available": available,
+        "acquisitions": acquisition_history.size(),
+        "mergers": merger_history.size(),
+        "selected": selected
+    }
+
+func _acquisition_lines(snapshot: Dictionary) -> Array:
+    var lines: Array = [
+        "%d target%s remain available for control or merger review." % [int(snapshot.get("available", 0)), "" if int(snapshot.get("available", 0)) == 1 else "s"]
+    ]
+    var target = snapshot.get("selected", {})
+    if target is Dictionary and not (target as Dictionary).is_empty():
+        var record := target as Dictionary
+        var name := str(record.get("name", record.get("id", "Target company")))
+        var asset_value := 0
+        var assets = record.get("assets", [])
+        if assets is Array:
+            for asset in assets:
+                if asset is Dictionary:
+                    asset_value += int((asset as Dictionary).get("value", (asset as Dictionary).get("cost", 0)))
+        var debt := int(round(float(record.get("debt", 0.0)) + float(record.get("liabilities", 0.0))))
+        var risk_count := 0
+        var risks = record.get("hidden_risks", [])
+        if risks is Array:
+            risk_count = risks.size()
+        lines.append("Next target · %s · status %s." % [name, str(record.get("status", "independent")).replace("_", " ")])
+        lines.append("Known balance · assets %s · debt/liabilities %s." % [_money(asset_value), _money(debt)])
+        lines.append("Due-diligence flags recorded · %d." % risk_count)
+    else:
+        lines.append("No independent acquisition target is currently registered.")
+    lines.append("Negotiation, bids and final control transactions remain authoritative in the Corporate Network.")
     return lines
 
 func _milestone_lines() -> Array:
