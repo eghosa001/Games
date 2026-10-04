@@ -64,7 +64,7 @@ func run() -> void:
     var plan_id := str(distress.restructuring_plan.get("id", ""))
     var stabilized: Dictionary = distress.evaluate(finance, 0.0)
     check(str(stabilized.get("state", "")) == "stable", "Sustained healthy finance completes recovery")
-    var recovery_history := history.get_timeline("crisis", 20)
+    var recovery_history: Array = history.get_timeline("crisis", 20)
     var history_match := false
     for event in recovery_history:
         if event is Dictionary and str(event.get("title", "")) == "Corporate recovery completed":
@@ -73,7 +73,7 @@ func run() -> void:
                 history_match = true
                 break
     check(history_match, "Completed recovery is preserved in permanent history")
-    var recovery_legacy := legacy.list_category("crisis_recoveries")
+    var recovery_legacy: Array = legacy.list_category("crisis_recoveries")
     var legacy_match := false
     for item in recovery_legacy:
         if item is Dictionary:
