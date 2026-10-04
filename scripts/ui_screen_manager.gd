@@ -9,7 +9,8 @@ const SCREEN_ALIASES := {"MarketPanel": "CustomerSegmentsUI"}
 const CLOSE_BUTTON_NAME := "UniversalCloseButton"
 const MODAL_LAYER_NAME := "FocusedScreenBackdrop"
 const MODAL_LAYER := 50
-const SCREEN_SCAN_INTERVAL := 0.50
+const ACTIVE_SCREEN_SCAN_INTERVAL := 0.10
+const IDLE_SCREEN_SCAN_INTERVAL := 0.50
 
 var _previous_visible: Dictionary = {}
 var _active_screen: Node = null
@@ -90,10 +91,12 @@ func _process(delta: float) -> void:
     if _initializing:
         _try_initialize()
         return
-    # Recursive visibility inspection is unnecessary at render-frame cadence.
-    # Ten checks per second keeps self-closing panels responsive without wasting CPU.
+    # Native panels may close themselves by hiding their authored child panel.
+    # While a focused screen is active, inspect at 10 Hz so HUD restoration feels
+    # immediate; idle discovery remains at 2 Hz to avoid needless background work.
     _scan_clock += delta
-    if _scan_clock >= SCREEN_SCAN_INTERVAL:
+    var interval := ACTIVE_SCREEN_SCAN_INTERVAL if _active_screen != null else IDLE_SCREEN_SCAN_INTERVAL
+    if _scan_clock >= interval:
         _scan_clock = 0.0
         _enforce_single_screen()
 
@@ -117,7 +120,10 @@ func _is_node_visible(node: Node) -> bool:
     if node == null or not is_instance_valid(node):
         return false
     if node is CanvasLayer:
-        return bool((node as CanvasLayer).visible)
+        # A CanvasLayer can stay visible while its authored panel/scrim is hidden.
+        # Treat it as open only when the layer itself and at least one visible
+        # CanvasItem descendant are present.
+        return bool((node as CanvasLayer).visible) and _has_visible_canvas_item(node)
     if node is CanvasItem:
         return bool((node as CanvasItem).visible and (node as CanvasItem).is_visible_in_tree())
     return false
