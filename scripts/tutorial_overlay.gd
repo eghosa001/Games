@@ -354,7 +354,7 @@ func _load_tutorial_state() -> void:
     var state = _state()
     if state == null:
         dismissed = false
-        _expanded_by_user = true
+        _expanded_by_user = false
         return
     tutorial.load_snapshot({
         "step": int(state.get_value("progression", "tutorial_step", 0)),
@@ -365,9 +365,10 @@ func _load_tutorial_state() -> void:
         dismissed = true
         _expanded_by_user = false
     else:
-        # A genuinely fresh session teaches the first action immediately.
-        # Later sessions remain compact unless the player explicitly opens GUIDE.
-        _expanded_by_user = not dismissed and int(tutorial.step) == 0
+        # The first objective is already visible on Home. Keep the desktop
+        # guide compact until explicitly requested so it cannot cover cash,
+        # reputation or the next objective during a fresh session.
+        _expanded_by_user = false
 
 func _save_tutorial_state() -> void:
     var state = _state()
@@ -419,7 +420,7 @@ func reset_tutorial() -> void:
     tutorial.step = 0
     tutorial.completed = false
     dismissed = false
-    _expanded_by_user = true
+    _expanded_by_user = false
     _save_tutorial_state()
     _refresh()
 
