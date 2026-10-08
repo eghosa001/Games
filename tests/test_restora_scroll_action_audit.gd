@@ -76,7 +76,7 @@ func _run() -> void:
             _buttons(content, buttons)
             for button in buttons:
                 check(label + " %s is wired" % button.name, not button.pressed.get_connections().is_empty())
-                if button.name.begins_with("FlowAction") or button.name.begins_with("Open"):
+                if String(button.name).begins_with("FlowAction") or String(button.name).begins_with("Open"):
                     check(label + " %s waits for touch release" % button.name, button.action_mode == BaseButton.ACTION_MODE_BUTTON_RELEASE)
             var vbar := scroll.get_v_scroll_bar()
             var end_scroll := int(maxf(0.0, vbar.max_value - vbar.page)) if vbar != null else 0
