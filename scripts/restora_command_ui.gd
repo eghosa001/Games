@@ -839,7 +839,7 @@ func _build_mobile_host() -> void:
     mobile_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
     mobile_scroll.follow_focus = true
     mobile_scroll.clip_contents = true
-    mobile_scroll.scroll_deadzone = 8
+    mobile_scroll.scroll_deadzone = 2
     mobile_scroll.scroll_vertical_custom_step = 72.0
     var scrollbar := mobile_scroll.get_v_scroll_bar()
     if scrollbar != null:
