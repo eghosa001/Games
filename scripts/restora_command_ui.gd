@@ -36,6 +36,7 @@ var hero_action: Button
 var _refresh_elapsed = 0.0
 var _last_signature = ""
 var _layout_kind = ""
+var _desktop_compact := false
 var _last_progress_level := -1
 var _pending_level_up := false
 var _pending_day_summary := false
@@ -616,7 +617,11 @@ func _layout_responsive() -> void:
         else:
             _layout_mobile_host()
     elif _layout_kind == "desktop":
-        _fit_fixed_canvas("DesktopExecutive", Vector2(1280, 720))
+        var compact := _layout_size().y < 690.0
+        if compact != _desktop_compact:
+            _rebuild_current()
+        else:
+            _fit_fixed_canvas("DesktopExecutive", Vector2(1280, 560) if compact else Vector2(1280, 720))
     elif _layout_kind == "tablet":
         _fit_fixed_canvas("TabletLive", Vector2(834, 1194))
 
@@ -1136,7 +1141,7 @@ func _stat_tile(parent_node: Node, key: String, x: float, y: float, w: float, la
     _remember(key + "_label", _label(p, "Label", label_text, Rect2(15, 13, w - 54, 14), 11, "gold", 600))
     var enlarged := _ui_text_scale() > 1.10
     _remember(key + "_value", _label(p, "Value", value_text, Rect2(15, 33 if enlarged else 36, w - 30, 41 if enlarged else 32), 24, "text", 700))
-    _remember(key + "_meta", _label(p, "Meta", meta_text, Rect2(15, 83 if enlarged else 75, w - 30, 16 if enlarged else 14), 10, "muted", 600))
+    _remember(key + "_meta", _label(p, "Meta", meta_text, Rect2(15, 83 if enlarged else 75, w - 30, 18 if enlarged else 17), 11, "muted", 600))
     return p
 
 func _content_width() -> float:
@@ -1148,10 +1153,10 @@ func _header(title: String, subtitle: String, right_text = "", status_role = "go
     var subtitle_width: float = float(w) - (178.0 if not right_text.is_empty() else 86.0)
     var enlarged := _ui_text_scale() > 1.10
     _remember("title", _label(mobile_content, "Title", title, Rect2(18, 4 if enlarged else 8, title_width, 40 if enlarged else 30), 24 if title == "RESTORA" else 21, "text", 700))
-    status_label = _label(mobile_content, "Status", subtitle, Rect2(18, 46 if enlarged else (37 if title != "RESTORA" else 39), subtitle_width, 16), 9, status_role, 600)
+    status_label = _label(mobile_content, "Status", subtitle, Rect2(18, 46 if enlarged else (37 if title != "RESTORA" else 39), subtitle_width, 20), 11, status_role, 600)
     _remember("status", status_label)
     if not right_text.is_empty():
-        _remember("right_status", _label(mobile_content, "RightStatus", right_text, Rect2(w - 154, 14, 92, 18), 9 if title != "RESTORA" else 11, "plum" if active_view == "settings" else "text", 600, HORIZONTAL_ALIGNMENT_RIGHT))
+        _remember("right_status", _label(mobile_content, "RightStatus", right_text, Rect2(w - 154, 14, 92, 20), 11 if title != "RESTORA" else 12, "plum" if active_view == "settings" else "text", 600, HORIZONTAL_ALIGNMENT_RIGHT))
     var alerts := Button.new()
     alerts.name = "NotificationsButton"
     alerts.position = Vector2(w - 62, 8)
@@ -1208,8 +1213,8 @@ func _build_mobile_live() -> void:
 
     var loop = _panel(mobile_content, "CoreLoop", Rect2(18, 508, inner_w, 112), "surface", "border", 18)
     _label(loop, "Head", "YOUR PATH", Rect2(15, 14, inner_w - 30, 14), 10, "gold", 600)
-    _label(loop, "Path", "1  RESTORE  >  2  OPERATE  >  3  GROW", Rect2(15, 38, inner_w - 30, 18), 11, "text", 700)
-    _remember("signal_footer", _label(loop, "Current", _core_loop_status(), Rect2(15, 66, inner_w - 30, 32), 10, "success", 600))
+    _label(loop, "Path", "1  RESTORE  >  2  OPERATE  >  3  GROW", Rect2(15, 38, inner_w - 30, 20), 12, "text", 700)
+    _remember("signal_footer", _label(loop, "Current", _core_loop_status(), Rect2(15, 66, inner_w - 30, 36), 12, "success", 600))
 
     var overview = _panel(mobile_content, "CommandOverview", Rect2(18, 636, inner_w, 168), "surface", "border", 18)
     _label(overview, "Head", "MANAGEMENT OVERVIEW", Rect2(15, 12, inner_w - 30, 14), 10, "gold", 600)
@@ -1794,8 +1799,13 @@ func _transparent_text_button(parent_node: Node, name: String, text_value: Strin
 
 func _build_desktop_live() -> void:
     var size = _layout_size()
-    var design = Vector2(1280,720)
+    # A 560px-tall composition keeps desktop text at native size in short browser
+    # windows, instead of shrinking the entire 720px dashboard to ~80%.
+    _desktop_compact = size.y < 690.0
+    var design = Vector2(1280, 560) if _desktop_compact else Vector2(1280, 720)
     var scale_factor = minf(size.x/design.x, size.y/design.y)
+    var top := 82.0 if _desktop_compact else 104.0
+    var end_y := 552.0 if _desktop_compact else 656.0
     var canvas = Control.new()
     canvas.name = "DesktopExecutive"
     canvas.size = design
@@ -1803,11 +1813,11 @@ func _build_desktop_live() -> void:
     canvas.position = (size - design * scale_factor) * 0.5
     root.add_child(canvas)
 
-    _label(canvas, "Brand", "RESTORA", Rect2(34,26,240,34), 28, "text", 700)
-    _label(canvas, "Mode", "EXECUTIVE COMMAND • DAY %d" % _day(), Rect2(34,62,300,20), 12, "gold", 600)
-    var world = _panel(canvas, "WorldPropertyView", Rect2(34,104,560,552), "surface", "border", 24)
+    _label(canvas, "Brand", "RESTORA", Rect2(34,15 if _desktop_compact else 26,240,34), 28, "text", 700)
+    _label(canvas, "Mode", "EXECUTIVE COMMAND • DAY %d" % _day(), Rect2(34,50 if _desktop_compact else 62,390,20), 13, "gold", 600)
+    var world = _panel(canvas, "WorldPropertyView", Rect2(34,top,560,end_y-top), "surface", "border", 24)
     _label(world, "Head", "PROPERTY PORTFOLIO", Rect2(21,19,250,19), 13, "gold", 600)
-    var scene = _panel(world, "Scene", Rect2(21,57,516,316), "surface_2", "border", 20)
+    var scene = _panel(world, "Scene", Rect2(21,53 if _desktop_compact else 57,516,242 if _desktop_compact else 316), "surface_2", "border", 20)
     # Use a cropped frame of the existing six-stage warehouse artwork instead of
     # leaving a large empty card. It follows the authoritative restoration stage.
     var sheet := _property_stage_texture()
@@ -1817,26 +1827,26 @@ func _build_desktop_live() -> void:
         crop.region = Rect2(0, clampi(_building_stage_slot(), 0, 5) * 144, 256, 144)
         var preview := TextureRect.new()
         preview.name = "RestorationPreview"
-        preview.position = Vector2(245, 72)
-        preview.size = Vector2(250, 214)
+        preview.position = Vector2(218, 31 if _desktop_compact else 65)
+        preview.size = Vector2(282, 161 if _desktop_compact else 180)
         preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
         preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
         preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
         preview.texture = crop
         scene.add_child(preview)
         _remember("desktop_property_art", preview)
-    _remember("desktop_property_name", _label(scene, "PropertyName", _building_name(), Rect2(24,28,214,48), 19, "text", 700))
-    _remember("desktop_property_type", _label(scene, "PropertyType", _building_type(), Rect2(24,79,214,22), 14, "muted", 500))
-    _remember("desktop_property_upgrade", _label(scene, "Upgrade", "UPGRADE LEVEL %d/6" % (_building_stage_slot() + 1), Rect2(24,124,214,24), 15, "gold", 700))
-    _remember("desktop_property_progress", _label(scene, "Progress", "%d%% RESTORED" % _building_progress(), Rect2(24,162,214,24), 15, "success", 700))
-    _remember("desktop_property_stage", _label(scene, "Stage", _building_stage_name(), Rect2(24,204,214,42), 14, "text", 600))
-    _remember("desktop_property_meta", _label(world, "Meta", "%s • %s\n%d%% restored • %s market value" % [_building_name(), _building_type(), _building_progress(), _money(int(_selected_building().get("value", 0)))], Rect2(21,394,500,54), 15, "text", 400))
+    _remember("desktop_property_name", _label(scene, "PropertyName", _building_name(), Rect2(24,28,192,48), 19, "text", 700))
+    _remember("desktop_property_type", _label(scene, "PropertyType", _building_type(), Rect2(24,79,192,22), 14, "muted", 500))
+    _remember("desktop_property_upgrade", _label(scene, "Upgrade", "UPGRADE LEVEL %d/6" % (_building_stage_slot() + 1), Rect2(24,117 if _desktop_compact else 124,192,24), 15, "gold", 700))
+    _remember("desktop_property_progress", _label(scene, "Progress", "%d%% RESTORED" % _building_progress(), Rect2(24,152 if _desktop_compact else 162,192,24), 15, "success", 700))
+    _remember("desktop_property_stage", _label(scene, "Stage", _building_stage_name(), Rect2(24,189 if _desktop_compact else 204,192,42), 14, "text", 600))
+    _remember("desktop_property_meta", _label(world, "Meta", "%s • %s\n%d%% restored • %s market value" % [_building_name(), _building_type(), _building_progress(), _money(int(_selected_building().get("value", 0)))], Rect2(21,309 if _desktop_compact else 394,500,54), 15, "text", 400))
     var phases := ["cleaning", "repair", "painting", "furnishing"]
     var selected := _selected_building()
     for i in range(phases.size()):
         var phase: String = phases[i]
         var x: float = 21.0 + float(i % 2) * 248.0
-        var y: float = 462.0 + float(floori(float(i) / 2.0)) * 43.0
+        var y: float = (375.0 if _desktop_compact else 462.0) + float(floori(float(i) / 2.0)) * 43.0
         _label(world, "PhaseName_" + phase, phase.to_upper(), Rect2(x,y,155,17), 12, "text", 600)
         var percent: int = clampi(int(selected.get(phase, 0)), 0, 100)
         _remember("desktop_phase_text_" + phase, _label(world, "PhaseValue_" + phase, "%d%%" % percent, Rect2(x+164,y,56,17), 12, "gold", 600, HORIZONTAL_ALIGNMENT_RIGHT))
@@ -1849,28 +1859,28 @@ func _build_desktop_live() -> void:
         phase_fill.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 4))
         track.add_child(phase_fill)
         _remember("desktop_phase_fill_" + phase, phase_fill)
-    _transparent_button(world, "OpenProperty", Rect2(0,0,560,552), _show_view.bind("property"))
+    _transparent_button(world, "OpenProperty", Rect2(0,0,560,end_y-top), _show_view.bind("property"))
 
-    _desktop_stat(canvas, "Cash", Rect2(620,104,190,96), "CASH", _money(_cash()), "cash")
-    _desktop_stat(canvas, "Worth", Rect2(824,104,190,96), "WORTH", _money(_worth()), "worth")
-    _desktop_stat(canvas, "Rep", Rect2(1028,104,218,96), "REP", str(_rep()), "rep")
+    _desktop_stat(canvas, "Cash", Rect2(620,top,190,82 if _desktop_compact else 96), "CASH", _money(_cash()), "cash")
+    _desktop_stat(canvas, "Worth", Rect2(824,top,190,82 if _desktop_compact else 96), "WORTH", _money(_worth()), "worth")
+    _desktop_stat(canvas, "Rep", Rect2(1028,top,218,82 if _desktop_compact else 96), "REP", str(_rep()), "rep")
 
-    var objective = _panel(canvas, "Objective", Rect2(620,220,626,184), "surface", "border", 18)
-    _label(objective, "Head", "NEXT OBJECTIVE", Rect2(18,16,200,19), 12, "gold", 600)
-    _remember("desktop_objective_title", _label(objective, "Title", _objective_title(), Rect2(18,44,440,28), 22, "text", 700))
-    _remember("desktop_objective_body", _label(objective, "Body", _objective_detail(), Rect2(18,80,580,50), 15, "muted", 400))
-    _frame_button(objective, "OpenNextObjective", "OPEN NEXT STEP", Rect2(18,128,224,48), Callable(self, "_open_objective_next"), false, true, 12)
+    var objective = _panel(canvas, "Objective", Rect2(620,171 if _desktop_compact else 220,626,153 if _desktop_compact else 184), "surface", "border", 18)
+    _label(objective, "Head", "NEXT OBJECTIVE", Rect2(18,12 if _desktop_compact else 16,200,19), 12, "gold", 600)
+    _remember("desktop_objective_title", _label(objective, "Title", _objective_title(), Rect2(18,39 if _desktop_compact else 44,550,28), 22, "text", 700))
+    _remember("desktop_objective_body", _label(objective, "Body", _objective_detail(), Rect2(18,75 if _desktop_compact else 80,580,38 if _desktop_compact else 50), 15, "muted", 400))
+    _frame_button(objective, "OpenNextObjective", "OPEN NEXT STEP", Rect2(18,112 if _desktop_compact else 128,224,39 if _desktop_compact else 48), Callable(self, "_open_objective_next"), false, true, 12)
 
-    var signals = _panel(canvas, "Signals", Rect2(620,426,304,230), "surface", "border", 18)
+    var signals = _panel(canvas, "Signals", Rect2(620,334 if _desktop_compact else 426,304,218 if _desktop_compact else 230), "surface", "border", 18)
     _label(signals, "Head", "SIGNALS", Rect2(18,16,180,19), 12, "gold", 600)
     _remember("desktop_signals", _label(signals, "Body", _signal_lines(), Rect2(18,50,260,120), 15, "text", 400))
 
-    var quick = _panel(canvas, "QuickActions", Rect2(942,426,304,230), "selected", "plum", 18)
+    var quick = _panel(canvas, "QuickActions", Rect2(942,334 if _desktop_compact else 426,304,218 if _desktop_compact else 230), "selected", "plum", 18)
     _label(quick, "Head", "QUICK ACTIONS", Rect2(18,16,180,19), 12, "gold", 600)
-    _frame_button(quick, "OpenBuilding", "PROPERTY", Rect2(18,48,268,40), _show_view.bind("property"), false, false, 13)
-    _frame_button(quick, "OpenBusiness", "BUSINESS", Rect2(18,92,268,40), _show_view.bind("operate"), false, false, 13)
-    _remember("desktop_finance_action", _frame_button(quick, "OpenFinance", "FINANCE", Rect2(18,136,268,40), _show_view.bind("finance"), false, false, 13))
-    _frame_button(quick, "OpenMore", "MORE", Rect2(18,180,268,40), _show_view.bind("more"), false, false, 13)
+    _frame_button(quick, "OpenBuilding", "PROPERTY", Rect2(18,34 if _desktop_compact else 48,268,44 if _desktop_compact else 40), _show_view.bind("property"), false, false, 13)
+    _frame_button(quick, "OpenBusiness", "BUSINESS", Rect2(18,79 if _desktop_compact else 92,268,44 if _desktop_compact else 40), _show_view.bind("operate"), false, false, 13)
+    _remember("desktop_finance_action", _frame_button(quick, "OpenFinance", "FINANCE", Rect2(18,124 if _desktop_compact else 136,268,44 if _desktop_compact else 40), _show_view.bind("finance"), false, false, 13))
+    _frame_button(quick, "OpenMore", "MORE", Rect2(18,169 if _desktop_compact else 180,268,44 if _desktop_compact else 40), _show_view.bind("more"), false, false, 13)
 
 func _desktop_stat(parent_node: Node, name: String, rect: Rect2, label_text: String, value_text: String, ref_key := "") -> void:
     var p = _panel(parent_node, name, rect, "surface", "border", 16)
@@ -1878,7 +1888,7 @@ func _desktop_stat(parent_node: Node, name: String, rect: Rect2, label_text: Str
     var value_label := _label(p, "Value", value_text, Rect2(14,36,rect.size.x-28,30), 23, "text", 700)
     if not ref_key.is_empty():
         _remember(ref_key + "_value", value_label)
-    _label(p, "Meta", "LIVE", Rect2(14,72,rect.size.x-28,16), 11, "muted", 600)
+    _label(p, "Meta", "LIVE", Rect2(14,65 if rect.size.y < 90.0 else 72,rect.size.x-28,14 if rect.size.y < 90.0 else 16), 11, "muted", 600)
 
 func _build_tablet_live() -> void:
     var size = _layout_size()
@@ -1891,16 +1901,34 @@ func _build_tablet_live() -> void:
     canvas.position = (size - design * scale_factor) * 0.5
     root.add_child(canvas)
     _label(canvas, "Brand", "RESTORA", Rect2(32,28,260,36), 30, "text", 700)
-    _label(canvas, "Mode", "TABLET • LIVE COMMAND", Rect2(32,68,300,16), 10, "gold", 600)
+    _label(canvas, "Mode", "TABLET • LIVE COMMAND", Rect2(32,68,300,20), 13, "gold", 600)
     var hero = _panel(canvas, "Hero", Rect2(32,112,770,250), "surface", "border", 24)
-    _label(hero, "Head", "NEXT MOVE", Rect2(22,20,180,16), 10, "gold", 600)
+    _label(hero, "Head", "NEXT MOVE", Rect2(22,20,180,20), 12, "gold", 600)
     _remember("tablet_objective_title", _label(hero, "Title", _objective_title(), Rect2(22,52,420,36), 28, "text", 700))
     _remember("tablet_stage_meta", _label(hero, "Meta", _stage_meta(), Rect2(22,96,360,20), 14, "muted", 400))
     var scene = _panel(hero, "Scene", Rect2(506,22,240,206), "surface_2", "border", 20)
     _remember("tablet_property_name", _label(scene, "Property", _building_name(), Rect2(16,24,208,42), 14, "text", 700))
     _remember("tablet_property_upgrade", _label(scene, "Upgrade", "LEVEL %d/6" % (_building_stage_slot() + 1), Rect2(16,86,208,22), 12, "gold", 700))
     _remember("tablet_property_progress", _label(scene, "Progress", "%d%% RESTORED" % _building_progress(), Rect2(16,120,208,22), 12, "success", 700))
-    _remember("tablet_property_stage", _label(scene, "Stage", _building_stage_name(), Rect2(16,154,208,20), 10, "muted", 600))
+    _remember("tablet_property_stage", _label(scene, "Stage", _building_stage_name(), Rect2(16,154,208,24), 12, "muted", 600))
+    # Keep the selected property's state visible on tablet as well as desktop.
+    var stage_sheet := _property_stage_texture()
+    if stage_sheet != null:
+        var tablet_crop := AtlasTexture.new()
+        tablet_crop.atlas = stage_sheet
+        tablet_crop.region = Rect2(0, clampi(_building_stage_slot(), 0, 5) * 144, 256, 144)
+        var tablet_art := TextureRect.new()
+        tablet_art.name = "TabletRestorationArt"
+        tablet_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        tablet_art.stretch_mode = TextureRect.STRETCH_SCALE
+        tablet_art.custom_minimum_size = Vector2.ZERO
+        tablet_art.position = Vector2(258, 125)
+        tablet_art.size = Vector2(218, 123)
+        tablet_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        tablet_art.clip_contents = true
+        tablet_art.texture = tablet_crop
+        hero.add_child(tablet_art)
+        _remember("tablet_property_art", tablet_art)
     var xs = [32.0,228.0,424.0,620.0]
     var names = ["CASH","WORTH","REPUTATION","GOODS"]
     var vals = [_money(_cash()),_money(_worth()),str(_rep()),str(_goods())]
@@ -1967,12 +1995,13 @@ func _refresh() -> void:
                     phase_fill.size.x = 220.0 * float(phase_percent) / 100.0
             _sync_finance_action(refs.get("desktop_finance_action") as Button)
             _sync_finance_action(refs.get("tablet_finance_action") as Button)
-            var art := refs.get("desktop_property_art") as TextureRect
-            if art != null and art.texture is AtlasTexture:
-                var stage_frame := art.texture as AtlasTexture
-                if stage_frame.atlas != _property_stage_texture():
-                    stage_frame.atlas = _property_stage_texture()
-                stage_frame.region = Rect2(0, clampi(_building_stage_slot(), 0, 5) * 144, 256, 144)
+            for art_key in ["desktop_property_art", "tablet_property_art"]:
+                var art := refs.get(art_key) as TextureRect
+                if art != null and art.texture is AtlasTexture:
+                    var stage_frame := art.texture as AtlasTexture
+                    if stage_frame.atlas != _property_stage_texture():
+                        stage_frame.atlas = _property_stage_texture()
+                    stage_frame.region = Rect2(0, clampi(_building_stage_slot(), 0, 5) * 144, 256, 144)
             _set_ref_text("desktop_objective_title", _objective_title())
             _set_ref_text("desktop_objective_body", _objective_detail())
             _set_ref_text("desktop_signals", _signal_lines())

@@ -128,23 +128,24 @@ func _enhance_home(hud: Node, content: Control) -> void:
     var hero := content.get_node_or_null("ExecutiveHero") as Control
     if hero == null or hero.get_node_or_null("ActiveRestorationArt") != null:
         return
-    # Keep the established Figma card height, but dedicate its visual region
-    # to the actual warehouse stage rather than a distant heritage building.
-    _shift_content(content, 270.0, 70.0, hero)
-    hero.size.y = 246.0
-    hero.clip_contents = true
-
     var manager := get_node_or_null("/root/RestoraThemeManager")
     var text_scale := float(manager.get_text_scale()) if manager != null and manager.has_method("get_text_scale") else 1.0
     var enlarged := text_scale > 1.10
-    var art_width := maxf(118.0, hero.size.x * 0.42)
-    var art := _stage_art("ActiveRestorationArt", hud, Vector2(art_width, 84.0))
-    art.position = Vector2(hero.size.x - art_width - 16.0, 96.0)
+
+    # Give the player's actual restoration stage a real visual focal point.
+    # Use a shorter, artwork-free variant at accessibility text sizes so that
+    # descriptions never compete with the illustration for space.
+    var hero_h := 294.0 if enlarged else 378.0
+    _shift_content(content, 270.0, hero_h - 176.0, hero)
+    hero.size.y = hero_h
+    hero.clip_contents = true
+    var image_w := minf(258.0, hero.size.x - 42.0)
+    var image_h := image_w * 144.0 / 256.0
+    var art := _stage_art("ActiveRestorationArt", hud, Vector2(image_w, image_h))
+    art.position = Vector2((hero.size.x - image_w) * 0.5, 164.0)
+    art.visible = not enlarged
     hero.add_child(art)
     hero.move_child(art, 0)
-    # At 115–130% accessibility size, free the picture column for legible
-    # multi-line instructions. Normal text sizes retain the staged artwork.
-    art.visible = not enlarged
 
     var eyebrow := hero.get_node_or_null("Eyebrow") as Label
     var title := hero.get_node_or_null("HeroTitle") as Label
@@ -154,34 +155,30 @@ func _enhance_home(hud: Node, content: Control) -> void:
         eyebrow.text = "NEXT MOVE"
         eyebrow.position = Vector2(21, 16)
         eyebrow.size.x = hero.size.x - 42.0
+        eyebrow.add_theme_font_size_override("font_size", maxi(11, int(round(11.0 * text_scale))))
     if title != null:
-        # Do not replace this with a hardcoded property name: the core HUD
-        # refreshes it from the real current objective as the player advances.
-        title.position = Vector2(21, 43)
-        title.size = Vector2(hero.size.x - 42.0, 51)
-        title.add_theme_font_size_override("font_size", mini(23, int(round(float(18 if hero.size.x < 310 else 20) * text_scale))))
+        title.position = Vector2(21, 41)
+        title.size = Vector2(hero.size.x - 42.0, 53.0)
+        title.add_theme_font_size_override("font_size", mini(23, int(round(float(19 if hero.size.x < 310.0 else 21) * text_scale))))
     if goal != null:
-        goal.position = Vector2(21, 103)
-        # The old 34px maximum height constrains assignments to size.
-        # Apply a larger maximum BEFORE setting the size. In Godot a zero
-        # maximum collapses the control, rather than disabling its limit.
-        var detail_size := Vector2(hero.size.x - 42.0 if enlarged else maxf(110.0, art.position.x - 31.0), 84.0)
+        goal.position = Vector2(21, 100)
+        var detail_size := Vector2(hero.size.x - 42.0, 104.0 if enlarged else 62.0)
         goal.custom_maximum_size = detail_size
         goal.custom_minimum_size = Vector2.ZERO
         goal.size = detail_size
         goal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         goal.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
         goal.clip_text = true
-        goal.add_theme_font_size_override("font_size", int(round(float(10 if hero.size.x < 310.0 else 11) * text_scale)))
+        goal.add_theme_font_size_override("font_size", int(round(12.0 * text_scale)))
     if action != null:
         action.text = "OPEN NEXT STEP"
-        action.position = Vector2(21, 195)
-        action.size = Vector2(hero.size.x - 42.0, 48)
+        action.position = Vector2(21, 233 if enlarged else 325)
+        action.size = Vector2(hero.size.x - 42.0, 48.0)
         action.add_theme_font_size_override("font_size", int(round(12.0 * text_scale)))
     for child in hero.get_children():
         if child is Panel:
             if is_equal_approx(child.position.y, 112.0):
-                child.position.y = 183.0
+                child.position.y = 216.0 if enlarged else 312.0
             elif child.size.x <= 8.0:
                 child.size.y = hero.size.y
 
