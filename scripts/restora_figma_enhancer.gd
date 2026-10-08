@@ -176,7 +176,7 @@ func _enhance_home(hud: Node, content: Control) -> void:
     if action != null:
         action.text = "OPEN NEXT STEP"
         action.position = Vector2(21, 195)
-        action.size = Vector2(hero.size.x - 42.0, 44)
+        action.size = Vector2(hero.size.x - 42.0, 48)
         action.add_theme_font_size_override("font_size", int(round(12.0 * text_scale)))
     for child in hero.get_children():
         if child is Panel:

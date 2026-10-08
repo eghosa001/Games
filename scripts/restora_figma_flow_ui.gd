@@ -36,7 +36,7 @@ const NAV_ACTIONS := [
     "pause", "day_summary", "level_up", "restoration_complete", "insufficient_funds",
     "offline_error", "loading", "empty_states"
 ]
-const CALDER_ART := preload("res://Assets/Art/restora_calder_works.svg")
+const CALDER_ART := preload("res://Assets/Art/restora_figma_heritage_home.png")
 const REGION_ART := preload("res://Assets/Art/restora_region_map.svg")
 
 var _auto_launch_pending := false
@@ -393,23 +393,24 @@ func back_target(view_name: String) -> String:
 func _render_screen(view_name: String, hud: Node, content: Control, spec: Dictionary) -> void:
     var w := content.size.x if content.size.x > 0 else 382.0
     var inner_w := w - 36.0
+    var text_scale := float(hud.call("_ui_text_scale"))
+    var compact := w < 370.0 or text_scale > 1.10
     hud.call("_header", str(spec.get("title", "RESTORA")), str(spec.get("subtitle", "")))
-    # Figma/detail screens use the top-right slot for Back. Remove the standard
-    # notification control first so the two touch targets never overlap.
+    # The notification and Back targets occupy one shared position.
     var header_notifications := content.get_node_or_null("NotificationsButton")
     if header_notifications != null:
         header_notifications.free()
     if not bool(spec.get("immersive", false)) and view_name != "launch":
         var back := back_target(view_name)
-        var back_button = hud.call("_frame_button", content, "FlowBack", "‹", Rect2(w - 62.0, 8.0, 44.0, 44.0), Callable(self, "_dispatch").bind(back, hud), false, false, 16)
+        var back_button = hud.call("_frame_button", content, "FlowBack", "‹", Rect2(w - 62.0, 8.0, 44.0, 44.0), Callable(self, "_dispatch").bind(back, hud), false, false, 17)
         if back_button is BaseButton:
             (back_button as BaseButton).action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
-    var y := 66.0
+            (back_button as BaseButton).tooltip_text = "Back"
+
+    var y := 68.0
     var artwork: Texture2D = null
     var stage_art := ["property_overview", "before_after"].has(view_name)
     if stage_art:
-        # This detail view must show the player's selected real property,
-        # rather than the unrelated Calder Works marketing illustration.
         var sheet := hud.call("_property_stage_texture") as Texture2D
         if sheet != null:
             var crop := AtlasTexture.new()
@@ -421,52 +422,60 @@ func _render_screen(view_name: String, hud: Node, content: Control, spec: Dictio
     elif ["region_overview", "property_acquisition"].has(view_name):
         artwork = REGION_ART
     if artwork != null:
-        var art_card = hud.call("_panel", content, "FlowArtworkCard", Rect2(18, y, inner_w, 142), "surface", "border", 16)
+        var art_card = hud.call("_panel", content, "FlowArtworkCard", Rect2(18, y, inner_w, 166), "surface", "border", 18)
         var art := TextureRect.new()
         art.name = "FlowArtwork"
         art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
         art.stretch_mode = TextureRect.STRETCH_SCALE if stage_art or artwork == CALDER_ART else TextureRect.STRETCH_KEEP_ASPECT_COVERED
         art.texture = artwork
         art.custom_minimum_size = Vector2.ZERO
-        art.size = Vector2(minf(inner_w - 24.0, 236.0), 132.0) if stage_art else Vector2(inner_w, 142)
+        art.size = Vector2(minf(inner_w - 20.0, 280.0), 155.0) if stage_art else Vector2(inner_w, 166.0)
         art.position = Vector2((inner_w - art.size.x) * 0.5, 5.0) if stage_art else Vector2.ZERO
         art.clip_contents = true
         art.mouse_filter = Control.MOUSE_FILTER_IGNORE
         art_card.add_child(art)
-        y += 156.0
+        y += 181.0
+
     var metrics: Array = spec.get("metrics", [])
     if not metrics.is_empty():
-        var gap := 6.0
-        var cols := mini(3, metrics.size())
+        var gap := 8.0
+        # At narrow widths or enlarged text, use two readable columns instead
+        # of forcing three 9px values into cramped cards.
+        var cols := mini(2 if compact else 3, metrics.size())
+        var tile_h := 104.0 if text_scale > 1.10 else 90.0
+        var row_stride := tile_h + 8.0
         var tile_w := (inner_w - gap * float(cols - 1)) / float(cols)
         for i in range(metrics.size()):
             var m = metrics[i]
             var col := i % cols
             var row := floori(float(i) / float(cols))
-            var tile = hud.call("_panel", content, "FlowMetric%d" % i, Rect2(18.0 + float(col) * (tile_w + gap), y + float(row) * 84.0, tile_w, 74.0), "surface_2", "border", 12)
-            hud.call("_label", tile, "Label", str(m[0]), Rect2(10, 10, tile_w - 20, 14), 9, "muted", 600)
-            hud.call("_label", tile, "Value", str(m[1]), Rect2(10, 30, tile_w - 20, 26), 14, "text", 700)
-        y += float(ceili(float(metrics.size()) / float(cols))) * 84.0 + 10.0
+            var tile = hud.call("_panel", content, "FlowMetric%d" % i, Rect2(18.0 + float(col) * (tile_w + gap), y + float(row) * row_stride, tile_w, tile_h), "surface_2", "border", 14)
+            hud.call("_label", tile, "Label", str(m[0]), Rect2(12, 12, tile_w - 24, 20), 11, "gold", 600)
+            hud.call("_label", tile, "Value", str(m[1]), Rect2(12, 38, tile_w - 24, 36), 16, "text", 700)
+        y += float(ceili(float(metrics.size()) / float(cols))) * row_stride + 6.0
 
     var details: Array = spec.get("details", [])
     var detail_row_heights: Array[float] = []
     var detail_rows_total := 0.0
-    var usable_text_width := maxf(160.0, inner_w - 60.0)
-    var approx_chars_per_line := maxi(24, int(floor(usable_text_width / 5.8)))
+    var usable_text_width := maxf(140.0, inner_w - 40.0)
+    var approx_chars_per_line := maxi(15, int(floor(usable_text_width / (6.6 * text_scale))))
+    var line_height := 19.0 * text_scale
     for item in details:
-        var text_value := str(item)
-        var estimated_lines := maxi(1, int(ceil(float(maxi(1, text_value.length())) / float(approx_chars_per_line))))
-        var row_height := maxf(40.0, 22.0 + float(estimated_lines) * 14.0)
+        var value := str(item)
+        var estimated_lines := maxi(1, int(ceil(float(maxi(1, value.length())) / float(approx_chars_per_line))))
+        var row_height := maxf(54.0, 20.0 + float(estimated_lines) * line_height)
         detail_row_heights.append(row_height)
         detail_rows_total += row_height + 8.0
-    var detail_h := maxf(112.0, 48.0 + detail_rows_total)
+    var detail_h := maxf(108.0, 52.0 + detail_rows_total)
     var detail = hud.call("_panel", content, "FlowDetails", Rect2(18, y, inner_w, detail_h), "surface", "border", 18)
-    hud.call("_label", detail, "Head", "DECISION CONTEXT", Rect2(14, 13, inner_w - 28, 14), 10, "gold", 700)
-    var row_y := 42.0
+    hud.call("_label", detail, "Head", "WHAT YOU NEED TO KNOW", Rect2(14, 13, inner_w - 28, 24), 12, "gold", 700)
+    var row_y := 46.0
     for i in range(details.size()):
         var row_h: float = detail_row_heights[i]
-        var row = hud.call("_panel", detail, "Detail%d" % i, Rect2(10, row_y, inner_w - 20, row_h), "surface_2", "border", 10)
-        hud.call("_label", row, "Text", str(details[i]), Rect2(10, 8, inner_w - 40, row_h - 16.0), 9, "text", 500)
+        var row = hud.call("_panel", detail, "Detail%d" % i, Rect2(10, row_y, inner_w - 20, row_h), "surface_2", "border", 12)
+        var label = hud.call("_label", row, "Text", str(details[i]), Rect2(10, 8, inner_w - 40, row_h - 16.0), 12, "text", 400)
+        if label is Label:
+            (label as Label).text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
         row_y += row_h + 8.0
     y += detail_h + 14.0
 
@@ -474,15 +483,15 @@ func _render_screen(view_name: String, hud: Node, content: Control, spec: Dictio
     for i in range(actions.size()):
         var action = actions[i]
         var primary := bool(action[2])
-        var button = hud.call("_frame_button", content, "FlowAction%d" % i, str(action[0]), Rect2(18, y, inner_w, 48), Callable(self, "_dispatch").bind(str(action[1]), hud), false, primary, 10)
+        var button = hud.call("_frame_button", content, "FlowAction%d" % i, str(action[0]), Rect2(18, y, inner_w, 52), Callable(self, "_dispatch").bind(str(action[1]), hud), false, primary, 12)
         if button is Button:
             (button as Button).tooltip_text = str(action[0])
             if NAV_ACTIONS.has(str(action[1])):
                 (button as Button).action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
-        y += 58.0
+        y += 62.0
 
-    content.custom_minimum_size.y = maxf(content.custom_minimum_size.y, y + 26.0)
-    content.size.y = maxf(content.size.y, y + 26.0)
+    content.custom_minimum_size.y = maxf(content.custom_minimum_size.y, y + 24.0)
+    content.size.y = maxf(content.size.y, y + 24.0)
 
 func _dispatch(action: String, hud: Node) -> void:
     if NAV_ACTIONS.has(action):
