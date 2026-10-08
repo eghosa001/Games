@@ -65,7 +65,8 @@ func _run()->void:
     check("mobile image clears objective description",stage_art!=null and goal!=null and not stage_art.get_global_rect().intersects(goal.get_global_rect()))
     if goal!=null and goal.get_visible_line_count()<goal.get_line_count():
         print("GOAL OVERFLOW: %d of %d lines visible in %s" % [goal.get_visible_line_count(),goal.get_line_count(),goal.size])
-    check("mobile goal retains expanded three-line height",goal!=null and goal.size.y>=70.0 and goal.custom_maximum_size.y>=70.0)
+    check("mobile goal has readable 11px type on regular phones",goal!=null and goal.get_theme_font_size("font_size")>=11)
+    check("mobile goal retains expanded three-line height",goal!=null and goal.size.y>=80.0 and goal.custom_maximum_size.y>=80.0)
     check("mobile objective wraps rather than clips its explanation",goal!=null and goal.get_line_count()>=3 and goal.get_visible_line_count()>=goal.get_line_count())
     check("mobile primary action fits inside hero",action!=null and hero.get_global_rect().encloses(action.get_global_rect()))
     check("mobile primary action retains true destination copy",action!=null and action.text=="OPEN NEXT STEP")
@@ -75,6 +76,8 @@ func _run()->void:
     check("property overview link exists",content.find_child("OpenHomeProperties",true,false) is Button)
     var nav:=hud.get("bottom_nav") as Control
     check("mobile nav stays inside viewport",nav!=null and Rect2(Vector2.ZERO,Vector2(root.size)).encloses(nav.get_global_rect()))
+    var home_tab:=nav.get_node_or_null("ProductionTabs/Nav_HOME/NavLabel") as Label if nav!=null else null
+    check("phone bottom navigation type remains legible",home_tab!=null and home_tab.get_theme_font_size("font_size")>=10)
     var home_nav:=nav.get_node_or_null("ProductionTabs/Nav_HOME") as Button if nav!=null else null
     var home_icon:=home_nav.get_node_or_null("NavIcon") as TextureRect if home_nav!=null else null
     check("bottom nav icon remains inside its actual button slot",home_icon!=null and home_icon.stretch_mode==TextureRect.STRETCH_SCALE and home_icon.clip_contents and home_icon.get_global_rect().size.x<=22.0 and home_icon.get_global_rect().size.y<=22.0)
@@ -98,6 +101,14 @@ func _run()->void:
     check("property view includes restoration artwork",content.find_child("PropertyVisual",true,false) is TextureRect)
     hud.open_figma_view("live")
     await process_frame
+    root.size=Vector2i(320,568)
+    await process_frame
+    hud._layout_responsive()
+    for _frame in range(3):
+        await process_frame
+    var small_content:=hud.get("mobile_content") as Control
+    var small_goal:=small_content.get_node_or_null("ExecutiveHero/HeroGoal") as Label
+    check("320px Home keeps full instructions visible",small_goal!=null and small_goal.get_visible_line_count()==small_goal.get_line_count() and small_goal.get_theme_font_size("font_size")>=10)
 
     for viewport in [Vector2i(700,900),Vector2i(768,1024),Vector2i(834,1194)]:
         root.size=viewport
@@ -143,6 +154,10 @@ func _run()->void:
     await process_frame
     check("desktop property summary exists",desktop!=null and desktop.get_node_or_null("WorldPropertyView")!=null)
     check("desktop quick actions exist",desktop!=null and desktop.get_node_or_null("QuickActions")!=null)
+    var desktop_objective_copy:=desktop.get_node_or_null("Objective/Body") as Label if desktop!=null else null
+    var desktop_signal_copy:=desktop.get_node_or_null("Signals/Body") as Label if desktop!=null else null
+    check("desktop main objective is readable and unclipped",desktop_objective_copy!=null and desktop_objective_copy.get_theme_font_size("font_size")>=15 and desktop_objective_copy.get_visible_line_count()==desktop_objective_copy.get_line_count())
+    check("desktop signal text has readable type",desktop_signal_copy!=null and desktop_signal_copy.get_theme_font_size("font_size")>=15)
     var desktop_finance:=desktop.get_node_or_null("QuickActions/OpenFinance") as Button if desktop!=null else null
     check("desktop Finance obeys the canonical unlock",desktop_finance!=null and desktop_finance.disabled==not bool(hud.call("_has_unlock","finance")))
     var next_button:=desktop.get_node_or_null("Objective/OpenNextObjective") as Button if desktop!=null else null
