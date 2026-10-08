@@ -105,6 +105,37 @@ func _run()->void:
         check("phone Finance relocks when authority returns to level one",finance_nav!=null and finance_nav.disabled)
         hud._set_tab(3)
         check("a locked primary route refuses navigation",str(hud.get("active_view"))=="live")
+    var accessibility_theme:=root.get_node_or_null("RestoraThemeManager")
+    check("accessibility theme manager is available",accessibility_theme!=null)
+    if accessibility_theme!=null:
+        for viewport in [Vector2i(390,844),Vector2i(320,568)]:
+            root.size=viewport
+            await process_frame
+            hud._layout_responsive()
+            accessibility_theme.set_text_scale(1.30)
+            for _frame in range(4):
+                await process_frame
+            var accessible_content:=hud.get("mobile_content") as Control
+            var accessible_hero:=accessible_content.get_node_or_null("ExecutiveHero") as Control
+            var accessible_goal:=accessible_hero.get_node_or_null("HeroGoal") as Label if accessible_hero!=null else null
+            var accessible_art:=accessible_hero.get_node_or_null("ActiveRestorationArt") as TextureRect if accessible_hero!=null else null
+            var accessible_action:=accessible_hero.get_node_or_null("PrimaryNextMove") as Button if accessible_hero!=null else null
+            var cash_tile:=accessible_content.get_node_or_null("Stat_cash") as Control
+            var cash_value:=cash_tile.get_node_or_null("Value") as Label if cash_tile!=null else null
+            var cash_meta:=cash_tile.get_node_or_null("Meta") as Label if cash_tile!=null else null
+            check("large text at %s makes room for description" % viewport,accessible_art!=null and not accessible_art.visible and accessible_goal!=null and accessible_goal.get_theme_font_size("font_size")>=13)
+            check("large text at %s shows all instruction lines" % viewport,accessible_goal!=null and accessible_goal.get_visible_line_count()==accessible_goal.get_line_count())
+            check("large text at %s keeps button legible and below copy" % viewport,accessible_action!=null and accessible_goal!=null and accessible_action.get_theme_font_size("font_size")>=15 and accessible_goal.get_global_rect().end.y<=accessible_action.get_global_rect().position.y)
+            check("large text at %s separates KPI value and caption" % viewport,cash_value!=null and cash_meta!=null and cash_value.get_global_rect().end.y<cash_meta.get_global_rect().position.y and cash_tile.get_global_rect().grow(1.0).encloses(cash_meta.get_global_rect()))
+        accessibility_theme.set_text_scale(1.0)
+        root.size=Vector2i(390,844)
+        await process_frame
+        hud._layout_responsive()
+        for _frame in range(3):
+            await process_frame
+        var standard_hero:=(hud.get("mobile_content") as Control).get_node_or_null("ExecutiveHero") as Control
+        var standard_art:=standard_hero.get_node_or_null("ActiveRestorationArt") as TextureRect if standard_hero!=null else null
+        check("normal text restores authored Home art",standard_art!=null and standard_art.visible)
     var theme:=root.get_node_or_null("RestoraThemeManager")
     if theme!=null:
         theme.set_mode("light")
