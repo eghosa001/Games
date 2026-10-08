@@ -92,6 +92,7 @@ func _process(delta: float) -> void:
     # Progression notice; navigation must always obey the destination they tap.
     if sig != _last_signature:
         _last_signature = sig
+        _sync_mobile_finance_action()
         _refresh()
 
 func _transient_modal_open() -> bool:
@@ -737,6 +738,8 @@ func _open_objective_next() -> void:
 
 func _set_tab(index: int) -> void:
     var target_index := clampi(index, 0, 4)
+    if target_index == 3 and not _has_unlock("finance"):
+        return
     var views = ["live", "operate", "property", "finance", "more"]
     var target_view: String = str(views[target_index])
     # Re-tapping the active primary tab is a lightweight "back to top" action;
@@ -779,7 +782,26 @@ func _rebuild_mobile_content() -> void:
     _last_signature = _state_signature()
     _end_figma_rebuild_suppression()
 
+func _sync_mobile_finance_action() -> void:
+    if mode_buttons.size() <= 3:
+        return
+    var button := mode_buttons[3] as Button
+    if button == null or not is_instance_valid(button):
+        return
+    var locked := not _has_unlock("finance")
+    if button.disabled == locked:
+        return
+    button.disabled = locked
+    button.tooltip_text = "Unlocks at Company Level %d" % _unlock_level("finance") if locked else "View financial health and transactions"
+    var tag := button.get_node_or_null("UnlockLevel") as Label
+    if tag != null:
+        tag.visible = locked
+    var icon := button.get_node_or_null("NavIcon") as TextureRect
+    if icon != null:
+        icon.modulate.a = 0.42 if locked else 1.0
+
 func _refresh_bottom_nav() -> void:
+    _sync_mobile_finance_action()
     for i in range(mode_buttons.size()):
         var button := mode_buttons[i]
         if button == null or not is_instance_valid(button):
@@ -1978,9 +2000,11 @@ func _set_ref_text(key: String, value: String) -> void:
         (node as Label).text = value
 
 func _state_signature() -> String:
-    return "%s|%d|%d|%d|%d|%d|%d|%s|%s" % [
+    # Company level and its semantic Finance unlock can change from XP without
+    # altering cash/day/property values; they must invalidate the HUD snapshot.
+    return "%s|%d|%d|%d|%d|%d|%d|%s|%s|%d|%s" % [
         active_view, _cash(), _rep(), _day(), _restoration(), _goods(), _debt(),
-        str(_business_open()), str(_selected_asset_index())
+        str(_business_open()), str(_selected_asset_index()), _company_level(), str(_has_unlock("finance"))
     ]
 
 func _state_value(domain: String, key: String, default_value):
