@@ -100,7 +100,11 @@ func _stage_art(name_value: String, hud: Node, size_value: Vector2) -> TextureRe
     frame.atlas = _property_sheet(hud)
     frame.region = Rect2(0, clampi(int(hud.call("_building_stage_slot")), 0, 5) * 144, 256, 144)
     var art := _art(name_value, frame, size_value)
-    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    # KEEP_ASPECT_CENTERED can paint the atlas at native 256x144
+    # outside its requested Control bounds. Scale the 16:9 stage frame into
+    # its allocated card and explicitly clip it, preventing button overlaps.
+    art.stretch_mode = TextureRect.STRETCH_SCALE
+    art.clip_contents = true
     return art
 
 func _sync_stage_art(content: Control, hud: Node, view: String) -> void:
@@ -155,6 +159,7 @@ func _enhance_home(hud: Node, content: Control) -> void:
         action.text = "OPEN NEXT STEP"
         action.position = Vector2(21, 195)
         action.size = Vector2(hero.size.x - 42.0, 44)
+        action.add_theme_font_size_override("font_size", 12)
     for child in hero.get_children():
         if child is Panel:
             if is_equal_approx(child.position.y, 112.0):
@@ -171,8 +176,9 @@ func _enhance_property(hud: Node, content: Control) -> void:
     for child in selected.get_children():
         if child is Control:
             child.position.y += 112.0
-    var art := _stage_art("PropertyVisual", hud, Vector2(selected.size.x - 36.0, 112.0))
-    art.position = Vector2(18, 0)
+    var art_size := Vector2(minf(selected.size.x - 36.0, 199.0), 112.0)
+    var art := _stage_art("PropertyVisual", hud, art_size)
+    art.position = Vector2((selected.size.x - art_size.x) * 0.5, 0)
     selected.add_child(art)
     selected.move_child(art, 0)
     # Preserve the authoritative property name, type and valuation labels.
