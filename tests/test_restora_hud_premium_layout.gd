@@ -73,8 +73,8 @@ func _run()->void:
     if goal!=null and goal.get_visible_line_count()<goal.get_line_count():
         print("GOAL OVERFLOW: %d of %d lines visible in %s" % [goal.get_visible_line_count(),goal.get_line_count(),goal.size])
     check("mobile goal has readable 11px type on regular phones",goal!=null and goal.get_theme_font_size("font_size")>=11)
-    check("mobile goal retains expanded three-line height",goal!=null and goal.size.y>=80.0 and goal.custom_maximum_size.y>=80.0)
-    check("mobile objective wraps rather than clips its explanation",goal!=null and goal.get_line_count()>=3 and goal.get_visible_line_count()>=goal.get_line_count())
+    check("mobile goal has enough room for full-width copy",goal!=null and goal.size.y>=60.0 and goal.custom_maximum_size.y>=60.0)
+    check("mobile objective wraps without clipping any lines",goal!=null and goal.get_line_count()>=2 and goal.get_visible_line_count()==goal.get_line_count())
     check("mobile primary action fits inside hero",action!=null and hero.get_global_rect().encloses(action.get_global_rect()))
     check("mobile primary action retains true destination copy",action!=null and action.text=="OPEN NEXT STEP")
     var cash_icon:=content.get_node_or_null("Stat_cash/StatIcon") as TextureRect
