@@ -39,6 +39,8 @@ func _run()->void:
     var action := hero.get_node_or_null("PrimaryNextMove") as Button if hero!=null else null
     check("mobile shows stage-correct property artwork",stage_art!=null and stage_art.texture is AtlasTexture)
     check("mobile artwork cannot draw beyond its card",stage_art!=null and stage_art.stretch_mode==TextureRect.STRETCH_SCALE and stage_art.clip_contents)
+    if stage_art!=null and action!=null:
+        print("STAGE ART GEOMETRY: art=%s action=%s" % [stage_art.get_global_rect(), action.get_global_rect()])
     check("mobile image leaves next-step action unobstructed",stage_art!=null and action!=null and not stage_art.get_global_rect().intersects(action.get_global_rect()))
     if stage_art!=null and stage_art.texture is AtlasTexture:
         check("warehouse uses warehouse sprite sheet",(stage_art.texture as AtlasTexture).atlas.resource_path.ends_with("building_warehouse_progression.svg"))
