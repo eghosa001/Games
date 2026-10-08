@@ -529,11 +529,15 @@ func _add_texture(parent_node: Node, name: String, rect: Rect2, texture: Texture
         return null
     var art := TextureRect.new()
     art.name = name
-    art.texture = texture
-    art.position = rect.position
-    art.size = rect.size
+    # Set expansion before assigning the texture: a native SVG minimum can
+    # otherwise overflow a small 20-22 px icon slot.
     art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    art.texture = texture
+    art.custom_minimum_size = Vector2.ZERO
+    art.position = rect.position
+    art.size = rect.size
+    art.clip_contents = true
     art.modulate = Color(1, 1, 1, alpha)
     art.mouse_filter = Control.MOUSE_FILTER_IGNORE
     parent_node.add_child(art)
@@ -547,7 +551,8 @@ func _add_icon(parent_node: Node, name: String, icon_key: String, rect: Rect2, r
     if icon != null:
         var tint := _color(role)
         icon.modulate = Color(tint.r, tint.g, tint.b, alpha)
-        icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        # Square SVG icon assets should be drawn inside their actual slot.
+        icon.stretch_mode = TextureRect.STRETCH_SCALE
     return icon
 
 func _build_root() -> void:
@@ -609,6 +614,19 @@ func _layout_responsive() -> void:
             _rebuild_current()
         else:
             _layout_mobile_host()
+    elif _layout_kind == "desktop":
+        _fit_fixed_canvas("DesktopExecutive", Vector2(1280, 720))
+    elif _layout_kind == "tablet":
+        _fit_fixed_canvas("TabletLive", Vector2(834, 1194))
+
+func _fit_fixed_canvas(canvas_name: String, design: Vector2) -> void:
+    var canvas := root.get_node_or_null(canvas_name) as Control if root != null else null
+    if canvas == null:
+        return
+    var viewport_size := _layout_size()
+    var factor := minf(viewport_size.x / design.x, viewport_size.y / design.y)
+    canvas.scale = Vector2.ONE * factor
+    canvas.position = (viewport_size - design * factor) * 0.5
 
 func _layout_class() -> String:
     var size = _layout_size()
@@ -1786,10 +1804,10 @@ func _build_desktop_live() -> void:
 
     var quick = _panel(canvas, "QuickActions", Rect2(942,426,304,230), "selected", "plum", 18)
     _label(quick, "Head", "QUICK ACTIONS", Rect2(18,16,180,16), 10, "gold", 600)
-    _frame_button(quick, "OpenBuilding", "PROPERTY", Rect2(18,48,268,38), _show_view.bind("property"))
-    _frame_button(quick, "OpenBusiness", "BUSINESS", Rect2(18,92,268,38), _show_view.bind("operate"))
-    _frame_button(quick, "OpenFinance", "FINANCE", Rect2(18,136,268,38), _show_view.bind("finance"))
-    _frame_button(quick, "OpenMore", "MORE", Rect2(18,180,268,38), _show_view.bind("more"))
+    _frame_button(quick, "OpenBuilding", "PROPERTY", Rect2(18,48,268,38), _show_view.bind("property"), false, false, 13)
+    _frame_button(quick, "OpenBusiness", "BUSINESS", Rect2(18,92,268,38), _show_view.bind("operate"), false, false, 13)
+    _frame_button(quick, "OpenFinance", "FINANCE", Rect2(18,136,268,38), _show_view.bind("finance"), false, false, 13)
+    _frame_button(quick, "OpenMore", "MORE", Rect2(18,180,268,38), _show_view.bind("more"), false, false, 13)
 
 func _desktop_stat(parent_node: Node, name: String, rect: Rect2, label_text: String, value_text: String, ref_key := "") -> void:
     var p = _panel(parent_node, name, rect, "surface", "border", 16)
@@ -1832,7 +1850,19 @@ func _build_tablet_live() -> void:
     _label(sig, "Head", "SIGNALS + OBJECTIVES", Rect2(20,18,250,18), 12, "gold", 600)
     _remember("tablet_signals", _label(sig, "Body", "%s\n\nNEXT OBJECTIVE\n%s" % [_signal_lines(), _objective_title()], Rect2(20,56,342,330), 15, "text", 400))
     var nav = _panel(canvas, "Nav", Rect2(32,1054,770,92), "surface", "border", 26)
-    _label(nav, "Labels", "HOME        BUSINESS        PROPERTY        FINANCE        MORE", Rect2(54,36,660,20), 13, "text", 600, HORIZONTAL_ALIGNMENT_CENTER)
+    var destinations := ["live", "operate", "property", "finance", "more"]
+    var labels := ["HOME", "BUSINESS", "PROPERTY", "FINANCE", "MORE"]
+    for i in range(destinations.size()):
+        var button := _frame_button(
+            nav, "TabletNav_" + labels[i], labels[i],
+            Rect2(14.0 + float(i) * 150.0, 12.0, 136.0, 68.0),
+            _set_tab.bind(i), i == 0, false, 14
+        )
+        if i == 3 and not _has_unlock("finance"):
+            button.disabled = true
+            button.text = "FINANCE  L%d" % _unlock_level("finance")
+            button.tooltip_text = "Unlocks at Company Level %d" % _unlock_level("finance")
+            button.add_theme_stylebox_override("disabled", _nav_disabled_style())
 
 func _refresh() -> void:
     if root == null:
