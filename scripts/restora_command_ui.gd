@@ -730,6 +730,11 @@ func handle_system_back() -> bool:
         return true
     return false
 
+func _open_objective_next() -> void:
+    # Resolve the authoritative destination at tap time: progression may
+    # change while the Home dashboard stays mounted.
+    _show_view(_objective_view())
+
 func _set_tab(index: int) -> void:
     var target_index := clampi(index, 0, 4)
     var views = ["live", "operate", "property", "finance", "more"]
@@ -1150,7 +1155,7 @@ func _build_mobile_live() -> void:
     progress_fill.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 4))
     progress_bg.add_child(progress_fill)
     _remember("progress_fill", progress_fill)
-    hero_action = _frame_button(hero, "PrimaryNextMove", "OPEN NEXT STEP", Rect2(21, 126, inner_w - 42, 44), _show_view.bind(_objective_view()), false, true, 9)
+    hero_action = _frame_button(hero, "PrimaryNextMove", "OPEN NEXT STEP", Rect2(21, 126, inner_w - 42, 44), Callable(self, "_open_objective_next"), false, true, 11)
 
     var gap = 6.0
     var tile_w = (inner_w - gap) * 0.5
@@ -1786,7 +1791,25 @@ func _build_desktop_live() -> void:
     _remember("desktop_property_upgrade", _label(scene, "Upgrade", "UPGRADE LEVEL %d/6" % (_building_stage_slot() + 1), Rect2(24,124,214,24), 15, "gold", 700))
     _remember("desktop_property_progress", _label(scene, "Progress", "%d%% RESTORED" % _building_progress(), Rect2(24,162,214,24), 15, "success", 700))
     _remember("desktop_property_stage", _label(scene, "Stage", _building_stage_name(), Rect2(24,204,214,42), 12, "text", 600))
-    _remember("desktop_property_meta", _label(world, "Meta", "%s • %s\n%d%% restored • %s market value" % [_building_name(), _building_type(), _building_progress(), _money(int(_selected_building().get("value", 0)))], Rect2(21,401,500,54), 14, "text", 400))
+    _remember("desktop_property_meta", _label(world, "Meta", "%s • %s\n%d%% restored • %s market value" % [_building_name(), _building_type(), _building_progress(), _money(int(_selected_building().get("value", 0)))], Rect2(21,394,500,54), 14, "text", 400))
+    var phases := ["cleaning", "repair", "painting", "furnishing"]
+    var selected := _selected_building()
+    for i in range(phases.size()):
+        var phase: String = phases[i]
+        var x: float = 21.0 + float(i % 2) * 248.0
+        var y: float = 462.0 + float(i / 2) * 43.0
+        _label(world, "PhaseName_" + phase, phase.to_upper(), Rect2(x,y,155,17), 11, "text", 600)
+        var percent: int = clampi(int(selected.get(phase, 0)), 0, 100)
+        _remember("desktop_phase_text_" + phase, _label(world, "PhaseValue_" + phase, "%d%%" % percent, Rect2(x+164,y,56,17), 11, "gold", 600, HORIZONTAL_ALIGNMENT_RIGHT))
+        var track := _panel(world, "PhaseTrack_" + phase, Rect2(x,y+22,220,8), "surface_2", "border", 4)
+        var phase_fill := Panel.new()
+        phase_fill.name = "Fill"
+        phase_fill.position = Vector2.ZERO
+        phase_fill.size = Vector2(220.0 * float(percent) / 100.0, 8.0)
+        phase_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        phase_fill.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 4))
+        track.add_child(phase_fill)
+        _remember("desktop_phase_fill_" + phase, phase_fill)
     _transparent_button(world, "OpenProperty", Rect2(0,0,560,552), _show_view.bind("property"))
 
     _desktop_stat(canvas, "Cash", Rect2(620,104,190,96), "CASH", _money(_cash()), "cash")
@@ -1796,7 +1819,8 @@ func _build_desktop_live() -> void:
     var objective = _panel(canvas, "Objective", Rect2(620,220,626,184), "surface", "border", 18)
     _label(objective, "Head", "NEXT OBJECTIVE", Rect2(18,16,200,16), 10, "gold", 600)
     _remember("desktop_objective_title", _label(objective, "Title", _objective_title(), Rect2(18,44,440,28), 22, "text", 700))
-    _remember("desktop_objective_body", _label(objective, "Body", _objective_detail(), Rect2(18,84,560,48), 13, "muted", 400))
+    _remember("desktop_objective_body", _label(objective, "Body", _objective_detail(), Rect2(18,80,580,48), 13, "muted", 400))
+    _frame_button(objective, "OpenNextObjective", "OPEN NEXT STEP", Rect2(18,136,210,38), Callable(self, "_open_objective_next"), false, true, 12)
 
     var signals = _panel(canvas, "Signals", Rect2(620,426,304,230), "surface", "border", 18)
     _label(signals, "Head", "SIGNALS", Rect2(18,16,180,16), 10, "gold", 600)
@@ -1806,7 +1830,7 @@ func _build_desktop_live() -> void:
     _label(quick, "Head", "QUICK ACTIONS", Rect2(18,16,180,16), 10, "gold", 600)
     _frame_button(quick, "OpenBuilding", "PROPERTY", Rect2(18,48,268,38), _show_view.bind("property"), false, false, 13)
     _frame_button(quick, "OpenBusiness", "BUSINESS", Rect2(18,92,268,38), _show_view.bind("operate"), false, false, 13)
-    _frame_button(quick, "OpenFinance", "FINANCE", Rect2(18,136,268,38), _show_view.bind("finance"), false, false, 13)
+    _remember("desktop_finance_action", _frame_button(quick, "OpenFinance", "FINANCE", Rect2(18,136,268,38), _show_view.bind("finance"), false, false, 13))
     _frame_button(quick, "OpenMore", "MORE", Rect2(18,180,268,38), _show_view.bind("more"), false, false, 13)
 
 func _desktop_stat(parent_node: Node, name: String, rect: Rect2, label_text: String, value_text: String, ref_key := "") -> void:
@@ -1858,11 +1882,19 @@ func _build_tablet_live() -> void:
             Rect2(14.0 + float(i) * 150.0, 12.0, 136.0, 68.0),
             _set_tab.bind(i), i == 0, false, 14
         )
-        if i == 3 and not _has_unlock("finance"):
-            button.disabled = true
-            button.text = "FINANCE  L%d" % _unlock_level("finance")
-            button.tooltip_text = "Unlocks at Company Level %d" % _unlock_level("finance")
-            button.add_theme_stylebox_override("disabled", _nav_disabled_style())
+        if i == 3:
+            _remember("tablet_finance_action", button)
+            _sync_finance_action(button)
+
+func _sync_finance_action(button: Button) -> void:
+    if button == null or not is_instance_valid(button):
+        return
+    var locked := not _has_unlock("finance")
+    button.disabled = locked
+    button.text = "FINANCE L%d" % _unlock_level("finance") if locked else "FINANCE"
+    button.tooltip_text = "Unlocks at Company Level %d" % _unlock_level("finance") if locked else "View financial health and transactions"
+    button.add_theme_stylebox_override("disabled", _style(_color("surface_2"), _color("border"), 12))
+    button.add_theme_color_override("font_disabled_color", _color("muted"))
 
 func _refresh() -> void:
     if root == null:
@@ -1887,6 +1919,15 @@ func _refresh() -> void:
             _set_ref_text("desktop_property_upgrade", "UPGRADE LEVEL %d/6" % (_building_stage_slot() + 1))
             _set_ref_text("desktop_property_progress", "%d%% RESTORED" % _building_progress())
             _set_ref_text("desktop_property_stage", _building_stage_name())
+            var selected_property := _selected_building()
+            for phase in ["cleaning", "repair", "painting", "furnishing"]:
+                var phase_percent: int = clampi(int(selected_property.get(phase, 0)), 0, 100)
+                _set_ref_text("desktop_phase_text_" + phase, "%d%%" % phase_percent)
+                var phase_fill := refs.get("desktop_phase_fill_" + phase) as Panel
+                if phase_fill != null:
+                    phase_fill.size.x = 220.0 * float(phase_percent) / 100.0
+            _sync_finance_action(refs.get("desktop_finance_action") as Button)
+            _sync_finance_action(refs.get("tablet_finance_action") as Button)
             var art := refs.get("desktop_property_art") as TextureRect
             if art != null and art.texture is AtlasTexture:
                 var stage_frame := art.texture as AtlasTexture
