@@ -18,6 +18,9 @@ except ImportError:
     sys.exit(2)
 
 BG_DARK = (4, 18, 12, 30, 16, 30)
+# The approved default Figma palette is warm limestone, not the retired
+# dark-only industrial dashboard. Validate both authored theme families.
+BG_LIGHT = (221, 255, 211, 255, 201, 255)
 PANEL_DARK = (8, 16, 22, 36, 28, 42)
 ACTION_DOCK = (12, 52, 12, 52, 16, 58)
 
@@ -59,8 +62,9 @@ def assert_shell_backdrop(img, vw, vh):
         return False, "shell backdrop: no pixels sampled"
     avg_lum = sum(values) / len(values)
     bright_ratio = sum(v > 120 for v in values) / len(values)
-    in_range = _in_range(mean, BG_DARK, tol=20)
-    passed = in_range and avg_lum < 70 and bright_ratio < 0.08
+    light = avg_lum > 145
+    in_range = _in_range(mean, BG_LIGHT if light else BG_DARK, tol=20)
+    passed = in_range and (bright_ratio > 0.80 if light else bright_ratio < 0.08)
     return passed, (f"shell backdrop: mean={mean} avg_lum={avg_lum:.1f} "
                     f"bright_ratio={bright_ratio:.3f} range={'OK' if in_range else 'BAD'}")
 
@@ -74,10 +78,14 @@ def assert_dark_surface(img, x0, y0, x1, y1, expected, label, tol=24, bright_lim
         return False, f"{label}: no pixels sampled"
     avg_lum = sum(values) / len(values)
     bright_ratio = sum(v > 120 for v in values) / len(values)
-    in_range = _in_range(mean, expected, tol=tol)
-    passed = in_range and avg_lum < 90 and bright_ratio < bright_limit
+    std_lum = (sum((v - avg_lum) ** 2 for v in values) / len(values)) ** 0.5
+    light = avg_lum > 145
+    in_range = _in_range(mean, expected, tol=tol) if not light else all(160 <= channel <= 255 for channel in mean)
+    # Bright surfaces must contain actual detail/text. Solid cream or white
+    # placeholders must not receive a false green on the light theme.
+    passed = (in_range and std_lum >= 6 and bright_ratio > 0.50) if light else (in_range and avg_lum < 90 and bright_ratio < bright_limit)
     return passed, (f"{label}: mean={mean} avg_lum={avg_lum:.1f} "
-                    f"bright_ratio={bright_ratio:.3f} range={'OK' if in_range else 'BAD'}")
+                    f"std_lum={std_lum:.1f} bright_ratio={bright_ratio:.3f} range={'OK' if in_range else 'BAD'}")
 
 
 def assert_management_surface(img, x0, y0, x1, y1, label):
@@ -92,7 +100,9 @@ def assert_management_surface(img, x0, y0, x1, y1, label):
     variance = sum((v - avg_lum) ** 2 for v in values) / len(values)
     std_lum = variance ** 0.5
     bright_ratio = sum(v > 180 for v in values) / len(values)
-    passed = 18 <= avg_lum <= 105 and std_lum >= 7 and bright_ratio < 0.20
+    # Management cards are readable in both the dark and light RESTORA themes.
+    passed = std_lum >= 7 and ((18 <= avg_lum <= 105 and bright_ratio < 0.20) or
+                               (160 <= avg_lum <= 250 and bright_ratio > 0.40))
     return passed, (f"{label}: mean={mean} avg_lum={avg_lum:.1f} "
                     f"std_lum={std_lum:.1f} bright_ratio={bright_ratio:.3f}")
 
