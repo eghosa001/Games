@@ -1797,7 +1797,7 @@ func _build_desktop_live() -> void:
     for i in range(phases.size()):
         var phase: String = phases[i]
         var x: float = 21.0 + float(i % 2) * 248.0
-        var y: float = 462.0 + float(i / 2) * 43.0
+        var y: float = 462.0 + float(floori(float(i) / 2.0)) * 43.0
         _label(world, "PhaseName_" + phase, phase.to_upper(), Rect2(x,y,155,17), 11, "text", 600)
         var percent: int = clampi(int(selected.get(phase, 0)), 0, 100)
         _remember("desktop_phase_text_" + phase, _label(world, "PhaseValue_" + phase, "%d%%" % percent, Rect2(x+164,y,56,17), 11, "gold", 600, HORIZONTAL_ALIGNMENT_RIGHT))
