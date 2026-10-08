@@ -235,6 +235,12 @@ func _run()->void:
     var compact_quick:=desktop.get_node_or_null("QuickActions") as Control if desktop!=null else null
     var compact_world:=desktop.get_node_or_null("WorldPropertyView") as Control if desktop!=null else null
     check("short desktop keeps property and quick actions on-screen",compact_quick!=null and compact_world!=null and Rect2(Vector2.ZERO,Vector2(1280,577)).encloses(compact_quick.get_global_rect()) and Rect2(Vector2.ZERO,Vector2(1280,577)).encloses(compact_world.get_global_rect()))
+    var compact_property_title:=desktop.get_node_or_null("WorldPropertyView/Scene/PropertyName") as Label if desktop!=null else null
+    var compact_stage_image:=desktop.get_node_or_null("WorldPropertyView/Scene/RestorationPreview") as TextureRect if desktop!=null else null
+    check("short desktop does not truncate the selected property name",compact_property_title!=null and compact_property_title.size.x>=400.0 and compact_property_title.get_visible_line_count()==compact_property_title.get_line_count())
+    check("short desktop art is below property headline",compact_property_title!=null and compact_stage_image!=null and compact_property_title.get_global_rect().end.y<=compact_stage_image.get_global_rect().position.y)
+    var browser_adapter:=FileAccess.get_file_as_string("res://scripts/web_responsive.gd")
+    check("browser adapter uses live landscape viewport",browser_adapter.contains("root.content_scale_size = browser") and browser_adapter.contains("Window.CONTENT_SCALE_ASPECT_IGNORE"))
     root.size=Vector2i(1280,720)
     await process_frame
     hud._layout_responsive()
