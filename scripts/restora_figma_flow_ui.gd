@@ -406,19 +406,31 @@ func _render_screen(view_name: String, hud: Node, content: Control, spec: Dictio
             (back_button as BaseButton).action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
     var y := 66.0
     var artwork: Texture2D = null
-    if ["launch","new_game","property_overview","before_after"].has(view_name):
+    var stage_art := ["property_overview", "before_after"].has(view_name)
+    if stage_art:
+        # This detail view must show the player's selected real property,
+        # rather than the unrelated Calder Works marketing illustration.
+        var sheet := hud.call("_property_stage_texture") as Texture2D
+        if sheet != null:
+            var crop := AtlasTexture.new()
+            crop.atlas = sheet
+            crop.region = Rect2(0, clampi(int(hud.call("_building_stage_slot")), 0, 5) * 144, 256, 144)
+            artwork = crop
+    elif ["launch", "new_game"].has(view_name):
         artwork = CALDER_ART
-    elif ["region_overview","property_acquisition"].has(view_name):
+    elif ["region_overview", "property_acquisition"].has(view_name):
         artwork = REGION_ART
     if artwork != null:
         var art_card = hud.call("_panel", content, "FlowArtworkCard", Rect2(18, y, inner_w, 142), "surface", "border", 16)
         var art := TextureRect.new()
         art.name = "FlowArtwork"
-        art.texture = artwork
-        art.position = Vector2.ZERO
-        art.size = Vector2(inner_w, 142)
         art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-        art.stretch_mode = TextureRect.STRETCH_SCALE if artwork == CALDER_ART else TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        art.stretch_mode = TextureRect.STRETCH_SCALE if stage_art or artwork == CALDER_ART else TextureRect.STRETCH_KEEP_ASPECT_COVERED
+        art.texture = artwork
+        art.custom_minimum_size = Vector2.ZERO
+        art.size = Vector2(minf(inner_w - 24.0, 236.0), 132.0) if stage_art else Vector2(inner_w, 142)
+        art.position = Vector2((inner_w - art.size.x) * 0.5, 5.0) if stage_art else Vector2.ZERO
+        art.clip_contents = true
         art.mouse_filter = Control.MOUSE_FILTER_IGNORE
         art_card.add_child(art)
         y += 156.0

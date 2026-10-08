@@ -156,8 +156,16 @@ func _enhance_home(hud: Node, content: Control) -> void:
         title.add_theme_font_size_override("font_size", 18 if hero.size.x < 310 else 20)
     if goal != null:
         goal.position = Vector2(21, 103)
-        goal.size = Vector2(maxf(110.0, art.position.x - 31.0), 74)
+        # The old 34px maximum height constrains assignments to size.
+        # Apply a larger maximum BEFORE setting the size. In Godot a zero
+        # maximum collapses the control, rather than disabling its limit.
+        var detail_size := Vector2(maxf(110.0, art.position.x - 31.0), 74.0)
+        goal.custom_maximum_size = detail_size
+        goal.custom_minimum_size = Vector2.ZERO
+        goal.size = detail_size
         goal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        goal.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+        goal.clip_text = true
         goal.add_theme_font_size_override("font_size", 10)
     if action != null:
         action.text = "OPEN NEXT STEP"

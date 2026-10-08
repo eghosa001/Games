@@ -63,12 +63,21 @@ func _run()->void:
     check("mobile objective retains actual property",title!=null and title.text.contains("Riverside Warehouse"))
     check("mobile image clears objective title",stage_art!=null and title!=null and not stage_art.get_global_rect().intersects(title.get_global_rect()))
     check("mobile image clears objective description",stage_art!=null and goal!=null and not stage_art.get_global_rect().intersects(goal.get_global_rect()))
+    if goal!=null and goal.get_visible_line_count()<goal.get_line_count():
+        print("GOAL OVERFLOW: %d of %d lines visible in %s" % [goal.get_visible_line_count(),goal.get_line_count(),goal.size])
+    check("mobile goal retains expanded three-line height",goal!=null and goal.size.y>=70.0 and goal.custom_maximum_size.y>=70.0)
+    check("mobile objective wraps rather than clips its explanation",goal!=null and goal.get_line_count()>=3 and goal.get_visible_line_count()>=goal.get_line_count())
     check("mobile primary action fits inside hero",action!=null and hero.get_global_rect().encloses(action.get_global_rect()))
     check("mobile primary action retains true destination copy",action!=null and action.text=="OPEN NEXT STEP")
+    var cash_icon:=content.get_node_or_null("Stat_cash/StatIcon") as TextureRect
+    check("small metric icon uses bounded texture rendering",cash_icon!=null and cash_icon.texture!=null and cash_icon.stretch_mode==TextureRect.STRETCH_SCALE and cash_icon.clip_contents and cash_icon.size.x<=22.0 and cash_icon.size.y<=22.0)
     check("compact command overview exists",content.get_node_or_null("CommandOverview")!=null)
     check("property overview link exists",content.find_child("OpenHomeProperties",true,false) is Button)
     var nav:=hud.get("bottom_nav") as Control
     check("mobile nav stays inside viewport",nav!=null and Rect2(Vector2.ZERO,Vector2(root.size)).encloses(nav.get_global_rect()))
+    var home_nav:=nav.get_node_or_null("ProductionTabs/Nav_HOME") as Button if nav!=null else null
+    var home_icon:=home_nav.get_node_or_null("NavIcon") as TextureRect if home_nav!=null else null
+    check("bottom nav icon remains inside its actual button slot",home_icon!=null and home_icon.stretch_mode==TextureRect.STRETCH_SCALE and home_icon.clip_contents and home_icon.get_global_rect().size.x<=22.0 and home_icon.get_global_rect().size.y<=22.0)
     var theme:=root.get_node_or_null("RestoraThemeManager")
     if theme!=null:
         theme.set_mode("light")
@@ -76,6 +85,12 @@ func _run()->void:
     check("warm limestone palette",theme!=null and theme.color("bg").to_html(false)=="f1ece1")
     check("aged brass accent",theme!=null and theme.color("gold").to_html(false)=="9a6728")
     check("plum selection",theme!=null and theme.color("plum").to_html(false)=="74465a")
+    for detail_view in ["property_overview", "before_after"]:
+        hud.open_figma_view(detail_view)
+        await process_frame
+        var detail_content:=hud.get("mobile_content") as Control
+        var detail_art:=detail_content.find_child("FlowArtwork",true,false) as TextureRect
+        check(detail_view+" uses selected real stage artwork",detail_art!=null and detail_art.texture is AtlasTexture and (detail_art.texture as AtlasTexture).atlas.resource_path.ends_with("building_warehouse_progression.svg"))
     hud.open_figma_view("property")
     await process_frame
     content=hud.get("mobile_content") as Control
@@ -83,12 +98,49 @@ func _run()->void:
     check("property view includes restoration artwork",content.find_child("PropertyVisual",true,false) is TextureRect)
     hud.open_figma_view("live")
     await process_frame
+
+    for viewport in [Vector2i(700,900),Vector2i(768,1024),Vector2i(834,1194)]:
+        root.size=viewport
+        for _frame in range(2):
+            await process_frame
+        hud._layout_responsive()
+        await process_frame
+        var tablet:=runtime.get_node_or_null("TabletLive") as Control
+        check("tablet canvas exists and fits %s" % viewport,tablet!=null and Rect2(Vector2.ZERO,Vector2(viewport)).grow(1.0).encloses(tablet.get_global_rect()))
+        var tablet_nav:=tablet.get_node_or_null("Nav") as Panel if tablet!=null else null
+        check("tablet bottom navigation exists",tablet_nav!=null)
+        if tablet_nav!=null:
+            for label in ["HOME","BUSINESS","PROPERTY","FINANCE","MORE"]:
+                var button:=tablet_nav.get_node_or_null("TabletNav_"+label) as Button
+                check("tablet "+label+" is a contained actionable target at %s" % viewport,button!=null and Rect2(Vector2.ZERO,Vector2(viewport)).grow(1.0).encloses(button.get_global_rect()) and button.get_global_rect().size.y>=48.0 and button.pressed.get_connections().size()>0)
+                if label=="FINANCE" and button!=null:
+                    check("tablet finance respects unlock level",button.disabled==not bool(hud.call("_has_unlock","finance")))
+    var tablet_now:=runtime.get_node_or_null("TabletLive") as Control
+    var prop_tab:=tablet_now.get_node_or_null("Nav/TabletNav_PROPERTY") as Button if tablet_now!=null else null
+    check("tablet property route is enabled",prop_tab!=null and not prop_tab.disabled)
+    if prop_tab!=null:
+        prop_tab.pressed.emit()
+        await process_frame
+        check("tablet property button opens correct destination",str(hud.get("active_view"))=="property")
+        check("tablet property Back succeeds",hud.handle_system_back())
+        await process_frame
+        check("tablet Back restores Home",str(hud.get("active_view"))=="live")
     root.size=Vector2i(1280,720)
     await process_frame
     hud._layout_responsive()
     await process_frame
     var desktop:=runtime.get_node_or_null("DesktopExecutive") as Control
     check("desktop management canvas exists",desktop!=null)
+    root.size=Vector2i(1100,760)
+    await process_frame
+    hud._layout_responsive()
+    await process_frame
+    desktop=runtime.get_node_or_null("DesktopExecutive") as Control
+    check("same-class desktop resize re-fits canvas",desktop!=null and Rect2(Vector2.ZERO,Vector2(1100,760)).grow(1.0).encloses(desktop.get_global_rect()))
+    root.size=Vector2i(1280,720)
+    await process_frame
+    hud._layout_responsive()
+    await process_frame
     check("desktop property summary exists",desktop!=null and desktop.get_node_or_null("WorldPropertyView")!=null)
     check("desktop quick actions exist",desktop!=null and desktop.get_node_or_null("QuickActions")!=null)
     var tutorial := game.get_node_or_null("UI/TutorialOverlay")
