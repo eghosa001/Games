@@ -53,10 +53,14 @@ func _add_marker(content: Control) -> void:
 func _art(name_value: String, texture: Texture2D, size_value: Vector2) -> TextureRect:
     var art := TextureRect.new()
     art.name = name_value
-    art.texture = texture
-    art.size = size_value
+    # Configure texture minimum sizing before assigning its source and bounds;
+    # otherwise Godot can retain the atlas's native 256x144 minimum and
+    # repaint beyond the intended 84px-tall mobile preview.
     art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    art.stretch_mode = TextureRect.STRETCH_SCALE
+    art.texture = texture
+    art.custom_minimum_size = Vector2.ZERO
+    art.size = size_value
     art.mouse_filter = Control.MOUSE_FILTER_IGNORE
     return art
 
