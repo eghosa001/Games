@@ -64,6 +64,23 @@ func _run()->void:
     hud._refresh()
     await process_frame
     check("desktop objective updates after inspection",objective_title!=null and objective_title.text.begins_with("Acquire "))
+    var preview := desktop.get_node_or_null("WorldPropertyView/Scene/RestorationPreview") as TextureRect
+    check("desktop renders actual restoration-stage artwork",preview!=null and preview.texture is AtlasTexture)
+    game.acquire_property()
+    await process_frame
+    hud._refresh()
+    var progress := desktop.get_node_or_null("WorldPropertyView/Scene/Progress") as Label
+    check("desktop restoration starts in sync",progress!=null and progress.text=="%d%% RESTORED" % int(hud.call("_building_progress")))
+    var before_stage := int(hud.call("_building_progress"))
+    game.restore_property()
+    await process_frame
+    hud._refresh()
+    var after_stage := int(hud.call("_building_progress"))
+    check("real restoration action progresses",after_stage>before_stage)
+    check("desktop restoration updates without reopening",progress!=null and progress.text=="%d%% RESTORED" % after_stage)
+    if preview!=null and preview.texture is AtlasTexture:
+        var crop := preview.texture as AtlasTexture
+        check("desktop art shows authoritative stage",is_equal_approx(crop.region.position.y,float(clampi(int(hud.call("_building_stage_slot")),0,5)*144)))
     game.queue_free()
     await process_frame
     quit(1 if failed > 0 else 0)
