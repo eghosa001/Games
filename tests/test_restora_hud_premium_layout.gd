@@ -81,6 +81,30 @@ func _run()->void:
     var home_nav:=nav.get_node_or_null("ProductionTabs/Nav_HOME") as Button if nav!=null else null
     var home_icon:=home_nav.get_node_or_null("NavIcon") as TextureRect if home_nav!=null else null
     check("bottom nav icon remains inside its actual button slot",home_icon!=null and home_icon.stretch_mode==TextureRect.STRETCH_SCALE and home_icon.clip_contents and home_icon.get_global_rect().size.x<=22.0 and home_icon.get_global_rect().size.y<=22.0)
+    var finance_nav:=nav.get_node_or_null("ProductionTabs/Nav_FINANCE") as Button if nav!=null else null
+    var level_state:=root.get_node_or_null("RenewGameState")
+    if level_state!=null and finance_nav!=null:
+        var starting_level:=int(level_state.get_value("progression","level",1))
+        var starting_unlocks: Array = (level_state.get_value("progression","unlocks",[]) as Array).duplicate(true)
+        check("Finance starts locked at level one",starting_level==1 and finance_nav.disabled)
+        var previous_signature:=str(hud.call("_state_signature"))
+        level_state.set_value("progression","level",2)
+        check("level-only progression invalidates HUD state",str(hud.call("_state_signature"))!=previous_signature)
+        hud._process(0.6)
+        check("phone Finance unlocks with level-only progression",not finance_nav.disabled)
+        var level_tag:=finance_nav.get_node_or_null("UnlockLevel") as Label
+        check("unlocked Finance removes its level badge",level_tag!=null and not level_tag.visible)
+        finance_nav.pressed.emit()
+        check("newly unlocked Finance opens real finance view",str(hud.get("active_view"))=="finance")
+        hud.open_figma_view("live")
+        await process_frame
+        finance_nav=hud.get("bottom_nav").get_node_or_null("ProductionTabs/Nav_FINANCE") as Button
+        level_state.set_value("progression","level",starting_level)
+        level_state.set_value("progression","unlocks",starting_unlocks)
+        hud._process(0.6)
+        check("phone Finance relocks when authority returns to level one",finance_nav!=null and finance_nav.disabled)
+        hud._set_tab(3)
+        check("a locked primary route refuses navigation",str(hud.get("active_view"))=="live")
     var theme:=root.get_node_or_null("RestoraThemeManager")
     if theme!=null:
         theme.set_mode("light")
