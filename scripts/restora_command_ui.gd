@@ -931,7 +931,7 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
         var icon_alpha := 0.42 if locked else 1.0
         _add_icon(button, "NavIcon", icon_keys[i], Rect2((button.custom_minimum_size.x - 20.0) * 0.5, 5, 20, 20), "gold" if i == active_tab else "muted", icon_alpha, NAV_ICON_ROOT)
 
-        var label = _label(button, "NavLabel", labels[i], Rect2(2, 34, button.custom_minimum_size.x - 4, 16), 10, "text" if i == active_tab else "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
+        var label = _label(button, "NavLabel", labels[i], Rect2(2, 33, button.custom_minimum_size.x - 4, 19), 11, "text" if i == active_tab else "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
         label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
         if locked:
             _label(button, "UnlockLevel", "L%d" % _unlock_level(required_unlock), Rect2(button.custom_minimum_size.x - 23, 3, 18, 11), 7, "muted", 700, HORIZONTAL_ALIGNMENT_RIGHT)
@@ -1098,7 +1098,7 @@ func _frame_button(parent_node: Node, name: String, text_value: String, rect: Re
     b.mouse_filter = Control.MOUSE_FILTER_PASS
     b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
     b.add_theme_font_override("font", _font(600))
-    b.add_theme_font_size_override("font_size", maxi(9, int(round(float(font_size) * _ui_text_scale()))))
+    b.add_theme_font_size_override("font_size", maxi(11, int(round(float(font_size) * _ui_text_scale()))))
     var bg = _color("gold") if gold_fill else (_color("selected") if selected else _color("surface_2"))
     var border = _color("gold") if gold_fill else (_color("plum") if selected else _color("border"))
     # White limestone text clears normal-size contrast on the brass CTA.
@@ -1671,40 +1671,34 @@ func _build_more_section(title: String, items: Array, y: float, inner_w: float, 
     return y + panel_h + 12.0
 
 func _build_mobile_guide() -> void:
-    if mobile_content != null:
-        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 948.0)
-        mobile_content.size.y = maxf(mobile_content.size.y, 948.0)
-
+    # Put the actionable, simulation-driven next step before explanatory copy.
+    # On 320px phones the first decision is visible without a long scroll.
     var w := _content_width()
     var inner_w := w - 36.0
-    _header("HOW RESTORA WORKS", "ONE LOOP • THREE PHASES")
+    _header("YOUR RESTORA GUIDE", "RESTORE · OPERATE · GROW")
 
-    var intro := _panel(mobile_content, "GuideIntro", Rect2(18, 66, inner_w, 116), "selected", "plum", 18)
-    _label(intro, "Head", "THE CORE IDEA", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 600)
-    _label(intro, "Body", "Take an abandoned property, restore it, turn it into a working business, earn from it, then reinvest to grow.", Rect2(16, 42, inner_w - 32, 58), 12, "text", 500)
+    var next := _panel(mobile_content, "GuideNextMove", Rect2(18, 68, inner_w, 182), "selected", "gold", 20)
+    _label(next, "Head", "YOUR NEXT MOVE", Rect2(16, 14, inner_w - 32, 19), 12, "gold", 700)
+    _label(next, "Title", _objective_title(), Rect2(16, 40, inner_w - 32, 32), 19, "text", 700)
+    _label(next, "Detail", _objective_detail(), Rect2(16, 78, inner_w - 32, 43), 12, "text", 400)
+    _frame_button(next, "GoNext", "TAKE ME THERE", Rect2(16, 130, inner_w - 32, 48), Callable(self, "_open_objective_next"), false, true, 12)
 
-    var restore := _panel(mobile_content, "GuideRestore", Rect2(18, 214, inner_w, 176), "surface", "border", 18)
-    _label(restore, "Phase", "1  •  RESTORE", Rect2(16, 14, 160, 16), 11, "gold", 700)
-    _label(restore, "Steps", "Inspect the property  >  Acquire it  >  Complete every restoration stage.", Rect2(16, 43, inner_w - 32, 44), 11, "text", 500)
-    _label(restore, "Why", "Reach OPERATIONAL to unlock business setup.", Rect2(16, 90, inner_w - 32, 30), 9, "muted", 500)
-    _frame_button(restore, "GoRestore", "GO TO PROPERTY", Rect2(16, 126, inner_w - 32, 44), _show_view.bind("property"), false, true, 9)
+    var restore := _panel(mobile_content, "GuideRestore", Rect2(18, 268, inner_w, 164), "surface", "border", 18)
+    _label(restore, "Phase", "01   RESTORE", Rect2(16, 14, inner_w - 32, 22), 14, "gold", 700)
+    _label(restore, "Steps", "Inspect the building. Acquire it and finish its restoration stages.", Rect2(16, 43, inner_w - 32, 50), 12, "text", 400)
+    _frame_button(restore, "GoRestore", "VIEW PROPERTY", Rect2(16, 108, inner_w - 32, 48), _show_view.bind("property"), false, false, 12)
 
-    var operate := _panel(mobile_content, "GuideOperate", Rect2(18, 406, inner_w, 190), "surface", "border", 18)
-    _label(operate, "Phase", "2  •  OPERATE", Rect2(16, 14, 160, 16), 11, "gold", 700)
-    _label(operate, "Steps", "Open a business  >  Buy inputs  >  Produce goods  >  Sell goods.", Rect2(16, 43, inner_w - 32, 44), 11, "text", 500)
-    _label(operate, "Why", "Inputs become stock. Selling stock creates revenue and profit.", Rect2(16, 94, inner_w - 32, 34), 9, "muted", 500)
-    _frame_button(operate, "GoOperate", "GO TO BUSINESS", Rect2(16, 140, inner_w - 32, 44), _show_view.bind("operate"), false, true, 9)
+    var operate := _panel(mobile_content, "GuideOperate", Rect2(18, 450, inner_w, 164), "surface", "border", 18)
+    _label(operate, "Phase", "02   OPERATE", Rect2(16, 14, inner_w - 32, 22), 14, "gold", 700)
+    _label(operate, "Steps", "Open a business. Buy inputs, make goods and sell to real demand.", Rect2(16, 43, inner_w - 32, 50), 12, "text", 400)
+    _frame_button(operate, "GoOperate", "VIEW BUSINESS", Rect2(16, 108, inner_w - 32, 48), _show_view.bind("operate"), false, false, 12)
 
-    var grow := _panel(mobile_content, "GuideGrow", Rect2(18, 612, inner_w, 152), "surface", "border", 18)
-    _label(grow, "Phase", "3  •  GROW", Rect2(16, 14, 160, 16), 11, "gold", 700)
-    _label(grow, "Steps", "Reinvest profit into capacity, better assets, contracts, regions and competitive strength.", Rect2(16, 43, inner_w - 32, 46), 11, "text", 500)
-    _label(grow, "Why", "These systems support growth; they are not your starting point.", Rect2(16, 96, inner_w - 32, 34), 9, "muted", 500)
+    var grow := _panel(mobile_content, "GuideGrow", Rect2(18, 632, inner_w, 132), "surface", "border", 18)
+    _label(grow, "Phase", "03   GROW", Rect2(16, 14, inner_w - 32, 22), 14, "gold", 700)
+    _label(grow, "Steps", "Reinvest profits into staff, properties and regions. New systems open as your company levels up.", Rect2(16, 45, inner_w - 32, 73), 12, "text", 400)
 
-    var next := _panel(mobile_content, "GuideNextMove", Rect2(18, 780, inner_w, 150), "surface", "gold", 18)
-    _label(next, "Head", "YOUR NEXT MOVE", Rect2(16, 14, inner_w - 32, 14), 10, "gold", 700)
-    _label(next, "Title", _objective_title(), Rect2(16, 40, inner_w - 32, 24), 16, "text", 700)
-    _label(next, "Detail", _objective_detail(), Rect2(16, 68, inner_w - 32, 28), 9, "muted", 500)
-    _frame_button(next, "GoNext", "TAKE ME THERE", Rect2(16, 100, inner_w - 32, 44), _show_view.bind(_objective_view()), false, true, 9)
+    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 790.0)
+    mobile_content.size.y = maxf(mobile_content.size.y, 790.0)
 
 func _build_mobile_settings() -> void:
     if mobile_content != null:
@@ -1862,7 +1856,7 @@ func _build_desktop_live() -> void:
     _label(objective, "Head", "NEXT OBJECTIVE", Rect2(18,16,200,19), 12, "gold", 600)
     _remember("desktop_objective_title", _label(objective, "Title", _objective_title(), Rect2(18,44,440,28), 22, "text", 700))
     _remember("desktop_objective_body", _label(objective, "Body", _objective_detail(), Rect2(18,80,580,50), 15, "muted", 400))
-    _frame_button(objective, "OpenNextObjective", "OPEN NEXT STEP", Rect2(18,136,210,38), Callable(self, "_open_objective_next"), false, true, 12)
+    _frame_button(objective, "OpenNextObjective", "OPEN NEXT STEP", Rect2(18,128,224,48), Callable(self, "_open_objective_next"), false, true, 12)
 
     var signals = _panel(canvas, "Signals", Rect2(620,426,304,230), "surface", "border", 18)
     _label(signals, "Head", "SIGNALS", Rect2(18,16,180,19), 12, "gold", 600)
@@ -1870,10 +1864,10 @@ func _build_desktop_live() -> void:
 
     var quick = _panel(canvas, "QuickActions", Rect2(942,426,304,230), "selected", "plum", 18)
     _label(quick, "Head", "QUICK ACTIONS", Rect2(18,16,180,19), 12, "gold", 600)
-    _frame_button(quick, "OpenBuilding", "PROPERTY", Rect2(18,48,268,38), _show_view.bind("property"), false, false, 13)
-    _frame_button(quick, "OpenBusiness", "BUSINESS", Rect2(18,92,268,38), _show_view.bind("operate"), false, false, 13)
-    _remember("desktop_finance_action", _frame_button(quick, "OpenFinance", "FINANCE", Rect2(18,136,268,38), _show_view.bind("finance"), false, false, 13))
-    _frame_button(quick, "OpenMore", "MORE", Rect2(18,180,268,38), _show_view.bind("more"), false, false, 13)
+    _frame_button(quick, "OpenBuilding", "PROPERTY", Rect2(18,48,268,40), _show_view.bind("property"), false, false, 13)
+    _frame_button(quick, "OpenBusiness", "BUSINESS", Rect2(18,92,268,40), _show_view.bind("operate"), false, false, 13)
+    _remember("desktop_finance_action", _frame_button(quick, "OpenFinance", "FINANCE", Rect2(18,136,268,40), _show_view.bind("finance"), false, false, 13))
+    _frame_button(quick, "OpenMore", "MORE", Rect2(18,180,268,40), _show_view.bind("more"), false, false, 13)
 
 func _desktop_stat(parent_node: Node, name: String, rect: Rect2, label_text: String, value_text: String, ref_key := "") -> void:
     var p = _panel(parent_node, name, rect, "surface", "border", 16)
