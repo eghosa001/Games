@@ -86,18 +86,30 @@ func _run() -> void:
     hud.open_figma_view("guide")
     await process_frame
     content = hud.get("mobile_content") as Control
-    var intro_body := content.get_node_or_null("GuideIntro/Body") as Label
+    var next_panel := content.get_node_or_null("GuideNextMove") as Control
+    var next_action := content.get_node_or_null("GuideNextMove/GoNext") as Button
+    var next_detail := content.get_node_or_null("GuideNextMove/Detail") as Label
     var restore_steps := content.get_node_or_null("GuideRestore/Steps") as Label
-    var restore_why := content.get_node_or_null("GuideRestore/Why") as Control
-    var restore_button := content.get_node_or_null("GuideRestore/GoRestore") as Control
-    var operate_why := content.get_node_or_null("GuideOperate/Why") as Control
-    var operate_button := content.get_node_or_null("GuideOperate/GoOperate") as Control
+    var restore_button := content.get_node_or_null("GuideRestore/GoRestore") as Button
+    var operate_steps := content.get_node_or_null("GuideOperate/Steps") as Label
+    var operate_button := content.get_node_or_null("GuideOperate/GoOperate") as Button
     var grow_panel := content.get_node_or_null("GuideGrow") as Control
-    var grow_why := content.get_node_or_null("GuideGrow/Why") as Label
-    check("guide body wraps instead of clipping", intro_body != null and intro_body.get_line_count() >= 2 and restore_steps != null and restore_steps.get_line_count() >= 2)
-    check("RESTORE explanation clears its action", restore_why != null and restore_button != null and restore_why.get_global_rect().end.y <= restore_button.get_global_rect().position.y)
-    check("OPERATE explanation clears its action", operate_why != null and operate_button != null and operate_why.get_global_rect().end.y <= operate_button.get_global_rect().position.y)
-    check("GROW explanation fits its card", grow_panel != null and grow_why != null and grow_why.get_line_count() >= 2 and grow_panel.get_global_rect().encloses(grow_why.get_global_rect()))
+    var grow_steps := content.get_node_or_null("GuideGrow/Steps") as Label
+    check("guide presents simulation-driven next move first", next_panel != null and next_panel.position.y < 100.0)
+    check("guide next action uses a full 48px touch target", next_action != null and next_action.size.y >= 48.0)
+    check("guide next action clears its description", next_detail != null and next_action != null and next_detail.get_global_rect().end.y < next_action.get_global_rect().position.y)
+    check("RESTORE explanation stays above its action", restore_steps != null and restore_button != null and restore_steps.get_global_rect().end.y < restore_button.get_global_rect().position.y)
+    check("OPERATE explanation stays above its action", operate_steps != null and operate_button != null and operate_steps.get_global_rect().end.y < operate_button.get_global_rect().position.y)
+    check("GROW explanation fits its card", grow_panel != null and grow_steps != null and grow_panel.get_global_rect().encloses(grow_steps.get_global_rect()))
+    hud.open_figma_view("before_after")
+    await process_frame
+    var detail_content := hud.get("mobile_content") as Control
+    var metric0 := detail_content.get_node_or_null("FlowMetric0") as Control
+    var metric1 := detail_content.get_node_or_null("FlowMetric1") as Control
+    var detail_label := detail_content.get_node_or_null("FlowDetails/Detail0/Text") as Label
+    check("detail metric cards retain readable width", metric0 != null and metric0.size.x > 90.0)
+    check("detail text uses 12px or larger", detail_label != null and detail_label.get_theme_font_size("font_size") >= 12)
+    check("detail metric layout uses three columns on regular 390px phones", metric0 != null and metric1 != null and metric1.position.y == metric0.position.y)
     for target in [Vector2i(320,568), Vector2i(390,844), Vector2i(480,800)]:
         root.size = target
         await process_frame
