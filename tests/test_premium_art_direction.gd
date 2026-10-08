@@ -29,7 +29,7 @@ func _run()->void:
     var main_scene:=FileAccess.get_file_as_string("res://scenes/Main.tscn")
     check("production runtime no longer mounts World3D",not main_scene.contains("RestoraWorld3D.tscn") and not main_scene.contains("name=\"World3D\""))
     var enhancer:=FileAccess.get_file_as_string("res://scripts/restora_figma_enhancer.gd")
-    check("property presentation uses Figma-inspired restoration imagery",enhancer.contains("restora_calder_works.svg") and enhancer.contains("restora_region_map.svg"))
+    check("property presentation uses Figma-inspired restoration imagery",enhancer.contains("building_warehouse_progression.svg") and enhancer.contains("restora_region_map.svg"))
     check("navigation uses dedicated minimal icon set",shell.contains("NavIcons/") and shell.contains("NAV_ICON_ROOT"))
     var tutorial:=FileAccess.get_file_as_string("res://scripts/tutorial_overlay.gd")
     check("onboarding progress remains visible",tutorial.contains("progress_bar") and tutorial.contains("STEP %d/%d"))

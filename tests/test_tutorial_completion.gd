@@ -82,13 +82,14 @@ func _run() -> void:
     var status: Dictionary = overlay.tutorial_status()
     check(not bool(status.get("dismissed", true)), "Fresh game keeps tutorial active")
     check(_step(overlay) == 0, "Tutorial begins at Inspect")
-    check(not overlay.panel.visible and overlay.collapsed_button.visible, "Fresh phone keeps teaching compact and clear of the command deck")
-    check(overlay.collapsed_button.size.y >= 44.0, "Mobile GUIDE chip remains touch reachable")
+    # The authored phone UX uses Home's next-step and the More > How to Play
+    # route, not a floating chip that obstructs the bottom navigation.
+    check(not overlay.panel.visible and not overlay.collapsed_button.visible, "Fresh phone keeps floating tutorial controls off the command deck")
 
     overlay.hide_tutorial()
     await _wait(2)
     check(bool((overlay.tutorial_status() as Dictionary).get("dismissed", false)), "Tutorial can be dismissed")
-    check(overlay.collapsed_button.visible, "Dismissed mobile tutorial keeps the GUIDE entry point")
+    check(not overlay.collapsed_button.visible, "Dismissed tutorial does not cover the Figma phone navigation")
     overlay.open_tutorial()
     await _wait(2)
     check(not bool((overlay.tutorial_status() as Dictionary).get("dismissed", true)), "GUIDE can reopen tutorial")

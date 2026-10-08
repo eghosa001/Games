@@ -31,6 +31,18 @@ func _run()->void:
     var hero:=content.get_node_or_null("ExecutiveHero") as Control
     check("home hero exists",hero!=null)
     check("home hero is readable size",hero!=null and hero.size.y>=170.0)
+    for _frame in range(3):
+        await process_frame
+    var stage_art := hero.get_node_or_null("ActiveRestorationArt") as TextureRect if hero!=null else null
+    var title := hero.get_node_or_null("HeroTitle") as Label if hero!=null else null
+    var goal := hero.get_node_or_null("HeroGoal") as Label if hero!=null else null
+    var action := hero.get_node_or_null("PrimaryNextMove") as Button if hero!=null else null
+    check("mobile shows stage-correct property artwork",stage_art!=null and stage_art.texture is AtlasTexture)
+    check("mobile objective retains actual property",title!=null and title.text.contains("Riverside Warehouse"))
+    check("mobile image clears objective title",stage_art!=null and title!=null and not stage_art.get_global_rect().intersects(title.get_global_rect()))
+    check("mobile image clears objective description",stage_art!=null and goal!=null and not stage_art.get_global_rect().intersects(goal.get_global_rect()))
+    check("mobile primary action fits inside hero",action!=null and hero.get_global_rect().encloses(action.get_global_rect()))
+    check("mobile primary action retains true destination copy",action!=null and action.text=="OPEN NEXT STEP")
     check("compact command overview exists",content.get_node_or_null("CommandOverview")!=null)
     check("property overview link exists",content.find_child("OpenHomeProperties",true,false) is Button)
     var nav:=hud.get("bottom_nav") as Control
@@ -57,6 +69,11 @@ func _run()->void:
     check("desktop management canvas exists",desktop!=null)
     check("desktop property summary exists",desktop!=null and desktop.get_node_or_null("WorldPropertyView")!=null)
     check("desktop quick actions exist",desktop!=null and desktop.get_node_or_null("QuickActions")!=null)
+    var tutorial := game.get_node_or_null("UI/TutorialOverlay")
+    var tutorial_panel := tutorial.get("panel") as Panel if tutorial!=null else null
+    var tutorial_chip := tutorial.get("collapsed_button") as Button if tutorial!=null else null
+    check("first-session guide is not covering desktop metrics",tutorial_panel!=null and not tutorial_panel.visible)
+    check("desktop guide remains discoverable",tutorial_chip!=null and tutorial_chip.visible)
     var objective_title:=desktop.get_node_or_null("Objective/Title") as Label if desktop!=null else null
     check("desktop starts with inspection objective",objective_title!=null and objective_title.text.begins_with("Inspect "))
     game.inspect_property()
