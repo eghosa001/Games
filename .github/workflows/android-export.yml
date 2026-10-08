@@ -2,9 +2,9 @@ name: RENEW Android Export
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - restora-apk-5c0c431a-20261008
+  pull_request:
+    paths:
+      - .github/workflows/android-export.yml
 
 permissions:
   contents: read
