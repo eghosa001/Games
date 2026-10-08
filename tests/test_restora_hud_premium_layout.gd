@@ -63,6 +63,8 @@ func _run()->void:
     check("mobile objective retains actual property",title!=null and title.text.contains("Riverside Warehouse"))
     check("mobile image clears objective title",stage_art!=null and title!=null and not stage_art.get_global_rect().intersects(title.get_global_rect()))
     check("mobile image clears objective description",stage_art!=null and goal!=null and not stage_art.get_global_rect().intersects(goal.get_global_rect()))
+    if goal!=null:
+        print("MOBILE GOAL LAYOUT: lines=%d visible=%d rect=%s min=%s max=%s text=%s" % [goal.get_line_count(),goal.get_visible_line_count(),goal.get_global_rect(),goal.custom_minimum_size,goal.custom_maximum_size,goal.text])
     check("mobile objective wraps rather than clips its explanation",goal!=null and goal.get_line_count()>=3 and goal.get_visible_line_count()>=goal.get_line_count())
     check("mobile primary action fits inside hero",action!=null and hero.get_global_rect().encloses(action.get_global_rect()))
     check("mobile primary action retains true destination copy",action!=null and action.text=="OPEN NEXT STEP")
