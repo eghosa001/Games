@@ -835,12 +835,21 @@ func _build_mobile_host() -> void:
     mobile_scroll.position = Vector2(x0, 0)
     mobile_scroll.size = Vector2(canvas_w, scroll_h)
     mobile_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-    mobile_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+    mobile_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
     mobile_scroll.mouse_filter = Control.MOUSE_FILTER_PASS
-    mobile_scroll.follow_focus = false
+    mobile_scroll.follow_focus = true
     mobile_scroll.clip_contents = true
-    mobile_scroll.scroll_deadzone = 2
+    mobile_scroll.scroll_deadzone = 8
     mobile_scroll.scroll_vertical_custom_step = 72.0
+    var scrollbar := mobile_scroll.get_v_scroll_bar()
+    if scrollbar != null:
+        # Keep a narrow, visible scroll position indicator without obscuring
+        # the 18px safe padding around interactive card content.
+        scrollbar.custom_minimum_size.x = 5.0
+        scrollbar.add_theme_stylebox_override("scroll", _solid_round(_color("surface_2"), 3))
+        scrollbar.add_theme_stylebox_override("grabber", _solid_round(_color("gold"), 3))
+        scrollbar.add_theme_stylebox_override("grabber_highlight", _solid_round(_color("gold").lightened(0.16), 3))
+        scrollbar.add_theme_stylebox_override("grabber_pressed", _solid_round(_color("gold"), 3))
     root.add_child(mobile_scroll)
 
     mobile_content = Control.new()
@@ -1669,7 +1678,7 @@ func _build_more_section(title: String, items: Array, y: float, inner_w: float, 
             hit = _transparent_button(section, "Open"+target, Rect2(0, row_y, inner_w, row_h), _show_view.bind(target))
         else:
             hit = _transparent_button(section, "Open"+target, Rect2(0, row_y, inner_w, row_h), _open_screen.bind(target))
-        hit.action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+        hit.action_mode = BaseButton.ACTION_MODE_BUTTON_RELEASE
         hit.disabled = locked
         if locked:
             hit.tooltip_text = body_text
