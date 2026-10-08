@@ -72,6 +72,9 @@ func _run()->void:
     check("property overview link exists",content.find_child("OpenHomeProperties",true,false) is Button)
     var nav:=hud.get("bottom_nav") as Control
     check("mobile nav stays inside viewport",nav!=null and Rect2(Vector2.ZERO,Vector2(root.size)).encloses(nav.get_global_rect()))
+    var home_nav:=nav.get_node_or_null("ProductionTabs/Nav_HOME") as Button if nav!=null else null
+    var home_icon:=home_nav.get_node_or_null("NavIcon") as TextureRect if home_nav!=null else null
+    check("bottom nav icon remains inside its actual button slot",home_icon!=null and home_icon.stretch_mode==TextureRect.STRETCH_SCALE and home_icon.clip_contents and home_icon.get_global_rect().size.x<=22.0 and home_icon.get_global_rect().size.y<=22.0)
     var theme:=root.get_node_or_null("RestoraThemeManager")
     if theme!=null:
         theme.set_mode("light")
