@@ -85,7 +85,7 @@ func _run()->void:
     var level_state:=root.get_node_or_null("RenewGameState")
     if level_state!=null and finance_nav!=null:
         var starting_level:=int(level_state.get_value("progression","level",1))
-        var starting_unlocks:=level_state.get_value("progression","unlocks",[]).duplicate(true)
+        var starting_unlocks: Array = (level_state.get_value("progression","unlocks",[]) as Array).duplicate(true)
         check("Finance starts locked at level one",starting_level==1 and finance_nav.disabled)
         var previous_signature:=str(hud.call("_state_signature"))
         level_state.set_value("progression","level",2)
