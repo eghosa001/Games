@@ -909,7 +909,7 @@ func _build_bottom_nav(x0: float, canvas_w: float, viewport_h: float) -> void:
         var icon_alpha := 0.42 if locked else 1.0
         _add_icon(button, "NavIcon", icon_keys[i], Rect2((button.custom_minimum_size.x - 20.0) * 0.5, 5, 20, 20), "gold" if i == active_tab else "muted", icon_alpha, NAV_ICON_ROOT)
 
-        var label = _label(button, "NavLabel", labels[i], Rect2(2, 34, button.custom_minimum_size.x - 4, 16), 8, "text" if i == active_tab else "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
+        var label = _label(button, "NavLabel", labels[i], Rect2(2, 34, button.custom_minimum_size.x - 4, 16), 10, "text" if i == active_tab else "muted", 600, HORIZONTAL_ALIGNMENT_CENTER)
         label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
         if locked:
             _label(button, "UnlockLevel", "L%d" % _unlock_level(required_unlock), Rect2(button.custom_minimum_size.x - 23, 3, 18, 11), 7, "muted", 700, HORIZONTAL_ALIGNMENT_RIGHT)
@@ -1093,9 +1093,9 @@ func _stat_tile(parent_node: Node, key: String, x: float, y: float, w: float, la
     var icon_map := {"cash":"finance","worth":"empire","rep":"people","goods":"production","inputs":"supply","debt":"finance","revenue":"market","equity":"empire","asset_value":"property","daily_income":"finance"}
     var icon_key := str(icon_map.get(key, "intelligence"))
     _add_icon(p, "StatIcon", icon_key, Rect2(w - 38, 11, 22, 22), "gold", 0.86)
-    _remember(key + "_label", _label(p, "Label", label_text, Rect2(15, 13, w - 54, 14), 9, "gold", 600))
+    _remember(key + "_label", _label(p, "Label", label_text, Rect2(15, 13, w - 54, 14), 11, "gold", 600))
     _remember(key + "_value", _label(p, "Value", value_text, Rect2(15, 36, w - 30, 32), 24, "text", 700))
-    _remember(key + "_meta", _label(p, "Meta", meta_text, Rect2(15, 75, w - 30, 14), 9, "muted", 600))
+    _remember(key + "_meta", _label(p, "Meta", meta_text, Rect2(15, 75, w - 30, 14), 10, "muted", 600))
     return p
 
 func _content_width() -> float:
@@ -1139,7 +1139,7 @@ func _build_mobile_live() -> void:
     rail.mouse_filter = Control.MOUSE_FILTER_IGNORE
     rail.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 0))
     hero.add_child(rail)
-    _label(hero, "Eyebrow", "NEXT MOVE", Rect2(21, 16, 110, 14), 9, "gold", 600)
+    _label(hero, "Eyebrow", "NEXT MOVE", Rect2(21, 16, 110, 14), 10, "gold", 600)
     _remember("hero_title", _label(hero, "HeroTitle", _objective_title(), Rect2(21, 39, inner_w - 42, 30), 20, "text", 700))
     hero_goal = _label(hero, "HeroGoal", _objective_detail(), Rect2(21, 73, inner_w - 42, 34), 10, "muted", 400)
     _remember("hero_goal", hero_goal)
@@ -1167,7 +1167,7 @@ func _build_mobile_live() -> void:
     var loop = _panel(mobile_content, "CoreLoop", Rect2(18, 508, inner_w, 112), "surface", "border", 18)
     _label(loop, "Head", "YOUR PATH", Rect2(15, 14, inner_w - 30, 14), 10, "gold", 600)
     _label(loop, "Path", "1  RESTORE  >  2  OPERATE  >  3  GROW", Rect2(15, 38, inner_w - 30, 18), 11, "text", 700)
-    _remember("signal_footer", _label(loop, "Current", _core_loop_status(), Rect2(15, 66, inner_w - 30, 32), 9, "success", 600))
+    _remember("signal_footer", _label(loop, "Current", _core_loop_status(), Rect2(15, 66, inner_w - 30, 32), 10, "success", 600))
 
     var overview = _panel(mobile_content, "CommandOverview", Rect2(18, 636, inner_w, 168), "surface", "border", 18)
     _label(overview, "Head", "MANAGEMENT OVERVIEW", Rect2(15, 12, inner_w - 30, 14), 10, "gold", 600)
@@ -1765,9 +1765,9 @@ func _build_desktop_live() -> void:
     root.add_child(canvas)
 
     _label(canvas, "Brand", "RESTORA", Rect2(34,26,240,34), 28, "text", 700)
-    _label(canvas, "Mode", "EXECUTIVE COMMAND • DAY %d" % _day(), Rect2(34,62,300,16), 10, "gold", 600)
+    _label(canvas, "Mode", "EXECUTIVE COMMAND • DAY %d" % _day(), Rect2(34,62,300,20), 12, "gold", 600)
     var world = _panel(canvas, "WorldPropertyView", Rect2(34,104,560,552), "surface", "border", 24)
-    _label(world, "Head", "PROPERTY PORTFOLIO", Rect2(21,19,250,16), 11, "gold", 600)
+    _label(world, "Head", "PROPERTY PORTFOLIO", Rect2(21,19,250,19), 13, "gold", 600)
     var scene = _panel(world, "Scene", Rect2(21,57,516,316), "surface_2", "border", 20)
     # Use a cropped frame of the existing six-stage warehouse artwork instead of
     # leaving a large empty card. It follows the authoritative restoration stage.
@@ -1787,20 +1787,20 @@ func _build_desktop_live() -> void:
         scene.add_child(preview)
         _remember("desktop_property_art", preview)
     _remember("desktop_property_name", _label(scene, "PropertyName", _building_name(), Rect2(24,28,214,48), 19, "text", 700))
-    _remember("desktop_property_type", _label(scene, "PropertyType", _building_type(), Rect2(24,79,214,20), 12, "muted", 500))
+    _remember("desktop_property_type", _label(scene, "PropertyType", _building_type(), Rect2(24,79,214,22), 14, "muted", 500))
     _remember("desktop_property_upgrade", _label(scene, "Upgrade", "UPGRADE LEVEL %d/6" % (_building_stage_slot() + 1), Rect2(24,124,214,24), 15, "gold", 700))
     _remember("desktop_property_progress", _label(scene, "Progress", "%d%% RESTORED" % _building_progress(), Rect2(24,162,214,24), 15, "success", 700))
-    _remember("desktop_property_stage", _label(scene, "Stage", _building_stage_name(), Rect2(24,204,214,42), 12, "text", 600))
-    _remember("desktop_property_meta", _label(world, "Meta", "%s • %s\n%d%% restored • %s market value" % [_building_name(), _building_type(), _building_progress(), _money(int(_selected_building().get("value", 0)))], Rect2(21,394,500,54), 14, "text", 400))
+    _remember("desktop_property_stage", _label(scene, "Stage", _building_stage_name(), Rect2(24,204,214,42), 14, "text", 600))
+    _remember("desktop_property_meta", _label(world, "Meta", "%s • %s\n%d%% restored • %s market value" % [_building_name(), _building_type(), _building_progress(), _money(int(_selected_building().get("value", 0)))], Rect2(21,394,500,54), 15, "text", 400))
     var phases := ["cleaning", "repair", "painting", "furnishing"]
     var selected := _selected_building()
     for i in range(phases.size()):
         var phase: String = phases[i]
         var x: float = 21.0 + float(i % 2) * 248.0
         var y: float = 462.0 + float(floori(float(i) / 2.0)) * 43.0
-        _label(world, "PhaseName_" + phase, phase.to_upper(), Rect2(x,y,155,17), 11, "text", 600)
+        _label(world, "PhaseName_" + phase, phase.to_upper(), Rect2(x,y,155,17), 12, "text", 600)
         var percent: int = clampi(int(selected.get(phase, 0)), 0, 100)
-        _remember("desktop_phase_text_" + phase, _label(world, "PhaseValue_" + phase, "%d%%" % percent, Rect2(x+164,y,56,17), 11, "gold", 600, HORIZONTAL_ALIGNMENT_RIGHT))
+        _remember("desktop_phase_text_" + phase, _label(world, "PhaseValue_" + phase, "%d%%" % percent, Rect2(x+164,y,56,17), 12, "gold", 600, HORIZONTAL_ALIGNMENT_RIGHT))
         var track := _panel(world, "PhaseTrack_" + phase, Rect2(x,y+22,220,8), "surface_2", "border", 4)
         var phase_fill := Panel.new()
         phase_fill.name = "Fill"
@@ -1817,17 +1817,17 @@ func _build_desktop_live() -> void:
     _desktop_stat(canvas, "Rep", Rect2(1028,104,218,96), "REP", str(_rep()), "rep")
 
     var objective = _panel(canvas, "Objective", Rect2(620,220,626,184), "surface", "border", 18)
-    _label(objective, "Head", "NEXT OBJECTIVE", Rect2(18,16,200,16), 10, "gold", 600)
+    _label(objective, "Head", "NEXT OBJECTIVE", Rect2(18,16,200,19), 12, "gold", 600)
     _remember("desktop_objective_title", _label(objective, "Title", _objective_title(), Rect2(18,44,440,28), 22, "text", 700))
-    _remember("desktop_objective_body", _label(objective, "Body", _objective_detail(), Rect2(18,80,580,48), 13, "muted", 400))
+    _remember("desktop_objective_body", _label(objective, "Body", _objective_detail(), Rect2(18,80,580,50), 15, "muted", 400))
     _frame_button(objective, "OpenNextObjective", "OPEN NEXT STEP", Rect2(18,136,210,38), Callable(self, "_open_objective_next"), false, true, 12)
 
     var signals = _panel(canvas, "Signals", Rect2(620,426,304,230), "surface", "border", 18)
-    _label(signals, "Head", "SIGNALS", Rect2(18,16,180,16), 10, "gold", 600)
-    _remember("desktop_signals", _label(signals, "Body", _signal_lines(), Rect2(18,50,260,120), 13, "text", 400))
+    _label(signals, "Head", "SIGNALS", Rect2(18,16,180,19), 12, "gold", 600)
+    _remember("desktop_signals", _label(signals, "Body", _signal_lines(), Rect2(18,50,260,120), 15, "text", 400))
 
     var quick = _panel(canvas, "QuickActions", Rect2(942,426,304,230), "selected", "plum", 18)
-    _label(quick, "Head", "QUICK ACTIONS", Rect2(18,16,180,16), 10, "gold", 600)
+    _label(quick, "Head", "QUICK ACTIONS", Rect2(18,16,180,19), 12, "gold", 600)
     _frame_button(quick, "OpenBuilding", "PROPERTY", Rect2(18,48,268,38), _show_view.bind("property"), false, false, 13)
     _frame_button(quick, "OpenBusiness", "BUSINESS", Rect2(18,92,268,38), _show_view.bind("operate"), false, false, 13)
     _remember("desktop_finance_action", _frame_button(quick, "OpenFinance", "FINANCE", Rect2(18,136,268,38), _show_view.bind("finance"), false, false, 13))
@@ -1835,11 +1835,11 @@ func _build_desktop_live() -> void:
 
 func _desktop_stat(parent_node: Node, name: String, rect: Rect2, label_text: String, value_text: String, ref_key := "") -> void:
     var p = _panel(parent_node, name, rect, "surface", "border", 16)
-    _label(p, "Label", label_text, Rect2(14,12,rect.size.x-28,14), 9, "gold", 600)
+    _label(p, "Label", label_text, Rect2(14,12,rect.size.x-28,18), 11, "gold", 600)
     var value_label := _label(p, "Value", value_text, Rect2(14,36,rect.size.x-28,30), 23, "text", 700)
     if not ref_key.is_empty():
         _remember(ref_key + "_value", value_label)
-    _label(p, "Meta", "LIVE", Rect2(14,72,rect.size.x-28,14), 9, "muted", 600)
+    _label(p, "Meta", "LIVE", Rect2(14,72,rect.size.x-28,16), 11, "muted", 600)
 
 func _build_tablet_live() -> void:
     var size = _layout_size()
