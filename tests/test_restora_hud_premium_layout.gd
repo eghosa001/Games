@@ -11,6 +11,11 @@ func check(label:String,ok:bool)->void:
         failed += 1
         push_error("FAIL: "+label)
 
+func _text_contrast(fg: Color, bg: Color) -> float:
+    var a: float = fg.srgb_to_linear().get_luminance()
+    var b: float = bg.srgb_to_linear().get_luminance()
+    return (maxf(a, b) + 0.05) / (minf(a, b) + 0.05)
+
 func _run()->void:
     root.content_scale_mode=Window.CONTENT_SCALE_MODE_DISABLED
     root.size=Vector2i(390,844)
@@ -143,6 +148,20 @@ func _run()->void:
     check("warm limestone palette",theme!=null and theme.color("bg").to_html(false)=="f1ece1")
     check("aged brass accent",theme!=null and theme.color("gold").to_html(false)=="9a6728")
     check("plum selection",theme!=null and theme.color("plum").to_html(false)=="74465a")
+    if theme!=null:
+        for mode in ["light","dark"]:
+            theme.set_mode(mode)
+            for _frame in range(3):
+                await process_frame
+            var theming_hero:=(hud.get("mobile_content") as Control).get_node_or_null("ExecutiveHero") as Control
+            var primary:=theming_hero.get_node_or_null("PrimaryNextMove") as Button if theming_hero!=null else null
+            for button_state in ["normal","hover","pressed","focus"]:
+                var fill:=primary.get_theme_stylebox(button_state) as StyleBoxFlat if primary!=null else null
+                var fg_color:=primary.get_theme_color("font_color") if primary!=null else Color.BLACK
+                var ratio:=_text_contrast(fg_color,fill.bg_color) if fill!=null else 0.0
+                check("%s primary %s has >=4.5 text contrast" % [mode,button_state],ratio>=4.5 and fill!=null and fill.bg_color.a>=0.99)
+        theme.set_mode("light")
+        await process_frame
     for detail_view in ["property_overview", "before_after"]:
         hud.open_figma_view(detail_view)
         await process_frame

@@ -1101,11 +1101,25 @@ func _frame_button(parent_node: Node, name: String, text_value: String, rect: Re
     b.add_theme_font_size_override("font_size", maxi(9, int(round(float(font_size) * _ui_text_scale()))))
     var bg = _color("gold") if gold_fill else (_color("selected") if selected else _color("surface_2"))
     var border = _color("gold") if gold_fill else (_color("plum") if selected else _color("border"))
-    var fg = _color("bg") if gold_fill else (_color("gold") if selected else _color("text"))
-    b.add_theme_stylebox_override("normal", _style(bg, border, 12))
-    b.add_theme_stylebox_override("hover", _style(bg.lightened(0.05), border, 12))
-    b.add_theme_stylebox_override("pressed", _style(bg.darkened(0.05), border, 12))
-    b.add_theme_stylebox_override("focus", _style(bg.lightened(0.03), _color("gold"), 12))
+    # White limestone text clears normal-size contrast on the brass CTA.
+    # Using the warm page background only achieved ~4.1:1 in light mode.
+    var fg = (_color("surface") if _is_light_theme() else _color("bg")) if gold_fill else (_color("gold") if selected else _color("text"))
+    var hover_bg = bg.darkened(0.05) if gold_fill and _is_light_theme() else bg.lightened(0.05)
+    var pressed_bg = bg.darkened(0.09) if gold_fill and _is_light_theme() else bg.darkened(0.05)
+    var focus_bg = bg.darkened(0.03) if gold_fill and _is_light_theme() else bg.lightened(0.03)
+    var button_states = {
+        "normal": _style(bg, border, 12),
+        "hover": _style(hover_bg, border, 12),
+        "pressed": _style(pressed_bg, border, 12),
+        "focus": _style(focus_bg, _color("gold"), 12)
+    }
+    for state in button_states:
+        var style := button_states[state] as StyleBoxFlat
+        if gold_fill:
+            # Translucent gold was composited over a near-white panel, lowering
+            # the effective text contrast; full opacity stabilizes all states.
+            style.bg_color.a = 1.0
+        b.add_theme_stylebox_override(state, style)
     b.add_theme_color_override("font_color", fg)
     b.add_theme_color_override("font_hover_color", fg)
     b.add_theme_color_override("font_pressed_color", fg)
