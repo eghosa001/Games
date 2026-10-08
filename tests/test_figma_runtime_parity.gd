@@ -115,6 +115,11 @@ func _run() -> void:
         await process_frame
         hud._layout_responsive()
         await process_frame
+        if target.x == 320:
+            var compact_content := hud.get("mobile_content") as Control
+            var compact_first := compact_content.get_node_or_null("FlowMetric0") as Control
+            var compact_third := compact_content.get_node_or_null("FlowMetric2") as Control
+            check("320px details wrap to two metric columns", compact_first != null and compact_third != null and compact_third.position.y > compact_first.position.y)
         if hud.get("bottom_nav") != null:
             check("%s navigation contained" % target, _inside(hud.get("bottom_nav") as Control, target))
         if hud.get("mobile_scroll") != null:
