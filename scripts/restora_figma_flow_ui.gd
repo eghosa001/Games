@@ -486,8 +486,10 @@ func _render_screen(view_name: String, hud: Node, content: Control, spec: Dictio
         var button = hud.call("_frame_button", content, "FlowAction%d" % i, str(action[0]), Rect2(18, y, inner_w, 52), Callable(self, "_dispatch").bind(str(action[1]), hud), false, primary, 12)
         if button is Button:
             (button as Button).tooltip_text = str(action[0])
-            if NAV_ACTIONS.has(str(action[1])):
-                (button as Button).action_mode = BaseButton.ACTION_MODE_BUTTON_PRESS
+            # Detail actions live inside a ScrollContainer. Trigger on release
+            # rather than touch-down, so a drag that begins on an action can
+            # scroll the page instead of accidentally navigating away.
+            (button as Button).action_mode = BaseButton.ACTION_MODE_BUTTON_RELEASE
         y += 62.0
 
     content.custom_minimum_size.y = maxf(content.custom_minimum_size.y, y + 24.0)
