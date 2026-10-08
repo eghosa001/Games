@@ -4,6 +4,10 @@ extends CanvasLayer
 ## This is the runtime implementation of the approved Figma production screens.
 ## Gameplay remains authoritative in Main and domain systems; this layer is presentation + routing only.
 
+const WAREHOUSE_STAGES := preload("res://Assets/Art/building_warehouse_progression.svg")
+const WORKSHOP_STAGES := preload("res://Assets/Art/building_factory_progression.svg")
+const COMMERCIAL_STAGES := preload("res://Assets/Art/building_office_progression.svg")
+
 const MOBILE_DESIGN_W = 390.0
 const MOBILE_CONTENT_H = 744.0
 const MOBILE_NAV_H = 70.0
@@ -176,6 +180,15 @@ func _building_name() -> String:
 
 func _building_type() -> String:
     return str(_selected_building().get("type", "Warehouse"))
+
+func _property_stage_texture() -> Texture2D:
+    match _building_type():
+        "Workshop":
+            return WORKSHOP_STAGES
+        "Commercial Building":
+            return COMMERCIAL_STAGES
+        _:
+            return WAREHOUSE_STAGES
 
 func _building_progress(building: Dictionary = {}) -> int:
     var item := building if not building.is_empty() else _selected_building()
@@ -1735,7 +1748,7 @@ func _build_desktop_live() -> void:
     var scene = _panel(world, "Scene", Rect2(21,57,516,316), "surface_2", "border", 20)
     # Use a cropped frame of the existing six-stage warehouse artwork instead of
     # leaving a large empty card. It follows the authoritative restoration stage.
-    var sheet := load("res://Assets/Art/building_warehouse_progression.svg") as Texture2D
+    var sheet := _property_stage_texture()
     if sheet != null:
         var crop := AtlasTexture.new()
         crop.atlas = sheet
@@ -1846,7 +1859,10 @@ func _refresh() -> void:
             _set_ref_text("desktop_property_stage", _building_stage_name())
             var art := refs.get("desktop_property_art") as TextureRect
             if art != null and art.texture is AtlasTexture:
-                (art.texture as AtlasTexture).region = Rect2(0, clampi(_building_stage_slot(), 0, 5) * 144, 256, 144)
+                var stage_frame := art.texture as AtlasTexture
+                if stage_frame.atlas != _property_stage_texture():
+                    stage_frame.atlas = _property_stage_texture()
+                stage_frame.region = Rect2(0, clampi(_building_stage_slot(), 0, 5) * 144, 256, 144)
             _set_ref_text("desktop_objective_title", _objective_title())
             _set_ref_text("desktop_objective_body", _objective_detail())
             _set_ref_text("desktop_signals", _signal_lines())

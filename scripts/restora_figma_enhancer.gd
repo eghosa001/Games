@@ -5,12 +5,15 @@ extends Node
 ## storytelling surfaces without duplicating any simulation or navigation logic.
 
 const WAREHOUSE_STAGES := preload("res://Assets/Art/building_warehouse_progression.svg")
+const WORKSHOP_STAGES := preload("res://Assets/Art/building_factory_progression.svg")
+const COMMERCIAL_STAGES := preload("res://Assets/Art/building_office_progression.svg")
 const REGION_ART := preload("res://Assets/Art/restora_region_map.svg")
 
 var _last_content_id := 0
 var _last_view := ""
+var _art_refresh_elapsed := 0.0
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
     var hud := get_parent()
     if hud == null:
         return
@@ -22,9 +25,12 @@ func _process(_delta: float) -> void:
     var content_id: int = content.get_instance_id()
     var marker: Node = content.get_node_or_null("FigmaEnhancementMarker")
     if content_id == _last_content_id and view == _last_view and marker != null:
-        if view in ["live", "property"]:
+        _art_refresh_elapsed += delta
+        if _art_refresh_elapsed >= 0.25 and view in ["live", "property"]:
+            _art_refresh_elapsed = 0.0
             _sync_stage_art(content, hud, view)
         return
+    _art_refresh_elapsed = 0.0
     _last_content_id = content_id
     _last_view = view
     _add_marker(content)
@@ -47,10 +53,14 @@ func _add_marker(content: Control) -> void:
 func _art(name_value: String, texture: Texture2D, size_value: Vector2) -> TextureRect:
     var art := TextureRect.new()
     art.name = name_value
-    art.texture = texture
-    art.size = size_value
+    # Configure texture minimum sizing before assigning its source and bounds;
+    # otherwise Godot can retain the atlas's native 256x144 minimum and
+    # repaint beyond the intended 84px-tall mobile preview.
     art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    art.stretch_mode = TextureRect.STRETCH_SCALE
+    art.texture = texture
+    art.custom_minimum_size = Vector2.ZERO
+    art.size = size_value
     art.mouse_filter = Control.MOUSE_FILTER_IGNORE
     return art
 
@@ -80,12 +90,25 @@ func _shift_content(content: Control, threshold: float, amount: float, excluded:
     content.custom_minimum_size.y += amount
     content.size.y += amount
 
+func _property_sheet(hud: Node) -> Texture2D:
+    match str(hud.call("_building_type")):
+        "Workshop":
+            return WORKSHOP_STAGES
+        "Commercial Building":
+            return COMMERCIAL_STAGES
+        _:
+            return WAREHOUSE_STAGES
+
 func _stage_art(name_value: String, hud: Node, size_value: Vector2) -> TextureRect:
     var frame := AtlasTexture.new()
-    frame.atlas = WAREHOUSE_STAGES
+    frame.atlas = _property_sheet(hud)
     frame.region = Rect2(0, clampi(int(hud.call("_building_stage_slot")), 0, 5) * 144, 256, 144)
     var art := _art(name_value, frame, size_value)
-    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    # KEEP_ASPECT_CENTERED can paint the atlas at native 256x144
+    # outside its requested Control bounds. Scale the 16:9 stage frame into
+    # its allocated card and explicitly clip it, preventing button overlaps.
+    art.stretch_mode = TextureRect.STRETCH_SCALE
+    art.clip_contents = true
     return art
 
 func _sync_stage_art(content: Control, hud: Node, view: String) -> void:
@@ -94,6 +117,9 @@ func _sync_stage_art(content: Control, hud: Node, view: String) -> void:
     if art == null or not art.texture is AtlasTexture:
         return
     var frame := art.texture as AtlasTexture
+    var next_sheet := _property_sheet(hud)
+    if frame.atlas != next_sheet:
+        frame.atlas = next_sheet
     var next_y := float(clampi(int(hud.call("_building_stage_slot")), 0, 5) * 144)
     if not is_equal_approx(frame.region.position.y, next_y):
         frame.region = Rect2(0, next_y, 256, 144)
@@ -137,6 +163,7 @@ func _enhance_home(hud: Node, content: Control) -> void:
         action.text = "OPEN NEXT STEP"
         action.position = Vector2(21, 195)
         action.size = Vector2(hero.size.x - 42.0, 44)
+        action.add_theme_font_size_override("font_size", 12)
     for child in hero.get_children():
         if child is Panel:
             if is_equal_approx(child.position.y, 112.0):
@@ -153,8 +180,9 @@ func _enhance_property(hud: Node, content: Control) -> void:
     for child in selected.get_children():
         if child is Control:
             child.position.y += 112.0
-    var art := _stage_art("PropertyVisual", hud, Vector2(selected.size.x - 36.0, 112.0))
-    art.position = Vector2(18, 0)
+    var art_size := Vector2(minf(selected.size.x - 36.0, 199.0), 112.0)
+    var art := _stage_art("PropertyVisual", hud, art_size)
+    art.position = Vector2((selected.size.x - art_size.x) * 0.5, 0)
     selected.add_child(art)
     selected.move_child(art, 0)
     # Preserve the authoritative property name, type and valuation labels.
