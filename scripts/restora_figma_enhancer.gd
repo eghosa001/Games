@@ -157,7 +157,15 @@ func _enhance_home(hud: Node, content: Control) -> void:
     if goal != null:
         goal.position = Vector2(21, 103)
         goal.size = Vector2(maxf(110.0, art.position.x - 31.0), 74)
+        # The HUD initially builds this label at full card width. Update the
+        # wrapping constraint as well as size when the stage image is placed
+        # beside it; otherwise Godot measures text against its old width and
+        # clips the second half of the instruction.
+        goal.custom_minimum_size = Vector2.ZERO
+        goal.custom_maximum_size = goal.size
         goal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        goal.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+        goal.clip_text = true
         goal.add_theme_font_size_override("font_size", 10)
     if action != null:
         action.text = "OPEN NEXT STEP"
