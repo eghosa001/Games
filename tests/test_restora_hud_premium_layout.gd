@@ -44,6 +44,8 @@ func _run()->void:
     var action := hero.get_node_or_null("PrimaryNextMove") as Button if hero!=null else null
     check("mobile shows stage-correct property artwork",stage_art!=null and stage_art.texture is AtlasTexture)
     check("mobile artwork cannot draw beyond its card",stage_art!=null and stage_art.stretch_mode==TextureRect.STRETCH_SCALE and stage_art.clip_contents)
+    check("mobile stage artwork is a prominent visual",stage_art!=null and stage_art.size.x>=220.0 and stage_art.size.y>=120.0)
+    check("mobile stage hero is large enough for image and next action",hero!=null and hero.size.y>=370.0)
     if stage_art!=null and action!=null:
         print("STAGE ART GEOMETRY: art=%s action=%s" % [stage_art.get_global_rect(), action.get_global_rect()])
     check("mobile image leaves next-step action unobstructed",stage_art!=null and action!=null and not stage_art.get_global_rect().intersects(action.get_global_rect()))
@@ -201,6 +203,8 @@ func _run()->void:
                 if label=="FINANCE" and button!=null:
                     check("tablet finance respects unlock level",button.disabled==not bool(hud.call("_has_unlock","finance")))
     var tablet_now:=runtime.get_node_or_null("TabletLive") as Control
+    var tablet_art:=tablet_now.get_node_or_null("Hero/TabletRestorationArt") as TextureRect if tablet_now!=null else null
+    check("tablet has stage-specific architectural artwork",tablet_art!=null and tablet_art.texture is AtlasTexture and tablet_art.size.x>=200.0)
     var prop_tab:=tablet_now.get_node_or_null("Nav/TabletNav_PROPERTY") as Button if tablet_now!=null else null
     check("tablet property route is enabled",prop_tab!=null and not prop_tab.disabled)
     if prop_tab!=null:
@@ -222,10 +226,20 @@ func _run()->void:
     await process_frame
     desktop=runtime.get_node_or_null("DesktopExecutive") as Control
     check("same-class desktop resize re-fits canvas",desktop!=null and Rect2(Vector2.ZERO,Vector2(1100,760)).grow(1.0).encloses(desktop.get_global_rect()))
+    root.size=Vector2i(1280,577)
+    await process_frame
+    hud._layout_responsive()
+    await process_frame
+    desktop=runtime.get_node_or_null("DesktopExecutive") as Control
+    check("short desktop uses 560px-native canvas",desktop!=null and is_equal_approx(desktop.size.y,560.0) and desktop.scale.x>=0.99 and desktop.scale.y>=0.99)
+    var compact_quick:=desktop.get_node_or_null("QuickActions") as Control if desktop!=null else null
+    var compact_world:=desktop.get_node_or_null("WorldPropertyView") as Control if desktop!=null else null
+    check("short desktop keeps property and quick actions on-screen",compact_quick!=null and compact_world!=null and Rect2(Vector2.ZERO,Vector2(1280,577)).encloses(compact_quick.get_global_rect()) and Rect2(Vector2.ZERO,Vector2(1280,577)).encloses(compact_world.get_global_rect()))
     root.size=Vector2i(1280,720)
     await process_frame
     hud._layout_responsive()
     await process_frame
+    desktop=runtime.get_node_or_null("DesktopExecutive") as Control
     check("desktop property summary exists",desktop!=null and desktop.get_node_or_null("WorldPropertyView")!=null)
     check("desktop quick actions exist",desktop!=null and desktop.get_node_or_null("QuickActions")!=null)
     var desktop_objective_copy:=desktop.get_node_or_null("Objective/Body") as Label if desktop!=null else null
