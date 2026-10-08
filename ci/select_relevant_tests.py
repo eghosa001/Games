@@ -383,6 +383,12 @@ def select(changed: list[str]) -> tuple[list[str], list[str]]:
         groups.append("restora_flow")
         tests.add("tests/test_figma_flow_wiring.gd")
 
+    # Stage-specific property artwork and constrained hero text belong to the
+    # small RESTORA HUD geometry test, not an unrelated exhaustive UI matrix.
+    if any(path in {"scripts/restora_figma_enhancer.gd", "scripts/restora_figma_flow_ui.gd"} for path in changed):
+        groups.append("restora_art_layout")
+        tests.add("tests/test_restora_hud_premium_layout.gd")
+
     if bankruptcy_changed:
         groups.append("bankruptcy")
         tests.add("tests/test_bankruptcy_system.gd")
