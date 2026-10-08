@@ -1733,11 +1733,28 @@ func _build_desktop_live() -> void:
     var world = _panel(canvas, "WorldPropertyView", Rect2(34,104,560,552), "surface", "border", 24)
     _label(world, "Head", "PROPERTY PORTFOLIO", Rect2(21,19,250,16), 11, "gold", 600)
     var scene = _panel(world, "Scene", Rect2(21,57,516,316), "surface_2", "border", 20)
-    _label(scene, "PropertyName", _building_name(), Rect2(24,28,468,34), 24, "text", 700)
-    _label(scene, "PropertyType", _building_type(), Rect2(24,68,468,20), 12, "muted", 500)
-    _label(scene, "Upgrade", "UPGRADE LEVEL %d/6" % (_building_stage_slot() + 1), Rect2(24,124,468,24), 15, "gold", 700)
-    _label(scene, "Progress", "%d%% RESTORED" % _building_progress(), Rect2(24,162,468,24), 15, "success", 700)
-    _label(scene, "Stage", _building_stage_name(), Rect2(24,204,468,20), 12, "text", 600)
+    # Use a cropped frame of the existing six-stage warehouse artwork instead of
+    # leaving a large empty card. It follows the authoritative restoration stage.
+    var sheet := load("res://Assets/Art/building_warehouse_progression.svg") as Texture2D
+    if sheet != null:
+        var crop := AtlasTexture.new()
+        crop.atlas = sheet
+        crop.region = Rect2(0, clampi(_building_stage_slot(), 0, 5) * 144, 256, 144)
+        var preview := TextureRect.new()
+        preview.name = "RestorationPreview"
+        preview.position = Vector2(245, 72)
+        preview.size = Vector2(250, 214)
+        preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+        preview.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        preview.texture = crop
+        scene.add_child(preview)
+        _remember("desktop_property_art", preview)
+    _remember("desktop_property_name", _label(scene, "PropertyName", _building_name(), Rect2(24,28,214,48), 19, "text", 700))
+    _remember("desktop_property_type", _label(scene, "PropertyType", _building_type(), Rect2(24,79,214,20), 12, "muted", 500))
+    _remember("desktop_property_upgrade", _label(scene, "Upgrade", "UPGRADE LEVEL %d/6" % (_building_stage_slot() + 1), Rect2(24,124,214,24), 15, "gold", 700))
+    _remember("desktop_property_progress", _label(scene, "Progress", "%d%% RESTORED" % _building_progress(), Rect2(24,162,214,24), 15, "success", 700))
+    _remember("desktop_property_stage", _label(scene, "Stage", _building_stage_name(), Rect2(24,204,214,42), 12, "text", 600))
     _remember("desktop_property_meta", _label(world, "Meta", "%s • %s\n%d%% restored • %s market value" % [_building_name(), _building_type(), _building_progress(), _money(int(_selected_building().get("value", 0)))], Rect2(21,401,500,54), 14, "text", 400))
     _transparent_button(world, "OpenProperty", Rect2(0,0,560,552), _show_view.bind("property"))
 
@@ -1786,10 +1803,10 @@ func _build_tablet_live() -> void:
     _remember("tablet_objective_title", _label(hero, "Title", _objective_title(), Rect2(22,52,420,36), 28, "text", 700))
     _remember("tablet_stage_meta", _label(hero, "Meta", _stage_meta(), Rect2(22,96,360,20), 14, "muted", 400))
     var scene = _panel(hero, "Scene", Rect2(506,22,240,206), "surface_2", "border", 20)
-    _label(scene, "Property", _building_name(), Rect2(16,24,208,42), 14, "text", 700)
-    _label(scene, "Upgrade", "LEVEL %d/6" % (_building_stage_slot() + 1), Rect2(16,86,208,22), 12, "gold", 700)
-    _label(scene, "Progress", "%d%% RESTORED" % _building_progress(), Rect2(16,120,208,22), 12, "success", 700)
-    _label(scene, "Stage", _building_stage_name(), Rect2(16,154,208,20), 10, "muted", 600)
+    _remember("tablet_property_name", _label(scene, "Property", _building_name(), Rect2(16,24,208,42), 14, "text", 700))
+    _remember("tablet_property_upgrade", _label(scene, "Upgrade", "LEVEL %d/6" % (_building_stage_slot() + 1), Rect2(16,86,208,22), 12, "gold", 700))
+    _remember("tablet_property_progress", _label(scene, "Progress", "%d%% RESTORED" % _building_progress(), Rect2(16,120,208,22), 12, "success", 700))
+    _remember("tablet_property_stage", _label(scene, "Stage", _building_stage_name(), Rect2(16,154,208,20), 10, "muted", 600))
     var xs = [32.0,228.0,424.0,620.0]
     var names = ["CASH","WORTH","REPUTATION","GOODS"]
     var vals = [_money(_cash()),_money(_worth()),str(_rep()),str(_goods())]
@@ -1822,11 +1839,23 @@ func _refresh() -> void:
             _set_ref_text("signals", _core_loop_lines())
             _set_ref_text("signal_footer", _core_loop_status())
             _set_ref_text("desktop_property_meta", "%s • %s\n%d%% restored • %s market value" % [_building_name(), _building_type(), _building_progress(), _money(int(_selected_building().get("value", 0)))])
+            _set_ref_text("desktop_property_name", _building_name())
+            _set_ref_text("desktop_property_type", _building_type())
+            _set_ref_text("desktop_property_upgrade", "UPGRADE LEVEL %d/6" % (_building_stage_slot() + 1))
+            _set_ref_text("desktop_property_progress", "%d%% RESTORED" % _building_progress())
+            _set_ref_text("desktop_property_stage", _building_stage_name())
+            var art := refs.get("desktop_property_art") as TextureRect
+            if art != null and art.texture is AtlasTexture:
+                (art.texture as AtlasTexture).region = Rect2(0, clampi(_building_stage_slot(), 0, 5) * 144, 256, 144)
             _set_ref_text("desktop_objective_title", _objective_title())
             _set_ref_text("desktop_objective_body", _objective_detail())
             _set_ref_text("desktop_signals", _signal_lines())
             _set_ref_text("tablet_objective_title", _objective_title())
             _set_ref_text("tablet_stage_meta", _stage_meta())
+            _set_ref_text("tablet_property_name", _building_name())
+            _set_ref_text("tablet_property_upgrade", "LEVEL %d/6" % (_building_stage_slot() + 1))
+            _set_ref_text("tablet_property_progress", "%d%% RESTORED" % _building_progress())
+            _set_ref_text("tablet_property_stage", _building_stage_name())
             _set_ref_text("tablet_operations", "Production\n%s\n\nContracts\n%d active\n\nPeople\n%d staff\n\nInventory\n%d inputs • %d goods\n\nFleet\nLevel %d" % [_production_rate_text(), _active_contracts(), _employees(), _inputs(), _goods(), maxi(1,_transport_level())])
             _set_ref_text("tablet_signals", "%s\n\nNEXT OBJECTIVE\n%s" % [_signal_lines(), _objective_title()])
             var fill = refs.get("progress_fill") as Control
