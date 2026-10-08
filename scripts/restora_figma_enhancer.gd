@@ -5,12 +5,15 @@ extends Node
 ## storytelling surfaces without duplicating any simulation or navigation logic.
 
 const WAREHOUSE_STAGES := preload("res://Assets/Art/building_warehouse_progression.svg")
+const WORKSHOP_STAGES := preload("res://Assets/Art/building_factory_progression.svg")
+const COMMERCIAL_STAGES := preload("res://Assets/Art/building_office_progression.svg")
 const REGION_ART := preload("res://Assets/Art/restora_region_map.svg")
 
 var _last_content_id := 0
 var _last_view := ""
+var _art_refresh_elapsed := 0.0
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
     var hud := get_parent()
     if hud == null:
         return
@@ -22,9 +25,12 @@ func _process(_delta: float) -> void:
     var content_id: int = content.get_instance_id()
     var marker: Node = content.get_node_or_null("FigmaEnhancementMarker")
     if content_id == _last_content_id and view == _last_view and marker != null:
-        if view in ["live", "property"]:
+        _art_refresh_elapsed += delta
+        if _art_refresh_elapsed >= 0.25 and view in ["live", "property"]:
+            _art_refresh_elapsed = 0.0
             _sync_stage_art(content, hud, view)
         return
+    _art_refresh_elapsed = 0.0
     _last_content_id = content_id
     _last_view = view
     _add_marker(content)
@@ -80,9 +86,18 @@ func _shift_content(content: Control, threshold: float, amount: float, excluded:
     content.custom_minimum_size.y += amount
     content.size.y += amount
 
+func _property_sheet(hud: Node) -> Texture2D:
+    match str(hud.call("_building_type")):
+        "Workshop":
+            return WORKSHOP_STAGES
+        "Commercial Building":
+            return COMMERCIAL_STAGES
+        _:
+            return WAREHOUSE_STAGES
+
 func _stage_art(name_value: String, hud: Node, size_value: Vector2) -> TextureRect:
     var frame := AtlasTexture.new()
-    frame.atlas = WAREHOUSE_STAGES
+    frame.atlas = _property_sheet(hud)
     frame.region = Rect2(0, clampi(int(hud.call("_building_stage_slot")), 0, 5) * 144, 256, 144)
     var art := _art(name_value, frame, size_value)
     art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -94,6 +109,9 @@ func _sync_stage_art(content: Control, hud: Node, view: String) -> void:
     if art == null or not art.texture is AtlasTexture:
         return
     var frame := art.texture as AtlasTexture
+    var next_sheet := _property_sheet(hud)
+    if frame.atlas != next_sheet:
+        frame.atlas = next_sheet
     var next_y := float(clampi(int(hud.call("_building_stage_slot")), 0, 5) * 144)
     if not is_equal_approx(frame.region.position.y, next_y):
         frame.region = Rect2(0, next_y, 256, 144)
