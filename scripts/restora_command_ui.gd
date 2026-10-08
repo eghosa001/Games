@@ -1675,30 +1675,33 @@ func _build_mobile_guide() -> void:
     # On 320px phones the first decision is visible without a long scroll.
     var w := _content_width()
     var inner_w := w - 36.0
+    var expanded := w < 360.0 or _ui_text_scale() > 1.10
+    var next_height := 230.0 if expanded else 200.0
     _header("YOUR RESTORA GUIDE", "RESTORE · OPERATE · GROW")
 
-    var next := _panel(mobile_content, "GuideNextMove", Rect2(18, 68, inner_w, 182), "selected", "gold", 20)
+    var next := _panel(mobile_content, "GuideNextMove", Rect2(18, 68, inner_w, next_height), "selected", "gold", 20)
     _label(next, "Head", "YOUR NEXT MOVE", Rect2(16, 14, inner_w - 32, 19), 12, "gold", 700)
-    _label(next, "Title", _objective_title(), Rect2(16, 40, inner_w - 32, 32), 19, "text", 700)
-    _label(next, "Detail", _objective_detail(), Rect2(16, 78, inner_w - 32, 43), 12, "text", 400)
-    _frame_button(next, "GoNext", "TAKE ME THERE", Rect2(16, 130, inner_w - 32, 48), Callable(self, "_open_objective_next"), false, true, 12)
+    _label(next, "Title", _objective_title(), Rect2(16, 40, inner_w - 32, 58 if expanded else 44), 19, "text", 700)
+    _label(next, "Detail", _objective_detail(), Rect2(16, 104 if expanded else 90, inner_w - 32, 62 if expanded else 48), 12, "text", 400)
+    _frame_button(next, "GoNext", "TAKE ME THERE", Rect2(16, 176 if expanded else 146, inner_w - 32, 48), Callable(self, "_open_objective_next"), false, true, 12)
 
-    var restore := _panel(mobile_content, "GuideRestore", Rect2(18, 268, inner_w, 164), "surface", "border", 18)
+    var restore_y := 68.0 + next_height + 18.0
+    var restore := _panel(mobile_content, "GuideRestore", Rect2(18, restore_y, inner_w, 164), "surface", "border", 18)
     _label(restore, "Phase", "01   RESTORE", Rect2(16, 14, inner_w - 32, 22), 14, "gold", 700)
     _label(restore, "Steps", "Inspect the building. Acquire it and finish its restoration stages.", Rect2(16, 43, inner_w - 32, 50), 12, "text", 400)
     _frame_button(restore, "GoRestore", "VIEW PROPERTY", Rect2(16, 108, inner_w - 32, 48), _show_view.bind("property"), false, false, 12)
 
-    var operate := _panel(mobile_content, "GuideOperate", Rect2(18, 450, inner_w, 164), "surface", "border", 18)
+    var operate := _panel(mobile_content, "GuideOperate", Rect2(18, restore_y + 182.0, inner_w, 164), "surface", "border", 18)
     _label(operate, "Phase", "02   OPERATE", Rect2(16, 14, inner_w - 32, 22), 14, "gold", 700)
     _label(operate, "Steps", "Open a business. Buy inputs, make goods and sell to real demand.", Rect2(16, 43, inner_w - 32, 50), 12, "text", 400)
     _frame_button(operate, "GoOperate", "VIEW BUSINESS", Rect2(16, 108, inner_w - 32, 48), _show_view.bind("operate"), false, false, 12)
 
-    var grow := _panel(mobile_content, "GuideGrow", Rect2(18, 632, inner_w, 132), "surface", "border", 18)
+    var grow := _panel(mobile_content, "GuideGrow", Rect2(18, restore_y + 364.0, inner_w, 132), "surface", "border", 18)
     _label(grow, "Phase", "03   GROW", Rect2(16, 14, inner_w - 32, 22), 14, "gold", 700)
     _label(grow, "Steps", "Reinvest profits into staff, properties and regions. New systems open as your company levels up.", Rect2(16, 45, inner_w - 32, 73), 12, "text", 400)
 
-    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 790.0)
-    mobile_content.size.y = maxf(mobile_content.size.y, 790.0)
+    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, restore_y + 516.0)
+    mobile_content.size.y = maxf(mobile_content.size.y, restore_y + 516.0)
 
 func _build_mobile_settings() -> void:
     if mobile_content != null:
