@@ -63,6 +63,7 @@ func _run()->void:
     check("mobile objective retains actual property",title!=null and title.text.contains("Riverside Warehouse"))
     check("mobile image clears objective title",stage_art!=null and title!=null and not stage_art.get_global_rect().intersects(title.get_global_rect()))
     check("mobile image clears objective description",stage_art!=null and goal!=null and not stage_art.get_global_rect().intersects(goal.get_global_rect()))
+    check("mobile objective wraps rather than clips its explanation",goal!=null and goal.get_line_count()>=3 and goal.get_visible_line_count()>=goal.get_line_count())
     check("mobile primary action fits inside hero",action!=null and hero.get_global_rect().encloses(action.get_global_rect()))
     check("mobile primary action retains true destination copy",action!=null and action.text=="OPEN NEXT STEP")
     var cash_icon:=content.get_node_or_null("Stat_cash/StatIcon") as TextureRect
@@ -78,6 +79,12 @@ func _run()->void:
     check("warm limestone palette",theme!=null and theme.color("bg").to_html(false)=="f1ece1")
     check("aged brass accent",theme!=null and theme.color("gold").to_html(false)=="9a6728")
     check("plum selection",theme!=null and theme.color("plum").to_html(false)=="74465a")
+    for detail_view in ["property_overview", "before_after"]:
+        hud.open_figma_view(detail_view)
+        await process_frame
+        var detail_content:=hud.get("mobile_content") as Control
+        var detail_art:=detail_content.find_child("FlowArtwork",true,false) as TextureRect
+        check(detail_view+" uses selected real stage artwork",detail_art!=null and detail_art.texture is AtlasTexture and (detail_art.texture as AtlasTexture).atlas.resource_path.ends_with("building_warehouse_progression.svg"))
     hud.open_figma_view("property")
     await process_frame
     content=hud.get("mobile_content") as Control
