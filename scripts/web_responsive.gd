@@ -59,8 +59,11 @@ func _apply() -> void:
         root.content_scale_size = mobile_size
         root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_IGNORE
     else:
-        root.content_scale_size = DESKTOP_SIZE
-        root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
+        # Match the actual browser viewport in landscape. A fixed 1280×720
+        # virtual canvas previously letterboxed 1280×577 windows and shrank
+        # every font before the compact desktop HUD could activate.
+        root.content_scale_size = browser
+        root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_IGNORE
     _scene_adjusted = false
     call_deferred("_apply_scene_visibility")
 
