@@ -377,7 +377,7 @@ func _build_overview_system_links(y: float) -> float:
         ["CONTRACTS", "%d active" % _active_contracts(), "ContractPanel", "screen", "contracts"],
         ["TECHNOLOGY", "Research and upgrades", "TechnologyPanel", "screen", "technology"],
         ["RIVALS", "%d competitors tracked" % _rival_count(), "CorporationsPanel", "screen", "competitors"],
-        ["HOW TO PLAY", "Restore → Operate → Grow", "guide", "view", ""]
+        ["HOW TO PLAY", "Restore > Operate > Grow", "guide", "view", ""]
     ]
     var gap: float = 8.0
     var col_w: float = (inner_w - 20.0 - gap) * 0.5
@@ -1093,7 +1093,7 @@ func _header(title: String, subtitle: String, right_text = "", status_role = "go
 
 func _build_mobile_live() -> void:
     var w = _content_width()
-    _header("RESTORA", "RESTORE → OPERATE → GROW", "DAY %d" % _day())
+    _header("RESTORA", "RESTORE > OPERATE > GROW", "DAY %d" % _day())
     var inner_w = w - 36.0
 
     var hero = _panel(mobile_content, "ExecutiveHero", Rect2(18, 66, inner_w, 176), "surface", "border", 22)
@@ -1130,7 +1130,7 @@ func _build_mobile_live() -> void:
 
     var loop = _panel(mobile_content, "CoreLoop", Rect2(18, 508, inner_w, 112), "surface", "border", 18)
     _label(loop, "Head", "YOUR PATH", Rect2(15, 14, inner_w - 30, 14), 10, "gold", 600)
-    _label(loop, "Path", "1  RESTORE  →  2  OPERATE  →  3  GROW", Rect2(15, 38, inner_w - 30, 18), 11, "text", 700)
+    _label(loop, "Path", "1  RESTORE  >  2  OPERATE  >  3  GROW", Rect2(15, 38, inner_w - 30, 18), 11, "text", 700)
     _remember("signal_footer", _label(loop, "Current", _core_loop_status(), Rect2(15, 66, inner_w - 30, 32), 9, "success", 600))
 
     var overview = _panel(mobile_content, "CommandOverview", Rect2(18, 636, inner_w, 168), "surface", "border", 18)
@@ -1548,7 +1548,7 @@ func _build_mobile_more() -> void:
         ]],
         ["INSIGHTS", insight_items],
         ["SYSTEM", [
-            ["HOW TO PLAY", "Restore → Operate → Grow", "guide", ""],
+            ["HOW TO PLAY", "Restore > Operate > Grow", "guide", ""],
             ["SAVE / LOAD", "Profiles and recovery", "SaveLoadPanel", ""],
             ["SETTINGS", "Theme, audio, accessibility and privacy", "settings", ""]
         ]]
@@ -1607,13 +1607,13 @@ func _build_mobile_guide() -> void:
 
     var restore := _panel(mobile_content, "GuideRestore", Rect2(18, 214, inner_w, 176), "surface", "border", 18)
     _label(restore, "Phase", "1  •  RESTORE", Rect2(16, 14, 160, 16), 11, "gold", 700)
-    _label(restore, "Steps", "Inspect the property  →  Acquire it  →  Complete every restoration stage.", Rect2(16, 43, inner_w - 32, 44), 11, "text", 500)
+    _label(restore, "Steps", "Inspect the property  >  Acquire it  >  Complete every restoration stage.", Rect2(16, 43, inner_w - 32, 44), 11, "text", 500)
     _label(restore, "Why", "Reach OPERATIONAL to unlock business setup.", Rect2(16, 90, inner_w - 32, 30), 9, "muted", 500)
     _frame_button(restore, "GoRestore", "GO TO PROPERTY", Rect2(16, 126, inner_w - 32, 44), _show_view.bind("property"), false, true, 9)
 
     var operate := _panel(mobile_content, "GuideOperate", Rect2(18, 406, inner_w, 190), "surface", "border", 18)
     _label(operate, "Phase", "2  •  OPERATE", Rect2(16, 14, 160, 16), 11, "gold", 700)
-    _label(operate, "Steps", "Open a business  →  Buy inputs  →  Produce goods  →  Sell goods.", Rect2(16, 43, inner_w - 32, 44), 11, "text", 500)
+    _label(operate, "Steps", "Open a business  >  Buy inputs  >  Produce goods  >  Sell goods.", Rect2(16, 43, inner_w - 32, 44), 11, "text", 500)
     _label(operate, "Why", "Inputs become stock. Selling stock creates revenue and profit.", Rect2(16, 94, inner_w - 32, 34), 9, "muted", 500)
     _frame_button(operate, "GoOperate", "GO TO BUSINESS", Rect2(16, 140, inner_w - 32, 44), _show_view.bind("operate"), false, true, 9)
 
