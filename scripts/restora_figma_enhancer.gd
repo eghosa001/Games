@@ -156,12 +156,12 @@ func _enhance_home(hud: Node, content: Control) -> void:
         title.add_theme_font_size_override("font_size", 18 if hero.size.x < 310 else 20)
     if goal != null:
         goal.position = Vector2(21, 103)
-        goal.size = Vector2(maxf(110.0, art.position.x - 31.0), 74)
-        # The HUD initially builds this label at full card width. Update the
-        # wrapping constraint as well as size when the stage image is placed
-        # beside it; otherwise Godot measures text against its old width and
-        # clips the second half of the instruction.
+        # The old 34px maximum height constrains assignments to size. Clear
+        # it *before* setting the new 74px wrapped label bounds, then apply
+        # the updated constraint. Otherwise only 2 of 3 text lines render.
         goal.custom_minimum_size = Vector2.ZERO
+        goal.custom_maximum_size = Vector2.ZERO
+        goal.size = Vector2(maxf(110.0, art.position.x - 31.0), 74)
         goal.custom_maximum_size = goal.size
         goal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         goal.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
