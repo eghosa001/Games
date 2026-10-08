@@ -241,6 +241,7 @@ func _run()->void:
     check("short desktop art is below property headline",compact_property_title!=null and compact_stage_image!=null and compact_property_title.get_global_rect().end.y<=compact_stage_image.get_global_rect().position.y)
     var browser_adapter:=FileAccess.get_file_as_string("res://scripts/web_responsive.gd")
     check("browser adapter uses live landscape viewport",browser_adapter.contains("root.content_scale_size = browser") and browser_adapter.contains("Window.CONTENT_SCALE_ASPECT_IGNORE"))
+    check("JS viewport bridge returns convertible string dimensions",browser_adapter.contains("String(Math.round(window.innerWidth))") and browser_adapter.contains("parts.size() == 2") and not browser_adapter.contains("result is Array"))
     root.size=Vector2i(1280,720)
     await process_frame
     hud._layout_responsive()

@@ -35,9 +35,14 @@ func _on_window_size_changed() -> void:
 func _browser_size() -> Vector2i:
     if not OS.has_feature("web"):
         return Vector2i.ZERO
-    var result = JavaScriptBridge.eval("[Math.round(window.innerWidth), Math.round(window.innerHeight)]")
-    if result is Array and result.size() >= 2:
-        return Vector2i(maxi(1, int(result[0])), maxi(1, int(result[1])))
+    # eval() returns JS strings as GDScript strings, but JS arrays are not
+    # converted into native Arrays. The old array expression always skipped
+    # the web-resize adapter, leaving the exported 1280×720 design letterboxed.
+    var result = JavaScriptBridge.eval("String(Math.round(window.innerWidth)) + ',' + String(Math.round(window.innerHeight))")
+    if result is String:
+        var parts := (result as String).split(",")
+        if parts.size() == 2 and parts[0].is_valid_int() and parts[1].is_valid_int():
+            return Vector2i(maxi(1, int(parts[0])), maxi(1, int(parts[1])))
     return Vector2i.ZERO
 
 func _apply() -> void:
