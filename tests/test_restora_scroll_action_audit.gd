@@ -111,6 +111,52 @@ func _run() -> void:
         await process_frame
         check("More How to Play action opens Guide", str(hud.get("active_view")) == "guide")
 
+    # ScreenManager owns 27 other pop-up and dashboard surfaces. These do not
+    # share ProductionScroll, so check their close/actions are reachable too.
+    var manager := root.get_node_or_null("RenewUIScreenManager")
+    check("managed screen coordinator available", manager != null)
+    if manager != null:
+        var managed := [
+            "ContractPanel", "HeadquartersPanel", "TechnologyPanel", "AlliancePanel",
+            "EmployeePanel", "CollectionPanel", "LiveOpsPanel", "HistoryPanel",
+            "NewsPanel", "InfrastructurePanel", "DashboardPanel", "FinancePanel",
+            "PortfolioPanel", "CorporationsPanel", "RegionsPanel",
+            "WorldOpportunitiesPanel", "BusinessOperationsPanel",
+            "ProductionControlPanel", "SupplyChainPanel", "EmpireExpansionPanel",
+            "EmpireIntelligencePanel", "EmpireProgressionPanel", "EmpireIdentityPanel",
+            "NotificationsCenterPanel", "SaveLoadPanel", "RenewDiplomacyUI",
+            "CustomerSegmentsUI"
+        ]
+        for viewport in [Vector2i(320, 568), Vector2i(390, 844)]:
+            root.size = viewport
+            hud._layout_responsive()
+            await process_frame
+            for name in managed:
+                manager.show_screen(name)
+                await process_frame
+                var modal := game.get_node_or_null("UI/" + name)
+                check("%s %s is reachable" % [viewport, name], modal != null and manager.get_active_screen_name() == name)
+                if modal != null:
+                    var modal_buttons: Array[Button] = []
+                    _buttons(modal, modal_buttons)
+                    for btn in modal_buttons:
+                        var bound := Rect2(Vector2.ZERO, Vector2(viewport))
+                        var rect := btn.get_global_rect()
+                        var clipped := rect.intersection(bound)
+                        var visible_ratio := clipped.get_area() / maxf(1.0, rect.get_area())
+                        var container: Node = btn.get_parent()
+                        var in_scroll := false
+                        while container != null:
+                            if container is ScrollContainer:
+                                in_scroll = true
+                                break
+                            container = container.get_parent()
+                        check("%s %s %s wired" % [viewport, name, btn.name], not btn.pressed.get_connections().is_empty())
+                        if not in_scroll:
+                            check("%s %s %s on-screen" % [viewport, name, btn.name], visible_ratio >= 0.98)
+                manager.hide_all_screens()
+                await process_frame
+
     game.queue_free()
     await process_frame
     print("SCROLL AND BUTTON AUDIT: %d checks, %d failures" % [checks, failed])
