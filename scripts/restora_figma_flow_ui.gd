@@ -36,7 +36,7 @@ const NAV_ACTIONS := [
     "pause", "day_summary", "level_up", "restoration_complete", "insufficient_funds",
     "offline_error", "loading", "empty_states"
 ]
-const CALDER_ART := preload("res://Assets/Art/restora_calder_works.svg")
+const CALDER_ART := preload("res://Assets/Art/restora_figma_heritage_home.png")
 const REGION_ART := preload("res://Assets/Art/restora_region_map.svg")
 
 var _auto_launch_pending := false
