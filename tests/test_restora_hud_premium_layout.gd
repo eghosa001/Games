@@ -143,6 +143,15 @@ func _run()->void:
     await process_frame
     check("desktop property summary exists",desktop!=null and desktop.get_node_or_null("WorldPropertyView")!=null)
     check("desktop quick actions exist",desktop!=null and desktop.get_node_or_null("QuickActions")!=null)
+    var desktop_finance:=desktop.get_node_or_null("QuickActions/OpenFinance") as Button if desktop!=null else null
+    check("desktop Finance obeys the canonical unlock",desktop_finance!=null and desktop_finance.disabled==not bool(hud.call("_has_unlock","finance")))
+    var next_button:=desktop.get_node_or_null("Objective/OpenNextObjective") as Button if desktop!=null else null
+    check("desktop next-step action is reachable",next_button!=null and next_button.pressed.get_connections().size()>0 and next_button.size.y>=36.0)
+    var desktop_world:=desktop.get_node_or_null("WorldPropertyView") as Control if desktop!=null else null
+    if desktop_world!=null:
+        for phase in ["cleaning","repair","painting","furnishing"]:
+            var meter:=desktop_world.get_node_or_null("PhaseTrack_"+phase+"/Fill") as Panel
+            check("desktop %s progress meter fits inside property card" % phase,meter!=null and desktop_world.get_global_rect().grow(1.0).encloses(meter.get_global_rect()))
     var tutorial := game.get_node_or_null("UI/TutorialOverlay")
     var tutorial_panel := tutorial.get("panel") as Panel if tutorial!=null else null
     var tutorial_chip := tutorial.get("collapsed_button") as Button if tutorial!=null else null
@@ -169,6 +178,18 @@ func _run()->void:
     var after_stage := int(hud.call("_building_progress"))
     check("real restoration action progresses",after_stage>before_stage)
     check("desktop restoration updates without reopening",progress!=null and progress.text=="%d%% RESTORED" % after_stage)
+    var phase_sum:=0
+    for phase in ["cleaning","repair","painting","furnishing"]:
+        var value:=clampi(int((hud.call("_selected_building") as Dictionary).get(phase,0)),0,100)
+        phase_sum+=value
+        var meter:=desktop_world.get_node_or_null("PhaseTrack_"+phase+"/Fill") as Panel if desktop_world!=null else null
+        var percent_label:=desktop_world.get_node_or_null("PhaseValue_"+phase) as Label if desktop_world!=null else null
+        check("desktop %s meter follows real restoration" % phase,meter!=null and is_equal_approx(meter.size.x,220.0*float(value)/100.0) and percent_label!=null and percent_label.text=="%d%%" % value)
+    check("restoration progress is meaningful",phase_sum>0)
+    if next_button!=null:
+        next_button.pressed.emit()
+        await process_frame
+        check("desktop next-step opens current authoritative destination",str(hud.get("active_view"))==str(hud.call("_objective_view")))
     if preview!=null and preview.texture is AtlasTexture:
         var crop := preview.texture as AtlasTexture
         check("desktop art shows authoritative stage",is_equal_approx(crop.region.position.y,float(clampi(int(hud.call("_building_stage_slot")),0,5)*144)))
