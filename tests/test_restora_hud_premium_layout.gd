@@ -38,6 +38,24 @@ func _run()->void:
     var goal := hero.get_node_or_null("HeroGoal") as Label if hero!=null else null
     var action := hero.get_node_or_null("PrimaryNextMove") as Button if hero!=null else null
     check("mobile shows stage-correct property artwork",stage_art!=null and stage_art.texture is AtlasTexture)
+    if stage_art!=null and stage_art.texture is AtlasTexture:
+        check("warehouse uses warehouse sprite sheet",(stage_art.texture as AtlasTexture).atlas.resource_path.ends_with("building_warehouse_progression.svg"))
+    for item in [[3,"Workshop","building_factory_progression.svg"],[6,"Commercial Building","building_office_progression.svg"]]:
+        hud._select_building(int(item[0]))
+        for _frame in range(3):
+            await process_frame
+        var staged_content:=hud.get("mobile_content") as Control
+        var staged_art:=staged_content.find_child("ActiveRestorationArt",true,false) as TextureRect
+        check("selected %s uses correct stage art" % str(item[1]),staged_art!=null and staged_art.texture is AtlasTexture and (staged_art.texture as AtlasTexture).atlas.resource_path.ends_with(str(item[2])))
+    hud._select_building(0)
+    for _frame in range(3):
+        await process_frame
+    content=hud.get("mobile_content") as Control
+    hero=content.get_node_or_null("ExecutiveHero") as Control
+    stage_art=hero.get_node_or_null("ActiveRestorationArt") as TextureRect
+    title=hero.get_node_or_null("HeroTitle") as Label
+    goal=hero.get_node_or_null("HeroGoal") as Label
+    action=hero.get_node_or_null("PrimaryNextMove") as Button
     check("mobile objective retains actual property",title!=null and title.text.contains("Riverside Warehouse"))
     check("mobile image clears objective title",stage_art!=null and title!=null and not stage_art.get_global_rect().intersects(title.get_global_rect()))
     check("mobile image clears objective description",stage_art!=null and goal!=null and not stage_art.get_global_rect().intersects(goal.get_global_rect()))
