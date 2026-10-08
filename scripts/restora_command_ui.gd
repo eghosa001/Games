@@ -1827,7 +1827,7 @@ func _build_desktop_live() -> void:
         crop.region = Rect2(0, clampi(_building_stage_slot(), 0, 5) * 144, 256, 144)
         var preview := TextureRect.new()
         preview.name = "RestorationPreview"
-        preview.position = Vector2(218, 31 if _desktop_compact else 65)
+        preview.position = Vector2(218, 61 if _desktop_compact else 65)
         preview.size = Vector2(282, 161 if _desktop_compact else 180)
         preview.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
         preview.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
@@ -1835,7 +1835,7 @@ func _build_desktop_live() -> void:
         preview.texture = crop
         scene.add_child(preview)
         _remember("desktop_property_art", preview)
-    _remember("desktop_property_name", _label(scene, "PropertyName", _building_name(), Rect2(24,28,192,48), 19, "text", 700))
+    _remember("desktop_property_name", _label(scene, "PropertyName", _building_name(), Rect2(24,18,476,36), 19, "text", 700))
     _remember("desktop_property_type", _label(scene, "PropertyType", _building_type(), Rect2(24,79,192,22), 14, "muted", 500))
     _remember("desktop_property_upgrade", _label(scene, "Upgrade", "UPGRADE LEVEL %d/6" % (_building_stage_slot() + 1), Rect2(24,117 if _desktop_compact else 124,192,24), 15, "gold", 700))
     _remember("desktop_property_progress", _label(scene, "Progress", "%d%% RESTORED" % _building_progress(), Rect2(24,152 if _desktop_compact else 162,192,24), 15, "success", 700))
