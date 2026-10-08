@@ -4,7 +4,7 @@ extends Node
 ## The gameplay HUD remains authoritative; this layer adds the high-value visual
 ## storytelling surfaces without duplicating any simulation or navigation logic.
 
-const CALDER_ART := preload("res://Assets/Art/restora_calder_works.svg")
+const WAREHOUSE_STAGES := preload("res://Assets/Art/building_warehouse_progression.svg")
 const REGION_ART := preload("res://Assets/Art/restora_region_map.svg")
 
 var _last_content_id := 0
@@ -22,6 +22,8 @@ func _process(_delta: float) -> void:
     var content_id: int = content.get_instance_id()
     var marker: Node = content.get_node_or_null("FigmaEnhancementMarker")
     if content_id == _last_content_id and view == _last_view and marker != null:
+        if view in ["live", "property"]:
+            _sync_stage_art(content, hud, view)
         return
     _last_content_id = content_id
     _last_view = view
@@ -48,7 +50,7 @@ func _art(name_value: String, texture: Texture2D, size_value: Vector2) -> Textur
     art.texture = texture
     art.size = size_value
     art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-    art.stretch_mode = TextureRect.STRETCH_SCALE if texture == CALDER_ART else TextureRect.STRETCH_KEEP_ASPECT_COVERED
+    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
     art.mouse_filter = Control.MOUSE_FILTER_IGNORE
     return art
 
@@ -78,47 +80,69 @@ func _shift_content(content: Control, threshold: float, amount: float, excluded:
     content.custom_minimum_size.y += amount
     content.size.y += amount
 
+func _stage_art(name_value: String, hud: Node, size_value: Vector2) -> TextureRect:
+    var frame := AtlasTexture.new()
+    frame.atlas = WAREHOUSE_STAGES
+    frame.region = Rect2(0, clampi(int(hud.call("_building_stage_slot")), 0, 5) * 144, 256, 144)
+    var art := _art(name_value, frame, size_value)
+    art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    return art
+
+func _sync_stage_art(content: Control, hud: Node, view: String) -> void:
+    var art_name := "ActiveRestorationArt" if view == "live" else "PropertyVisual"
+    var art := content.find_child(art_name, true, false) as TextureRect
+    if art == null or not art.texture is AtlasTexture:
+        return
+    var frame := art.texture as AtlasTexture
+    var next_y := float(clampi(int(hud.call("_building_stage_slot")), 0, 5) * 144)
+    if not is_equal_approx(frame.region.position.y, next_y):
+        frame.region = Rect2(0, next_y, 256, 144)
+
 func _enhance_home(hud: Node, content: Control) -> void:
     var hero := content.get_node_or_null("ExecutiveHero") as Control
     if hero == null or hero.get_node_or_null("ActiveRestorationArt") != null:
         return
+    # Keep the established Figma card height, but dedicate its visual region
+    # to the actual warehouse stage rather than a distant heritage building.
     _shift_content(content, 270.0, 70.0, hero)
     hero.size.y = 246.0
     hero.clip_contents = true
-    var art := _art("ActiveRestorationArt", CALDER_ART, Vector2(hero.size.x, 116.0))
+
+    var art_width := maxf(118.0, hero.size.x * 0.42)
+    var art := _stage_art("ActiveRestorationArt", hud, Vector2(art_width, 84.0))
+    art.position = Vector2(hero.size.x - art_width - 16.0, 96.0)
     hero.add_child(art)
     hero.move_child(art, 0)
-    var scrim := ColorRect.new()
-    scrim.name = "ActiveRestorationScrim"
-    scrim.position = Vector2(0, 74)
-    scrim.size = Vector2(hero.size.x, 42)
-    scrim.color = Color(0.08, 0.07, 0.05, 0.62)
-    scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    hero.add_child(scrim)
-    hero.move_child(scrim, 1)
+
     var eyebrow := hero.get_node_or_null("Eyebrow") as Label
     var title := hero.get_node_or_null("HeroTitle") as Label
     var goal := hero.get_node_or_null("HeroGoal") as Label
     var action := hero.get_node_or_null("PrimaryNextMove") as Button
     if eyebrow != null:
-        eyebrow.text = "ACTIVE RESTORATION"
-        eyebrow.position = Vector2(21, 91)
-        eyebrow.size.x = hero.size.x - 42
+        eyebrow.text = "NEXT MOVE"
+        eyebrow.position = Vector2(21, 16)
+        eyebrow.size.x = hero.size.x - 42.0
     if title != null:
-        title.text = "The Calder Works"
-        title.position = Vector2(21, 126)
-        title.size = Vector2(hero.size.x - 42, 27)
+        # Do not replace this with a hardcoded property name: the core HUD
+        # refreshes it from the real current objective as the player advances.
+        title.position = Vector2(21, 43)
+        title.size = Vector2(hero.size.x - 42.0, 51)
+        title.add_theme_font_size_override("font_size", 18 if hero.size.x < 310 else 20)
     if goal != null:
-        goal.text = "Victorian textile mill • %d%% restored • %s" % [int(hud.call("_building_progress")), str(hud.call("_building_stage_name"))]
-        goal.position = Vector2(21, 155)
-        goal.size = Vector2(hero.size.x - 42, 30)
+        goal.position = Vector2(21, 103)
+        goal.size = Vector2(maxf(110.0, art.position.x - 31.0), 74)
+        goal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        goal.add_theme_font_size_override("font_size", 10)
     if action != null:
-        action.text = "CONTINUE RESTORATION"
-        action.position = Vector2(21, 202)
-        action.size = Vector2(hero.size.x - 42, 38)
+        action.text = "OPEN NEXT STEP"
+        action.position = Vector2(21, 195)
+        action.size = Vector2(hero.size.x - 42.0, 44)
     for child in hero.get_children():
-        if child is Panel and child != art and is_equal_approx(child.position.y, 112.0):
-            child.position.y = 190.0
+        if child is Panel:
+            if is_equal_approx(child.position.y, 112.0):
+                child.position.y = 183.0
+            elif child.size.x <= 8.0:
+                child.size.y = hero.size.y
 
 func _enhance_property(hud: Node, content: Control) -> void:
     var selected := content.get_node_or_null("SelectedProperty") as Control
@@ -126,19 +150,14 @@ func _enhance_property(hud: Node, content: Control) -> void:
         return
     _shift_content(content, 310.0, 112.0, selected)
     selected.size.y += 112.0
-    var existing := selected.get_children()
-    for child in existing:
+    for child in selected.get_children():
         if child is Control:
             child.position.y += 112.0
-    var art := _art("PropertyVisual", CALDER_ART, Vector2(selected.size.x, 126.0))
+    var art := _stage_art("PropertyVisual", hud, Vector2(selected.size.x - 36.0, 112.0))
+    art.position = Vector2(18, 0)
     selected.add_child(art)
     selected.move_child(art, 0)
-    var type_label := selected.get_node_or_null("Type") as Label
-    if type_label != null:
-        type_label.text = "Victorian textile mill • Foundry Ward"
-    var detail := selected.get_node_or_null("Detail") as Label
-    if detail != null:
-        detail.text += " • Target £740K"
+    # Preserve the authoritative property name, type and valuation labels.
 
 func _enhance_world(content: Control) -> void:
     if content.get_node_or_null("StrategicRegionMap") != null:
