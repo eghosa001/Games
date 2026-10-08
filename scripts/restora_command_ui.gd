@@ -1083,6 +1083,10 @@ func _transparent_button(parent_node: Node, name: String, rect: Rect2, callback:
     parent_node.add_child(b)
     return b
 
+func _ui_text_scale() -> float:
+    var manager = _theme_manager()
+    return float(manager.get_text_scale()) if manager != null and manager.has_method("get_text_scale") else 1.0
+
 func _frame_button(parent_node: Node, name: String, text_value: String, rect: Rect2, callback: Callable, selected = false, gold_fill = false, font_size = 9) -> Button:
     var b = Button.new()
     b.name = name
@@ -1094,7 +1098,7 @@ func _frame_button(parent_node: Node, name: String, text_value: String, rect: Re
     b.mouse_filter = Control.MOUSE_FILTER_PASS
     b.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
     b.add_theme_font_override("font", _font(600))
-    b.add_theme_font_size_override("font_size", font_size)
+    b.add_theme_font_size_override("font_size", maxi(9, int(round(float(font_size) * _ui_text_scale()))))
     var bg = _color("gold") if gold_fill else (_color("selected") if selected else _color("surface_2"))
     var border = _color("gold") if gold_fill else (_color("plum") if selected else _color("border"))
     var fg = _color("bg") if gold_fill else (_color("gold") if selected else _color("text"))
@@ -1116,8 +1120,9 @@ func _stat_tile(parent_node: Node, key: String, x: float, y: float, w: float, la
     var icon_key := str(icon_map.get(key, "intelligence"))
     _add_icon(p, "StatIcon", icon_key, Rect2(w - 38, 11, 22, 22), "gold", 0.86)
     _remember(key + "_label", _label(p, "Label", label_text, Rect2(15, 13, w - 54, 14), 11, "gold", 600))
-    _remember(key + "_value", _label(p, "Value", value_text, Rect2(15, 36, w - 30, 32), 24, "text", 700))
-    _remember(key + "_meta", _label(p, "Meta", meta_text, Rect2(15, 75, w - 30, 14), 10, "muted", 600))
+    var enlarged := _ui_text_scale() > 1.10
+    _remember(key + "_value", _label(p, "Value", value_text, Rect2(15, 33 if enlarged else 36, w - 30, 41 if enlarged else 32), 24, "text", 700))
+    _remember(key + "_meta", _label(p, "Meta", meta_text, Rect2(15, 83 if enlarged else 75, w - 30, 16 if enlarged else 14), 10, "muted", 600))
     return p
 
 func _content_width() -> float:
@@ -1127,8 +1132,9 @@ func _header(title: String, subtitle: String, right_text = "", status_role = "go
     var w = _content_width()
     var title_width: float = float(w) - (178.0 if not right_text.is_empty() else 82.0)
     var subtitle_width: float = float(w) - (178.0 if not right_text.is_empty() else 86.0)
-    _remember("title", _label(mobile_content, "Title", title, Rect2(18, 8, title_width, 30), 24 if title == "RESTORA" else 21, "text", 700))
-    status_label = _label(mobile_content, "Status", subtitle, Rect2(18, 37 if title != "RESTORA" else 39, subtitle_width, 16), 9, status_role, 600)
+    var enlarged := _ui_text_scale() > 1.10
+    _remember("title", _label(mobile_content, "Title", title, Rect2(18, 4 if enlarged else 8, title_width, 40 if enlarged else 30), 24 if title == "RESTORA" else 21, "text", 700))
+    status_label = _label(mobile_content, "Status", subtitle, Rect2(18, 46 if enlarged else (37 if title != "RESTORA" else 39), subtitle_width, 16), 9, status_role, 600)
     _remember("status", status_label)
     if not right_text.is_empty():
         _remember("right_status", _label(mobile_content, "RightStatus", right_text, Rect2(w - 154, 14, 92, 18), 9 if title != "RESTORA" else 11, "plum" if active_view == "settings" else "text", 600, HORIZONTAL_ALIGNMENT_RIGHT))
@@ -1768,7 +1774,7 @@ func _transparent_text_button(parent_node: Node, name: String, text_value: Strin
     b.mouse_filter = Control.MOUSE_FILTER_PASS
     b.flat = true
     b.add_theme_font_override("font", _font(600))
-    b.add_theme_font_size_override("font_size", 9)
+    b.add_theme_font_size_override("font_size", int(round(10.0 * _ui_text_scale())))
     b.add_theme_color_override("font_color", _color(role))
     b.add_theme_color_override("font_hover_color", _color(role).lightened(0.08))
     if callback.is_valid(): b.pressed.connect(callback)
