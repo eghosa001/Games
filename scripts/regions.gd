@@ -41,13 +41,17 @@ func _normalize() -> void:
     if infrastructure.size() > regions.size(): infrastructure.resize(regions.size())
     if local_reputation.size() > regions.size(): local_reputation.resize(regions.size())
     selected = clamp(selected,0,regions.size()-1)
+    for region in regions:
+        region["unlocked"] = true
 
 func _ready() -> void:
     _normalize()
     _recalculate_economy(1)
 
-func update_unlocks(reputation:int) -> void:
-    for r in regions: r["unlocked"] = reputation >= int(r["rep"])
+func update_unlocks(_reputation:int) -> void:
+    # All six markets are explorable on day one; reputation instead affects
+    # the economy and relationships, not whether a player may visit.
+    for r in regions: r["unlocked"] = true
 
 func select(index:int, reputation:int) -> Dictionary:
     _normalize(); update_unlocks(reputation)

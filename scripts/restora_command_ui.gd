@@ -742,8 +742,10 @@ func handle_system_back() -> bool:
     return false
 
 func _home_goal_title() -> String:
+    if _owned_building_count() == 0:
+        return "Explore your city"
     if not _business_open():
-        return _objective_title()
+        return "Build your business"
     match _easy_play_stage():
         "sell": return "Sell your ready goods"
         "wait": return "Today's customers are served"
@@ -754,9 +756,17 @@ func _home_goal_title() -> String:
         _: return _objective_title()
 
 func _home_goal_detail() -> String:
+    if _owned_building_count() == 0:
+        return "Tap any building below to play."
     if _business_open():
-        return _easy_play_hint()
-    return _objective_detail()
+        match _easy_play_stage():
+            "sell": return "Sell your ready goods to earn cash."
+            "wait": return "All customers served. Explore your city."
+            "produce": return "Make goods, then sell for profit."
+            "funds": return "Check funding to make more goods."
+            "buy", "supply": return "Stock up on materials to produce."
+            _: return "Keep growing your business."
+    return "Choose any building and make it yours."
 
 func _home_primary_title() -> String:
     if not _inspected():
@@ -1234,6 +1244,50 @@ func _header(title: String, subtitle: String, right_text = "", status_role = "go
     alerts.pressed.connect(_show_view.bind("notifications"))
     mobile_content.add_child(alerts)
 
+func _home_building_image(item: Dictionary) -> Texture2D:
+    # Every card represents an actual available property and its real
+    # restoration state, not a generic image of the selected warehouse.
+    var art := AtlasTexture.new()
+    match str(item.get("type", "Warehouse")):
+        "Workshop": art.atlas = WORKSHOP_STAGES
+        "Commercial Building": art.atlas = COMMERCIAL_STAGES
+        _: art.atlas = WAREHOUSE_STAGES
+    art.region = Rect2(0, float(_building_stage_slot(item)) * 144.0, 256.0, 144.0)
+    return art
+
+func _build_home_city(y: float) -> float:
+    var catalog: Array = _building_catalog()
+    var inner_w := _content_width() - 36.0
+    var gap := 8.0
+    var card_w := (inner_w - 20.0 - gap) * 0.5
+    var card_h := 130.0
+    var rows := ceili(float(catalog.size()) / 2.0)
+    var panel_h := 76.0 + float(rows) * 138.0
+    var city := _panel(mobile_content, "HomeCity", Rect2(18, y, inner_w, panel_h), "surface", "border", 18)
+    _label(city, "Heading", "EXPLORE YOUR CITY", Rect2(14, 12, inner_w - 112, 18), 14, "text", 700)
+    _label(city, "Count", "%d PLACES" % catalog.size(), Rect2(inner_w - 99, 14, 83, 15), 9, "gold", 700, HORIZONTAL_ALIGNMENT_RIGHT)
+    _label(city, "Hint", "Pick any building. Grow in any order.", Rect2(14, 35, inner_w - 28, 20), 10, "muted", 400)
+    for i in range(catalog.size()):
+        var item: Dictionary = catalog[i]
+        var x := 10.0 + float(i % 2) * (card_w + gap)
+        var card_y := 66.0 + float(floori(float(i) / 2.0)) * 138.0
+        var selected := i == int(_state_value("properties", "selected_property", 0))
+        var tile := _panel(city, "CityProperty%d" % i, Rect2(x, card_y, card_w, card_h), "selected" if selected else "surface_2", "plum" if selected else "border", 14)
+        var image_box := TextureRect.new()
+        image_box.name = "BuildingArtwork"
+        image_box.position = Vector2(8, 6)
+        image_box.size = Vector2(card_w - 16.0, 65)
+        image_box.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+        image_box.stretch_mode = TextureRect.STRETCH_SCALE
+        image_box.texture = _home_building_image(item)
+        image_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        tile.add_child(image_box)
+        _label(tile, "BuildingName", str(item.get("name", "Property")), Rect2(9, 74, card_w - 18, 30), 10, "text", 600)
+        var meta := "%d%% RESTORED" % _building_progress(item) if bool(item.get("owned", false)) else ("SURVEYED • %s" % _money(_property_purchase_cost(item)) if bool(item.get("inspected", false)) else "VIEW • %s" % _money(_property_purchase_cost(item)))
+        _label(tile, "PropertyStatus", meta, Rect2(9, 109, card_w - 18, 16), 9, "success" if bool(item.get("owned", false)) else "gold", 600)
+        _transparent_button(tile, "OpenCityProperty%d" % i, Rect2(0, 0, card_w, card_h), _select_building_and_open.bind(i))
+    return y + panel_h
+
 func _build_mobile_live() -> void:
     var w = _content_width()
     _header("RESTORA", "RESTORE > OPERATE > GROW", "DAY %d" % _day())
@@ -1267,8 +1321,8 @@ func _build_mobile_live() -> void:
 
     var gap = 6.0
     var tile_w = (inner_w - gap) * 0.5
-    _stat_tile(mobile_content, "cash", 18, 276, tile_w, "CASH", _money(_cash()), "AVAILABLE")
-    _stat_tile(mobile_content, "worth", 18 + tile_w + gap, 276, tile_w, "WORTH", _money(_worth()), "TOTAL")
+    _stat_tile(mobile_content, "cash", 18, 254, tile_w, "CASH", _money(_cash()), "AVAILABLE")
+    _stat_tile(mobile_content, "worth", 18 + tile_w + gap, 254, tile_w, "WORTH", _money(_worth()), "TOTAL")
     # Keep legacy state nodes available to dashboards/tests, but let new players
     # see their cash and one next action instead of four competing scorecards.
     _stat_tile(mobile_content, "rep", 18, 392, tile_w, "REPUTATION", str(_rep()), "COMPANY L%d" % _company_level()).hide()
@@ -1280,8 +1334,11 @@ func _build_mobile_live() -> void:
     _remember("signal_footer", _label(loop, "Current", _core_loop_status(), Rect2(15, 66, inner_w - 30, 36), 12, "success", 600))
     loop.hide()
 
-    var overview = _panel(mobile_content, "CommandOverview", Rect2(18, 392, inner_w, 168), "surface", "border", 18)
-    _label(overview, "Head", "MANAGEMENT OVERVIEW", Rect2(15, 12, inner_w - 30, 14), 10, "gold", 600)
+    # Multiple real properties are playable from HOME before any levels are
+    # earned. The old one-property management summary remains lower down.
+    var overview_y := _build_home_city(372.0) + 16.0
+    var overview = _panel(mobile_content, "CommandOverview", Rect2(18, overview_y, inner_w, 168), "surface", "border", 18)
+    _label(overview, "Head", "QUICK MANAGEMENT", Rect2(15, 12, inner_w - 30, 14), 10, "gold", 600)
     var prop_state := "%d/%d owned • %d%% selected restored" % [_owned_building_count(), _building_catalog().size(), _building_progress()]
     var business_state := "OPEN" if _business_open() else ("READY" if _stage() == "Operational" else "RESTORE FIRST")
     _label(overview, "Properties", "PROPERTIES", Rect2(15, 46, 86, 14), 9, "text", 600)
@@ -1295,8 +1352,8 @@ func _build_mobile_live() -> void:
     _transparent_button(overview, "OpenHomeGrowth", Rect2(0, 116, inner_w, 44), _show_view.bind("more"))
 
     if mobile_content != null:
-        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 594.0)
-        mobile_content.size.y = maxf(mobile_content.size.y, 594.0)
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, overview_y + 196.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, overview_y + 196.0)
 
 
 func _build_mobile_operations() -> void:

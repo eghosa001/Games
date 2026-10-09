@@ -268,7 +268,7 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
                 ["Supplier, civic and competitor relationships affect the same simulation.", "Open the relationship manager for negotiations and alliance actions."],
                 [["OPEN RELATIONSHIPS", "alliance_manager", true], ["CORPORATIONS", "corporations_manager", false]])
         "corporate_strategy":
-            var strategy_next := "world_power" if _company_level() >= 8 else "company_progress"
+            var strategy_next := "world_power"
             return _spec("Corporate Strategy", "OWNERSHIP · ACQUISITIONS · CONTROL",
                 [["RIVALS", str(_rival_count())], ["REP", str(rep)], ["LEVEL", str(_company_level())]],
                 _corporate_strategy_lines(),
@@ -290,13 +290,13 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
             return _spec("Headquarters", "EXECUTIVE CAPACITY · STRATEGIC FACILITIES",
                 [["STAGE", str(hq.get("stage", "Small Office"))], ["AREAS", str(hq.get("areas", 0))], ["VALUE", _money(int(hq.get("value", 0)))]],
                 _headquarters_lines(hq),
-                [["OPEN HQ COMMAND", "headquarters_manager", true], ["WORLD POWER", "world_power", false], ["LEGACY", "legacy" if _company_level() >= 9 else "company_progress", false]])
+                [["OPEN HQ COMMAND", "headquarters_manager", true], ["WORLD POWER", "world_power", false], ["LEGACY", "legacy", false]])
         "legacy":
             var legacy := _legacy_snapshot()
             return _spec("Legacy", "HISTORY · COLLECTIONS · PRESTIGE",
                 [["COLLECTED", str(legacy.get("collections", 0))], ["PRESTIGE", str(legacy.get("prestige_wins", 0))], ["LEVEL", str(_company_level())]],
                 _legacy_lines(legacy),
-                [["OPEN COLLECTION", "collection_manager", true], ["COMPANY HISTORY", "history_manager", false], ["PRESTIGE / ENDGAME", "endgame" if _company_level() >= 10 else "company_progress", false]])
+                [["OPEN COLLECTION", "collection_manager", true], ["COMPANY HISTORY", "history_manager", false], ["PRESTIGE / ENDGAME", "endgame", false]])
         "endgame":
             var endgame := _endgame_snapshot()
             return _spec("Prestige / Endgame", "TYCOON · MONOPOLIST · HEGEMON",
@@ -331,10 +331,10 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
                 [["CONTINUE", "continue_after_day", true], ["REVIEW", "reports", false]], true)
         "level_up":
             var reached_level := _company_level()
-            return _spec("Level-Up / Unlock", "COMPANY LEVEL %d · %s" % [reached_level, _progression_layer_name(reached_level).to_upper()],
+            return _spec("Company Milestone", "COMPANY LEVEL %d · %s" % [reached_level, _progression_layer_name(reached_level).to_upper()],
                 [["LEVEL", str(reached_level)], ["REP", str(rep)], ["VALUE", _money(worth)]],
                 _level_up_lines(reached_level),
-                [["OPEN NEW LAYER", _progression_primary_target(reached_level), true], ["COMPANY PROGRESS", "company_progress", false], ["HOME", "live", false]], true)
+                [["EXPLORE SPECIALTY", _progression_primary_target(reached_level), true], ["COMPANY PROGRESS", "company_progress", false], ["HOME", "live", false]], true)
         "restoration_complete":
             return _spec("Restoration Complete", property_name,
                 [["VALUE", _money(_property_value())], ["RESTORED", "100%"], ["REP", str(rep)]],
@@ -789,7 +789,7 @@ func _progression_primary_target(level: int) -> String:
 func _company_progress_lines(level: int, employees: int, contracts: int) -> Array:
     var lines: Array = [
         "Current layer · %s." % _progression_layer_name(level),
-        "Current unlocks · %s." % _feature_text(_progression_features(level)),
+        "Milestone specialties · %s (available at any level)." % _feature_text(_progression_features(level)),
         _completed_layers_text(level),
         "%d properties owned · %d staff · %d active contract%s." % [_owned_properties(), employees, contracts, "" if contracts == 1 else "s"]
     ]
@@ -812,7 +812,7 @@ func _company_progress_lines(level: int, employees: int, contracts: int) -> Arra
 
 func _level_up_lines(level: int) -> Array:
     var lines: Array = [
-        "Unlocked now · %s." % _feature_text(_progression_features(level)),
+        "Milestone specialties · %s (already available to explore)." % _feature_text(_progression_features(level)),
         "Strategic layer · %s." % _progression_layer_name(level)
     ]
     if level < 10:

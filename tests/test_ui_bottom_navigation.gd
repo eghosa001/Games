@@ -53,7 +53,7 @@ func _run() -> void:
             check(button.get_node_or_null("UnlockLevel") != null, "locked navigation shows unlock level " + expected[i])
 
     check(not (buttons[0] as Button).disabled and not (buttons[1] as Button).disabled and not (buttons[2] as Button).disabled and not (buttons[4] as Button).disabled, "home, business, property and more are available from Level 1")
-    check((buttons[3] as Button).disabled, "Finance waits for Company Level 2")
+    check(not (buttons[3] as Button).disabled, "Finance is available from company Level 1")
 
     var progression = game.get_node("Systems/StrategicProgression")
     state.set_value("progression", "xp", 100)

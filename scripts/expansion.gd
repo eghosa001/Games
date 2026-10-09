@@ -33,7 +33,7 @@ func _normalize_all() -> void:
         p["quality"] = clamp(int(p.get("quality", 60)), 30, 100); p["employees"] = max(1, int(p.get("employees", 1)))
         if not p.has("inputs") or not (p["inputs"] is Dictionary): p["inputs"] = {}
         if not p.has("input_need") or not (p["input_need"] is Dictionary): p["input_need"] = {}
-        p["unlock_rep"] = int(p.get("unlock_rep", 10)); p["unlocked"] = bool(p.get("unlocked", false))
+        p["unlock_rep"] = int(p.get("unlock_rep", 10)); p["unlocked"] = true
         if not p.has("industry") or String(p["industry"]).is_empty():
             match String(p.get("type", "")):
                 "Residential": p["industry"] = "Housing"
@@ -47,9 +47,11 @@ func _normalize_all() -> void:
         site["output"] = max(0, int(site.get("output", 0))); site["risk"] = clamp(int(site.get("risk", 0)), 0, 100)
         site["owned"] = bool(site.get("owned", false)); site["stock"] = max(0, int(site.get("stock", 0)))
 
-func unlock_from_reputation(rep: int) -> void:
+func unlock_from_reputation(_rep: int) -> void:
     _normalize_all()
-    for p in properties: p["unlocked"] = int(rep) >= int(p["unlock_rep"])
+    # Asset prices and operational capacity remain the real progression
+    # barriers, not a separate reputation threshold.
+    for p in properties: p["unlocked"] = true
 
 func selected(index: int = -1) -> Dictionary:
     _normalize_all()

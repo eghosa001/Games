@@ -28,6 +28,18 @@ func _run()->void:
 
     var home_content:=hud.get("mobile_content") as Control
     check("HOME keeps a compact management overview",home_content.find_child("CommandOverview",true,false)!=null)
+    var city:=home_content.get_node_or_null("HomeCity") as Control
+    check("HOME shows all nine buildings as playable opportunities",city!=null and city.find_children("CityProperty*","Panel",true,false).size()==9)
+    check("HOME puts city choices above management tables",city!=null and (home_content.get_node_or_null("CommandOverview") as Control).position.y>city.position.y)
+    var another:=home_content.find_child("OpenCityProperty6",true,false) as Button
+    check("commercial property directly accessible from HOME",another!=null)
+    if another!=null:
+        another.pressed.emit()
+        await process_frame
+        check("home property card really selects commercial building",str(hud.get("active_view"))=="property" and str(hud.call("_building_type"))=="Commercial Building")
+        hud.open_figma_view("live")
+        await process_frame
+        home_content=hud.get("mobile_content") as Control
     var home_property:=home_content.find_child("OpenHomeProperties",true,false) as Button
     var home_business:=home_content.find_child("OpenHomeBusiness",true,false) as Button
     var home_growth:=home_content.find_child("OpenHomeGrowth",true,false) as Button

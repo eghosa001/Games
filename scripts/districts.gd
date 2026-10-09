@@ -11,14 +11,14 @@ var districts: Variant = [
 ]
 var selected: Variant = 0
 
-func update_unlocks(reputation: int) -> void:
+func update_unlocks(_reputation: int) -> void:
+    # District choice is open immediately; investment still costs real cash.
     for d in districts:
-        d["unlocked"] = reputation >= int(d["reputation"])
+        d["unlocked"] = true
 
 func select(index: int) -> Dictionary:
     if index < 0 or index >= districts.size(): return {"ok":false,"message":"Unknown district."}
-    if not districts[index]["unlocked"]:
-        return {"ok":false,"message":"Reach %d reputation to unlock %s." % [districts[index]["reputation"],districts[index]["name"]]}
+    update_unlocks(0)
     selected = index
     return {"ok":true,"message":"District selected: %s." % districts[index]["name"]}
 
@@ -44,3 +44,4 @@ func restore_state(snapshot: Dictionary) -> void:
     if snapshot.is_empty():return
     var saved=snapshot.get("districts",[]);districts=saved.duplicate(true) if saved is Array else districts
     selected=int(snapshot.get("selected",selected))
+    update_unlocks(0)

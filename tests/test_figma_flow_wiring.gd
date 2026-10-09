@@ -245,14 +245,14 @@ func _run() -> void:
     await process_frame
     var executive_locked := (hud.get("mobile_content") as Control).find_child("OpenRenewManagementPolicyUI", true, false) as Button
     check("Executive Desk is visible for anticipation at level 1", executive_locked != null)
-    check("Executive Desk stays locked during the opening loop", executive_locked != null and executive_locked.disabled)
+    check("Executive Desk opens during the opening loop", executive_locked != null and not executive_locked.disabled)
     if state != null:
         state.set_value("progression", "level", 2)
         state.set_value("progression", "xp", 100)
     hud.open_figma_view("more")
     await process_frame
     var executive_button := (hud.get("mobile_content") as Control).find_child("OpenRenewManagementPolicyUI", true, false) as Button
-    check("Executive Desk unlocks with level-2 management systems", executive_button != null and not executive_button.disabled)
+    check("Executive Desk remains available when level increases", executive_button != null and not executive_button.disabled)
     if executive_button != null:
         executive_button.pressed.emit()
         await process_frame
@@ -295,7 +295,7 @@ func _run() -> void:
     hud.open_figma_view("more")
     await process_frame
     var level7_acquisition_button := (hud.get("mobile_content") as Control).find_child("Openacquisitions", true, false) as Button
-    check("real progression unlocks acquisitions at Level 7", strategic_progression != null and strategic_progression.has_method("has_unlock") and bool(strategic_progression.has_unlock("acquisitions")))
+    check("acquisitions stay explorable across all company levels", strategic_progression != null and strategic_progression.has_method("has_unlock") and bool(strategic_progression.has_unlock("acquisitions")))
     check("Level 7 More acquisitions row is enabled", level7_acquisition_button != null and not level7_acquisition_button.disabled)
     if level7_acquisition_button != null and not level7_acquisition_button.disabled:
         level7_acquisition_button.pressed.emit()
@@ -381,7 +381,7 @@ func _run() -> void:
             check("Progression notice opens Figma level-up screen", str(hud.get("active_view")) == "level_up")
             check("opening level-up clears the pending notice", not bool(hud.get("_pending_level_up")))
             var unlock_text := (hud.get("mobile_content") as Control).get_node_or_null("FlowDetails/Detail0/Text") as Label
-            check("level-up names the real systems unlocked at level 2", unlock_text != null and unlock_text.text.contains("Employees") and unlock_text.text.contains("Finance"))
+            check("milestone celebrates specialties without gating them", unlock_text != null and unlock_text.text.contains("Employees") and unlock_text.text.contains("Finance") and unlock_text.text.contains("already available"))
 
         state.set_value("progression", "xp", 3000)
         state.set_value("progression", "level", 7)

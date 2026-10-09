@@ -19,7 +19,9 @@ func run()->void:
     check(progression.get_xp()==0,"Company starts at 0 XP")
     check(progression.has_unlock("restoration"),"Level 1 exposes restoration")
     check(progression.has_unlock("core_operations"),"Level 1 exposes core operations")
-    check(not progression.has_unlock("acquisitions"),"Late-game acquisitions are not part of the opening progression")
+    check(progression.has_unlock("acquisitions"),"Acquisitions are discoverable from day one")
+    check(progression.has_unlock("finance") and progression.has_unlock("regions"),"Finance and regions are available at level one")
+    check(not progression.has_unlock("company_level_2"),"A level-two achievement must still be earned")
     progression.award_action("restoration_step")
     check(progression.get_xp()==10,"Restoration earns meaningful XP")
     progression.award_action("production_run")
@@ -34,7 +36,7 @@ func run()->void:
     check(progression.has_unlock("company_level_2"),"Generic level unlock remains recorded for save compatibility")
     for feature in ["employees","contracts","finance"]:
         check(progression.has_unlock(feature),"Level 2 unlocks %s" % feature)
-    check(not progression.has_unlock("regions"),"Regions remain a later milestone at Level 2")
+    check(progression.has_unlock("regions"),"Regions stay open regardless of XP level")
     check(progression.get_features_for_level(3).has("regions"),"Level 3 progression contract includes regions")
     check(progression.get_features_for_level(6).has("infrastructure"),"Level 6 progression contract includes infrastructure")
     check(progression.get_features_for_level(7).has("acquisitions"),"Level 7 progression contract includes acquisitions")
@@ -51,7 +53,7 @@ func run()->void:
     progression._backfill_semantic_unlocks()
     check(progression.has_unlock("employees"),"Old save backfill restores early semantic unlocks")
     check(progression.has_unlock("diplomacy"),"Old save backfill restores diplomacy milestone")
-    check(progression.has_unlock("infrastructure") and progression.has_unlock("technology"),"Old save backfill restores Level 6 strategic systems")
+    check(progression.has_unlock("infrastructure") and progression.has_unlock("technology"),"Old saves retain access to strategic systems")
 
     state.set_value("progression","xp",0);state.set_value("progression","level",1);state.set_value("progression","unlocks",[])
     progression._backfill_semantic_unlocks()

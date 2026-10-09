@@ -26,6 +26,15 @@ func _inside_viewport(child: Control, viewport_size: Vector2) -> bool:
 func _inside_panel(child: Control, panel: Control) -> bool:
     if child == null or panel == null or not child.visible:
         return true
+    # Buttons in an intentionally clipped scrolling area can exist outside
+    # the visible panel without being painted or touchable outside it.
+    var ancestor: Node = child.get_parent()
+    while ancestor != null and ancestor != panel:
+        if ancestor is ScrollContainer:
+            var clipped := ancestor as ScrollContainer
+            if clipped.clip_contents:
+                return panel.get_global_rect().encloses(clipped.get_global_rect())
+        ancestor = ancestor.get_parent()
     return panel.get_global_rect().encloses(child.get_global_rect())
 
 func run() -> void:
@@ -87,6 +96,10 @@ func run() -> void:
                     outside += 1
             check(small == 0, "%s visible buttons meet touch sizing at %s" % [screen_name, target])
             check(outside == 0, "%s visible buttons stay inside panel at %s" % [screen_name, target])
+            if screen_name == "CorporationsPanel":
+                var actions := box.get_node_or_null("CorporationActionsScroll") as ScrollContainer
+                var action_content := actions.get_node_or_null("CorporationActionsBody") as Control if actions != null else null
+                check(actions != null and actions.clip_contents and action_content != null and action_content.custom_minimum_size.y > actions.size.y, "all corporate controls scroll within the phone panel at %s" % target)
     manager.hide_all_screens()
     root.size = Vector2i(1280, 720)
     await process_frame

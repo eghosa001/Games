@@ -32,13 +32,13 @@ func run() -> void:
     var contract_button:=more_content.find_child("Opencontract_market",true,false) as Button
     var supply_button:=more_content.find_child("Opensupply_chain",true,false) as Button
     var infrastructure_button:=more_content.find_child("Openinfrastructure_roadmap",true,false) as Button
-    var collection_button:=more_content.find_child("Openmilestones",true,false) as Button
+    var collection_button:=more_content.find_child("Openlegacy",true,false) as Button
     check(employee_button!=null, "More exposes Figma employee management")
     check(contract_button!=null, "More exposes Figma contract management")
     check(supply_button!=null, "More exposes Figma supply management")
-    check(employee_button!=null and employee_button.disabled, "Employees are progression-gated at founding")
-    check(infrastructure_button!=null and infrastructure_button.disabled, "Infrastructure is progression-gated at founding")
-    check(collection_button!=null and collection_button.disabled, "Collection is progression-gated at founding")
+    check(employee_button!=null and not employee_button.disabled, "Employees are available from founding")
+    check(infrastructure_button!=null and not infrastructure_button.disabled, "Infrastructure is available from founding")
+    check(collection_button!=null and not collection_button.disabled, "Collection is available from founding")
     var last_more_section:=more_content.get_node_or_null("MoreSection3") as Control if more_content!=null else null
     check(last_more_section!=null and more_content.size.y>=last_more_section.position.y+last_more_section.size.y+18.0, "grouped More commands remain scrollable on phone")
 
