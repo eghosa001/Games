@@ -690,6 +690,9 @@ func _show_view(view_name: String) -> void:
         _pending_level_up = false
     if view_name == "day_summary":
         _pending_day_summary = false
+    if view_name == "new_game":
+        _easy_play_feedback = ""
+        _advanced_controls_expanded = false
     match view_name:
         "live":
             active_tab = 0
@@ -737,6 +740,23 @@ func handle_system_back() -> bool:
         _show_view("live")
         return true
     return false
+
+func _home_goal_title() -> String:
+    if not _business_open():
+        return _objective_title()
+    match _easy_play_stage():
+        "sell": return "Sell your ready goods"
+        "wait": return "Today's customers are served"
+        "produce": return "Make your next batch"
+        "funds": return "Your business needs funding"
+        "buy": return "Stock up on materials"
+        "supply": return "Find available supplies"
+        _: return _objective_title()
+
+func _home_goal_detail() -> String:
+    if _business_open():
+        return _easy_play_hint()
+    return _objective_detail()
 
 func _home_primary_title() -> String:
     if not _inspected():
@@ -1227,8 +1247,8 @@ func _build_mobile_live() -> void:
     rail.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 0))
     hero.add_child(rail)
     _label(hero, "Eyebrow", "NEXT MOVE", Rect2(21, 16, 110, 14), 10, "gold", 600)
-    _remember("hero_title", _label(hero, "HeroTitle", _objective_title(), Rect2(21, 39, inner_w - 42, 30), 20, "text", 700))
-    hero_goal = _label(hero, "HeroGoal", _objective_detail(), Rect2(21, 73, inner_w - 42, 34), 10, "muted", 400)
+    _remember("hero_title", _label(hero, "HeroTitle", _home_goal_title(), Rect2(21, 39, inner_w - 42, 30), 20, "text", 700))
+    hero_goal = _label(hero, "HeroGoal", _home_goal_detail(), Rect2(21, 73, inner_w - 42, 34), 10, "muted", 400)
     _remember("hero_goal", hero_goal)
     var progress_bg = Panel.new()
     progress_bg.position = Vector2(21, 112)
@@ -1243,6 +1263,7 @@ func _build_mobile_live() -> void:
     progress_bg.add_child(progress_fill)
     _remember("progress_fill", progress_fill)
     hero_action = _frame_button(hero, "PrimaryNextMove", _home_primary_title(), Rect2(21, 126, inner_w - 42, 44), Callable(self, "_home_primary_action"), false, true, 11)
+    hero_action.disabled = _business_open() and not _easy_play_enabled()
 
     var gap = 6.0
     var tile_w = (inner_w - gap) * 0.5
@@ -2114,10 +2135,11 @@ func _refresh() -> void:
     match active_view:
         "live":
             _set_ref_text("right_status", "DAY %d" % _day())
-            _set_ref_text("hero_title", _objective_title())
-            _set_ref_text("hero_goal", _objective_detail())
+            _set_ref_text("hero_title", _home_goal_title())
+            _set_ref_text("hero_goal", _home_goal_detail())
             if hero_action != null:
                 hero_action.text = _home_primary_title()
+                hero_action.disabled = _business_open() and not _easy_play_enabled()
             _set_ref_text("cash_value", _money(_cash()))
             _set_ref_text("worth_value", _money(_worth()))
             _set_ref_text("rep_value", str(_rep()))
