@@ -2,6 +2,10 @@ name: RENEW Android Export
 
 on:
   workflow_dispatch:
+  # One-off Android test build after owner feedback: branch is not merged.
+  pull_request:
+    paths:
+      - .github/workflows/android-export.yml
 
 permissions:
   contents: read
