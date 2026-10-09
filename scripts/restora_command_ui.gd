@@ -2509,9 +2509,15 @@ func _open_business_choices() -> void:
     _frame_button(panel, "CancelPurpose", "CANCEL", Rect2(16, 354, w - 68, 44), panel.queue_free, false, false, 9)
 
 func _choose_business(index: int) -> void:
+    var opened_before := _business_open()
     if parent != null and parent.has_method("choose_business_purpose"):
         parent.choose_business_purpose(index)
-    _rebuild_current()
+    if not opened_before and _business_open():
+        _easy_play_feedback = "BUSINESS OPEN! Now make goods and sell them to your customers."
+    if _layout_kind == "mobile":
+        _rebuild_mobile_content()
+    else:
+        _rebuild_current()
 
 func _open_commercial_actions() -> void:
     if mobile_content == null:
@@ -2520,7 +2526,12 @@ func _open_commercial_actions() -> void:
     if existing != null:
         existing.queue_free()
     var w = _content_width()
-    var panel = _panel(mobile_content, "CommercialActionModal", Rect2(18, 318, w - 36, 250), "selected", "plum", 18)
+    # Place the modal inside the *visible* portion of the scroll, even when
+    # advanced tools were opened far down the page.
+    var modal_y := (float(mobile_scroll.scroll_vertical) if mobile_scroll != null else 0.0) + 24.0
+    var panel = _panel(mobile_content, "CommercialActionModal", Rect2(18, modal_y, w - 36, 250), "selected", "plum", 18)
+    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, modal_y + 280.0)
+    mobile_content.size.y = maxf(mobile_content.size.y, modal_y + 280.0)
     panel.mouse_filter = Control.MOUSE_FILTER_STOP
     _label(panel, "Head", "COMMERCIAL ACTIONS", Rect2(16, 14, w - 68, 18), 12, "gold", 600)
     _label(panel, "Help", "Price %s • %d goods • %d customer demand left today." % [_money(int(_state_value("businesses","player_price",110))), _goods(), _demand_remaining()], Rect2(16, 40, w - 68, 34), 10, "muted", 400)
@@ -2536,13 +2547,23 @@ func _open_commercial_actions() -> void:
 func _sell_goods() -> void:
     if parent == null or not parent.has_method("sell_goods"):
         return
+    var cash_before := _cash()
+    var goods_before := _goods()
     var result = parent.sell_goods()
     if result is Dictionary and not bool(result.get("ok", false)):
+        _easy_play_feedback = str(result.get("message", "Sale unavailable."))
         if status_label != null:
-            status_label.text = str(result.get("message", "Sale unavailable."))
+            status_label.text = _easy_play_feedback
             status_label.add_theme_color_override("font_color", _color("danger"))
+        _set_ref_text("easy_play_hint", _easy_play_feedback)
         return
-    _rebuild_current()
+    var earned := maxi(0, _cash() - cash_before)
+    var sold := maxi(0, goods_before - _goods())
+    _easy_play_feedback = "SOLD %d GOODS! EARNED %s. Great work — keep building!" % [sold, _money(earned)]
+    if _layout_kind == "mobile":
+        _rebuild_mobile_content()
+    else:
+        _rebuild_current()
 
 func _deliver_contract() -> void:
     if parent == null or not parent.has_method("deliver_contract"):
@@ -2574,16 +2595,28 @@ func _input_bundle_quote() -> Dictionary:
     return supply.input_bundle_quote() if supply != null and supply.has_method("input_bundle_quote") else {}
 
 func _produce() -> void:
+    var goods_before := _goods()
+    var cash_before := _cash()
     if parent != null and parent.has_method("produce_goods"):
         parent.produce_goods()
+    if _goods() > goods_before:
+        _easy_play_feedback = "MADE %d GOODS for %s. Next: sell them!" % [_goods() - goods_before, _money(maxi(0, cash_before - _cash()))]
+    else:
+        _easy_play_feedback = "Production could not finish. Check your cash and suppliers."
     if _layout_kind == "mobile":
         _rebuild_mobile_content()
     else:
         _refresh()
 
 func _buy_inputs() -> void:
+    var inputs_before := _inputs()
+    var cash_before := _cash()
     if parent != null and parent.has_method("buy_inputs"):
         parent.buy_inputs()
+    if _inputs() > inputs_before:
+        _easy_play_feedback = "MATERIALS ARRIVED for %s. You can now make goods." % _money(maxi(0, cash_before - _cash()))
+    else:
+        _easy_play_feedback = "Materials were unavailable. Try checking suppliers."
     if _layout_kind == "mobile":
         _rebuild_mobile_content()
     else:
