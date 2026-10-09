@@ -2,8 +2,9 @@ extends Node
 
 ## Company progression earned from meaningful gameplay outcomes.
 ## XP and level live in GameState.progression; this node owns progression rules.
-## Semantic unlock IDs provide a stable, player-facing progression contract so UI
-## and systems can expose complexity in the intended order without breaking old saves.
+## Levels are achievement milestones, not hard locks on the simulation.
+## Players may explore all systems immediately; money, property condition, assets
+## and legitimate business prerequisites still decide whether an action succeeds.
 const LEVEL_THRESHOLDS := [0, 100, 250, 500, 900, 1400, 2000, 2800, 3800, 5000]
 const XP_REWARDS := {"restoration_step":10,"property_operational":50,"profit_per_100":1,"contract_signed":25,"contract_completed":40,"employee_hired":15,"production_run":12,"expansion_purchased":35,"expansion_upgraded":20}
 const TRACK_INTERVAL := 0.20
@@ -153,9 +154,7 @@ func award_xp(amount:int,reason:String)->Dictionary:
             logs.append("PROGRESSION: Company reached Level %d (+%d XP from %s)." % [new_level, amount, reason])
             if logs.size() > 100: logs.pop_front()
             state.set_value("company", "log_lines", logs)
-        var newly_unlocked := get_features_for_level(new_level)
-        var unlock_text := ", ".join(newly_unlocked.map(func(item): return str(item).replace("_", " ").capitalize()))
-        state.set_value("company", "message", "Company Level %d reached%s." % [new_level, " — unlocked " + unlock_text if not unlock_text.is_empty() else ""])
+        state.set_value("company", "message", "Company Level %d reached — a new company milestone! Keep building." % new_level)
     return {"ok":true,"xp":xp,"level":new_level,"level_up":new_level>before_level,"reason":reason,"unlocks":get_unlocked_features()}
 func award_action(action:String,multiplier:float=1.0)->Dictionary: return award_xp(int(round(float(XP_REWARDS.get(action,0))*max(0.0,multiplier))),action)
 func award_profit(profit:int)->Dictionary:
@@ -163,22 +162,28 @@ func award_profit(profit:int)->Dictionary:
     return award_xp(max(1,int(floor(float(profit)/100.0))),"profit of $%d"%profit)
 func has_unlock(unlock_id:String)->bool:
     if unlock_id.is_empty():return true
-    var state=_state();if state==null:return false
+    # All named systems are browsable from day one. These IDs used to gate
+    # controls behind XP levels; they now denote optional milestones only.
+    for milestone_level in FEATURE_UNLOCKS.keys():
+        if unlock_id in FEATURE_UNLOCKS[milestone_level]:
+            return true
+    # Save compatibility: numeric milestones are still *earned*, never faked.
+    if unlock_id.begins_with("company_level_"):
+        var required := int(unlock_id.trim_prefix("company_level_"))
+        return required >= 1 and get_level() >= required
+    var state=_state()
+    if state == null:return false
     var unlocks=state.get_value("progression","unlocks",[])
-    if unlocks is Array and unlock_id in unlocks:return true
-    # Semantic company level is authoritative even if a legacy/restored save
-    # contains a stale unlock cache. This prevents valid Level 2+ systems from
-    # remaining inaccessible after load.
-    var level:=maxi(1,get_level())
-    for reached_level in range(1,level+1):
-        if unlock_id=="company_level_%d"%reached_level:return true
-        var features=get_features_for_level(reached_level)
-        if features is Array and unlock_id in features:return true
-    return false
+    return unlocks is Array and unlock_id in unlocks
 func get_unlocked_features()->Array:
-    var state=_state();if state==null:return []
-    var unlocks=state.get_value("progression","unlocks",[])
-    return unlocks.duplicate(true) if unlocks is Array else []
+    # Availability is independent of the XP counter. All menus see the same
+    # canonical set while the persisted unlock log keeps earned achievements.
+    var available:Array=[]
+    for milestone_level in FEATURE_UNLOCKS.keys():
+        for feature in FEATURE_UNLOCKS[milestone_level]:
+            if feature not in available:
+                available.append(feature)
+    return available
 func get_features_for_level(level:int)->Array:
     var features = FEATURE_UNLOCKS.get(level, [])
     return features.duplicate(true) if features is Array else []
