@@ -47,9 +47,11 @@ func _normalize_all() -> void:
         site["output"] = max(0, int(site.get("output", 0))); site["risk"] = clamp(int(site.get("risk", 0)), 0, 100)
         site["owned"] = bool(site.get("owned", false)); site["stock"] = max(0, int(site.get("stock", 0)))
 
-func unlock_from_reputation(rep: int) -> void:
+func unlock_from_reputation(_rep: int) -> void:
     _normalize_all()
-    for p in properties: p["unlocked"] = int(rep) >= int(p["unlock_rep"])
+    # Asset prices and operational capacity remain the real progression
+    # barriers, not a separate reputation threshold.
+    for p in properties: p["unlocked"] = true
 
 func selected(index: int = -1) -> Dictionary:
     _normalize_all()
