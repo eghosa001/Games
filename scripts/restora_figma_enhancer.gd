@@ -126,61 +126,40 @@ func _sync_stage_art(content: Control, hud: Node, view: String) -> void:
 
 func _enhance_home(hud: Node, content: Control) -> void:
     var hero := content.get_node_or_null("ExecutiveHero") as Control
-    if hero == null or hero.get_node_or_null("ActiveRestorationArt") != null:
+    if hero == null:
         return
+    # Home is a city browser, not a towering portrait of the first warehouse.
+    # Keep the one-step objective compact so multiple playable property cards
+    # appear within the opening phone viewport.
     var manager := get_node_or_null("/root/RestoraThemeManager")
     var text_scale := float(manager.get_text_scale()) if manager != null and manager.has_method("get_text_scale") else 1.0
-    var enlarged := text_scale > 1.10
-
-    # Give the player's actual restoration stage a real visual focal point.
-    # Use a shorter, artwork-free variant at accessibility text sizes so that
-    # descriptions never compete with the illustration for space.
-    var hero_h := 294.0 if enlarged else 378.0
-    _shift_content(content, 270.0, hero_h - 176.0, hero)
-    hero.size.y = hero_h
-    hero.clip_contents = true
-    var image_w := minf(258.0, hero.size.x - 42.0)
-    var image_h := image_w * 144.0 / 256.0
-    var art := _stage_art("ActiveRestorationArt", hud, Vector2(image_w, image_h))
-    art.position = Vector2((hero.size.x - image_w) * 0.5, 164.0)
-    art.visible = not enlarged
-    hero.add_child(art)
-    hero.move_child(art, 0)
-
     var eyebrow := hero.get_node_or_null("Eyebrow") as Label
     var title := hero.get_node_or_null("HeroTitle") as Label
     var goal := hero.get_node_or_null("HeroGoal") as Label
     var action := hero.get_node_or_null("PrimaryNextMove") as Button
     if eyebrow != null:
-        eyebrow.text = "NEXT MOVE"
-        eyebrow.position = Vector2(21, 16)
+        eyebrow.text = "YOUR NEXT MOVE"
         eyebrow.size.x = hero.size.x - 42.0
-        eyebrow.add_theme_font_size_override("font_size", maxi(11, int(round(11.0 * text_scale))))
     if title != null:
-        title.position = Vector2(21, 41)
-        title.size = Vector2(hero.size.x - 42.0, 53.0)
-        title.add_theme_font_size_override("font_size", mini(23, int(round(float(19 if hero.size.x < 310.0 else 21) * text_scale))))
+        title.position = Vector2(21, 35)
+        title.size = Vector2(hero.size.x - 42.0, 36)
+        title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        title.add_theme_font_size_override("font_size", mini(22, int(round(19.0 * text_scale))))
     if goal != null:
-        goal.position = Vector2(21, 100)
-        var detail_size := Vector2(hero.size.x - 42.0, 104.0 if enlarged else 62.0)
-        goal.custom_maximum_size = detail_size
-        goal.custom_minimum_size = Vector2.ZERO
-        goal.size = detail_size
+        goal.position = Vector2(21, 72)
+        goal.size = Vector2(hero.size.x - 42.0, 43)
+        goal.custom_maximum_size = goal.size
         goal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        goal.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
-        goal.clip_text = true
-        goal.add_theme_font_size_override("font_size", int(round(12.0 * text_scale)))
+        goal.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+        goal.add_theme_font_size_override("font_size", int(round(10.0 * text_scale)))
     if action != null:
         action.text = str(hud.call("_home_primary_title"))
-        action.position = Vector2(21, 233 if enlarged else 325)
-        action.size = Vector2(hero.size.x - 42.0, 48.0)
-        action.add_theme_font_size_override("font_size", int(round(12.0 * text_scale)))
+        action.position = Vector2(21, 124)
+        action.size = Vector2(hero.size.x - 42.0, 46)
+        action.add_theme_font_size_override("font_size", int(round(11.0 * text_scale)))
     for child in hero.get_children():
-        if child is Panel:
-            if is_equal_approx(child.position.y, 112.0):
-                child.position.y = 216.0 if enlarged else 312.0
-            elif child.size.x <= 8.0:
-                child.size.y = hero.size.y
+        if child is Panel and is_equal_approx(child.position.y, 112.0):
+            child.visible = false
 
 func _enhance_property(hud: Node, content: Control) -> void:
     var selected := content.get_node_or_null("SelectedProperty") as Control
