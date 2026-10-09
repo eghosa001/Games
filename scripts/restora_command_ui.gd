@@ -1217,15 +1217,18 @@ func _build_mobile_live() -> void:
     var tile_w = (inner_w - gap) * 0.5
     _stat_tile(mobile_content, "cash", 18, 276, tile_w, "CASH", _money(_cash()), "AVAILABLE")
     _stat_tile(mobile_content, "worth", 18 + tile_w + gap, 276, tile_w, "WORTH", _money(_worth()), "TOTAL")
-    _stat_tile(mobile_content, "rep", 18, 392, tile_w, "REPUTATION", str(_rep()), "COMPANY L%d" % _company_level())
-    _stat_tile(mobile_content, "goods", 18 + tile_w + gap, 392, tile_w, "GOODS", str(_goods()), "READY" if _goods() > 0 else "EMPTY")
+    # Keep legacy state nodes available to dashboards/tests, but let new players
+    # see their cash and one next action instead of four competing scorecards.
+    _stat_tile(mobile_content, "rep", 18, 392, tile_w, "REPUTATION", str(_rep()), "COMPANY L%d" % _company_level()).hide()
+    _stat_tile(mobile_content, "goods", 18 + tile_w + gap, 392, tile_w, "GOODS", str(_goods()), "READY" if _goods() > 0 else "EMPTY").hide()
 
     var loop = _panel(mobile_content, "CoreLoop", Rect2(18, 508, inner_w, 112), "surface", "border", 18)
     _label(loop, "Head", "YOUR PATH", Rect2(15, 14, inner_w - 30, 14), 10, "gold", 600)
     _label(loop, "Path", "1  RESTORE  >  2  OPERATE  >  3  GROW", Rect2(15, 38, inner_w - 30, 20), 12, "text", 700)
     _remember("signal_footer", _label(loop, "Current", _core_loop_status(), Rect2(15, 66, inner_w - 30, 36), 12, "success", 600))
+    loop.hide()
 
-    var overview = _panel(mobile_content, "CommandOverview", Rect2(18, 636, inner_w, 168), "surface", "border", 18)
+    var overview = _panel(mobile_content, "CommandOverview", Rect2(18, 392, inner_w, 168), "surface", "border", 18)
     _label(overview, "Head", "MANAGEMENT OVERVIEW", Rect2(15, 12, inner_w - 30, 14), 10, "gold", 600)
     var prop_state := "%d/%d owned • %d%% selected restored" % [_owned_building_count(), _building_catalog().size(), _building_progress()]
     var business_state := "OPEN" if _business_open() else ("READY" if _stage() == "Operational" else "RESTORE FIRST")
@@ -1240,8 +1243,8 @@ func _build_mobile_live() -> void:
     _transparent_button(overview, "OpenHomeGrowth", Rect2(0, 116, inner_w, 44), _show_view.bind("more"))
 
     if mobile_content != null:
-        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 838.0)
-        mobile_content.size.y = maxf(mobile_content.size.y, 838.0)
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 594.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, 594.0)
 
 
 func _build_mobile_operations() -> void:
@@ -1249,7 +1252,7 @@ func _build_mobile_operations() -> void:
     var business_ready := _business_open()
     var w = _content_width()
     var status_text := "OPERATING" if business_ready else ("READY TO OPEN" if property_ready else "RESTORATION REQUIRED")
-    _header("BUSINESS OPERATIONS", "%s • %s" % [_building_name().to_upper(), status_text], "DAY %d" % _day(), "success" if business_ready else "gold")
+    _header("YOUR BUSINESS", "%s • %s" % [_building_name().to_upper(), status_text], "DAY %d" % _day(), "success" if business_ready else "gold")
     var inner_w = w - 36.0
     var gap = 6.0
     var tile_w = (inner_w - gap) * 0.5
@@ -1313,8 +1316,76 @@ func _build_mobile_operations() -> void:
     _frame_button(toolkit, "BusinessTeam", "TEAM", Rect2(24 + tool_w, 62, tool_w, 42), _show_view.bind("employee_list"), false, false, 9)
     _frame_button(toolkit, "BusinessContracts", "CONTRACTS", Rect2(16, 112, tool_w, 42), _show_view.bind("contract_market"), false, false, 9)
     _frame_button(toolkit, "BusinessSupply", "SUPPLY", Rect2(24 + tool_w, 112, tool_w, 42), _show_view.bind("supply_chain"), false, false, 9)
-    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 744.0)
-    mobile_content.size.y = maxf(mobile_content.size.y, 744.0)
+    # Easy Play is the first thing a new player sees. The detailed controls
+    # still exist below for players who want to manage their own production.
+    for child in mobile_content.get_children():
+        if child is Control and (child as Control).position.y >= 82.0:
+            (child as Control).position.y += 192.0
+    var quick := _panel(mobile_content, "EasyPlay", Rect2(18, 82, inner_w, 176), "selected", "plum", 20)
+    _label(quick, "Heading", "EASY PLAY", Rect2(16, 12, inner_w - 32, 20), 14, "text", 700)
+    _label(quick, "Steps", "1  RESTORE     2  MAKE GOODS     3  SELL", Rect2(16, 39, inner_w - 32, 18), 11, "gold", 600)
+    _remember("easy_play_hint", _label(quick, "Hint", _easy_play_hint(), Rect2(16, 64, inner_w - 32, 43), 12, "text", 400))
+    var primary := _frame_button(quick, "EasyPlayAction", _easy_play_title(), Rect2(16, 116, inner_w - 32, 48), _easy_play_primary, false, true, 12)
+    primary.disabled = not _easy_play_enabled()
+    primary.tooltip_text = _easy_play_hint()
+    _remember("easy_play_action", primary)
+    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 944.0)
+    mobile_content.size.y = maxf(mobile_content.size.y, 944.0)
+
+func _easy_play_stage() -> String:
+    # The primary action always uses the game's real finance, production and
+    # sales commands. Taps must never mint money or invent inventory.
+    if _stage() != "Operational":
+        return "restore"
+    if not _business_open():
+        return "open"
+    if _goods() > 0:
+        return "sell" if _demand_remaining() > 0 else "wait"
+    var quote := _production_quote()
+    if bool(quote.get("ok", false)):
+        return "produce" if bool(quote.get("affordable", false)) else "funds"
+    var inputs_quote := _input_bundle_quote()
+    if bool(inputs_quote.get("ok", false)) and bool(inputs_quote.get("affordable", false)):
+        return "buy"
+    return "supply"
+
+func _easy_play_title() -> String:
+    match _easy_play_stage():
+        "restore": return "RESTORE YOUR FIRST PROPERTY"
+        "open": return "OPEN YOUR BUSINESS"
+        "sell": return "SELL YOUR GOODS"
+        "wait": return "WAIT FOR NEW CUSTOMERS"
+        "produce": return "MAKE GOODS • %s" % _money(int(_production_quote().get("total_cost", 0)))
+        "funds": return "VIEW FUNDING OPTIONS"
+        "buy": return "GET MATERIALS • %s" % _money(int(_input_bundle_quote().get("cost", 0)))
+        _: return "REVIEW SUPPLIERS"
+
+func _easy_play_hint() -> String:
+    match _easy_play_stage():
+        "restore": return "Inspect, acquire and restore one property. We'll guide you through each step."
+        "open": return "Your property is ready! Choose the business you want to run."
+        "sell": return "%d goods ready. %d customers remain today. Sell to earn real revenue." % [_goods(), _demand_remaining()]
+        "wait": return "Today's demand is filled. New customers return when the day changes."
+        "produce":
+            var quote := _production_quote()
+            return "Make about %d goods for %s, then sell them. Costs are paid once." % [int(quote.get("estimated_output", 0)), _money(int(quote.get("total_cost", 0)))]
+        "funds": return "Making goods costs %s, but you have %s. Review your options." % [_money(int(_production_quote().get("total_cost", 0))), _money(_cash())]
+        "buy": return "Production needs supplies. Buy a bundle and try again."
+        _: return "Materials are unavailable. Review your suppliers and stock."
+
+func _easy_play_enabled() -> bool:
+    return _easy_play_stage() != "wait"
+
+func _easy_play_primary() -> void:
+    match _easy_play_stage():
+        "restore": _show_view("property")
+        "open": _open_business_choices()
+        "sell": _sell_goods()
+        "produce": _produce()
+        "buy": _buy_inputs()
+        "funds": _show_view("financial_health")
+        "supply": _show_view("supply_chain")
+        _: pass
 
 func _build_mobile_finance() -> void:
     var w = _content_width()
@@ -2037,6 +2108,12 @@ func _refresh() -> void:
             else:
                 _set_ref_text("production_rate", _production_rate_text())
                 _set_ref_text("commercial_body", _commercial_text())
+            _set_ref_text("easy_play_hint", _easy_play_hint())
+            var easy_action := refs.get("easy_play_action") as Button
+            if easy_action != null:
+                easy_action.text = _easy_play_title()
+                easy_action.disabled = not _easy_play_enabled()
+                easy_action.tooltip_text = _easy_play_hint()
         "finance":
             _set_ref_text("cash_value", _money(_cash()))
             _set_ref_text("debt_value", _money(_debt()))
@@ -2316,7 +2393,9 @@ func _property_cta() -> void:
     elif not _owned() and parent.has_method("acquire_property"):
         parent.acquire_property()
     elif _stage() != "Operational":
-        _show_view("restoration_plan")
+        # The property button now leads straight to the cost confirmation;
+        # the full restoration plan remains available for detailed players.
+        _show_view("restoration_confirm")
         return
     else:
         _show_view("operate")
