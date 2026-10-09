@@ -55,6 +55,22 @@ func _run()->void:
     check("fresh BUSINESS keeps commercial controls locked",fresh_business_content.find_child("OpenCommercial",true,false)==null)
     check("BUSINESS exposes a direct operations toolkit",fresh_business_content.find_child("BusinessToolkit",true,false)!=null)
 
+    # The first decision is visible before advanced controls and never grants
+    # money as a fake click reward.
+    var easy_panel:=fresh_business_content.get_node_or_null("EasyPlay") as Control
+    var easy_action:=fresh_business_content.get_node_or_null("EasyPlay/EasyPlayAction") as Button
+    var details_panel:=fresh_business_content.get_node_or_null("ProductionControl") as Control
+    check("BUSINESS starts with a clear Easy Play card",easy_panel!=null and easy_action!=null)
+    check("guided action is visible before advanced production",easy_panel!=null and details_panel!=null and easy_panel.position.y < details_panel.position.y)
+    check("guided action is an accessible touch target",easy_action!=null and easy_action.size.y>=48)
+    check("fresh company is directed to real restoration",easy_action!=null and str(hud.call("_easy_play_stage"))=="restore" and easy_action.text=="RESTORE YOUR FIRST PROPERTY")
+    if easy_action!=null:
+        var cash_before:=int(hud.call("_cash"))
+        easy_action.pressed.emit(); await process_frame
+        check("guided action opens the actual property workflow",str(hud.get("active_view"))=="property")
+        check("navigation alone never creates or spends cash",int(hud.call("_cash"))==cash_before)
+        hud.open_figma_view("operate"); await process_frame
+
     var expected:=["HOME","BUSINESS","PROPERTY","FINANCE","MORE"]
     var tabs:Array=hud.get("mode_buttons")
     check("exactly five primary destinations",tabs.size()==5)
