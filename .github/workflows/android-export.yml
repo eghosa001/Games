@@ -2,10 +2,10 @@ name: RENEW Android Export
 
 on:
   workflow_dispatch:
-  # Explicit one-time APK request: keep normal Android exports manual-only.
-  push:
-    branches:
-      - build/restora-apk-20261009
+  # Temporary opt-in PR build for the requested installable Android APK.
+  pull_request:
+    paths:
+      - .github/workflows/android-export.yml
 
 permissions:
   contents: read
