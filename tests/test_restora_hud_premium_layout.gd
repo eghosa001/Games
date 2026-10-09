@@ -153,7 +153,7 @@ func _run()->void:
         await process_frame
         var detail_content:=hud.get("mobile_content") as Control
         var detail_art:=detail_content.find_child("FlowArtwork",true,false) as TextureRect
-        check(detail_view+" uses selected real stage artwork",detail_art!=null and detail_art.texture is AtlasTexture and (detail_art.texture as AtlasTexture).atlas.resource_path.ends_with("building_warehouse_progression.svg"))
+        check(detail_view+" uses selected real stage artwork",detail_art!=null and detail_art.texture is AtlasTexture and (detail_art.texture as AtlasTexture).atlas == hud.call("_property_stage_texture"))
     hud.open_figma_view("property")
     await process_frame
     content=hud.get("mobile_content") as Control
