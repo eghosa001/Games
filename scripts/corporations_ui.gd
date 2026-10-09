@@ -9,6 +9,8 @@ var status_label: Label
 var scroll: ScrollContainer
 var list_label: Label
 var detail_label: Label
+var actions_scroll: ScrollContainer
+var actions_content: Control
 var next_button: Button
 var offer_button: Button
 var improve_button: Button
@@ -126,6 +128,21 @@ func _build_ui() -> void:
 
     close_button = _button("CLOSE")
     close_button.pressed.connect(_close)
+
+    # Buying/selling, alliances and acquisitions must ALL be usable on small
+    # screens now that level-based hiding has been removed. Scroll the actions
+    # instead of painting the last buttons outside the card.
+    actions_scroll = ScrollContainer.new()
+    actions_scroll.name = "CorporationActionsScroll"
+    actions_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    actions_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+    actions_scroll.clip_contents = true
+    panel.add_child(actions_scroll)
+    actions_content = Control.new()
+    actions_content.name = "CorporationActionsBody"
+    actions_scroll.add_child(actions_content)
+    for button in [next_button, offer_button, improve_button, shares_button, sell_shares_button, acquire_button, battle_button, raise_bid_button, walk_button, close_button]:
+        button.reparent(actions_content)
     _layout()
 
 func _label(text: String, size: int, color: Color) -> Label:
@@ -180,7 +197,10 @@ func _layout() -> void:
     detail_label.position = Vector2(side, scroll.position.y + scroll.size.y + 8.0)
     detail_label.size = Vector2(width - side * 2.0, 70.0)
 
-    var y := detail_label.position.y + detail_label.size.y + 8.0
+    var actions_y := detail_label.position.y + detail_label.size.y + 8.0
+    actions_scroll.position = Vector2(0.0, actions_y)
+    actions_scroll.size = Vector2(width, maxf(52.0, panel.size.y - actions_y - 8.0))
+    var y := 0.0
     var half := (width - side * 2.0 - gap) / 2.0
     _place_pair(next_button, offer_button, side, y, half, row_h, gap)
     y += row_h + gap
@@ -200,8 +220,10 @@ func _layout() -> void:
         _place_pair(raise_bid_button, walk_button, side, y, half, row_h, gap)
         y += row_h + gap
 
-    close_button.position = Vector2(side, minf(y, panel.size.y - 58.0))
+    close_button.position = Vector2(side, y)
     close_button.size = Vector2(width - side * 2.0, 50)
+    actions_content.custom_minimum_size = Vector2(width, y + 54.0)
+    actions_content.size = actions_content.custom_minimum_size
 
 func _place_pair(left: Button, right: Button, side: float, y: float, half: float, height: float, gap: float) -> void:
     left.position = Vector2(side, y)
