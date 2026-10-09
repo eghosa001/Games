@@ -66,21 +66,15 @@ func _exercise_opening_flow(game:Node,hud:Node)->void:
     if acquire!=null:
         acquire.pressed.emit();await process_frame;await process_frame
 
-    var restore_entry:=_find_button(hud.get("mobile_content"),"RESTORE NEXT STAGE")
-    check("opening action exists: RESTORE NEXT STAGE",restore_entry!=null)
-    if restore_entry!=null:
-        restore_entry.pressed.emit();await process_frame;await process_frame
-    check("restoration plan opens",str(hud.get("active_view"))=="restoration_plan")
-
-    # Exercise the actual Figma consequence-check flow for every restoration stage:
-    # Plan -> Review Next Work -> Confirm Work -> next Plan / Completion.
+    # New restoration is one priced confirmation per stage, not the old
+    # compulsory Plan -> Review -> Confirm chain.
     for stage_index in range(4):
-        check("restoration stage %d starts on plan" % (stage_index+1),str(hud.get("active_view"))=="restoration_plan")
-        var review:=_find_button(hud.get("mobile_content"),"REVIEW NEXT WORK")
-        check("restoration stage %d review action exists" % (stage_index+1),review!=null)
-        if review==null:break
-        review.pressed.emit();await process_frame;await process_frame
-        check("restoration stage %d opens consequence check" % (stage_index+1),str(hud.get("active_view"))=="restoration_confirm")
+        hud.open_figma_view("property");await process_frame
+        var restore_entry:=_find_button(hud.get("mobile_content"),"RESTORE NEXT STAGE")
+        check("restoration stage %d has a direct action" % (stage_index+1),restore_entry!=null)
+        if restore_entry==null:break
+        restore_entry.pressed.emit();await process_frame;await process_frame
+        check("restoration stage %d opens the cost confirmation" % (stage_index+1),str(hud.get("active_view"))=="restoration_confirm")
         var confirm:=_find_button(hud.get("mobile_content"),"CONFIRM WORK")
         check("restoration stage %d confirm action exists" % (stage_index+1),confirm!=null)
         if confirm==null:break
@@ -88,15 +82,14 @@ func _exercise_opening_flow(game:Node,hud:Node)->void:
 
     var state:=root.get_node_or_null("RenewGameState")
     check("restoration reaches Operational",state!=null and str(state.get_value("properties","stage",""))=="Operational")
-    check("Figma completion screen remains active after progression updates",str(hud.get("active_view"))=="restoration_complete")
-
+    check("restoration completion is visible",str(hud.get("active_view"))=="restoration_complete")
     var start_business:=_find_button(hud.get("mobile_content"),"START BUSINESS")
     check("Start Business CTA exists",start_business!=null)
     if start_business!=null:start_business.pressed.emit();await process_frame
     check("Operations view opens",str(hud.get("active_view"))=="operate")
 
-    var choose:=_find_button(hud.get("mobile_content"),"CHOOSE BUSINESS")
-    check("business choice is reachable",choose!=null)
+    var choose:=_find_button(hud.get("mobile_content"),"OPEN YOUR BUSINESS")
+    check("Easy Play can launch the business",choose!=null)
     if choose!=null:
         choose.pressed.emit();await process_frame
         var purpose:=_find_button(hud.get("mobile_content"),"Purpose0",true)
@@ -104,12 +97,18 @@ func _exercise_opening_flow(game:Node,hud:Node)->void:
         if purpose!=null:purpose.pressed.emit();await process_frame;await process_frame
     check("business becomes operational",bool(game.business_open))
 
-    var buy:=_find_button(hud.get("mobile_content"),"BUY INPUTS")
-    var produce:=_find_button(hud.get("mobile_content"),"PRODUCE BATCH")
-    check("Buy Inputs action present after launch",buy!=null)
-    check("Produce Batch action present after launch",produce!=null)
-    if buy!=null:buy.pressed.emit();await process_frame
-    if produce!=null:produce.pressed.emit();await process_frame
+    var quick:=_find_button(hud.get("mobile_content"),"EasyPlayAction",true)
+    check("Business has a visible one-tap production action",quick!=null and not quick.disabled)
+    if quick!=null:
+        quick.pressed.emit();await process_frame;await process_frame
+        if int(state.get_value("production","finished_goods",0))==0:
+            quick=_find_button(hud.get("mobile_content"),"EasyPlayAction",true)
+            if quick!=null:quick.pressed.emit();await process_frame;await process_frame
+    check("guided action produces actual inventory",state!=null and int(state.get_value("production","finished_goods",0))>0)
+    quick=_find_button(hud.get("mobile_content"),"EasyPlayAction",true)
+    check("ready inventory exposes direct selling",quick!=null and quick.text=="SELL YOUR GOODS")
+    if quick!=null:quick.pressed.emit();await process_frame;await process_frame
+    check("one-tap selling earns real sales",state!=null and int(state.get_value("economy","last_sales",0))>0)
 
 func _exercise_primary_views(hud:Node)->void:
     var expected:=["live","operate","property","finance","more"]
