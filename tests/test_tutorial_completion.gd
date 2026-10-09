@@ -119,14 +119,16 @@ func _run() -> void:
 
     var restore_guard := 0
     while str(state.get_value("properties", "stage", "")) != "Operational" and restore_guard < 8:
-        if str(hud.get("active_view")) == "property":
-            property_cta = _find_button(hud.get("mobile_content"), "RESTORE NEXT STAGE")
-            check(property_cta != null, "Restore plan remains reachable from Property")
-            if property_cta == null:
-                break
-            property_cta.pressed.emit()
-            await _wait(2)
-
+        # The detail route may return to its optional planning screen after
+        # work; the short path starts from the property button every time.
+        hud.open_figma_view("property")
+        await _wait(2)
+        property_cta = _find_button(hud.get("mobile_content"), "RESTORE NEXT STAGE")
+        check(property_cta != null, "Property exposes one obvious restore action")
+        if property_cta == null:
+            break
+        property_cta.pressed.emit()
+        await _wait(2)
         check(str(hud.get("active_view")) == "restoration_confirm", "One tap opens the priced restoration confirmation")
         var confirm := _find_button(hud.get("mobile_content"), "CONFIRM WORK")
         check(confirm != null, "Restoration confirmation is reachable")
