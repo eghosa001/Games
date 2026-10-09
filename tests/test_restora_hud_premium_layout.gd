@@ -76,7 +76,7 @@ func _run()->void:
     check("mobile goal has enough room for full-width copy",goal!=null and goal.size.y>=60.0 and goal.custom_maximum_size.y>=60.0)
     check("mobile objective wraps without clipping any lines",goal!=null and goal.get_line_count()>=2 and goal.get_visible_line_count()==goal.get_line_count())
     check("mobile primary action fits inside hero",action!=null and hero.get_global_rect().encloses(action.get_global_rect()))
-    check("mobile primary action retains true destination copy",action!=null and action.text=="OPEN NEXT STEP")
+    check("mobile primary action retains true destination copy",action!=null and action.text==str(hud.call("_home_primary_title")))
     var cash_icon:=content.get_node_or_null("Stat_cash/StatIcon") as TextureRect
     check("small metric icon uses bounded texture rendering",cash_icon!=null and cash_icon.texture!=null and cash_icon.stretch_mode==TextureRect.STRETCH_SCALE and cash_icon.clip_contents and cash_icon.size.x<=22.0 and cash_icon.size.y<=22.0)
     check("compact command overview exists",content.get_node_or_null("CommandOverview")!=null)

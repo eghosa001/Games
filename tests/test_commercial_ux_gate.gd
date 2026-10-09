@@ -63,12 +63,28 @@ func _run()->void:
     check("BUSINESS starts with a clear Easy Play card",easy_panel!=null and easy_action!=null)
     check("guided action is visible before advanced production",easy_panel!=null and details_panel!=null and easy_panel.position.y < details_panel.position.y)
     check("guided action is an accessible touch target",easy_action!=null and easy_action.size.y>=48)
-    check("fresh company is directed to real restoration",easy_action!=null and str(hud.call("_easy_play_stage"))=="restore" and easy_action.text=="RESTORE YOUR FIRST PROPERTY")
+    check("fresh company starts with the free inspection",easy_action!=null and str(hud.call("_easy_play_stage"))=="inspect" and easy_action.text=="INSPECT FIRST PROPERTY")
+    var advanced:=fresh_business_content.get_node_or_null("AdvancedControlsToggle") as Button
+    check("advanced tools start hidden behind one obvious toggle",advanced!=null and details_panel!=null and not details_panel.visible)
+    if advanced!=null:
+        advanced.pressed.emit(); await process_frame
+        var expanded:=hud.get("mobile_content").get_node_or_null("ProductionControl") as Control
+        check("one tap reveals the detailed controls",expanded!=null and expanded.visible)
+        (hud.get("mobile_content").get_node_or_null("AdvancedControlsToggle") as Button).pressed.emit(); await process_frame
+        var collapsed:=hud.get("mobile_content").get_node_or_null("ProductionControl") as Control
+        check("advanced tools can be hidden again",collapsed!=null and not collapsed.visible)
+        easy_action=hud.get("mobile_content").get_node_or_null("EasyPlay/EasyPlayAction") as Button
     if easy_action!=null:
         var cash_before:=int(hud.call("_cash"))
         easy_action.pressed.emit(); await process_frame
-        check("guided action opens the actual property workflow",str(hud.get("active_view"))=="property")
-        check("navigation alone never creates or spends cash",int(hud.call("_cash"))==cash_before)
+        check("one guided tap really inspects the property",bool(hud.call("_inspected")))
+        check("guided action stays on playable Business screen",str(hud.get("active_view"))=="operate")
+        check("inspection grants no imaginary cash",int(hud.call("_cash"))==cash_before)
+        var next_action:=hud.get("mobile_content").get_node_or_null("EasyPlay/EasyPlayAction") as Button
+        check("guided action shows the real purchase price next",next_action!=null and next_action.text.begins_with("BUY FIRST PROPERTY"))
+        if next_action!=null:
+            next_action.pressed.emit(); await process_frame
+            check("acquisition needs the real priced property screen",str(hud.get("active_view"))=="property")
         hud.open_figma_view("operate"); await process_frame
 
     var expected:=["HOME","BUSINESS","PROPERTY","FINANCE","MORE"]

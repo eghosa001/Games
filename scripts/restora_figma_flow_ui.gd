@@ -64,7 +64,7 @@ func build_view(view_name: String, hud: Node, content: Control) -> bool:
     return true
 
 func _auto_launch(hud: Node) -> void:
-    await get_tree().create_timer(0.75).timeout
+    await get_tree().create_timer(0.15).timeout
     _auto_launch_pending = false
     if not is_instance_valid(hud) or str(hud.get("active_view")) != "launch":
         return
@@ -95,11 +95,11 @@ func _screen_spec(view_name: String, hud: Node) -> Dictionary:
             return _spec("RESTORA", "RESTORE · OPERATE · GROW", [],
                 ["Bring neglected places back to life.", "Build a company whose progress is visible in every property."], [], true)
         "new_game":
-            return _spec("New Game", "BUILD VALUE FROM NEGLECTED PLACES",
-                [["STARTING CASH", _money(cash)], ["DIFFICULTY", "BALANCED"], ["TUTORIAL", "GUIDED"]],
-                ["Heritage challenge · higher prestige, stricter cash decisions.",
-                 "Independent planner · live economy with contextual guidance."],
-                [["CREATE COMPANY", "create_company", true], ["START WITHOUT GUIDE", "start_unguided", false]], true)
+            return _spec("New Game", "YOUR FIRST RESTORATION",
+                [["STARTING CASH", _money(cash)]],
+                ["Restore one property, open a business and make your first sale.",
+                 "The highlighted button tells you what to do next."],
+                [["START PLAYING", "create_company", true], ["START WITHOUT GUIDE", "start_unguided", false]], true)
         "continue_game":
             return _spec("Continue Game", "YOUR LOCAL COMPANY",
                 [["CASH", _money(cash)], ["VALUE", _money(worth)], ["DAY", str(day)]],
@@ -502,7 +502,10 @@ func _dispatch(action: String, hud: Node) -> void:
     match action:
         "create_company":
             _game_call("start_new_game")
-            hud.call("open_figma_view", "onboarding")
+            # The Home's playable first action replaces a compulsory extra
+            # onboarding page. How to Play remains available on demand.
+            hud.set("_easy_play_feedback", "")
+            hud.call("open_figma_view", "live")
         "start_home":
             hud.call("open_figma_view", "live")
         "start_unguided":

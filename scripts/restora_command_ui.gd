@@ -42,6 +42,8 @@ var _pending_level_up := false
 var _pending_day_summary := false
 var _view_transition: Tween
 var _texture_cache: Dictionary = {}
+var _advanced_controls_expanded := false
+var _easy_play_feedback := ""
 
 var _font_regular: SystemFont
 var _font_semibold: SystemFont
@@ -688,6 +690,9 @@ func _show_view(view_name: String) -> void:
         _pending_level_up = false
     if view_name == "day_summary":
         _pending_day_summary = false
+    if view_name == "new_game":
+        _easy_play_feedback = ""
+        _advanced_controls_expanded = false
     match view_name:
         "live":
             active_tab = 0
@@ -736,9 +741,53 @@ func handle_system_back() -> bool:
         return true
     return false
 
+func _home_goal_title() -> String:
+    if not _business_open():
+        return _objective_title()
+    match _easy_play_stage():
+        "sell": return "Sell your ready goods"
+        "wait": return "Today's customers are served"
+        "produce": return "Make your next batch"
+        "funds": return "Your business needs funding"
+        "buy": return "Stock up on materials"
+        "supply": return "Find available supplies"
+        _: return _objective_title()
+
+func _home_goal_detail() -> String:
+    if _business_open():
+        return _easy_play_hint()
+    return _objective_detail()
+
+func _home_primary_title() -> String:
+    if not _inspected():
+        return "INSPECT PROPERTY"
+    if not _owned():
+        return "VIEW PROPERTY • %s" % _money(_acquisition_cost())
+    if _stage() != "Operational":
+        return "RESTORE NEXT STAGE"
+    if not _business_open():
+        return "CHOOSE YOUR BUSINESS"
+    return _easy_play_title()
+
+func _home_primary_action() -> void:
+    # One visible action does the next useful thing. Paid property decisions
+    # retain their explicit priced controls/confirmation screens.
+    if not _inspected():
+        if parent != null and parent.has_method("inspect_property"):
+            parent.inspect_property()
+        _show_view("live")
+    elif not _owned():
+        _show_view("property")
+    elif _stage() != "Operational":
+        _show_view("restoration_confirm")
+    elif not _business_open():
+        _show_view("operate")
+        _open_business_choices()
+    else:
+        _show_view("operate")
+        _easy_play_primary()
+
 func _open_objective_next() -> void:
-    # Resolve the authoritative destination at tap time: progression may
-    # change while the Home dashboard stays mounted.
     _show_view(_objective_view())
 
 func _set_tab(index: int) -> void:
@@ -1016,6 +1065,8 @@ func _normalize_mobile_content_extent() -> void:
     for child in mobile_content.get_children():
         if child is Control:
             var control := child as Control
+            if not control.visible:
+                continue
             max_bottom = maxf(max_bottom, control.position.y + control.size.y + 18.0)
             if control.position.x + control.size.x > content_w:
                 control.size.x = maxf(1.0, content_w - control.position.x)
@@ -1196,8 +1247,8 @@ func _build_mobile_live() -> void:
     rail.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 0))
     hero.add_child(rail)
     _label(hero, "Eyebrow", "NEXT MOVE", Rect2(21, 16, 110, 14), 10, "gold", 600)
-    _remember("hero_title", _label(hero, "HeroTitle", _objective_title(), Rect2(21, 39, inner_w - 42, 30), 20, "text", 700))
-    hero_goal = _label(hero, "HeroGoal", _objective_detail(), Rect2(21, 73, inner_w - 42, 34), 10, "muted", 400)
+    _remember("hero_title", _label(hero, "HeroTitle", _home_goal_title(), Rect2(21, 39, inner_w - 42, 30), 20, "text", 700))
+    hero_goal = _label(hero, "HeroGoal", _home_goal_detail(), Rect2(21, 73, inner_w - 42, 34), 10, "muted", 400)
     _remember("hero_goal", hero_goal)
     var progress_bg = Panel.new()
     progress_bg.position = Vector2(21, 112)
@@ -1211,7 +1262,8 @@ func _build_mobile_live() -> void:
     progress_fill.add_theme_stylebox_override("panel", _solid_round(_color("gold"), 4))
     progress_bg.add_child(progress_fill)
     _remember("progress_fill", progress_fill)
-    hero_action = _frame_button(hero, "PrimaryNextMove", "OPEN NEXT STEP", Rect2(21, 126, inner_w - 42, 44), Callable(self, "_open_objective_next"), false, true, 11)
+    hero_action = _frame_button(hero, "PrimaryNextMove", _home_primary_title(), Rect2(21, 126, inner_w - 42, 44), Callable(self, "_home_primary_action"), false, true, 11)
+    hero_action.disabled = _business_open() and not _easy_play_enabled()
 
     var gap = 6.0
     var tile_w = (inner_w - gap) * 0.5
@@ -1316,11 +1368,20 @@ func _build_mobile_operations() -> void:
     _frame_button(toolkit, "BusinessTeam", "TEAM", Rect2(24 + tool_w, 62, tool_w, 42), _show_view.bind("employee_list"), false, false, 9)
     _frame_button(toolkit, "BusinessContracts", "CONTRACTS", Rect2(16, 112, tool_w, 42), _show_view.bind("contract_market"), false, false, 9)
     _frame_button(toolkit, "BusinessSupply", "SUPPLY", Rect2(24 + tool_w, 112, tool_w, 42), _show_view.bind("supply_chain"), false, false, 9)
-    # Easy Play is the first thing a new player sees. The detailed controls
-    # still exist below for players who want to manage their own production.
+    # The first screen has a single action and two visible resources. Detailed
+    # controls stay discoverable, but out of the way until explicitly expanded.
     for child in mobile_content.get_children():
-        if child is Control and (child as Control).position.y >= 82.0:
-            (child as Control).position.y += 192.0
+        if child is Control:
+            var control := child as Control
+            if control.position.y >= 204.0:
+                control.position.y += 256.0
+            elif control.position.y >= 82.0:
+                control.position.y += 192.0
+    for advanced_name in ["ProductionControl", "CommercialControls", "BusinessToolkit"]:
+        var advanced := mobile_content.get_node_or_null(advanced_name) as Control
+        if advanced != null:
+            advanced.visible = _advanced_controls_expanded
+    _frame_button(mobile_content, "AdvancedControlsToggle", "HIDE MANAGEMENT TOOLS ▲" if _advanced_controls_expanded else "ADVANCED MANAGEMENT ▼", Rect2(18, 394, inner_w, 48), _toggle_advanced_controls, false, false, 11)
     var quick := _panel(mobile_content, "EasyPlay", Rect2(18, 82, inner_w, 176), "selected", "plum", 20)
     _label(quick, "Heading", "EASY PLAY", Rect2(16, 12, inner_w - 32, 20), 14, "text", 700)
     _label(quick, "Steps", "1  RESTORE     2  MAKE GOODS     3  SELL", Rect2(16, 39, inner_w - 32, 18), 11, "gold", 600)
@@ -1329,12 +1390,17 @@ func _build_mobile_operations() -> void:
     primary.disabled = not _easy_play_enabled()
     primary.tooltip_text = _easy_play_hint()
     _remember("easy_play_action", primary)
-    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 944.0)
-    mobile_content.size.y = maxf(mobile_content.size.y, 944.0)
+    if _advanced_controls_expanded:
+        mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, 1000.0)
+        mobile_content.size.y = maxf(mobile_content.size.y, 1000.0)
 
 func _easy_play_stage() -> String:
     # The primary action always uses the game's real finance, production and
     # sales commands. Taps must never mint money or invent inventory.
+    if not _inspected():
+        return "inspect"
+    if not _owned():
+        return "acquire"
     if _stage() != "Operational":
         return "restore"
     if not _business_open():
@@ -1351,7 +1417,9 @@ func _easy_play_stage() -> String:
 
 func _easy_play_title() -> String:
     match _easy_play_stage():
-        "restore": return "RESTORE YOUR FIRST PROPERTY"
+        "inspect": return "INSPECT FIRST PROPERTY"
+        "acquire": return "BUY FIRST PROPERTY • %s" % _money(_acquisition_cost())
+        "restore": return "RESTORE NEXT STAGE"
         "open": return "OPEN YOUR BUSINESS"
         "sell": return "SELL YOUR GOODS"
         "wait": return "WAIT FOR NEW CUSTOMERS"
@@ -1361,8 +1429,12 @@ func _easy_play_title() -> String:
         _: return "REVIEW SUPPLIERS"
 
 func _easy_play_hint() -> String:
+    if not _easy_play_feedback.is_empty():
+        return _easy_play_feedback
     match _easy_play_stage():
-        "restore": return "Inspect, acquire and restore one property. We'll guide you through each step."
+        "inspect": return "Start here. A free inspection shows what the building needs."
+        "acquire": return "Your inspection is complete. Review the %s purchase before buying." % _money(_acquisition_cost())
+        "restore": return "Restore one stage at a time. Review each price before paying."
         "open": return "Your property is ready! Choose the business you want to run."
         "sell": return "%d goods ready. %d customers remain today. Sell to earn real revenue." % [_goods(), _demand_remaining()]
         "wait": return "Today's demand is filled. New customers return when the day changes."
@@ -1377,8 +1449,15 @@ func _easy_play_enabled() -> bool:
     return _easy_play_stage() != "wait"
 
 func _easy_play_primary() -> void:
-    match _easy_play_stage():
-        "restore": _show_view("property")
+    var next := _easy_play_stage()
+    _easy_play_feedback = ""
+    match next:
+        "inspect":
+            if parent != null and parent.has_method("inspect_property"):
+                parent.inspect_property()
+            _rebuild_mobile_content()
+        "acquire": _show_view("property")
+        "restore": _show_view("restoration_confirm")
         "open": _open_business_choices()
         "sell": _sell_goods()
         "produce": _produce()
@@ -1386,6 +1465,10 @@ func _easy_play_primary() -> void:
         "funds": _show_view("financial_health")
         "supply": _show_view("supply_chain")
         _: pass
+
+func _toggle_advanced_controls() -> void:
+    _advanced_controls_expanded = not _advanced_controls_expanded
+    _show_view("operate")
 
 func _build_mobile_finance() -> void:
     var w = _content_width()
@@ -2052,8 +2135,11 @@ func _refresh() -> void:
     match active_view:
         "live":
             _set_ref_text("right_status", "DAY %d" % _day())
-            _set_ref_text("hero_title", _objective_title())
-            _set_ref_text("hero_goal", _objective_detail())
+            _set_ref_text("hero_title", _home_goal_title())
+            _set_ref_text("hero_goal", _home_goal_detail())
+            if hero_action != null:
+                hero_action.text = _home_primary_title()
+                hero_action.disabled = _business_open() and not _easy_play_enabled()
             _set_ref_text("cash_value", _money(_cash()))
             _set_ref_text("worth_value", _money(_worth()))
             _set_ref_text("rep_value", str(_rep()))
@@ -2445,9 +2531,15 @@ func _open_business_choices() -> void:
     _frame_button(panel, "CancelPurpose", "CANCEL", Rect2(16, 354, w - 68, 44), panel.queue_free, false, false, 9)
 
 func _choose_business(index: int) -> void:
+    var opened_before := _business_open()
     if parent != null and parent.has_method("choose_business_purpose"):
         parent.choose_business_purpose(index)
-    _rebuild_current()
+    if not opened_before and _business_open():
+        _easy_play_feedback = "BUSINESS OPEN! Now make goods and sell them to your customers."
+    if _layout_kind == "mobile":
+        _rebuild_mobile_content()
+    else:
+        _rebuild_current()
 
 func _open_commercial_actions() -> void:
     if mobile_content == null:
@@ -2456,7 +2548,12 @@ func _open_commercial_actions() -> void:
     if existing != null:
         existing.queue_free()
     var w = _content_width()
-    var panel = _panel(mobile_content, "CommercialActionModal", Rect2(18, 318, w - 36, 250), "selected", "plum", 18)
+    # Place the modal inside the *visible* portion of the scroll, even when
+    # advanced tools were opened far down the page.
+    var modal_y := (float(mobile_scroll.scroll_vertical) if mobile_scroll != null else 0.0) + 24.0
+    var panel = _panel(mobile_content, "CommercialActionModal", Rect2(18, modal_y, w - 36, 250), "selected", "plum", 18)
+    mobile_content.custom_minimum_size.y = maxf(mobile_content.custom_minimum_size.y, modal_y + 280.0)
+    mobile_content.size.y = maxf(mobile_content.size.y, modal_y + 280.0)
     panel.mouse_filter = Control.MOUSE_FILTER_STOP
     _label(panel, "Head", "COMMERCIAL ACTIONS", Rect2(16, 14, w - 68, 18), 12, "gold", 600)
     _label(panel, "Help", "Price %s • %d goods • %d customer demand left today." % [_money(int(_state_value("businesses","player_price",110))), _goods(), _demand_remaining()], Rect2(16, 40, w - 68, 34), 10, "muted", 400)
@@ -2472,13 +2569,23 @@ func _open_commercial_actions() -> void:
 func _sell_goods() -> void:
     if parent == null or not parent.has_method("sell_goods"):
         return
+    var cash_before := _cash()
+    var goods_before := _goods()
     var result = parent.sell_goods()
     if result is Dictionary and not bool(result.get("ok", false)):
+        _easy_play_feedback = str(result.get("message", "Sale unavailable."))
         if status_label != null:
-            status_label.text = str(result.get("message", "Sale unavailable."))
+            status_label.text = _easy_play_feedback
             status_label.add_theme_color_override("font_color", _color("danger"))
+        _set_ref_text("easy_play_hint", _easy_play_feedback)
         return
-    _rebuild_current()
+    var earned := maxi(0, _cash() - cash_before)
+    var sold := maxi(0, goods_before - _goods())
+    _easy_play_feedback = "SOLD %d GOODS! EARNED %s. Great work — keep building!" % [sold, _money(earned)]
+    if _layout_kind == "mobile":
+        _rebuild_mobile_content()
+    else:
+        _rebuild_current()
 
 func _deliver_contract() -> void:
     if parent == null or not parent.has_method("deliver_contract"):
@@ -2510,16 +2617,28 @@ func _input_bundle_quote() -> Dictionary:
     return supply.input_bundle_quote() if supply != null and supply.has_method("input_bundle_quote") else {}
 
 func _produce() -> void:
+    var goods_before := _goods()
+    var cash_before := _cash()
     if parent != null and parent.has_method("produce_goods"):
         parent.produce_goods()
+    if _goods() > goods_before:
+        _easy_play_feedback = "MADE %d GOODS for %s. Next: sell them!" % [_goods() - goods_before, _money(maxi(0, cash_before - _cash()))]
+    else:
+        _easy_play_feedback = "Production could not finish. Check your cash and suppliers."
     if _layout_kind == "mobile":
         _rebuild_mobile_content()
     else:
         _refresh()
 
 func _buy_inputs() -> void:
+    var inputs_before := _inputs()
+    var cash_before := _cash()
     if parent != null and parent.has_method("buy_inputs"):
         parent.buy_inputs()
+    if _inputs() > inputs_before:
+        _easy_play_feedback = "MATERIALS ARRIVED for %s. You can now make goods." % _money(maxi(0, cash_before - _cash()))
+    else:
+        _easy_play_feedback = "Materials were unavailable. Try checking suppliers."
     if _layout_kind == "mobile":
         _rebuild_mobile_content()
     else:

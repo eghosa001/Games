@@ -49,9 +49,9 @@ var steps: Variant = [
     {
         "phase":"OPERATE",
         "title":"BUY PRODUCTION INPUTS",
-        "text":"Purchase the materials needed for your first production batch.",
-        "why":"Production cannot start without stock such as timber, iron or energy.",
-        "where":"BUSINESS > BUY INPUTS",
+        "text":"Tap Make Goods. The game can buy missing materials automatically, or you can stock them yourself.",
+        "why":"Production always pays real input costs from your available cash.",
+        "where":"BUSINESS > EASY PLAY",
         "view":"operate",
         "cta":"OPEN BUSINESS",
         "action":"BUY INPUTS"
@@ -71,7 +71,7 @@ var steps: Variant = [
         "title":"MAKE YOUR FIRST SALE",
         "text":"Sell the finished goods into current customer demand.",
         "why":"A completed sale proves the full loop: restore, operate, earn, then reinvest.",
-        "where":"BUSINESS > COMMERCIAL CONTROLS > SELL GOODS",
+        "where":"BUSINESS > EASY PLAY > SELL GOODS",
         "view":"operate",
         "cta":"OPEN BUSINESS",
         "action":"SELL GOODS"
@@ -110,8 +110,10 @@ func _advance(action:String, game)->bool:
         "ACQUIRE": valid = bool(game.owned)
         "RESTORE": valid = str(game.stage) == "Operational" or int(game.restoration) >= 100
         "OPEN BUSINESS": valid = bool(game.business_open)
-        "BUY INPUTS": valid = _has_inputs(game)
-        "PRODUCE": valid = int(game.finished_goods) > 0
+        # Automatic input sourcing and immediate selling must not strand the
+        # tutorial at a step already passed by the authoritative game state.
+        "BUY INPUTS": valid = _has_inputs(game) or int(game.finished_goods) > 0 or int(game.last_sales) > 0
+        "PRODUCE": valid = int(game.finished_goods) > 0 or int(game.last_sales) > 0
         "SELL GOODS": valid = int(game.last_sales) > 0
     if valid:
         step += 1

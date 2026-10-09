@@ -119,23 +119,17 @@ func _run() -> void:
 
     var restore_guard := 0
     while str(state.get_value("properties", "stage", "")) != "Operational" and restore_guard < 8:
-        if str(hud.get("active_view")) == "property":
-            property_cta = _find_button(hud.get("mobile_content"), "RESTORE NEXT STAGE")
-            check(property_cta != null, "Restore plan remains reachable from Property")
-            if property_cta == null:
-                break
-            property_cta.pressed.emit()
-            await _wait(2)
-
-        check(str(hud.get("active_view")) == "restoration_plan", "Restoration uses the authored plan screen")
-        var review := _find_button(hud.get("mobile_content"), "REVIEW NEXT WORK")
-        check(review != null, "Next restoration work can be reviewed")
-        if review == null:
-            break
-        review.pressed.emit()
+        # The detail route may return to its optional planning screen after
+        # work; the short path starts from the property button every time.
+        hud.open_figma_view("property")
         await _wait(2)
-
-        check(str(hud.get("active_view")) == "restoration_confirm", "Restoration opens consequence confirmation")
+        property_cta = _find_button(hud.get("mobile_content"), "RESTORE NEXT STAGE")
+        check(property_cta != null, "Property exposes one obvious restore action")
+        if property_cta == null:
+            break
+        property_cta.pressed.emit()
+        await _wait(2)
+        check(str(hud.get("active_view")) == "restoration_confirm", "One tap opens the priced restoration confirmation")
         var confirm := _find_button(hud.get("mobile_content"), "CONFIRM WORK")
         check(confirm != null, "Restoration confirmation is reachable")
         if confirm == null:
@@ -157,8 +151,8 @@ func _run() -> void:
     await _wait(3)
     check(str(hud.get("active_view")) == "operate", "Operations view opens")
 
-    var choose := _find_button(hud.get("mobile_content"), "CHOOSE BUSINESS")
-    check(choose != null, "Choose Business action is reachable")
+    var choose := _find_button(hud.get("mobile_content"), "OPEN YOUR BUSINESS")
+    check(choose != null, "Easy Play opens the business chooser")
     if choose != null:
         choose.pressed.emit()
     await _wait(2)
@@ -170,28 +164,25 @@ func _run() -> void:
     check(bool(state.get_value("businesses", "business_open", false)), "Business opens")
     check(_step(overlay) == 4, "Open Business advances tutorial to Buy Inputs")
 
-    var buy := _find_button(hud.get("mobile_content"), "BUY INPUTS")
-    check(buy != null, "Buy Inputs action is reachable")
-    if buy != null:
-        buy.pressed.emit()
-    await _wait_for_step(overlay, 5)
-    check(_step(overlay) == 5, "Buying inputs advances tutorial to Produce")
-
-    var produce := _find_button(hud.get("mobile_content"), "PRODUCE BATCH")
-    check(produce != null, "Produce action is reachable")
-    if produce != null:
-        produce.pressed.emit()
-    await _wait_for_step(overlay, 6)
-    check(int(state.get_value("production", "finished_goods", 0)) > 0, "Production creates finished goods")
-    check(_step(overlay) == 6, "Producing advances tutorial to Sell Goods")
-
-    var commercial := _find_button(hud.get("mobile_content"), "OpenCommercial", true)
-    check(commercial != null, "Commercial Controls is reachable")
-    if commercial != null:
-        commercial.pressed.emit()
+    # The production quote may automatically source raw inputs. A player
+    # should not have to navigate an optional inventory screen first.
+    var first_stage := str(hud.call("_easy_play_stage"))
+    check(["produce", "buy"].has(first_stage), "Easy Play offers production or materials")
+    var first_make := _find_button(hud.get("mobile_content"), "EasyPlayAction", true)
+    if first_make != null:
+        first_make.pressed.emit()
     await _wait(3)
-    var sell := _find_button(hud.get("mobile_content"), "SELL GOODS")
-    check(sell != null, "Sell Goods action is reachable")
+    if first_stage == "buy":
+        var make_after_buy := _find_button(hud.get("mobile_content"), "EasyPlayAction", true)
+        if make_after_buy != null:
+            make_after_buy.pressed.emit()
+        await _wait(3)
+    await _wait_for_step(overlay, 6)
+    check(int(state.get_value("production", "finished_goods", 0)) > 0, "One guided production action creates goods")
+    check(_step(overlay) == 6, "Automatic inputs never block tutorial progression")
+
+    var sell := _find_button(hud.get("mobile_content"), "EasyPlayAction", true)
+    check(sell != null and sell.text == "SELL YOUR GOODS", "Easy Play exposes immediate selling")
     if sell != null:
         sell.pressed.emit()
     await _wait_for_step(overlay, 7)
