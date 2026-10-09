@@ -742,8 +742,10 @@ func handle_system_back() -> bool:
     return false
 
 func _home_goal_title() -> String:
+    if _owned_building_count() == 0:
+        return "Explore your city"
     if not _business_open():
-        return _objective_title()
+        return "Build your business"
     match _easy_play_stage():
         "sell": return "Sell your ready goods"
         "wait": return "Today's customers are served"
@@ -754,9 +756,11 @@ func _home_goal_title() -> String:
         _: return _objective_title()
 
 func _home_goal_detail() -> String:
+    if _owned_building_count() == 0:
+        return "Nine places to explore. Tap any building below and start restoring."
     if _business_open():
         return _easy_play_hint()
-    return _objective_detail()
+    return "Your city is open. Inspect, restore and expand at your own pace."
 
 func _home_primary_title() -> String:
     if not _inspected():
@@ -1273,7 +1277,7 @@ func _build_home_city(y: float) -> float:
         image_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
         tile.add_child(image_box)
         _label(tile, "BuildingName", str(item.get("name", "Property")), Rect2(9, 74, card_w - 18, 30), 10, "text", 600)
-        var meta := "%d%% RESTORED" % _building_progress(item) if bool(item.get("owned", false)) else ("INSPECTED" if bool(item.get("inspected", false)) else "EXPLORE")
+        var meta := "%d%% RESTORED" % _building_progress(item) if bool(item.get("owned", false)) else ("SURVEYED • %s" % _money(_property_purchase_cost(item)) if bool(item.get("inspected", false)) else "VIEW • %s" % _money(_property_purchase_cost(item)))
         _label(tile, "PropertyStatus", meta, Rect2(9, 109, card_w - 18, 16), 9, "success" if bool(item.get("owned", false)) else "gold", 600)
         _transparent_button(tile, "OpenCityProperty%d" % i, Rect2(0, 0, card_w, card_h), _select_building_and_open.bind(i))
     return y + panel_h
