@@ -41,6 +41,8 @@ func _normalize() -> void:
     if infrastructure.size() > regions.size(): infrastructure.resize(regions.size())
     if local_reputation.size() > regions.size(): local_reputation.resize(regions.size())
     selected = clamp(selected,0,regions.size()-1)
+    for region in regions:
+        region["unlocked"] = true
 
 func _ready() -> void:
     _normalize()
