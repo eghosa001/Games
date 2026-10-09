@@ -171,7 +171,7 @@ func _enhance_home(hud: Node, content: Control) -> void:
         goal.clip_text = true
         goal.add_theme_font_size_override("font_size", int(round(12.0 * text_scale)))
     if action != null:
-        action.text = "OPEN NEXT STEP"
+        action.text = str(hud.call("_home_primary_title"))
         action.position = Vector2(21, 233 if enlarged else 325)
         action.size = Vector2(hero.size.x - 42.0, 48.0)
         action.add_theme_font_size_override("font_size", int(round(12.0 * text_scale)))
