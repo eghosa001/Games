@@ -757,10 +757,16 @@ func _home_goal_title() -> String:
 
 func _home_goal_detail() -> String:
     if _owned_building_count() == 0:
-        return "Nine places to explore. Tap any building below and start restoring."
+        return "Tap any building below to play."
     if _business_open():
-        return _easy_play_hint()
-    return "Your city is open. Inspect, restore and expand at your own pace."
+        match _easy_play_stage():
+            "sell": return "Sell your ready goods to earn cash."
+            "wait": return "All customers served. Explore your city."
+            "produce": return "Make goods, then sell for profit."
+            "funds": return "Check funding to make more goods."
+            "buy", "supply": return "Stock up on materials to produce."
+            _: return "Keep growing your business."
+    return "Choose any building and make it yours."
 
 func _home_primary_title() -> String:
     if not _inspected():
