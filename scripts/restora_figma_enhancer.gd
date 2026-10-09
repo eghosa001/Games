@@ -133,6 +133,10 @@ func _enhance_home(hud: Node, content: Control) -> void:
     # appear within the opening phone viewport.
     var manager := get_node_or_null("/root/RestoraThemeManager")
     var text_scale := float(manager.get_text_scale()) if manager != null and manager.has_method("get_text_scale") else 1.0
+    var enlarged := text_scale > 1.10
+    if enlarged:
+        _shift_content(content, 246.0, 46.0, hero)
+        hero.size.y += 46.0
     var eyebrow := hero.get_node_or_null("Eyebrow") as Label
     var title := hero.get_node_or_null("HeroTitle") as Label
     var goal := hero.get_node_or_null("HeroGoal") as Label
@@ -141,22 +145,22 @@ func _enhance_home(hud: Node, content: Control) -> void:
         eyebrow.text = "YOUR NEXT MOVE"
         eyebrow.size.x = hero.size.x - 42.0
     if title != null:
-        title.position = Vector2(21, 35)
-        title.size = Vector2(hero.size.x - 42.0, 36)
+        title.position = Vector2(21, 33)
+        title.size = Vector2(hero.size.x - 42.0, 39)
         title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
         title.add_theme_font_size_override("font_size", mini(22, int(round(19.0 * text_scale))))
     if goal != null:
-        goal.position = Vector2(21, 72)
-        goal.size = Vector2(hero.size.x - 42.0, 43)
+        goal.position = Vector2(21, 74)
+        goal.size = Vector2(hero.size.x - 42.0, 82 if enlarged else 44)
         goal.custom_maximum_size = goal.size
         goal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-        goal.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-        goal.add_theme_font_size_override("font_size", int(round(10.0 * text_scale)))
+        goal.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
+        goal.add_theme_font_size_override("font_size", int(round(11.0 * text_scale)))
     if action != null:
         action.text = str(hud.call("_home_primary_title"))
-        action.position = Vector2(21, 124)
-        action.size = Vector2(hero.size.x - 42.0, 46)
-        action.add_theme_font_size_override("font_size", int(round(11.0 * text_scale)))
+        action.position = Vector2(21, 165 if enlarged else 124)
+        action.size = Vector2(hero.size.x - 42.0, 48 if enlarged else 46)
+        action.add_theme_font_size_override("font_size", int(round(12.0 * text_scale)))
     for child in hero.get_children():
         if child is Panel and is_equal_approx(child.position.y, 112.0):
             child.visible = false
