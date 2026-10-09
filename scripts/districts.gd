@@ -44,3 +44,4 @@ func restore_state(snapshot: Dictionary) -> void:
     if snapshot.is_empty():return
     var saved=snapshot.get("districts",[]);districts=saved.duplicate(true) if saved is Array else districts
     selected=int(snapshot.get("selected",selected))
+    update_unlocks(0)
